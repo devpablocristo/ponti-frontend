@@ -1,11 +1,21 @@
 name: Deploy to Cloud Run
 
 on:
-  push:
-    branches:
-      - dev
-      - staging
-      - main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Rama a deployar'
+        required: true
+        type: string
+        default: 'main'
+      environment:
+        description: 'Ambiente a deployar'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - production
 
 env:
   PROJECT_ID: new-ponti-dev
@@ -25,18 +35,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
 
-      - name: Set environment based on branch
+      - name: Set environment based on selection
         id: env
         run: |
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
+          if [[ "${{ inputs.environment }}" == "production" ]]; then
             echo "ENV=production" >> $GITHUB_OUTPUT
             echo "TAG=prod" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref_name }}" == "staging" ]]; then
+          elif [[ "${{ inputs.environment }}" == "staging" ]]; then
             echo "ENV=staging" >> $GITHUB_OUTPUT
             echo "TAG=stg" >> $GITHUB_OUTPUT
           else
-            echo "ENV=production" >> $GITHUB_OUTPUT
+            echo "ENV=development" >> $GITHUB_OUTPUT
             echo "TAG=dev" >> $GITHUB_OUTPUT
           fi
 
