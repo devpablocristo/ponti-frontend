@@ -1,0 +1,84 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - main
+
+env:
+  PROJECT_ID: new-ponti-dev
+  REGION: us-central1
+  SERVICE_NAME: ponti-frontend
+  REGISTRY: us-central1-docker.pkg.dev
+  REPOSITORY: ponti-frontend-registry
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set environment based on branch
+        id: env
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "ENV=production" >> $GITHUB_OUTPUT
+            echo "TAG=prod" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == "staging" ]]; then
+            echo "ENV=staging" >> $GITHUB_OUTPUT
+            echo "TAG=stg" >> $GITHUB_OUTPUT
+          else
+            echo "ENV=production" >> $GITHUB_OUTPUT
+            echo "TAG=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }} .
+          docker tag ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }} \
+                     ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --project=${{ env.PROJECT_ID }} \
+            --region=${{ env.REGION }} \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }} \
+            --service-account=cloudrun-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+            --allow-unauthenticated \
+            --port=3000 \
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }}" \
+            --set-env-vars="BASE_LOGIN_API=${{ secrets.BASE_LOGIN_API }}" \
+            --set-env-vars="BASE_MANAGER_API=${{ secrets.BASE_MANAGER_API }}" \
+            --set-env-vars="X_API_KEY=${{ secrets.X_API_KEY }}"
+
+      - name: Show deployment URL
+        run: |
+          echo "✅ Deployed to: https://${{ env.SERVICE_NAME }}-1087442197188.${{ env.REGION }}.run.app"
