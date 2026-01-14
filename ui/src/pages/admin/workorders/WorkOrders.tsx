@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-
 import DataTable from "../../../components/Table/DataTable";
 import {
   Metrics,
@@ -174,16 +173,51 @@ export function WorkOrders() {
     error,
   } = useOrders();
 
-  const columns: Column<OrdersData>[] = React.useMemo(
-    () => [
+  const normalizeDate = (date: string) => {
+    if (!date) return "";
+    return date.includes("/")
+      ? date.split("/").reverse().join("-") // DD/MM/YYYY → YYYY-MM-DD
+      : date.split("T")[0]; // ISO → YYYY-MM-DD
+  };
+
+  // Filtros activos por columna (se usa dentro de useMemo de columns)
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+
+  const columns: Column<OrdersData>[] = React.useMemo(() => {
+    // 1. Iniciamos la "cascada" con todos los datos originales
+    let dataForNextColumn = orders;
+
+    // 2. Helper: Calcula opciones para la columna actual y filtra la data para la SIGUIENTE
+    const processCascade = (key: keyof OrdersData, customSort?: (a: any, b: any) => number) => {
+      // A. Extraemos las opciones usando la data que llegó hasta aquí
+      const options = [...new Set(dataForNextColumn.map((order) => order[key]))];
+
+      // B. Ordenamos las opciones (numérica o alfabéticamente)
+      if (customSort) {
+        options.sort(customSort);
+      } else {
+        options.sort();
+      }
+
+      // C. Si hay un filtro activo en ESTA columna, reducimos la data para las columnas que vienen a la derecha
+      if (columnsFilters[key]) {
+        dataForNextColumn = dataForNextColumn.filter((order) =>
+          String(order[key]).toLowerCase() === String(columnsFilters[key]).toLowerCase()
+        );
+      }
+
+      // D. Devolvemos siempre strings (DataTable espera string[])
+      return options.map(String);
+    };
+
+    return [
       {
         key: "number",
         header: "N°",
         filterable: true,
         filterType: "select",
-        filterOptions: [...new Set(orders.map((order) => order.number))].sort(
-          (a, b) => Number(a) - Number(b)
-        ),
+        // Usamos el helper con ordenamiento numérico
+        filterOptions: processCascade("number", (a, b) => Number(a) - Number(b)),
         render: (value, data) => (
           <strong className="text-blue-700">
             <a
@@ -202,45 +236,38 @@ export function WorkOrders() {
         header: "Proyecto",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.project_name)),
-        ].sort(),
+        // Usamos el helper (ordenamiento por defecto alfabético)
+        filterOptions: processCascade("project_name"),
       },
       {
         key: "field_name",
         header: "Campo",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.field_name)),
-        ].sort(),
+        // Para cuando llegue aquí, dataForNextColumn ya estará filtrada por N° y Proyecto
+        filterOptions: processCascade("field_name"),
       },
       {
         key: "lot_name",
         header: "Lote",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.lot_name)),
-        ].sort(),
+        filterOptions: processCascade("lot_name"),
       },
       {
         key: "date",
         header: "Fecha",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(
-            orders.map((order) => {
-              if (!order.date) return "";
-              const datePart = order.date.split("T")[0];
-              const [year, month, day] = datePart.split("-").map(Number);
-              const dayStr = String(day).padStart(2, "0");
-              const monthStr = String(month).padStart(2, "0");
-              return `${dayStr}/${monthStr}/${year}`;
-            })
-          ),
-        ],
+        // Mantenemos tu lógica de formateo de fecha
+        filterOptions: processCascade("date").map((dateString) => {
+          if (!dateString) return "";
+          const datePart = String(dateString).split("T")[0];
+          const [year, month, day] = datePart.split("-").map(Number);
+          const dayStr = String(day).padStart(2, "0");
+          const monthStr = String(month).padStart(2, "0");
+          return `${dayStr}/${monthStr}/${year}`;
+        }).filter((v, i, a) => a.indexOf(v) === i).sort(), // Limpiamos duplicados post-formato
         render: (dateString) => {
           if (!dateString) return "";
           const datePart = dateString.split("T")[0];
@@ -250,20 +277,16 @@ export function WorkOrders() {
           return `${dayStr}/${monthStr}/${year}`;
         },
       },
-
       {
         key: "crop_name",
         header: "Cultivo",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.crop_name)),
-        ].sort(),
+        filterOptions: processCascade("crop_name"),
         render: (crop) => (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${
-              cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-            }`}
+            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
           >
             {crop}
           </span>
@@ -274,14 +297,11 @@ export function WorkOrders() {
         header: "Labor",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.labor_category_name)),
-        ].sort(),
+        filterOptions: processCascade("labor_category_name"),
         render: (labor) => (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${
-              laborColors[labor] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-            }`}
+            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[labor] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
           >
             {labor}
           </span>
@@ -292,18 +312,14 @@ export function WorkOrders() {
         header: "Tipo/Clase",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.type_name)),
-        ].sort(),
+        filterOptions: processCascade("type_name"),
       },
       {
         key: "contractor",
         header: "Contratista",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.contractor)),
-        ].sort(),
+        filterOptions: processCascade("contractor"),
       },
       {
         key: "surface_ha",
@@ -315,9 +331,7 @@ export function WorkOrders() {
         header: "Insumo",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.supply_name)),
-        ].sort(),
+        filterOptions: processCascade("supply_name"),
       },
       {
         key: "consumption",
@@ -329,13 +343,14 @@ export function WorkOrders() {
         header: "Rubro",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.category_name)),
-        ].sort(),
+        filterOptions: processCascade("category_name"),
       },
-      { key: "dose", header: "Dosis", filterable: false, render: (value: any) => {
-          return <strong>{value}</strong>;
-        }},
+      {
+        key: "dose",
+        header: "Dosis",
+        filterable: false,
+        render: (value: any) => <strong>{value}</strong>
+      },
       {
         key: "cost_per_ha",
         header: "Costo USD/Ha",
@@ -355,9 +370,9 @@ export function WorkOrders() {
           return <>{isNaN(num) ? "-" : `u$${formatNumberAr(num)}`}</>;
         },
       },
-    ],
-    [orders]
-  );
+    ];
+    // IMPORTANTE: Ahora dependemos de 'orders' Y de 'columnsFilters'
+  }, [orders, columnsFilters]);
 
   const allColumnsMap = new Map();
   [...columns].forEach((col) => {
@@ -385,10 +400,8 @@ export function WorkOrders() {
     message: "",
     primaryButtonText: "",
     secondaryButtonText: "Cancelar",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
-
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (!error) return;
@@ -398,6 +411,40 @@ export function WorkOrders() {
   useEffect(() => {
     setColumnsToShow(columns);
   }, [columns]);
+
+  const filterHierarchy = {
+    project_name: ["field_name", "lot_name"],
+    field_name: ["lot_name"],
+  };
+
+  useEffect(() => {
+    Object.entries(filterHierarchy).forEach(([parent, children]) => {
+      if (!columnsFilters[parent]) return;
+
+      const validData = orders.filter(
+        (o) =>
+          String(o[parent as keyof OrdersData]).toLowerCase() ===
+          String(columnsFilters[parent]).toLowerCase()
+      );
+
+      children.forEach((child) => {
+        const validValues = new Set(
+          validData.map((o) => o[child as keyof OrdersData])
+        );
+
+        if (
+          columnsFilters[child] &&
+          !validValues.has(columnsFilters[child])
+        ) {
+          setColumnsFilters((prev) => {
+            const updated = { ...prev };
+            delete updated[child];
+            return updated;
+          });
+        }
+      });
+    });
+  }, [columnsFilters, orders]);
 
   useEffect(() => {
     if (!projectId && !selectedField) {
@@ -482,16 +529,24 @@ export function WorkOrders() {
   };
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      return Object.entries(columnsFilters).every(([key, value]) => {
-        if (!value) return true;
+  return orders.filter((order) => {
+    return Object.entries(columnsFilters).every(([key, value]) => {
+      if (!value) return true;
+
+      if (key === "date") {
         return (
-          String(order[key as keyof OrdersData]).toLowerCase() ===
-          String(value).toLowerCase()
+          normalizeDate(String(order.date)) ===
+          normalizeDate(String(value))
         );
-      });
+      }
+
+      return (
+        String(order[key as keyof OrdersData]).toLowerCase() ===
+        String(value).toLowerCase()
+      );
     });
-  }, [orders, columnsFilters]);
+  });
+}, [orders, columnsFilters]);
 
   const paginatedOrders = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -522,7 +577,7 @@ export function WorkOrders() {
     }
   };
 
-  // Handler para resetear página al aplicar filtros
+  // Handler para cambio de filtros (simple, sin lógica compleja)
   const handleFilterChange = (filters: Record<string, any>) => {
     setColumnsFilters(filters);
     setCurrentPage(1);
@@ -536,7 +591,7 @@ export function WorkOrders() {
           {
             label: "Exportar órdenes",
             icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             ,
             variant: "outlinePonti",
@@ -596,7 +651,7 @@ export function WorkOrders() {
           />
         )}
         <DataTable
-          key={orders.length}
+          key={`${projectId}-${selectedField?.id || 0}-${orders.length}`}
           data={paginatedOrders}
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
