@@ -196,9 +196,10 @@ const DataTable = <T,>({
             <tr>
               {expandableRowRender && <th className="w-8 p-2"></th>}
               {columns.map((column) => {
-                const isFilterActive =
-                  filters?.[String(column.key)] &&
-                  filters[String(column.key)] !== "";
+                const filterVal = filters?.[String(column.key)];
+                const isFilterActive = Array.isArray(filterVal)
+                  ? filterVal.length > 0
+                  : filterVal !== undefined && filterVal !== "";
                 const isSorted = sortKey === String(column.key);
                 return (
                   <th key={String(column.key)} className="p-4">
@@ -208,11 +209,10 @@ const DataTable = <T,>({
                         {column.sortable !== false && (
                           <button
                             onClick={() => toggleSort(String(column.key))}
-                            className={`mr-1 focus:outline-none ${
-                              isSorted
-                                ? "text-blue-600"
-                                : "text-gray-300 hover:text-blue-400"
-                            }`}
+                            className={`mr-1 focus:outline-none ${isSorted
+                              ? "text-blue-600"
+                              : "text-gray-300 hover:text-blue-400"
+                              }`}
                             title={
                               isSorted
                                 ? sortDirection === "asc"
@@ -243,15 +243,16 @@ const DataTable = <T,>({
                         >
                           <button
                             onClick={() => toggleFilter(String(column.key))}
-                            className={`ml-1 relative ${
-                              activeFilter === String(column.key) ||
+                            className={`ml-1 relative ${activeFilter === String(column.key) ||
                               isFilterActive
-                                ? "text-blue-500"
-                                : "text-gray-200 hover:text-blue-600"
-                            } focus:outline-none`}
+                              ? "text-blue-500"
+                              : "text-gray-200 hover:text-blue-600"
+                              } focus:outline-none`}
                             title={
                               isFilterActive
-                                ? `Filtro: ${filters[String(column.key)]}`
+                                ? Array.isArray(filterVal)
+                                  ? `Filtro: ${filterVal.join(", ")}`
+                                  : `Filtro: ${filterVal}`
                                 : "Filtrar"
                             }
                           >
@@ -267,36 +268,43 @@ const DataTable = <T,>({
 
                           {activeFilter === String(column.key) && (
                             <div
-                              className={`absolute z-[9999] ${
-                                columns.indexOf(column) === 0
-                                  ? "left-0"
-                                  : "right-0"
-                              } mt-2 w-48 bg-white rounded-md shadow-lg p-2 border border-gray-200`}
+                              className={`absolute z-[9999] ${columns.indexOf(column) === 0
+                                ? "left-0"
+                                : "right-0"
+                                } mt-2 w-48 bg-white rounded-md shadow-lg p-2 border border-gray-200`}
                             >
                               <div className="p-2">
                                 <label className="block text-gray-700 text-xs mb-1">
-                                  Filter
+                                  Filtro
                                 </label>
 
                                 {column.filterType === "select" &&
-                                column.filterOptions ? (
-                                  <select
-                                    className="border border-gray-300 rounded px-2 py-1 w-full text-xs text-gray-700"
-                                    value={filters?.[String(column.key)] || ""}
-                                    onChange={(e) =>
-                                      handleFilterChange(
-                                        String(column.key),
-                                        e.target.value
-                                      )
-                                    }
-                                  >
-                                    <option value="">All</option>
-                                    {column.filterOptions.map((option) => (
-                                      <option key={option} value={option}>
-                                        {option}
-                                      </option>
-                                    ))}
-                                  </select>
+                                  column.filterOptions ? (
+                                  <div className="max-h-48 overflow-auto pr-1 text-gray-700">
+                              {/*       <div className="text-xs text-gray-500 mb-1">Selecciona uno o varios</div> */}
+                                    {column.filterOptions.map((option) => {
+                                      const current = filters?.[String(column.key)];
+                                      const selected = Array.isArray(current)
+                                        ? current.includes(option)
+                                        : false;
+                                      return (
+                                        <label key={option} className="flex items-center gap-2 text-xs py-1 text-gray-700">
+                                          <input
+                                            type="checkbox"
+                                            checked={selected}
+                                            onChange={(e) => {
+                                              const prev = Array.isArray(current) ? current : [];
+                                              const next = e.target.checked
+                                                ? [...prev, option]
+                                                : prev.filter((v: string) => v !== option);
+                                              handleFilterChange(String(column.key), next);
+                                            }}
+                                          />
+                                          {option}
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
                                 ) : column.filterType === "date" ? (
                                   <input
                                     type="date"
@@ -372,9 +380,8 @@ const DataTable = <T,>({
                 <React.Fragment key={index}>
                   <tr
                     key={index}
-                    className={`border-t border-gray-100 text-gray-900 ${
-                      index % 2 === 0 ? "bg-white" : "bg-[#EBF5FF]"
-                    }`}
+                    className={`border-t border-gray-100 text-gray-900 ${index % 2 === 0 ? "bg-white" : "bg-[#EBF5FF]"
+                      }`}
                   >
                     {expandableRowRender && (
                       <td
@@ -385,9 +392,8 @@ const DataTable = <T,>({
                         }}
                       >
                         <svg
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            expandedRow === index ? "rotate-90" : ""
-                          }`}
+                          className={`w-4 h-4 transition-transform duration-200 ${expandedRow === index ? "rotate-90" : ""
+                            }`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -537,11 +543,10 @@ const DataTable = <T,>({
                   <li key={page}>
                     <button
                       onClick={() => pagination.onPageChange(page)}
-                      className={`flex items-center justify-center text-sm py-2 px-3 border ${
-                        pagination.page === page
-                          ? "bg-gray-200 text-black font-bold"
-                          : "bg-white text-gray-600 hover:bg-gray-100"
-                      }`}
+                      className={`flex items-center justify-center text-sm py-2 px-3 border ${pagination.page === page
+                        ? "bg-gray-200 text-black font-bold"
+                        : "bg-white text-gray-600 hover:bg-gray-100"
+                        }`}
                     >
                       {page}
                     </button>

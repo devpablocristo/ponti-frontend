@@ -35,8 +35,11 @@ const MOCK_WORKORDERS = [
   { 
     id: 101, 
     number: "OT-001",
+    customer_id: 1,
+    project_id: 1,
+    campaign_id: 3,
     project_name: "Proyecto 3",
-    field_name: "Campo listo 1",
+    field_name: "Campo 1",
     lot_name: "Lote 2",
     date: "2026-01-15",
     crop_name: "Trigo",
@@ -60,6 +63,9 @@ const MOCK_WORKORDERS = [
   { 
     id: 102, 
     number: "OT-002",
+    customer_id: 1,
+    project_id: 1,
+    campaign_id: 3,
     project_name: "Proyecto 2",
     field_name: "Campo 2",
     lot_name: "Lote 1",
@@ -85,8 +91,11 @@ const MOCK_WORKORDERS = [
   { 
     id: 98, 
     number: "OT-003",
+    customer_id: 1,
+    project_id: 1,
+    campaign_id: 3,
     project_name: "Proyecto 2",
-    field_name: "Campo listo 1",
+    field_name: "Campo 1",
     lot_name: "Lote 2",
     date: "2025-12-10",
     crop_name: "Trigo",
@@ -110,6 +119,9 @@ const MOCK_WORKORDERS = [
   { 
     id: 96, 
     number: "OT-005",
+    customer_id: 1,
+    project_id: 1,
+    campaign_id: 3,
     project_name: "Proyecto 1",
     field_name: "Campo 3",
     lot_name: "Lote 3",
@@ -135,6 +147,9 @@ const MOCK_WORKORDERS = [
   { 
     id: 97, 
     number: "OT-006",
+    customer_id: 1,
+    project_id: 1,
+    campaign_id: 3,
     project_name: "Proyecto 1",
     field_name: "Campo 3",
     lot_name: "Lote 4",
@@ -159,25 +174,43 @@ const MOCK_WORKORDERS = [
   }
 ];
 
+// Filter helpers so the mocks respond to the same filters the UI sends
+const filterWorkorders = (url: string) => {
+  const { searchParams } = new URL(url);
+  const matchParam = (wo: any, key: string) => {
+    const values = searchParams.getAll(key);
+    if (!values.length) return true;
+    return values.some((v) => String(wo[key]) === v);
+  };
+
+  return MOCK_WORKORDERS.filter((wo) =>
+    matchParam(wo, "customer_id") &&
+    matchParam(wo, "project_id") &&
+    matchParam(wo, "campaign_id") &&
+    matchParam(wo, "field_id") &&
+    matchParam(wo, "lot_id") &&
+    matchParam(wo, "type_id") &&
+    matchParam(wo, "status")
+  );
+};
+
 // Function to calculate metrics from workorders
-const calculateWorkorderMetrics = () => {
-  // Surface: sum all surface_ha from all workorders
-  const surface_ha = MOCK_WORKORDERS
-    .reduce((sum, wo) => sum + parseFloat(wo.surface_ha), 0);
+const calculateWorkorderMetrics = (data = MOCK_WORKORDERS) => {
+  // Surface: sum all surface_ha from filtered workorders
+  const surface_ha = data.reduce((sum, wo) => sum + parseFloat(wo.surface_ha), 0);
 
   // Liters: sum consumption where type is "Líquido"
-  const liters = MOCK_WORKORDERS
+  const liters = data
     .filter(wo => wo.type_name === "Líquido")
     .reduce((sum, wo) => sum + parseFloat(wo.consumption), 0);
 
   // Kilograms: sum consumption where type is NOT "Líquido"
-  const kilograms = MOCK_WORKORDERS
+  const kilograms = data
     .filter(wo => wo.type_name !== "Líquido")
     .reduce((sum, wo) => sum + parseFloat(wo.consumption), 0);
 
   // Direct cost: sum of all total_cost
-  const direct_cost = MOCK_WORKORDERS
-    .reduce((sum, wo) => sum + wo.total_cost, 0);
+  const direct_cost = data.reduce((sum, wo) => sum + wo.total_cost, 0);
 
   return {
     surface_ha,
@@ -290,7 +323,7 @@ export const handlers = [
     
     const projectData = {
       id: 1,
-      name: "Proyecto Alpha",
+      name: "Proyecto 1",
       customer: { id: 1, name: "Oscar Salomon" },
       campaign: { id: 3, name: "2026-2027" },
       managers: [{ name: "Manager 1" }],
@@ -322,10 +355,9 @@ export const handlers = [
       logRequest("GET", request.url);
       return new HttpResponse(
         JSON.stringify([
-          { id: 10, name: "Campo listo 1", status: "active", project_id: 1 },
+          { id: 10, name: "Campo 1", status: "active", project_id: 1 },
           { id: 11, name: "Campo 2", status: "active", project_id: 1 },
-          { id: 12, name: "Campo 3", status: "active", project_id: 1 },
-          { id: 13, name: "Campo 4", status: "active", project_id: 1 }
+          { id: 12, name: "Campo 3", status: "active", project_id: 1 }
         ]),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
@@ -343,7 +375,7 @@ export const handlers = [
           fields: [
             {
               id: 10,
-              name: "Campo listo 1",
+              name: "Campo 1",
               lease_type_id: 4,
               lease_type_percent: 21,
               lease_type_value: 200,
@@ -607,9 +639,9 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
             id: 20, 
             lot_name: "Lote 1",
             field_id: 10,
-            field_name: "Campo listo 1",
+            field_name: "Campo 1",
             project_id: 1,
-            project_name: "Proyecto Alpha",
+            project_name: "Proyecto 1",
             hectares: "12000",
             harvested_area: "0",
             crop_id: 3, 
@@ -631,9 +663,9 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
             id: 21, 
             lot_name: "Lote 2",
             field_id: 10,
-            field_name: "Campo listo 1",
+            field_name: "Campo 1",
             project_id: 1,
-            project_name: "Proyecto Alpha",
+            project_name: "Proyecto 2",
             hectares: "10323",
             harvested_area: "0",
             crop_id: 3, 
@@ -661,7 +693,8 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
   // 19. WORKORDERS METRICS (Debe ir ANTES del handler general)
   http.get(new RegExp(configService.baseManagerApi + "/workorders/metrics"), ({ request }) => {
     logRequest("GET", request.url);
-    const metrics = calculateWorkorderMetrics();
+    const filtered = filterWorkorders(request.url);
+    const metrics = calculateWorkorderMetrics(filtered);
     return new HttpResponse(
       JSON.stringify(metrics),
       { status: 200, headers: { "Content-Type": "application/json" } }
@@ -671,10 +704,11 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
   // 19B. WORKORDERS (Órdenes de trabajo)
   http.get(new RegExp(configService.baseManagerApi + "/workorders"), ({ request }) => {
     logRequest("GET", request.url);
+    const filtered = filterWorkorders(request.url);
     return new HttpResponse(
       JSON.stringify({
-        items: MOCK_WORKORDERS,
-        page_info: { total: MOCK_WORKORDERS.length }
+          items: filtered,
+          page_info: { total: filtered.length }
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -806,7 +840,7 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
           by_field: [
             {
               field_id: 10,
-              field_name: "Campo listo 1",
+              field_name: "Campo 1",
               hectares: "22323",
               crops: [
                 { crop_id: 3, crop_name: "Trigo", hectares: "22323", cost_usd: "500000" }

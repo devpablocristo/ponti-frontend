@@ -1,11 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 import DataTable from "../../../components/Table/DataTable";
-import {
-  Metrics,
-  OrdersData,
-  WorkorderData,
-} from "../../../hooks/useWorkOrders/types";
+import {Metrics, OrdersData, WorkorderData} from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -388,8 +384,14 @@ export function WorkOrders() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const { projectId, selectedProject, selectedField, filters } =
-    useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+  const {
+    projectId,
+    selectedProject,
+    selectedField,
+    selectedCustomer,
+    selectedCampaignId,
+    filters,
+  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -446,6 +448,15 @@ export function WorkOrders() {
     });
   }, [columnsFilters, orders]);
 
+  const buildQueryParams = () => {
+    const params: Record<string, string> = {};
+    if (selectedCustomer && selectedCustomer.id !== 0) params.customer_id = String(selectedCustomer.id);
+    if (projectId) params.project_id = String(projectId);
+    if (selectedCampaignId) params.campaign_id = String(selectedCampaignId);
+    if (selectedField && selectedField.id !== 0) params.field_id = String(selectedField.id);
+    return new URLSearchParams(params).toString();
+  };
+
   useEffect(() => {
     if (!projectId && !selectedField) {
       setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
@@ -454,25 +465,14 @@ export function WorkOrders() {
     setErrorMessage("");
     setVisibleColumns(columns.map((col) => col.key));
 
-    let query = "";
-    if (selectedField && selectedField.id !== 0) {
-      query += `field_id=${selectedField.id}`;
-    } else {
-      query += `project_id=${projectId}`;
-    }
-
+    const query = buildQueryParams();
     setCurrentPage(1);
     getOrders(query);
     getMetrics(query);
-  }, [projectId, selectedField]);
+  }, [projectId, selectedField, selectedCampaignId, selectedCustomer]);
 
   const handleOrderCreated = () => {
-    let query = "";
-    if (selectedField && selectedField.id !== 0) {
-      query += `field_id=${selectedField.id}`;
-    } else {
-      query += `project_id=${projectId}`;
-    }
+    const query = buildQueryParams();
     setCurrentPage(1);
     getOrders(query);
     getMetrics(query);
@@ -529,29 +529,66 @@ export function WorkOrders() {
   };
 
   const filteredOrders = useMemo(() => {
-  return orders.filter((order) => {
-    return Object.entries(columnsFilters).every(([key, value]) => {
-      if (!value) return true;
+    return orders.filter((order) => {
+      return Object.entries(columnsFilters).every(([key, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-      if (key === "date") {
-        return (
-          normalizeDate(String(order.date)) ===
-          normalizeDate(String(value))
-        );
-      }
+        if (key === "date") {
+          const orderDate = normalizeDate(String(order.date));
+          if (Array.isArray(value)) {
+            return value.some((v) => orderDate === normalizeDate(String(v)));
+          }
+          return orderDate === normalizeDate(String(value));
+        }
 
-      return (
-        String(order[key as keyof OrdersData]).toLowerCase() ===
-        String(value).toLowerCase()
-      );
+        const orderVal = String(order[key as keyof OrdersData]).toLowerCase();
+        if (Array.isArray(value)) {
+          const values = value.map((v) => String(v).toLowerCase());
+          return values.includes(orderVal);
+        }
+        return orderVal === String(value).toLowerCase();
+      });
     });
-  });
-}, [orders, columnsFilters]);
+  }, [orders, columnsFilters]);
 
   const paginatedOrders = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredOrders.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredOrders, currentPage, itemsPerPage]);
+
+  // Métricas derivadas en tiempo real según los filtros de la tabla
+  const derivedMetrics: Metrics = useMemo(() => {
+    const DIRECT_CATEGORIES = ["SEED", "SUPPLIES", "FERTILIZERS", "LABORS"];
+
+    const toNumber = (v: any) => {
+      const n = Number(v);
+      return isNaN(n) ? 0 : n;
+    };
+
+    // Si no hay filtros de columnas, usamos directamente lo que trae el backend
+    const hasColumnFilters = Object.values(columnsFilters).some((v) =>
+      Array.isArray(v) ? v.length > 0 : Boolean(v)
+    );
+    if (!hasColumnFilters) return metrics;
+
+    const surface_ha = filteredOrders.reduce((sum, o) => sum + toNumber(o.surface_ha), 0);
+
+    const directOrders = filteredOrders.filter((o) => DIRECT_CATEGORIES.includes(String(o.category_name)));
+    const hasDirectCategory = directOrders.length > 0;
+    const direct_cost = (hasDirectCategory ? directOrders : filteredOrders)
+      .reduce((sum, o) => sum + toNumber(o.total_cost), 0);
+
+    // Para filtros de tabla, dejamos litros/kilos en 0 hasta que el backend entregue los desgloses necesarios
+    const liters = 0;
+    const kilograms = 0;
+
+    return {
+      surface_ha,
+      liters,
+      kilograms,
+      direct_cost,
+    };
+  }, [filteredOrders, columnsFilters, metrics]);
 
   const handleExport = async () => {
     if (!projectId) return;
@@ -621,7 +658,8 @@ export function WorkOrders() {
       )}
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
-          <OrdersIndicators metrics={metrics} processing={processingMetrics} />
+          {/* Métricas dinámicas que reflejan filtros de la tabla */}
+          <OrdersIndicators metrics={derivedMetrics} processing={processingMetrics} />
         </div>
       )}
       <div className="mt-4 relative">
