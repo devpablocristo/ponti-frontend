@@ -197,9 +197,21 @@ export function WorkOrders() {
 
       // C. Si hay un filtro activo en ESTA columna, reducimos la data para las columnas que vienen a la derecha
       if (columnsFilters[key]) {
-        dataForNextColumn = dataForNextColumn.filter((order) =>
-          String(order[key]).toLowerCase() === String(columnsFilters[key]).toLowerCase()
-        );
+        const filterValue = columnsFilters[key];
+        if (Array.isArray(filterValue) && filterValue.length > 0) {
+          // Filtro multi-selección
+          dataForNextColumn = dataForNextColumn.filter((order) =>
+            filterValue.some(
+              (val) =>
+                String(order[key]).toLowerCase() === String(val).toLowerCase()
+            )
+          );
+        } else if (!Array.isArray(filterValue)) {
+          // Filtro de valor único
+          dataForNextColumn = dataForNextColumn.filter((order) =>
+            String(order[key]).toLowerCase() === String(filterValue).toLowerCase()
+          );
+        }
       }
 
       // D. Devolvemos siempre strings (DataTable espera string[])
@@ -423,26 +435,53 @@ export function WorkOrders() {
     Object.entries(filterHierarchy).forEach(([parent, children]) => {
       if (!columnsFilters[parent]) return;
 
-      const validData = orders.filter(
-        (o) =>
-          String(o[parent as keyof OrdersData]).toLowerCase() ===
-          String(columnsFilters[parent]).toLowerCase()
-      );
+      const parentFilter = columnsFilters[parent];
+      const validData = orders.filter((o) => {
+        const orderValue = String(o[parent as keyof OrdersData]).toLowerCase();
+        if (Array.isArray(parentFilter)) {
+          // Si el filtro padre es un array, verificar si el valor está incluido
+          return parentFilter.some(
+            (val) => String(val).toLowerCase() === orderValue
+          );
+        } else {
+          // Si es un valor único
+          return orderValue === String(parentFilter).toLowerCase();
+        }
+      });
 
       children.forEach((child) => {
         const validValues = new Set(
           validData.map((o) => o[child as keyof OrdersData])
         );
 
-        if (
-          columnsFilters[child] &&
-          !validValues.has(columnsFilters[child])
-        ) {
-          setColumnsFilters((prev) => {
-            const updated = { ...prev };
-            delete updated[child];
-            return updated;
-          });
+        const childFilter = columnsFilters[child];
+        if (childFilter) {
+          if (Array.isArray(childFilter)) {
+            // Si el filtro hijo es un array, verificar si algún valor es inválido
+            const validChildValues = childFilter.filter((val) =>
+              validValues.has(val)
+            );
+            if (validChildValues.length !== childFilter.length) {
+              setColumnsFilters((prev) => {
+                const updated = { ...prev };
+                if (validChildValues.length > 0) {
+                  updated[child] = validChildValues;
+                } else {
+                  delete updated[child];
+                }
+                return updated;
+              });
+            }
+          } else {
+            // Si es un valor único
+            if (!validValues.has(childFilter)) {
+              setColumnsFilters((prev) => {
+                const updated = { ...prev };
+                delete updated[child];
+                return updated;
+              });
+            }
+          }
         }
       });
     });
@@ -558,37 +597,95 @@ export function WorkOrders() {
 
   // Métricas derivadas en tiempo real según los filtros de la tabla
   const derivedMetrics: Metrics = useMemo(() => {
-    const DIRECT_CATEGORIES = ["SEED", "SUPPLIES", "FERTILIZERS", "LABORS"];
-
     const toNumber = (v: any) => {
       const n = Number(v);
       return isNaN(n) ? 0 : n;
     };
 
-    // Si no hay filtros de columnas, usamos directamente lo que trae el backend
-    const hasColumnFilters = Object.values(columnsFilters).some((v) =>
-      Array.isArray(v) ? v.length > 0 : Boolean(v)
-    );
-    if (!hasColumnFilters) return metrics;
+    let surface_ha = 0;
+    let totalLiters = 0;
+    let totalKilograms = 0;
+    let direct_cost = 0;
 
-    const surface_ha = filteredOrders.reduce((sum, o) => sum + toNumber(o.surface_ha), 0);
-
-    const directOrders = filteredOrders.filter((o) => DIRECT_CATEGORIES.includes(String(o.category_name)));
-    const hasDirectCategory = directOrders.length > 0;
-    const direct_cost = (hasDirectCategory ? directOrders : filteredOrders)
-      .reduce((sum, o) => sum + toNumber(o.total_cost), 0);
-
-    // Para filtros de tabla, dejamos litros/kilos en 0 hasta que el backend entregue los desgloses necesarios
-    const liters = 0;
-    const kilograms = 0;
+    filteredOrders.forEach((order) => {
+      // Sumar superficie
+      surface_ha += toNumber(order.surface_ha);
+      
+      // Extraer valor numérico del consumo
+      const consumption = String(order.consumption || "").trim();
+      const numberMatch = consumption.match(/[\d.]+/);
+      const consumptionValue = numberMatch ? parseFloat(numberMatch[0]) || 0 : 0;
+      
+      // Detectar unidad según estructura real
+      const upperConsumption = consumption.toUpperCase();
+      const supplyNameUpper = String(order.supply_name || "").toUpperCase();
+      const categoryNameUpper = String(order.category_name || "").toUpperCase();
+      const typeNameUpper = String(order.type_name || "").toUpperCase();
+      
+      let isLiter = false;
+      let isKilo = false;
+      
+      // 1. Si el consumo tiene unidad explícita
+      if (upperConsumption.includes("L") || upperConsumption.includes("LT")) {
+        isLiter = true;
+      }
+      else if (upperConsumption.includes("KG") || upperConsumption.includes("K")) {
+        isKilo = true;
+      }
+      // 2. Por Tipo/Clase (Agroquímicos = Litros, Semilla = Kg)
+      else if (typeNameUpper.includes("AGROQUÍMICO") || typeNameUpper.includes("AGROQUIMICO")) {
+        isLiter = true;
+      }
+      else if (typeNameUpper.includes("SEMILLA")) {
+        isKilo = true;
+      }
+      // 3. Por Rubro
+      // LITROS: Herbicidas, Coadyuvantes, Curasemillas, Insecticidas, Fungicidas
+      else if (categoryNameUpper.includes("HERBICIDA") || 
+               categoryNameUpper.includes("COADYUVANTE") || 
+               categoryNameUpper.includes("CURASEMILLA") || 
+               categoryNameUpper.includes("INSECTICIDA") || 
+               categoryNameUpper.includes("FUNGICIDA")) {
+        isLiter = true;
+      }
+      // KILOS: Semilla, Fertilizantes
+      else if (categoryNameUpper.includes("SEMILLA") || categoryNameUpper.includes("FERTILIZANTE")) {
+        isKilo = true;
+      }
+      // 4. Por nombre del insumo
+      else if (supplyNameUpper.includes("HERBICIDA") || 
+               supplyNameUpper.includes("ACEITE") || 
+               supplyNameUpper.includes("INSECTICIDA") || 
+               supplyNameUpper.includes("FUNGICIDA") || 
+               supplyNameUpper.includes("LITRO")) {
+        isLiter = true;
+      }
+      else if (supplyNameUpper.includes("SEMILLA") || 
+               supplyNameUpper.includes("FERTILIZANTE") || 
+               supplyNameUpper.includes("KILO")) {
+        isKilo = true;
+      }
+      // Nota: "Otros Insumos" no se detecta (puede ser L o Kg)
+      // Labores (Siembra, Pulverización, Riego, Cosecha, Otras Labores) no tienen unidades
+      
+      // Sumar al total correspondiente
+      if (isLiter) {
+        totalLiters += consumptionValue;
+      } else if (isKilo) {
+        totalKilograms += consumptionValue;
+      }
+      
+      // Sumar todos los costos
+      direct_cost += toNumber(order.total_cost);
+    });
 
     return {
       surface_ha,
-      liters,
-      kilograms,
+      liters: totalLiters,
+      kilograms: totalKilograms,
       direct_cost,
     };
-  }, [filteredOrders, columnsFilters, metrics]);
+  }, [filteredOrders, columnsFilters]);
 
   const handleExport = async () => {
     if (!projectId) return;
