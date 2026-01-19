@@ -161,7 +161,6 @@ export function WorkOrders() {
     getOrders,
     deleteOrder,
     getMetrics,
-    metrics,
     processingMetrics,
     errorMetrics,
     orders,
