@@ -26,6 +26,10 @@ env:
   IMAGE_TAG_PROD: ${{ vars.IMAGE_TAG_PROD }}
   WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
   WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
+  # Variables sensibles (Settings → Secrets and variables → Actions)
+  BASE_LOGIN_API: ${{ secrets.BASE_LOGIN_API }}
+  BASE_MANAGER_API: ${{ secrets.BASE_MANAGER_API }}
+  X_API_KEY: ${{ secrets.X_API_KEY }}
 
 jobs:
   deploy:
@@ -46,7 +50,7 @@ jobs:
       - name: Validate required variables
         run: |
           missing=()
-          for var in GCP_PROJECT_ID GCP_REGION SERVICE_NAME IMAGE_NAME ARTIFACT_REGISTRY IMAGE_TAG_DEV IMAGE_TAG_PROD WIF_PROVIDER WIF_SERVICE_ACCOUNT; do
+          for var in GCP_PROJECT_ID GCP_REGION SERVICE_NAME IMAGE_NAME ARTIFACT_REGISTRY IMAGE_TAG_DEV IMAGE_TAG_PROD WIF_PROVIDER WIF_SERVICE_ACCOUNT BASE_LOGIN_API BASE_MANAGER_API X_API_KEY; do
             if [[ -z "${!var}" ]]; then
               missing+=("$var")
             fi
@@ -121,7 +125,10 @@ jobs:
             --region="${GCP_REGION}" \
             --image="${IMAGE_URI}:${{ steps.vars.outputs.IMAGE_TAG }}" \
             --allow-unauthenticated \
-            --set-env-vars="NODE_ENV=${{ steps.vars.outputs.DEPLOY_ENV }}"
+            --set-env-vars="NODE_ENV=${{ steps.vars.outputs.DEPLOY_ENV }}" \
+            --set-env-vars="BASE_LOGIN_API=${BASE_LOGIN_API}" \
+            --set-env-vars="BASE_MANAGER_API=${BASE_MANAGER_API}" \
+            --set-env-vars="X_API_KEY=${X_API_KEY}"
         shell: bash
 
       # Confirmación simple de deploy
