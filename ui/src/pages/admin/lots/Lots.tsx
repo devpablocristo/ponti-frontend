@@ -695,6 +695,12 @@ export function Lots() {
     seasons,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
+    // Filtros globales de workspace y limpiar filtros al cambiar de cliente
+    useEffect(() => {
+      setColumnsFilters({});
+      setCurrentPage(1);
+    }, [selectedCustomer]);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [message, setMessage] = useState("");
 
