@@ -177,7 +177,6 @@ export function WorkOrders() {
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
-
   // Helper: filtra las órdenes según todos los filtros activos
   const filterOrders = (data: OrdersData[], filters: Record<string, any>) => {
     return data.filter((order) => {
@@ -412,6 +411,12 @@ export function WorkOrders() {
     selectedCampaignId,
     filters,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+
+  // Filtros globales de workspace y limpiar filtros al cambiar de cliente
+  useEffect(() => {
+    setColumnsFilters({});
+    setCurrentPage(1);
+  }, [selectedCustomer]);
 
   const [errorMessage, setErrorMessage] = useState("");
 
