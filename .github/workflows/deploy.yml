@@ -1,96 +1,138 @@
-name: Deploy to Cloud Run
+name: Deploy Frontend to Cloud Run
 
 on:
+  # Deploy automático por rama
+  push:
+    branches:
+      - develop
+      - main
+  # Deploy manual por rama (siempre a dev)
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Rama a deployar'
+        description: "Rama a deployar (siempre a dev)"
         required: true
         type: string
-        default: 'main'
-      environment:
-        description: 'Ambiente a deployar'
-        required: true
-        type: choice
-        options:
-          - dev
-          - staging
-          - production
+        default: "develop"
 
 env:
-  PROJECT_ID: new-ponti-dev
-  REGION: us-central1
-  SERVICE_NAME: ponti-frontend
-  REGISTRY: us-central1-docker.pkg.dev
-  REPOSITORY: ponti-frontend-registry
+  # Variables configurables desde GitHub Actions (Settings → Variables)
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+  ARTIFACT_REGISTRY: ${{ vars.ARTIFACT_REGISTRY }}
+  IMAGE_TAG_DEV: ${{ vars.IMAGE_TAG_DEV }}
+  IMAGE_TAG_PROD: ${{ vars.IMAGE_TAG_PROD }}
+  WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+  WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
+  # Variables sensibles (Settings → Secrets and variables → Actions)
+  BASE_LOGIN_API: ${{ secrets.BASE_LOGIN_API }}
+  BASE_MANAGER_API: ${{ secrets.BASE_MANAGER_API }}
+  X_API_KEY: ${{ secrets.X_API_KEY }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       id-token: write
 
     steps:
+      # Checkout con rama seleccionada (o la rama del push)
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || github.ref_name }}
 
-      - name: Set environment based on selection
-        id: env
+      # Validación de variables requeridas
+      - name: Validate required variables
         run: |
-          if [[ "${{ inputs.environment }}" == "production" ]]; then
-            echo "ENV=production" >> $GITHUB_OUTPUT
-            echo "TAG=prod" >> $GITHUB_OUTPUT
-          elif [[ "${{ inputs.environment }}" == "staging" ]]; then
-            echo "ENV=staging" >> $GITHUB_OUTPUT
-            echo "TAG=stg" >> $GITHUB_OUTPUT
-          else
-            echo "ENV=development" >> $GITHUB_OUTPUT
-            echo "TAG=dev" >> $GITHUB_OUTPUT
+          missing=()
+          for var in GCP_PROJECT_ID GCP_REGION SERVICE_NAME IMAGE_NAME ARTIFACT_REGISTRY IMAGE_TAG_DEV IMAGE_TAG_PROD WIF_PROVIDER WIF_SERVICE_ACCOUNT BASE_LOGIN_API BASE_MANAGER_API X_API_KEY; do
+            if [[ -z "${!var}" ]]; then
+              missing+=("$var")
+            fi
+          done
+          if (( ${#missing[@]} )); then
+            echo "Missing required variables: ${missing[*]}"
+            exit 1
           fi
+        shell: bash
 
-      - name: Authenticate to Google Cloud
+      # Definición del ambiente y tag según rama
+      - name: Set deploy environment
+        id: vars
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "DEPLOY_ENV=dev" >> "$GITHUB_OUTPUT"
+            echo "IMAGE_TAG=${IMAGE_TAG_DEV}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "DEPLOY_ENV=prod" >> "$GITHUB_OUTPUT"
+            echo "IMAGE_TAG=${IMAGE_TAG_PROD}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+            echo "DEPLOY_ENV=dev" >> "$GITHUB_OUTPUT"
+            echo "IMAGE_TAG=${IMAGE_TAG_DEV}" >> "$GITHUB_OUTPUT"
+          else
+            echo "Unsupported branch: ${{ github.ref_name }}"
+            exit 1
+          fi
+        shell: bash
+
+      # Autenticación con Workload Identity Federation (sin claves)
+      - name: Authenticate to Google Cloud (WIF)
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+          token_format: "access_token"
 
+      # Configuración de gcloud
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
 
+      # Login de Docker en Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: |
-          gcloud auth configure-docker ${{ env.REGISTRY }} --quiet
+          gcloud auth configure-docker "${ARTIFACT_REGISTRY}" --quiet
+        shell: bash
 
+      # Build del frontend en contenedor (Dockerfile del repo)
       - name: Build Docker image
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }} .
-          docker tag ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }} \
-                     ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
+          docker build -t "${IMAGE_URI}:${{ steps.vars.outputs.IMAGE_TAG }}" .
+          docker tag "${IMAGE_URI}:${{ steps.vars.outputs.IMAGE_TAG }}" "${IMAGE_URI}:${GITHUB_SHA}"
+        shell: bash
 
+      # Push de la imagen
       - name: Push Docker image
         run: |
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}
-          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
+          docker push "${IMAGE_URI}:${{ steps.vars.outputs.IMAGE_TAG }}"
+          docker push "${IMAGE_URI}:${GITHUB_SHA}"
+        shell: bash
 
+      # Deploy a Cloud Run
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --project=${{ env.PROJECT_ID }} \
-            --region=${{ env.REGION }} \
-            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }} \
-            --service-account=cloudrun-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com \
+          IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
+          gcloud run deploy "${SERVICE_NAME}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --image="${IMAGE_URI}:${{ steps.vars.outputs.IMAGE_TAG }}" \
             --allow-unauthenticated \
-            --port=3000 \
-            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }}" \
-            --set-env-vars="BASE_LOGIN_API=${{ secrets.BASE_LOGIN_API }}" \
-            --set-env-vars="BASE_MANAGER_API=${{ secrets.BASE_MANAGER_API }}" \
-            --set-env-vars="X_API_KEY=${{ secrets.X_API_KEY }}"
+            --set-env-vars="NODE_ENV=${{ steps.vars.outputs.DEPLOY_ENV }}" \
+            --set-env-vars="BASE_LOGIN_API=${BASE_LOGIN_API}" \
+            --set-env-vars="BASE_MANAGER_API=${BASE_MANAGER_API}" \
+            --set-env-vars="X_API_KEY=${X_API_KEY}"
+        shell: bash
 
-      - name: Show deployment URL
+      # Confirmación simple de deploy
+      - name: Show deployment info
         run: |
-          echo "✅ Deployed to: https://${{ env.SERVICE_NAME }}-1087442197188.${{ env.REGION }}.run.app"
+          echo "✅ Deploy completado para ${SERVICE_NAME} en ${GCP_REGION}"
+        shell: bash
