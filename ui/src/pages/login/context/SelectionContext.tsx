@@ -84,9 +84,12 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.removeItem("campaign");
     } else {
       localStorage.setItem("campaign", JSON.stringify(campaign));
-      localStorage.setItem("project_id", campaign.project_id);
+      // Guardar el project_id del proyecto seleccionado
+      if (project?.id) {
+        localStorage.setItem("project_id", JSON.stringify(project.id));
+      }
     }
-  }, [campaign]);
+  }, [campaign, project]);
 
   useEffect(() => {
     if (field === undefined || field === null) {

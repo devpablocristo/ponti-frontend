@@ -312,10 +312,10 @@ export const useWorkspaceFilters = (
       placeholder: "Seleccione campo",
       options:
         selectedCustomer && selectedProject
-          ? [{ id: 0, name: "Todos los campos" }, ...(fields || [])]
+          ? [{ id: 0, name: "Todos los campos" }, ...(Array.isArray(fields) ? fields : [])]
           : [],
       total: selectedCustomer ? totalFields : 0,
-      value: selectedField?.id,
+      value: selectedField?.id ?? 0,
       onChange: () => {},
       setData: setSelectedField,
       disabled:
