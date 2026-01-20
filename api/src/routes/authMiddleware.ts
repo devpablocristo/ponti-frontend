@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 //import redis from "../clients/redisClient";
 
 import { ApiClient } from "../clients/ApiClient";
@@ -33,19 +34,36 @@ export const verifyToken = async (
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader?.split(" ")[1];
-    if (!token) {
+    
+    if (!token || token.trim() === "") {
+      console.log("Token vacío o no proporcionado. Header:", authHeader);
       res.status(401).json({ message: "No autorizado" });
       return;
     }
 
-    // const redisKey = `session:${token}`;
-    // const cachedUser = await redis.get(redisKey);
+    console.log("Token recibido (primeros 20 chars):", token.substring(0, 20));
 
-    // if (cachedUser) {
-    //   //req.user = JSON.parse(cachedUser);
-    //   return next();
-    // }
+    // En desarrollo, verificar el token localmente
+    const secretKey = process.env.JWT_SECRET;
+    if (secretKey && process.env.NODE_ENV === "development") {
+      try {
+        const decoded = jwt.verify(token, secretKey) as any;
+        req.user = {
+          status: "active",
+          userID: decoded.id,
+          rolID: decoded.rolId,
+          hash: decoded.hash || "",
+          exp: decoded.exp,
+        };
+        next();
+        return;
+      } catch (jwtError: any) {
+        console.error("Error validando JWT:", jwtError.message);
+        // Continuar con validación externa si JWT falla
+      }
+    }
 
+    // Fallback: validar contra API externa
     try {
       const headers = { Authorization: `Bearer ${token}` };
       const { data, success } = await apiClient.get<UserData>(
