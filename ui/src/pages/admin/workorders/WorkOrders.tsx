@@ -175,56 +175,59 @@ export function WorkOrders() {
       : date.split("T")[0]; // ISO → YYYY-MM-DD
   };
 
-  // Filtros activos por columna (se usa dentro de useMemo de columns)
+  // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
 
-  const columns: Column<OrdersData>[] = React.useMemo(() => {
-    // 1. Iniciamos la "cascada" con todos los datos originales
-    let dataForNextColumn = orders;
+  // Helper: filtra las órdenes según todos los filtros activos
+  const filterOrders = (data: OrdersData[], filters: Record<string, any>) => {
+    return data.filter((order) => {
+      return Object.entries(filters).every(([key, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-    // 2. Helper: Calcula opciones para la columna actual y filtra la data para la SIGUIENTE
-    const processCascade = (key: keyof OrdersData, customSort?: (a: any, b: any) => number) => {
-      // A. Extraemos las opciones usando la data que llegó hasta aquí
-      const options = [...new Set(dataForNextColumn.map((order) => order[key]))];
-
-      // B. Ordenamos las opciones (numérica o alfabéticamente)
-      if (customSort) {
-        options.sort(customSort);
-      } else {
-        options.sort();
-      }
-
-      // C. Si hay un filtro activo en ESTA columna, reducimos la data para las columnas que vienen a la derecha
-      if (columnsFilters[key]) {
-        const filterValue = columnsFilters[key];
-        if (Array.isArray(filterValue) && filterValue.length > 0) {
-          // Filtro multi-selección
-          dataForNextColumn = dataForNextColumn.filter((order) =>
-            filterValue.some(
-              (val) =>
-                String(order[key]).toLowerCase() === String(val).toLowerCase()
-            )
-          );
-        } else if (!Array.isArray(filterValue)) {
-          // Filtro de valor único
-          dataForNextColumn = dataForNextColumn.filter((order) =>
-            String(order[key]).toLowerCase() === String(filterValue).toLowerCase()
-          );
+        if (key === "date") {
+          const orderDate = normalizeDate(String(order.date));
+          if (Array.isArray(value)) {
+            return value.some((v) => orderDate === normalizeDate(String(v)));
+          }
+          return orderDate === normalizeDate(String(value));
         }
-      }
 
-      // D. Devolvemos siempre strings (DataTable espera string[])
-      return options.map(String);
-    };
+        const orderVal = String(order[key as keyof OrdersData]).toLowerCase();
+        if (Array.isArray(value)) {
+          const values = value.map((v) => String(v).toLowerCase());
+          return values.includes(orderVal);
+        }
+        return orderVal === String(value).toLowerCase();
+      });
+    });
+  };
 
+  // Helper: obtiene las opciones válidas para una columna, considerando todos los filtros excepto el de esa columna
+  const getFilterOptionsForColumn = (
+    key: keyof OrdersData,
+    customSort?: (a: any, b: any) => number
+  ) => {
+    // Aplica todos los filtros excepto el de la columna actual
+    const filtersExceptCurrent = { ...columnsFilters };
+    delete filtersExceptCurrent[key];
+    const filtered = filterOrders(orders, filtersExceptCurrent);
+    let options = [...new Set(filtered.map((order) => order[key]))];
+    if (customSort) {
+      options.sort(customSort);
+    } else {
+      options.sort();
+    }
+    return options.map(String);
+  };
+
+  const columns: Column<OrdersData>[] = React.useMemo(() => {
     return [
       {
         key: "number",
         header: "N°",
         filterable: true,
         filterType: "select",
-        // Usamos el helper con ordenamiento numérico
-        filterOptions: processCascade("number", (a, b) => Number(a) - Number(b)),
+        filterOptions: getFilterOptionsForColumn("number", (a, b) => Number(a) - Number(b)),
         render: (value, data) => (
           <strong className="text-blue-700">
             <a
@@ -243,38 +246,38 @@ export function WorkOrders() {
         header: "Proyecto",
         filterable: true,
         filterType: "select",
-        // Usamos el helper (ordenamiento por defecto alfabético)
-        filterOptions: processCascade("project_name"),
+        filterOptions: getFilterOptionsForColumn("project_name"),
       },
       {
         key: "field_name",
         header: "Campo",
         filterable: true,
         filterType: "select",
-        // Para cuando llegue aquí, dataForNextColumn ya estará filtrada por N° y Proyecto
-        filterOptions: processCascade("field_name"),
+        filterOptions: getFilterOptionsForColumn("field_name"),
       },
       {
         key: "lot_name",
         header: "Lote",
         filterable: true,
         filterType: "select",
-        filterOptions: processCascade("lot_name"),
+        filterOptions: getFilterOptionsForColumn("lot_name"),
       },
       {
         key: "date",
         header: "Fecha",
         filterable: true,
         filterType: "select",
-        // Mantenemos tu lógica de formateo de fecha
-        filterOptions: processCascade("date").map((dateString) => {
-          if (!dateString) return "";
-          const datePart = String(dateString).split("T")[0];
-          const [year, month, day] = datePart.split("-").map(Number);
-          const dayStr = String(day).padStart(2, "0");
-          const monthStr = String(month).padStart(2, "0");
-          return `${dayStr}/${monthStr}/${year}`;
-        }).filter((v, i, a) => a.indexOf(v) === i).sort(), // Limpiamos duplicados post-formato
+        filterOptions: getFilterOptionsForColumn("date")
+          .map((dateString) => {
+            if (!dateString) return "";
+            const datePart = String(dateString).split("T")[0];
+            const [year, month, day] = datePart.split("-").map(Number);
+            const dayStr = String(day).padStart(2, "0");
+            const monthStr = String(month).padStart(2, "0");
+            return `${dayStr}/${monthStr}/${year}`;
+          })
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .sort(),
         render: (dateString) => {
           if (!dateString) return "";
           const datePart = dateString.split("T")[0];
@@ -289,7 +292,7 @@ export function WorkOrders() {
         header: "Cultivo",
         filterable: true,
         filterType: "select",
-        filterOptions: processCascade("crop_name"),
+        filterOptions: getFilterOptionsForColumn("crop_name"),
         render: (crop) => (
           <span
             className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
@@ -304,7 +307,7 @@ export function WorkOrders() {
         header: "Labor",
         filterable: true,
         filterType: "select",
-        filterOptions: processCascade("labor_category_name"),
+        filterOptions: getFilterOptionsForColumn("labor_category_name"),
         render: (labor) => (
           <span
             className={`px-2 py-1 text-[14px] rounded-md ${laborColors[labor] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
@@ -319,43 +322,49 @@ export function WorkOrders() {
         header: "Tipo/Clase",
         filterable: true,
         filterType: "select",
-        filterOptions: processCascade("type_name"),
+        filterOptions: getFilterOptionsForColumn("type_name"),
       },
       {
         key: "contractor",
         header: "Contratista",
         filterable: true,
         filterType: "select",
-        filterOptions: processCascade("contractor"),
+        filterOptions: getFilterOptionsForColumn("contractor"),
       },
       {
         key: "surface_ha",
         header: "Superficie",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("surface_ha"),
       },
       {
         key: "supply_name",
         header: "Insumo",
         filterable: true,
         filterType: "select",
-        filterOptions: processCascade("supply_name"),
+        filterOptions: getFilterOptionsForColumn("supply_name"),
       },
       {
         key: "consumption",
         header: "Consumo",
-        filterable: false,
+        filterable: true,
+        filterType: "select", // Permite filtrar por texto o número
+        filterOptions: getFilterOptionsForColumn("consumption"),
       },
       {
         key: "category_name",
         header: "Rubro",
         filterable: true,
         filterType: "select",
-        filterOptions: processCascade("category_name"),
+        filterOptions: getFilterOptionsForColumn("category_name"),
       },
       {
         key: "dose",
         header: "Dosis",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("dose"),
         render: (value: any) => <strong>{value}</strong>
       },
       {
