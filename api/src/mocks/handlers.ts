@@ -333,8 +333,8 @@ export const handlers = [
         { id: 3, name: "Carla", percentage: "33" }
       ],
       fields: [ 
-        { id: 10, name: "Campo 1" }, 
-        { id: 11, name: "Campo 2" } 
+        { id: 10, name: "campo alegre" }, 
+        { id: 12, name: "SJDD" } 
       ]
     };
     
@@ -355,9 +355,8 @@ export const handlers = [
       logRequest("GET", request.url);
       return new HttpResponse(
         JSON.stringify([
-          { id: 10, name: "Campo 1", status: "active", project_id: 1 },
-          { id: 11, name: "Campo 2", status: "active", project_id: 1 },
-          { id: 12, name: "Campo 3", status: "active", project_id: 1 }
+          { id: 10, name: "campo alegre", status: "active", project_id: 1 },
+          { id: 12, name: "SJDD", status: "active", project_id: 1 }
         ]),
         { status: 200, headers: { "Content-Type": "application/json" } }
       );
@@ -375,11 +374,27 @@ export const handlers = [
           fields: [
             {
               id: 10,
-              name: "Campo 1",
+              name: "campo alegre",
               lease_type_id: 4,
               lease_type_percent: 21,
               lease_type_value: 200,
-              lots: [ { id: 20, name: "Lote 1", hectares: 22323 } ]
+              lots: [ 
+                { id: 20, name: "ALFONZA", hectares: 17 },
+                { id: 21, name: "REDONDA 2", hectares: 39 }
+              ]
+            },
+            {
+              id: 12,
+              name: "SJDD",
+              lease_type_id: 4,
+              lease_type_percent: 21,
+              lease_type_value: 200,
+              lots: [ 
+                { id: 22, name: "REDONDA 1", hectares: 76 },
+                { id: 23, name: "UBEDA 1", hectares: 18 },
+                { id: 24, name: "JIMENES 3", hectares: 110 },
+                { id: 25, name: "JIMENES 2", hectares: 142 }
+              ]
             }
           ]
         }),
@@ -604,11 +619,11 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
     logRequest("GET", request.url);
     return new HttpResponse(
       JSON.stringify({
-        seeded_area: 22323,
+        seeded_area: 402,
         harvested_area: 0,
-        yield_tn_per_ha: 8,
-        cost_per_hectare: 22.4,
-        superficie_total: 22323
+        yield_tn_per_ha: 0,
+        cost_per_hectare: 158.87,
+        superficie_total: 402
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -619,11 +634,11 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
     logRequest("GET", request.url);
     return new HttpResponse(
       JSON.stringify({
-        seeded_area: 22323,
+        seeded_area: 402,
         harvested_area: 0,
-        yield_tn_per_ha: 8,
-        cost_per_hectare: 22.4,
-        superficie_total: 22323
+        yield_tn_per_ha: 0,
+        cost_per_hectare: 158.87,
+        superficie_total: 402
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -637,54 +652,156 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
         items: [
           { 
             id: 20, 
-            lot_name: "Lote 1",
+            lot_name: "ALFONZA",
             field_id: 10,
-            field_name: "Campo 1",
+            field_name: "campo alegre",
             project_id: 1,
             project_name: "Proyecto 1",
-            hectares: "12000",
+            hectares: "17",
             harvested_area: "0",
             crop_id: 3, 
-            crop_name: "Trigo",
-            previous_crop: "Soja",
-            current_crop: "Trigo",
-            variety: "DM STS",
+            crop_name: "Soja",
+            previous_crop: "MONTE",
+            current_crop: "Soja",
+            variety: "DM 75I75 IPRO",
             status: "active",
-            dates: [{ sequence: 1, sowing_date: "2026-06-15", harvest_date: "" }],
+            dates: [{ sequence: 1, sowing_date: "2026-01-06", harvest_date: "" }],
             tons: "0",
-            cost_usd_per_ha: "22.4",
-            yield_tn_per_ha: "8",
-            income_net_per_ha: "15",
-            rent_per_ha: "5",
-            active_total_per_ha: "25",
-            operating_result_per_ha: "10"
+            cost_usd_per_ha: "127.64",
+            yield_tn_per_ha: "0",
+            income_net_per_ha: "0",
+            rent_per_ha: "0",
+            admin_per_ha: "40",
+            active_total_per_ha: "167.64",
+            operating_result_per_ha: "-167.64"
           },
           { 
             id: 21, 
-            lot_name: "Lote 2",
+            lot_name: "REDONDA 2",
             field_id: 10,
-            field_name: "Campo 1",
+            field_name: "campo alegre",
             project_id: 1,
-            project_name: "Proyecto 2",
-            hectares: "10323",
+            project_name: "Proyecto 1",
+            hectares: "39",
             harvested_area: "0",
             crop_id: 3, 
-            crop_name: "Trigo",
-            previous_crop: "Girasol",
-            current_crop: "Trigo",
-            variety: "DM STS",
+            crop_name: "Soja",
+            previous_crop: "Trigo",
+            current_crop: "Soja",
+            variety: "DM 60I62 IPRO",
             status: "active",
-            dates: [{ sequence: 1, sowing_date: "2026-06-20", harvest_date: "" }],
+            dates: [{ sequence: 1, sowing_date: "2025-12-13", harvest_date: "" }],
             tons: "0",
-            cost_usd_per_ha: "20.5",
-            yield_tn_per_ha: "7.5",
-            income_net_per_ha: "14",
-            rent_per_ha: "4.5",
-            active_total_per_ha: "24",
-            operating_result_per_ha: "9.5"
+            cost_usd_per_ha: "195.28",
+            yield_tn_per_ha: "0",
+            income_net_per_ha: "0",
+            rent_per_ha: "0",
+            admin_per_ha: "40",
+            active_total_per_ha: "235.28",
+            operating_result_per_ha: "-235.28"
+          },
+          { 
+            id: 22, 
+            lot_name: "REDONDA 1",
+            field_id: 12,
+            field_name: "SJDD",
+            project_id: 1,
+            project_name: "Proyecto 2",
+            hectares: "76",
+            harvested_area: "0",
+            crop_id: 3, 
+            crop_name: "Soja",
+            previous_crop: "Trigo",
+            current_crop: "Soja",
+            variety: "DM 60I62 IPRO",
+            status: "active",
+            dates: [{ sequence: 1, sowing_date: "2025-12-13", harvest_date: "" }],
+            tons: "0",
+            cost_usd_per_ha: "148.44",
+            yield_tn_per_ha: "0",
+            income_net_per_ha: "0",
+            rent_per_ha: "0",
+            admin_per_ha: "40",
+            active_total_per_ha: "188.44",
+            operating_result_per_ha: "-188.44"
+          },
+          { 
+            id: 23, 
+            lot_name: "UBEDA 1",
+            field_id: 12,
+            field_name: "SJDD",
+            project_id: 1,
+            project_name: "Proyecto 2",
+            hectares: "18",
+            harvested_area: "0",
+            crop_id: 3, 
+            crop_name: "Soja",
+            previous_crop: "Trigo",
+            current_crop: "Soja",
+            variety: "DM 60I62 IPRO",
+            status: "active",
+            dates: [{ sequence: 1, sowing_date: "2025-12-13", harvest_date: "" }],
+            tons: "0",
+            cost_usd_per_ha: "181.63",
+            yield_tn_per_ha: "0",
+            income_net_per_ha: "0",
+            rent_per_ha: "0",
+            admin_per_ha: "40",
+            active_total_per_ha: "221.63",
+            operating_result_per_ha: "-221.63"
+          },
+          { 
+            id: 24, 
+            lot_name: "JIMENES 3",
+            field_id: 12,
+            field_name: "SJDD",
+            project_id: 1,
+            project_name: "Proyecto 2",
+            hectares: "110",
+            harvested_area: "0",
+            crop_id: 3, 
+            crop_name: "Soja",
+            previous_crop: "Trigo",
+            current_crop: "Soja",
+            variety: "DM 75I75 IRPO (90%)",
+            status: "active",
+            dates: [{ sequence: 1, sowing_date: "2025-12-18", harvest_date: "" }],
+            tons: "0",
+            cost_usd_per_ha: "152.9",
+            yield_tn_per_ha: "0",
+            income_net_per_ha: "0",
+            rent_per_ha: "0",
+            admin_per_ha: "40",
+            active_total_per_ha: "192.9",
+            operating_result_per_ha: "-192.9"
+          },
+          { 
+            id: 25, 
+            lot_name: "JIMENES 2",
+            field_id: 12,
+            field_name: "SJDD",
+            project_id: 1,
+            project_name: "Proyecto 2",
+            hectares: "142",
+            harvested_area: "0",
+            crop_id: 3, 
+            crop_name: "Soja",
+            previous_crop: "Trigo",
+            current_crop: "Soja",
+            variety: "DM 75I75 IPRO (90%)",
+            status: "active",
+            dates: [{ sequence: 1, sowing_date: "2025-12-18", harvest_date: "" }],
+            tons: "0",
+            cost_usd_per_ha: "147.3",
+            yield_tn_per_ha: "0",
+            income_net_per_ha: "0",
+            rent_per_ha: "0",
+            admin_per_ha: "40",
+            active_total_per_ha: "187.3",
+            operating_result_per_ha: "-187.3"
           }
         ],
-        page_info: { total: 2 }
+        page_info: { total: 6 }
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
