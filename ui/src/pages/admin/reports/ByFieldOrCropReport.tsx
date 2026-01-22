@@ -27,8 +27,8 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `${ value } Tn/Has`,
     },
-    classNameRows: "text-black font-bold h-14",
-    classNameHeader: "text-black font-bold h-14",
+    classNameRows: "text-black font-bold ",
+    classNameHeader: "text-black font-bold ",
   },
   {
     label: "Precio bruto",
@@ -98,8 +98,8 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
     },
-    classNameRows: "text-black bg-[#E5E7EB] font-bold h-12",
-    classNameHeader: "text-black bg-[#E5E7EB] font-bold h-12",
+    classNameRows: "text-black bg-[#E5E7EB] font-bold ",
+    classNameHeader: "text-black bg-[#E5E7EB] font-bold ",
   },
   {
     label: "Semillas", key: "supply_semillas", valueFormat: {

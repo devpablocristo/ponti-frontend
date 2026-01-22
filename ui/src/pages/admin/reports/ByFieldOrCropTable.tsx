@@ -3,9 +3,11 @@ import { FieldCropReportData, RowToRender } from "../../../hooks/useReporting/ty
 import { cropColors } from "../colors";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
+// Badge del cultivo
+// Simplificado: quitamos el margen hardcodeado y el flex para que se comporte bien en línea
 const CropBadge = ({ cropName }: { cropName: string }) => (
   <span
-    className={`px-2 py-1 text-xs font-medium rounded-md flex justify-start ${
+    className={`px-2 py-0.5 text-xs font-medium rounded-md whitespace-nowrap ${
       cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
     }`}
   >
@@ -13,7 +15,6 @@ const CropBadge = ({ cropName }: { cropName: string }) => (
   </span>
 );
 
-// Ahora "production" está en la lista de ocultables, porque "surface" es la que manda.
 const COLLAPSIBLE_KEYS = [
   "production",
   "yield",
@@ -24,6 +25,28 @@ const COLLAPSIBLE_KEYS = [
   "net_income",
 ];
 
+// --- VALUE CELL (Tu versión original) ---
+const ValueCell = ({ value, isCentered }: { value: string, isCentered: boolean }) => {
+  const match = value.match(/^([\d.,-]+)\s*(.*)$/);
+  
+  if (!match) {
+    return (
+      <span className={isCentered ? "text-center w-full" : "pl-8 text-left"}>
+        {value}
+      </span>
+    );
+  }
+
+  const [, numberPart, unitPart] = match;
+
+  return (
+    <div className={`flex items-center w-full ${isCentered ? 'justify-center' : 'justify-start pl-8'}`}>
+      <span className="w-16 text-right font-medium">{numberPart}</span>
+      <span className="w-12 text-left text-xs opacity-90">{unitPart}</span>
+    </div>
+  );
+};
+
 export const ByFieldOrCropTable = ({
   data,
   rows,
@@ -31,7 +54,6 @@ export const ByFieldOrCropTable = ({
   data: FieldCropReportData | null;
   rows?: RowToRender[];
 }) => {
-  // Estado para controlar si el grupo está abierto o cerrado
   const [isEconomicsOpen, setIsEconomicsOpen] = useState(false);
 
   if (!data || !data.columns) {
@@ -41,6 +63,9 @@ export const ByFieldOrCropTable = ({
       </div>
     );
   }
+
+  // Detectamos si es una sola columna o varias
+  const isSingleColumn = data.columns.length === 1;
 
   const getValue = (rowKey: string, columnId: string) => {
     const row = data.rows.find((r) => r.key === rowKey);
@@ -68,12 +93,19 @@ export const ByFieldOrCropTable = ({
               data.columns.map((row) => (
                 <>
                   <th className="w-2"></th>
-                  <th className="p-2 flex flex-col items-start">
-                    <p className="mb-2 text-left uppercase font-medium">
-                      {row.field_name}
-                    </p>
-                    <hr className="mb-3 w-full" />
-                    <CropBadge cropName={row.crop_name} />
+                  {/* --- MODIFICACIÓN DEL ENCABEZADO --- */}
+                  <th className="p-2 align-middle">
+                    <div 
+                      className={`flex items-center gap-2 ${
+                        isSingleColumn ? "justify-start pl-8" : "justify-center"
+                      }`}
+                    >
+                      <span className="uppercase font-medium text-gray-700 whitespace-nowrap">
+                        {row.field_name}
+                      </span>
+                      {/* Badge al lado, sin HR */}
+                      <CropBadge cropName={row.crop_name} />
+                    </div>
                   </th>
                 </>
               ))}
@@ -82,10 +114,8 @@ export const ByFieldOrCropTable = ({
         <tbody>
           {rows?.map((row) => {
             const { key } = row;
-            // Ahora la fila que tiene el control es "surface"
             const isToggleRow = key === "surface";
 
-            // Si la fila está en la lista de ocultables y el grupo está cerrado, no la mostramos.
             if (COLLAPSIBLE_KEYS.includes(key) && !isEconomicsOpen) {
               return null;
             }
@@ -110,6 +140,7 @@ export const ByFieldOrCropTable = ({
   ) {
     return (
       <tr key={key} className={classNameHeader}>
+        {/* Columna de etiquetas (Siempre a la izquierda) */}
         <th
           className={
             [
@@ -119,13 +150,15 @@ export const ByFieldOrCropTable = ({
             ]
               .filter(Boolean)
               .join(" ") +
-            " p-2 text-left w-1/5 border-t border-t-gray-300 " +
+            " p-1 text-left w-1/5 border-t border-t-gray-300 " +
             (isToggleRow ? "cursor-pointer hover:bg-gray-50" : "")
           }
-          onClick={isToggleRow ? () => setIsEconomicsOpen(!isEconomicsOpen) : undefined}
+          onClick={
+            isToggleRow ? () => setIsEconomicsOpen(!isEconomicsOpen) : undefined
+          }
         >
           {isToggleRow ? (
-            <div className="flex items-center gap-2 select-none">
+            <div className="flex items-center gap-2 select-none pl-2">
               {isEconomicsOpen ? (
                 <ChevronDown size={16} className="text-gray-500" />
               ) : (
@@ -134,13 +167,12 @@ export const ByFieldOrCropTable = ({
               {label}
             </div>
           ) : (
-            label
+            <span className="pl-2">{label}</span>
           )}
         </th>
 
-        {/* Celdas de Datos (Derecha) */}
+        {/* Columnas de datos */}
         {data!.columns.map((column, index) => {
-          
           const finalRowClasses = [
             !classNameRows.includes("text-") && "text-gray-600",
             !classNameRows.includes("bg-"),
@@ -151,6 +183,7 @@ export const ByFieldOrCropTable = ({
             .join(" ");
 
           const rowValue = getValue(key, column.id);
+          const formattedValue = valueFormat.crop(rowValue);
 
           return (
             <>
@@ -158,28 +191,32 @@ export const ByFieldOrCropTable = ({
               {showIndicator ? (
                 <td
                   key={index}
-                  className={`${finalRowClasses} p-1 text-left flex justify-start items-center h-14 border-t border-t-gray-300`}
+                  className={`${finalRowClasses} border-t border-t-gray-300 h-14 p-0 `}
                 >
-                  {valueFormat.crop(rowValue)}
-                  <div className="relative h-6 w-6 ml-1">
-                    <div
-                      className={`absolute inset-0 rounded-full opacity-30 ${indicatorBackgroundColor(
-                        rowValue
-                      )}`}
-                    ></div>
-                    <div
-                      className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full ${indicatorBackgroundColor(
-                        rowValue
-                      )}`}
-                    ></div>
+                  <div className={`flex items-center h-full w-full ${!isSingleColumn ? 'justify-center' : ''}`}>
+                    <ValueCell value={formattedValue} isCentered={!isSingleColumn} />
+                    
+                    {/* Semáforo */}
+                    <div className="relative h-6 w-6 ml-0 mr-2">
+                      <div
+                        className={`absolute inset-0 rounded-full opacity-30 ${indicatorBackgroundColor(
+                          rowValue
+                        )}`}
+                      ></div>
+                      <div
+                        className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full ${indicatorBackgroundColor(
+                          rowValue
+                        )}`}
+                      ></div>
+                    </div>
                   </div>
                 </td>
               ) : (
                 <td
                   key={index}
-                  className={`${finalRowClasses} p-1 text-left border-t h-3 border-t-gray-300`}
+                  className={`${finalRowClasses} border-t border-t-gray-300 h-3 p-0`}
                 >
-                  {valueFormat.crop(rowValue)}
+                  <ValueCell value={formattedValue} isCentered={!isSingleColumn} />
                 </td>
               )}
             </>
