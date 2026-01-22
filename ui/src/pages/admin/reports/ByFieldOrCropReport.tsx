@@ -69,27 +69,27 @@ const rowsToRender: RowToRender[] = [
   },
   {
     label: "Siembra", key: "labor_siembra", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Pulverizacion", key: "labor_pulverizacion", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Riego", key: "labor_riego", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Cosecha", key: "labor_cosecha", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Otras Labores", key: "labor_otras", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
@@ -103,42 +103,42 @@ const rowsToRender: RowToRender[] = [
   },
   {
     label: "Semillas", key: "supply_semillas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Curasemillas", key: "supply_curasemillas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Herbicidas", key: "supply_herbicidas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Insecticidas", key: "supply_insecticidas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Coadyuvantes", key: "supply_coadyuvantes", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Fertilizantes", key: "supply_fertilizantes", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Fungicidas", key: "supply_fungicidas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Otros insumos", key: "supply_otros", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
@@ -220,11 +220,13 @@ const rowsToRender: RowToRender[] = [
 export function ByFieldOrCropReport() {
   const [selectedField, setSelectedField] = useState<string>("0");
   const [selectedCrop, setSelectedCrop] = useState<string>("0");
+  
+  const { fieldCropReportingData: reportingData, processing, error, getFieldCropReportingData } = useReporting();
 
   const { filters, projectId, selectedCampaignId, loading } =
     useWorkspaceFilters(["project", "campaign"]);
 
-  const { fieldCropReportingData: reportingData, processing, error, getFieldCropReportingData } = useReporting();
+  // ...existing code...
 
   const buildQueryParams = () => {
     const params: Record<string, string> = {};
@@ -313,12 +315,13 @@ export function ByFieldOrCropReport() {
                     name="field"
                     value={ selectedField }
                     onChange={ (e) => setSelectedField(e.target.value) }
-                    options={ reportingData ? reportingData.columns.reduce((acc, crop) => {
-                        if (acc.findIndex(f => f.id === crop.field_id) === -1) {
-                          acc.push({ id: crop.field_id, name: crop.field_name });
-                        }
-                        return acc;
-                      }, [{ id: 0, name: "Todos" }])
+                    options={ reportingData && reportingData.columns
+                      ? reportingData.columns.reduce((acc, crop) => {
+                          if (acc.findIndex(f => f.id === crop.field_id) === -1) {
+                            acc.push({ id: crop.field_id, name: crop.field_name });
+                          }
+                          return acc;
+                        }, [{ id: 0, name: "Todos" }])
                       : [] }
                     size="sm"
                     fullWidth
@@ -330,7 +333,7 @@ export function ByFieldOrCropReport() {
                     name="crop"
                     value={ selectedCrop }
                     onChange={ (e) => setSelectedCrop(e.target.value) }
-                    options={ reportingData ? [
+                    options={ reportingData && reportingData.columns ? [
                       { id: 0, name: "Todos" },
                       ...reportingData.columns.map((crop) => ({
                         id: crop.crop_id,

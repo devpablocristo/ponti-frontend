@@ -278,7 +278,7 @@ export const handlers = [
       }),
       { status: 200 }
     );
-  }),
+  }),  
 
   // 4. MOCK DE CUSTOMERS (Estrategia: Objeto con propiedad data)
   http.get(configService.baseManagerApi + "/customers", ({ request }) => {
@@ -943,29 +943,126 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
   }),
 
   // 27. REPORTS - Field Crop (Reporte por campo y cultivo)
-  http.get(new RegExp(configService.baseManagerApi + "/reports/field-crop.*"), ({ request }) => {
+ http.get(new RegExp(configService.baseManagerApi + "/reports/field-crop.*"), ({ request }) => {
     logRequest("GET", request.url);
-    return new HttpResponse(
-      JSON.stringify({
-        success: true,
-        data: {
-          summary: {
-            total_hectares: "22323",
-            total_cost_usd: "500000",
-            avg_cost_per_ha_usd: "22.4"
-          },
-          by_field: [
-            {
-              field_id: 10,
-              field_name: "Campo 1",
-              hectares: "22323",
-              crops: [
-                { crop_id: 3, crop_name: "Trigo", hectares: "22323", cost_usd: "500000" }
-              ]
-            }
-          ]
+    
+    const mockData = {
+      project_id: 1,
+      project_name: "Proyecto 1",
+      customer_id: 1,
+      customer_name: "Cliente Demo",
+      campaign_id: 3,
+      campaign_name: "2026-2027",
+      columns: [
+        {
+          id: "10-3",
+          field_id: 10,
+          field_name: "Campo Alegre",
+          crop_id: 3,
+          crop_name: "Trigo"
+        },
+        {
+          id: "10-4",
+          field_id: 10,
+          field_name: "Campo Alegre",
+          crop_id: 4,
+          crop_name: "Maíz"
+        },
+        {
+          id: "11-3",
+          field_id: 11,
+          field_name: "Campo Sur",
+          crop_id: 3,
+          crop_name: "Trigo"
         }
-      }),
+      ],
+      rows: [
+        {
+          key: "surface",
+          unit: "Has",
+          value_type: "number",
+          values: {
+            "10-3": { number: "120" },
+            "10-4": { number: "80" },
+            "11-3": { number: "60" }
+          }
+        },
+        {
+          key: "production",
+          unit: "Tn",
+          value_type: "number",
+          values: {
+            "10-3": { number: "420" },
+            "10-4": { number: "300" },
+            "11-3": { number: "180" }
+          }
+        },
+        {
+          key: "yield",
+          unit: "Tn/Ha",
+          value_type: "number",
+          values: {
+            "10-3": { number: "3.5" },
+            "10-4": { number: "3.75" },
+            "11-3": { number: "3.0" }
+          }
+        },
+        {
+          key: "gross_price",
+          unit: "u$/Tn",
+          value_type: "number",
+          values: {
+            "10-3": { number: "210" },
+            "10-4": { number: "195" },
+            "11-3": { number: "205" }
+          }
+        },
+        {
+          key: "net_income",
+          unit: "u$/Tn",
+          value_type: "number",
+          values: {
+            "10-3": { number: "180" },
+            "10-4": { number: "170" },
+            "11-3": { number: "175" }
+          }
+        },
+        {
+          key: "labors_cost",
+          unit: "u$/Ha",
+          value_type: "number",
+          values: {
+            "10-3": { number: "60" },
+            "10-4": { number: "55" },
+            "11-3": { number: "58" }
+          }
+        },
+        {
+          key: "supplies_cost",
+          unit: "u$/Ha",
+          value_type: "number",
+          values: {
+            "10-3": { number: "90" },
+            "10-4": { number: "85" },
+            "11-3": { number: "88" }
+          }
+        },
+        {
+          key: "gross_margin",
+          unit: "u$/Ha",
+          value_type: "number",
+          values: {
+            "10-3": { number: "120" },
+            "10-4": { number: "110" },
+            "11-3": { number: "115" }
+          }
+        }
+      ]
+    };
+
+    console.log('[MOCK] field-crop responde:', mockData);
+    return new HttpResponse(
+      JSON.stringify(mockData),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   }),
