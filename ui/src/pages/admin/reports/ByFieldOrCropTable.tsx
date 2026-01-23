@@ -94,7 +94,7 @@ export const ByFieldOrCropTable = ({
     <div className="overflow-x-auto">
       <div
         style={{
-          width: `${data.columns.length * 300}px`,
+          width: `${data.columns.length * 360}px`,
         }}
       >
         <table className="text-sm bg-white border border-gray-300">
