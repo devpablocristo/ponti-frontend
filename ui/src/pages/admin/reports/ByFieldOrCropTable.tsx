@@ -7,9 +7,8 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 // Simplificado: quitamos el margen hardcodeado y el flex para que se comporte bien en línea
 const CropBadge = ({ cropName }: { cropName: string }) => (
   <span
-    className={`px-2 py-0.5 text-xs font-medium rounded-md whitespace-nowrap ${
-      cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-    }`}
+    className={`px-2 py-0.5 text-xs font-medium rounded-md whitespace-nowrap ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+      }`}
   >
     {cropName}
   </span>
@@ -28,21 +27,29 @@ const COLLAPSIBLE_KEYS = [
 // --- VALUE CELL (Tu versión original) ---
 const ValueCell = ({ value, isCentered }: { value: string, isCentered: boolean }) => {
   const match = value.match(/^([\d.,-]+)\s*(.*)$/);
-  
+
   if (!match) {
     return (
-      <span className={isCentered ? "text-center w-full" : "pl-8 text-left"}>
-        {value}
-      </span>
+      <div
+        className={`inline-flex w-full ${
+          isCentered ? "justify-center" : "justify-start pl-8"
+        }`}
+      >
+        <span>{value}</span>
+      </div>
     );
   }
 
   const [, numberPart, unitPart] = match;
 
   return (
-    <div className={`flex items-center w-full ${isCentered ? 'justify-center' : 'justify-start pl-8'}`}>
-      <span className="w-16 text-right font-medium">{numberPart}</span>
-      <span className="w-12 text-left text-xs opacity-90">{unitPart}</span>
+    <div
+      className={`inline-flex items-center gap-1 ${
+        isCentered ? "justify-center" : "justify-start pl-8"
+      }`}
+    >
+      <span className="text-right font-medium">{numberPart}</span>
+      <span className="text-left text-xs opacity-90">{unitPart}</span>
     </div>
   );
 };
@@ -84,8 +91,13 @@ export const ByFieldOrCropTable = ({
   };
 
   return (
-    <div className="overflow-x-auto flex justify-between">
-      <table className="w-full text-sm bg-white border border-gray-300">
+    <div className="overflow-x-auto">
+      <div
+        style={{
+          width: `${data.columns.length * 300}px`,
+        }}
+      >
+        <table className="text-sm bg-white border border-gray-300">
         <thead>
           <tr className="h-14">
             <th></th>
@@ -94,16 +106,13 @@ export const ByFieldOrCropTable = ({
                 <>
                   <th className="w-2"></th>
                   {/* --- MODIFICACIÓN DEL ENCABEZADO --- */}
-                  <th className="p-2 align-middle">
-                    <div 
-                      className={`flex items-center gap-2 ${
-                        isSingleColumn ? "justify-start pl-8" : "justify-center"
-                      }`}
+                  <th className="p-2 align-middle w-[165px]">
+                    <div
+                      className={`flex flex-col gap-1 `}
                     >
                       <span className="uppercase font-medium text-gray-700 whitespace-nowrap">
                         {row.field_name}
                       </span>
-                      {/* Badge al lado, sin HR */}
                       <CropBadge cropName={row.crop_name} />
                     </div>
                   </th>
@@ -123,7 +132,8 @@ export const ByFieldOrCropTable = ({
             return renderRow(row, isToggleRow);
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   );
 
@@ -150,7 +160,7 @@ export const ByFieldOrCropTable = ({
             ]
               .filter(Boolean)
               .join(" ") +
-            " p-1 text-left w-1/5 border-t border-t-gray-300 " +
+            " p-1 text-left w-[210px] border-t border-t-gray-300 " +
             (isToggleRow ? "cursor-pointer hover:bg-gray-50" : "")
           }
           onClick={
@@ -191,20 +201,20 @@ export const ByFieldOrCropTable = ({
               {showIndicator ? (
                 <td
                   key={index}
-                  className={`${finalRowClasses} border-t border-t-gray-300 h-14 p-0 `}
+                  className={`${finalRowClasses} border-t border-t-gray-300 p-0`}
                 >
-                  <div className={`flex items-center h-full w-full ${!isSingleColumn ? 'justify-center' : ''}`}>
+                  <div className="flex items-center justify-center h-full w-full gap-1">
                     <ValueCell value={formattedValue} isCentered={!isSingleColumn} />
-                    
+
                     {/* Semáforo */}
-                    <div className="relative h-6 w-6 ml-0 mr-2">
+                    <div className="relative h-4 w-4 ml-1">
                       <div
                         className={`absolute inset-0 rounded-full opacity-30 ${indicatorBackgroundColor(
                           rowValue
                         )}`}
                       ></div>
                       <div
-                        className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full ${indicatorBackgroundColor(
+                        className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${indicatorBackgroundColor(
                           rowValue
                         )}`}
                       ></div>
@@ -214,9 +224,11 @@ export const ByFieldOrCropTable = ({
               ) : (
                 <td
                   key={index}
-                  className={`${finalRowClasses} border-t border-t-gray-300 h-3 p-0`}
+                  className={`${finalRowClasses} border-t border-t-gray-300 p-0`}
                 >
-                  <ValueCell value={formattedValue} isCentered={!isSingleColumn} />
+                  <div className="flex items-center justify-center h-full w-full">
+                    <ValueCell value={formattedValue} isCentered={!isSingleColumn} />
+                  </div>
                 </td>
               )}
             </>

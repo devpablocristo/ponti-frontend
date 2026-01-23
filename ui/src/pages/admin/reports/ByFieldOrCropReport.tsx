@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
+import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import SelectField from "../../../components/Input/SelectField";
-import Button from "../../../components/Button/Button";
 import { ByFieldOrCropTable } from "./ByFieldOrCropTable.tsx";
 import useReporting from "../../../hooks/useReporting";
 import { RowToRender } from "../../../hooks/useReporting/types.ts";
@@ -361,17 +360,6 @@ export function ByFieldOrCropReport() {
                 rows={ rowsToRender }
               />
             ) }
-          </div>
-          <div className="flex justify-end mr-2 mb-6">
-            <Button
-              variant="outlineGreen"
-              className="gap-2"
-              onClick={ toPDF }
-              disabled={ processing }
-            >
-              <ExternalLink/>
-              Exportar informe
-            </Button>
           </div>
         </>
       ) }
