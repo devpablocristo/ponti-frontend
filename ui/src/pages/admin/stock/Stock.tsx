@@ -346,7 +346,7 @@ export function Stock() {
         key: "supply_name",
         header: "Insumo",
         minWidth: "300px", // columna principal
-        wrap: true,     
+        wrap: true,
         padding: "xs",
         headerPadding: "xs",
         filterable: true,
@@ -439,9 +439,18 @@ export function Stock() {
         filterable: false,
         header: "Stock de campo",
         headerPadding: "xs",
-        render: (value, item) => (
-          <EditableCell item={item} value={value} projectId={projectId} />
-        ),
+        render: (value, item) => {
+          const systemStock = Number(item.stock_units) || 0;
+          const isNegativeSystemStock = systemStock < 0;
+          if (isNegativeSystemStock) {
+            return (
+              <div className="bg-red-50 border border-red-300 rounded-md p-1">
+                <EditableCell item={item} value={value} projectId={projectId} />
+              </div>
+            );
+          }
+          return <EditableCell item={item} value={value} projectId={projectId} />;
+        },
       },
       {
         key: "stock_difference",
@@ -455,7 +464,7 @@ export function Stock() {
           columnsFilters
         ),
         header: "Diferencia",
-        
+
         render: (diff) => {
           const value = Number(diff);
           if (value === 0) {
@@ -484,7 +493,7 @@ export function Stock() {
         padding: "xs",
         headerPadding: "xs",
         filterOptions: getFilterOptionsForColumn(
-          "close_date", 
+          "close_date",
           stock,
           columnsFilters
         ),
@@ -531,17 +540,17 @@ export function Stock() {
   );
 
   useEffect(() => {
-  if (!projectId || !selectedCustomer || !selectedCampaignId) {
-    return;
-  }
+    if (!projectId || !selectedCustomer || !selectedCampaignId) {
+      return;
+    }
 
-  setCurrentPage(1); // 👈 RESET PAGINACIÓN
+    setCurrentPage(1); // 👈 RESET PAGINACIÓN
 
-  getStock(projectId, "");
-  getPeriods(projectId);
-  setDisabledCloseStock(false);
-  setSelectedDate("");
-}, [getStock, projectId, selectedCustomer, selectedCampaignId]);
+    getStock(projectId, "");
+    getPeriods(projectId);
+    setDisabledCloseStock(false);
+    setSelectedDate("");
+  }, [getStock, projectId, selectedCustomer, selectedCampaignId]);
 
   useEffect(() => {
     if (periods && periods.length > 0) {
@@ -558,22 +567,22 @@ export function Stock() {
   }, [periods]);
 
   useEffect(() => {
-  if (!projectId) return;
+    if (!projectId) return;
 
-  setCurrentPage(1); // 👈 RESET PAGINACIÓN
+    setCurrentPage(1); // 👈 RESET PAGINACIÓN
 
-  const periodNumber = Number(period);
-  if (periodNumber === 0) {
-    getStock(projectId, "");
-    setDisabledCloseStock(false);
-    setSelectedDate("");
-    return;
-  }
+    const periodNumber = Number(period);
+    if (periodNumber === 0) {
+      getStock(projectId, "");
+      setDisabledCloseStock(false);
+      setSelectedDate("");
+      return;
+    }
 
-  getStock(projectId, stockPeriods[periodNumber]?.name || "");
-  setSelectedDate(stockPeriods[periodNumber]?.name || "");
-  setDisabledCloseStock(true);
-}, [period, stockPeriods]);
+    getStock(projectId, stockPeriods[periodNumber]?.name || "");
+    setSelectedDate(stockPeriods[periodNumber]?.name || "");
+    setDisabledCloseStock(true);
+  }, [period, stockPeriods]);
 
   useEffect(() => {
     if (errorCloseStock) {
