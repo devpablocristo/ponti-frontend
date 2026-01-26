@@ -531,15 +531,17 @@ export function Stock() {
   );
 
   useEffect(() => {
-    if (!projectId || !selectedCustomer || !selectedCampaignId) {
-      return;
-    }
+  if (!projectId || !selectedCustomer || !selectedCampaignId) {
+    return;
+  }
 
-    getStock(projectId, "");
-    getPeriods(projectId);
-    setDisabledCloseStock(false);
-    setSelectedDate("");
-  }, [getStock, projectId, selectedCustomer, selectedCampaignId]);
+  setCurrentPage(1); // 👈 RESET PAGINACIÓN
+
+  getStock(projectId, "");
+  getPeriods(projectId);
+  setDisabledCloseStock(false);
+  setSelectedDate("");
+}, [getStock, projectId, selectedCustomer, selectedCampaignId]);
 
   useEffect(() => {
     if (periods && periods.length > 0) {
@@ -556,18 +558,22 @@ export function Stock() {
   }, [periods]);
 
   useEffect(() => {
-    if (!projectId) return;
-    const periodNumber = Number(period);
-    if (periodNumber === 0) {
-      getStock(projectId, "");
-      setDisabledCloseStock(false);
-      setSelectedDate("");
-      return;
-    }
-    getStock(projectId, stockPeriods[periodNumber]?.name || "");
-    setSelectedDate(stockPeriods[periodNumber]?.name || "");
-    setDisabledCloseStock(true);
-  }, [period, stockPeriods]);
+  if (!projectId) return;
+
+  setCurrentPage(1); // 👈 RESET PAGINACIÓN
+
+  const periodNumber = Number(period);
+  if (periodNumber === 0) {
+    getStock(projectId, "");
+    setDisabledCloseStock(false);
+    setSelectedDate("");
+    return;
+  }
+
+  getStock(projectId, stockPeriods[periodNumber]?.name || "");
+  setSelectedDate(stockPeriods[periodNumber]?.name || "");
+  setDisabledCloseStock(true);
+}, [period, stockPeriods]);
 
   useEffect(() => {
     if (errorCloseStock) {
