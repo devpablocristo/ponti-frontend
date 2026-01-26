@@ -113,7 +113,7 @@ const EditableCell = ({
         min="0"
         className="block w-full p-2 text-gray-800 border border-gray-300 rounded-lg bg-gray-100 text-sm"
         value={value}
-        onChange={() => {}}
+        onChange={() => { }}
         disabled={true}
       />
       <button
@@ -254,7 +254,6 @@ export function Stock() {
   const {
     getStock,
     stock,
-    summary,
     processing,
     error,
     closeStock,
@@ -266,69 +265,197 @@ export function Stock() {
     periods,
   } = useStock();
 
+  const filteredStock = useMemo(() => {
+    return (Array.isArray(stock) ? stock : []).filter((item) => {
+      return Object.entries(columnsFilters).every(([key, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) {
+          return true;
+        }
+
+        const itemValue = String(item[key as keyof GetStockItems] ?? "")
+          .toLowerCase();
+
+        // 🟢 MULTI SELECT
+        if (Array.isArray(value)) {
+          return value.some((v) =>
+            itemValue.includes(String(v).toLowerCase())
+          );
+        }
+
+        // 🟢 SINGLE SELECT
+        return itemValue.includes(String(value).toLowerCase());
+      });
+    });
+  }, [stock, columnsFilters]);
+
+  const derivedSummary: Summary = useMemo(() => {
+    let totalKg = 0;
+    let totalLt = 0;
+    let totalUsd = 0;
+
+    filteredStock.forEach((item) => {
+      const entry = Number(item.entry_stock) || 0;
+      const usd = Number(item.total_usd) || 0;
+
+      if (item.supply_unit_id === 1) {
+        totalKg += entry;
+      } else if (item.supply_unit_id === 2) {
+        totalLt += entry;
+      }
+
+      totalUsd += usd;
+    });
+
+    return {
+      total_kg: totalKg,
+      total_lt: totalLt,
+      total_usd: totalUsd,
+    };
+  }, [filteredStock]);
+
+  function getFilterOptionsForColumn(
+    key: keyof GetStockItems,
+    stock: GetStockItems[],
+    filters: Record<string, any>
+  ) {
+    const otherFilters = { ...filters };
+    delete otherFilters[key];
+
+    const filtered = stock.filter((item) =>
+      Object.entries(otherFilters).every(([k, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+        const itemValue = String(item[k as keyof GetStockItems] ?? "").toLowerCase();
+
+        if (Array.isArray(value)) {
+          return value.some((v) =>
+            itemValue.includes(String(v).toLowerCase())
+          );
+        }
+
+        return itemValue.includes(String(value).toLowerCase());
+      })
+    );
+
+    return [...new Set(filtered.map((i) => String(i[key] ?? "")))].filter(Boolean);
+  }
+
   const columns: Column<GetStockItems>[] = useMemo(
     () => [
       {
         key: "supply_name",
         header: "Insumo",
-        render: (value) => <strong>{value}</strong>,
+        minWidth: "300px", // columna principal
+        wrap: true,     
+        padding: "xs",
+        headerPadding: "xs",
         filterable: true,
         filterType: "select",
-        filterOptions: [...new Set(stock.map((stock) => stock.supply_name))],
+        filterOptions: getFilterOptionsForColumn(
+          "supply_name",
+          stock,
+          columnsFilters
+        ),
       },
       {
         key: "class_type",
         header: "Rubro",
+        padding: "xs",
+        headerPadding: "xs",
         filterable: true,
         filterType: "select",
-        filterOptions: [...new Set(stock.map((stock) => stock.class_type))],
+        filterOptions: getFilterOptionsForColumn(
+          "class_type",
+          stock,
+          columnsFilters
+        ),
       },
       {
         key: "investor_name",
         header: "Inversor",
         filterable: true,
+        padding: "xs",
+        headerPadding: "xs",
         filterType: "select",
-        filterOptions: [...new Set(stock.map((stock) => stock.investor_name))],
+        filterOptions: getFilterOptionsForColumn(
+          "investor_name",
+          stock,
+          columnsFilters
+        ),
       },
       {
         key: "entry_stock",
-        filterable: false,
+        padding: "xs",
+        filterable: true,
+        filterType: "select",
+        headerPadding: "xs",
+        filterOptions: getFilterOptionsForColumn(
+          "entry_stock",
+          stock,
+          columnsFilters
+        ),
         header: "Ingresados",
         render: (value, item) => {
-          const unit = item.supply_unit_id === 1 ? "Lt" : "Kg";
+          const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
           return formatNumberAr(value) + unit;
         },
       },
       {
         key: "consumed",
-        filterable: false,
+        filterable: true,
         header: "Consumidos",
+        padding: "xs",
+        headerPadding: "xs",
         render: (value, item) => {
-          const unit = item.supply_unit_id === 1 ? "Lt" : "Kg";
+          const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
           return formatNumberAr(value) + unit;
         },
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn(
+          "consumed",
+          stock,
+          columnsFilters
+        ),
       },
       {
         key: "stock_units",
-        filterable: false,
-        header: "Stock",
+        filterable: true,
+        header: "Stock de sistema",
+        headerPadding: "xs",
+        padding: "xs",
         render: (value, item) => {
-          const unit = item.supply_unit_id === 1 ? "Lt" : "Kg";
+          const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
           return formatNumberAr(value) + unit;
         },
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn(
+          "stock_units",
+          stock,
+          columnsFilters
+        ),
       },
       {
         key: "real_stock_units",
         filterable: false,
-        header: "Stock real",
+        header: "Stock de campo",
+        headerPadding: "xs",
         render: (value, item) => (
           <EditableCell item={item} value={value} projectId={projectId} />
         ),
       },
       {
         key: "stock_difference",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        padding: "xs",
+        headerPadding: "xs",
+        filterOptions: getFilterOptionsForColumn(
+          "stock_difference",
+          stock,
+          columnsFilters
+        ),
         header: "Diferencia",
+        
         render: (diff) => {
           const value = Number(diff);
           if (value === 0) {
@@ -352,7 +479,15 @@ export function Stock() {
       },
       {
         key: "close_date",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        padding: "xs",
+        headerPadding: "xs",
+        filterOptions: getFilterOptionsForColumn(
+          "close_date", 
+          stock,
+          columnsFilters
+        ),
         header: "Fecha de cierre",
         render: (dateString) => {
           if (!dateString) return " - ";
@@ -366,12 +501,16 @@ export function Stock() {
       {
         key: "supply_unit_price",
         header: "Precio U.",
+        padding: "xs",
+        headerPadding: "xs",
         filterable: false,
         render: (value) => "u$ " + formatNumberAr(value),
       },
       {
         key: "total_usd",
         header: "Total u$",
+        padding: "xs",
+        headerPadding: "xs",
         filterable: false,
         render: (value) => {
           const num = Number(value);
@@ -380,15 +519,15 @@ export function Stock() {
               {isNaN(num)
                 ? "-"
                 : `u$ ${num.toLocaleString("es-AR", {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 3,
-                  })}`}
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 3,
+                })}`}
             </strong>
           );
         },
       },
     ],
-    [projectId, stock]
+    [projectId, stock, columnsFilters]
   );
 
   useEffect(() => {
@@ -464,22 +603,6 @@ export function Stock() {
     setIsModalOpen(false);
   };
 
-  const filteredStock = useMemo(() => {
-    return stock.filter((m) => {
-      return Object.entries(columnsFilters).every(([key, value]) => {
-        if (!value) return true;
-        return String(m[key as keyof GetStockItems])
-          .toLowerCase()
-          .includes(String(value).toLowerCase());
-      });
-    });
-  }, [stock, columnsFilters]);
-
-  const paginatedStock = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredStock.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredStock, currentPage, itemsPerPage]);
-
   const handleExport = async () => {
     if (!projectId) return;
 
@@ -517,7 +640,7 @@ export function Stock() {
           {
             label: "Exportar stock",
             icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             ,
             variant: "outlinePonti",
@@ -530,7 +653,7 @@ export function Stock() {
       {!error && projectId && selectedCustomer && selectedCampaignId && (
         <div className="my-4">
           <ItemsIndicators
-            summary={summary}
+            summary={derivedSummary}
             selectedDate={selectedDate}
             disabledCloseStock={disabledCloseStock}
             onDateChange={handleDateChange}
@@ -568,7 +691,7 @@ export function Stock() {
         {errorPeriods && <div>{errorPeriods}</div>}
         {projectId && selectedCustomer && selectedCampaignId && (
           <DataTable
-            data={paginatedStock}
+            data={filteredStock}
             columns={columns}
             message="No hay stock disponible"
             filters={columnsFilters}

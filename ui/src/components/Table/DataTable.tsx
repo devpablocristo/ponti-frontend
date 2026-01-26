@@ -19,6 +19,18 @@ type Column<T> = {
   filterType?: FilterType;
   filterOptions?: string[];
   sortable?: boolean;
+
+  // 👇 NUEVO (opción 3)
+  width?: string;
+  minWidth?: string;
+  maxWidth?: string;
+  align?: "left" | "center" | "right";
+  // 👇 NUEVO
+  padding?: "xs" | "sm" | "md";
+  wrap?: boolean; // 👈 NUEVO
+  headerAlign?: "left" | "center" | "right";
+  headerPadding?: "xs" | "sm" | "md";
+  headerWrap?: boolean;
 };
 
 type DataTableProps<T> = {
@@ -137,6 +149,14 @@ const DataTable = <T,>({
 
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
+  // 2️⃣ Paginación después del ordenamiento
+  const paginatedData = React.useMemo(() => {
+    if (!pagination) return sortedData;
+    const start = (pagination.page - 1) * pagination.perPage;
+    const end = start + pagination.perPage;
+    return sortedData.slice(start, end);
+  }, [sortedData, pagination]);
+
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const filterRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -202,7 +222,23 @@ const DataTable = <T,>({
                   : filterVal !== undefined && filterVal !== "";
                 const isSorted = sortKey === String(column.key);
                 return (
-                  <th key={String(column.key)} className="p-4">
+                  <th
+                    key={String(column.key)}
+                    className={`p-4 uppercase font-bold text-xs ${column.headerAlign === "center"
+                        ? "text-center"
+                        : column.headerAlign === "right"
+                          ? "text-right"
+                          : "text-left"
+                      } ${column.headerPadding
+                        ? column.headerPadding === "xs"
+                          ? "px-2 py-1"
+                          : column.headerPadding === "sm"
+                            ? "px-3 py-2"
+                            : "px-4 py-3"
+                        : "" // 👈 CLAVE: si no se define, queda p-4
+                      } ${column.headerWrap ? "whitespace-normal break-words" : ""
+                      }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         {/* Ícono de ordenamiento */}
@@ -281,7 +317,7 @@ const DataTable = <T,>({
                                 {column.filterType === "select" &&
                                   column.filterOptions ? (
                                   <div className="max-h-48 overflow-auto pr-1 text-gray-700">
-                              {/*       <div className="text-xs text-gray-500 mb-1">Selecciona uno o varios</div> */}
+                                    {/*       <div className="text-xs text-gray-500 mb-1">Selecciona uno o varios</div> */}
                                     {column.filterOptions.map((option) => {
                                       const current = filters?.[String(column.key)];
                                       const selected = Array.isArray(current)
@@ -375,8 +411,8 @@ const DataTable = <T,>({
             </tr>
           </thead>
           <tbody>
-            {sortedData.length > 0 ? (
-              sortedData.map((item, index) => (
+            {paginatedData.length > 0 ? (
+              paginatedData.map((item, index) => (
                 <React.Fragment key={index}>
                   <tr
                     key={index}
@@ -411,8 +447,24 @@ const DataTable = <T,>({
                     {columns.map((column) => (
                       <td
                         key={String(column.key)}
-                        className="px-6 py-4 min-w-[100px] max-w-[180px] whitespace-nowrap truncate"
-                        title={String(item[column.key])}
+                        className={`truncate ${column.wrap ? "whitespace-normal break-words" : "whitespace-nowrap"
+                          } ${column.align === "center"
+                            ? "text-center"
+                            : column.align === "right"
+                              ? "text-right"
+                              : "text-left"
+                          } ${column.padding === "xs"
+                            ? "px-2 py-1"
+                            : column.padding === "sm"
+                              ? "px-3 py-2"
+                              : "px-4 py-3"
+                          }`}
+                        style={{
+                          width: column.width,
+                          minWidth: column.minWidth ?? "100px",
+                          maxWidth: column.maxWidth ?? "180px",
+                        }}
+                        title={!column.wrap ? String(item[column.key]) : undefined}
                       >
                         {column.render
                           ? column.render(item[column.key], item)
@@ -489,7 +541,7 @@ const DataTable = <T,>({
         </table>
       </div>
       <div className="bg-white z-10 border-t sticky bottom-0">
-        {pagination && data.length > 0 && (
+        {pagination && sortedData.length > 0 && (
           <nav
             className="bg-white flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
             aria-label="Table navigation"

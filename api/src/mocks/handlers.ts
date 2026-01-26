@@ -315,6 +315,259 @@ export const handlers = [
     );
   }),
 
+  // =======================
+// STOCK SUMMARY (Manager API)
+// =======================
+http.get(
+  new RegExp(configService.baseManagerApi + "/projects/\\d+/stocks/summary.*"),
+  ({ request }) => {
+    logRequest("GET", request.url);
+
+    return new HttpResponse(
+      JSON.stringify({
+        total_kilograms: 6850,
+        total_liters: 80,
+        net_total_usd: 38250,
+        items: [
+          {
+            id: 1,
+            supply_name: "VELTROMA SAFLUFENACIL 70% ADAMA X 0,35",
+            class_type: "Herbicidas",
+            investor_name: "Oscar",
+            entry_stock: 100,
+            consumed: 20,
+            stock_units: 80,
+            real_stock_units: 80,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 50,
+            total_usd: 4000,
+            supply_unit_id: 2
+          },
+          {
+            id: 2,
+            supply_name: "Urea",
+            class_type: "FERTILIZERS",
+            investor_name: "Carla",
+            entry_stock: 5000,
+            consumed: 150,
+            stock_units: 4850,
+            real_stock_units: 4800,
+            stock_difference: -50,
+            close_date: null,
+            supply_unit_price: 5,
+            total_usd: 24250,
+            supply_unit_id: 1
+          },
+          {
+            id: 3,
+            supply_name: "GLIFOSATO 48% X 20L",
+            class_type: "Herbicidas",
+            investor_name: "Oscar",
+            entry_stock: 200,
+            consumed: 50,
+            stock_units: 150,
+            real_stock_units: 145,
+            stock_difference: -5,
+            close_date: null,
+            supply_unit_price: 30,
+            total_usd: 4350,
+            supply_unit_id: 2
+          },
+          {
+            id: 4,
+            supply_name: "FOSFATO MONOAMÓNICO",
+            class_type: "FERTILIZERS",
+            investor_name: "Carla",
+            entry_stock: 3000,
+            consumed: 500,
+            stock_units: 2500,
+            real_stock_units: 2500,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 10,
+            total_usd: 25000,
+            supply_unit_id: 1
+          },
+          {
+            id: 5,
+            supply_name: "2,4-D AMINA 60% X 20L",
+            class_type: "Herbicidas",
+            investor_name: "Oscar",
+            entry_stock: 120,
+            consumed: 30,
+            stock_units: 90,
+            real_stock_units: 90,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 25,
+            total_usd: 2250,
+            supply_unit_id: 2
+          },
+          {
+            id: 6,
+            supply_name: "SULFATO DE AMONIO",
+            class_type: "FERTILIZERS",
+            investor_name: "Carla",
+            entry_stock: 4000,
+            consumed: 1000,
+            stock_units: 3000,
+            real_stock_units: 2950,
+            stock_difference: -50,
+            close_date: null,
+            supply_unit_price: 8,
+            total_usd: 23600,
+            supply_unit_id: 1
+          },
+          {
+            id: 7,
+            supply_name: "ATRACINA 90% X 10KG",
+            class_type: "Herbicidas",
+            investor_name: "Oscar",
+            entry_stock: 80,
+            consumed: 10,
+            stock_units: 70,
+            real_stock_units: 70,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 40,
+            total_usd: 2800,
+            supply_unit_id: 2
+          },
+          {
+            id: 8,
+            supply_name: "CLORURO DE POTASIO",
+            class_type: "FERTILIZERS",
+            investor_name: "Carla",
+            entry_stock: 2500,
+            consumed: 500,
+            stock_units: 2000,
+            real_stock_units: 2000,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 12,
+            total_usd: 24000,
+            supply_unit_id: 1
+          },
+          {
+            id: 9,
+            supply_name: "METOLACLOR 96% X 20L",
+            class_type: "Herbicidas",
+            investor_name: "Oscar",
+            entry_stock: 60,
+            consumed: 15,
+            stock_units: 45,
+            real_stock_units: 45,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 55,
+            total_usd: 2475,
+            supply_unit_id: 2
+          },
+          {
+            id: 10,
+            supply_name: "NITRATO DE AMONIO",
+            class_type: "FERTILIZERS",
+            investor_name: "Carla",
+            entry_stock: 3500,
+            consumed: 1000,
+            stock_units: 2500,
+            real_stock_units: 2500,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 9,
+            total_usd: 22500,
+            supply_unit_id: 1
+          },
+          {
+            id: 11,
+            supply_name: "IMIDACLOPRID 35% X 5L",
+            class_type: "Insecticidas",
+            investor_name: "Oscar",
+            entry_stock: 40,
+            consumed: 5,
+            stock_units: 35,
+            real_stock_units: 35,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 60,
+            total_usd: 2100,
+            supply_unit_id: 2
+          },
+          {
+            id: 12,
+            supply_name: "FOSFITO DE POTASIO",
+            class_type: "FERTILIZERS",
+            investor_name: "Carla",
+            entry_stock: 1800,
+            consumed: 300,
+            stock_units: 1500,
+            real_stock_units: 1500,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 15,
+            total_usd: 22500,
+            supply_unit_id: 1
+          },
+          {
+            id: 13,
+            supply_name: "AZOXISTROBIN 25% X 5L",
+            class_type: "Fungicidas",
+            investor_name: "Oscar",
+            entry_stock: 30,
+            consumed: 10,
+            stock_units: 20,
+            real_stock_units: 20,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 70,
+            total_usd: 1400,
+            supply_unit_id: 2
+          },
+          {
+            id: 14,
+            supply_name: "UREA GRANULADA",
+            class_type: "FERTILIZERS",
+            investor_name: "Carla",
+            entry_stock: 6000,
+            consumed: 1000,
+            stock_units: 5000,
+            real_stock_units: 5000,
+            stock_difference: 0,
+            close_date: null,
+            supply_unit_price: 7,
+            total_usd: 35000,
+            supply_unit_id: 1
+          }
+        ]
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+),
+
+// =======================
+// STOCK PERIODS (Manager API)
+// =======================
+http.get(
+  new RegExp(configService.baseManagerApi + "/projects/\\d+/stocks/periods"),
+  ({ request }) => {
+    logRequest("GET", request.url);
+
+    return new HttpResponse(
+      JSON.stringify([
+        "2026-01-01",
+        "2025-12-01",
+        "2025-11-01"
+      ]),
+      { status: 200 }
+    );
+  }
+),
+
   // 6. MOCK DE PROYECTOS (Consolidado para todas las variantes)
   http.get(new RegExp(configService.baseManagerApi + "/projects($|/|\\?)"), ({ request }) => {
     const url = new URL(request.url);
@@ -895,7 +1148,71 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   }),
+// =======================
+// 25A. STOCK - GET (Contrato REAL del frontend)
+// =======================
+http.get(
+  new RegExp(configService.baseManagerApi + "/stock/\\d+"),
+  ({ request }) => {
+    logRequest("GET", request.url);
 
+    return new HttpResponse(
+      JSON.stringify({
+        success: true,
+        data: {
+          total_kilograms: 6850,
+          total_liters: 80,
+          net_total_usd: 38250,
+          items: [
+            {
+              id: 1,
+              supply_name: "Glifosato",
+              class_type: "SUPPLIES",
+              investor_name: "Oscar",
+
+              entry_stock: 100,
+              consumed: 20,
+              stock_units: 80,
+              real_stock_units: 80,
+              stock_difference: 0,
+
+              close_date: null,
+
+              supply_unit_price: 50,
+              total_usd: 4000,
+
+              supply_unit_id: 2 // 2 = Litros
+            },
+            {
+              id: 2,
+              supply_name: "Urea",
+              class_type: "FERTILIZERS",
+              investor_name: "Carla",
+
+              entry_stock: 5000,
+              consumed: 150,
+              stock_units: 4850,
+              real_stock_units: 4800,
+              stock_difference: -50,
+
+              close_date: null,
+
+              supply_unit_price: 5,
+              total_usd: 24250,
+
+              supply_unit_id: 1 // 1 = Kilogramos
+            }
+          ]
+        }
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+),
+  
   // 25. STOCK (por proyecto)
   http.get(new RegExp(configService.baseManagerApi + "/stock.*"), ({ request }) => {
     logRequest("GET", request.url);
