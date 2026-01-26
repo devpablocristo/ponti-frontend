@@ -313,10 +313,10 @@ export function Tasks() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("date", tasks, taskFilters).map((d) => {
-  const datePart = d.split("T")[0];
-  const [y, m, day] = datePart.split("-");
-  return `${day}/${m}/${y}`;
-}),
+          const datePart = d.split("T")[0];
+          const [y, m, day] = datePart.split("-");
+          return `${day}/${m}/${y}`;
+        }),
         render: (dateString) => {
           if (!dateString) return "";
           const datePart = (dateString ?? "").split("T")[0];
@@ -422,7 +422,7 @@ export function Tasks() {
         header: "Costo U$/Ha",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("usd_cost_ha", tasks, taskFilters),  
+        filterOptions: getFilterOptionsForColumn("usd_cost_ha", tasks, taskFilters),
         render: (value) => (
           <>u${formatNumberAr(value)}</>
         ),
@@ -562,16 +562,14 @@ export function Tasks() {
           if (Array.isArray(value)) return value.includes(taskStatus);
           return taskStatus === value;
         }
-
-        const taskVal = String(task[key as keyof TaskData] ?? "").toLowerCase();
+        const taskValRaw = task[key as keyof TaskData];
+        const taskVal = String(taskValRaw ?? "").toLowerCase();
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            taskVal.includes(String(v).toLowerCase())
-          );
+          return value.some((v) => taskVal === String(v).toLowerCase());
         }
 
-        return taskVal.includes(String(value).toLowerCase());
+        return taskVal === String(value).toLowerCase();
       });
     });
   }, [tasks, taskFilters]);
