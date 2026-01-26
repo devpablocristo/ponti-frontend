@@ -439,18 +439,9 @@ export function Stock() {
         filterable: false,
         header: "Stock de campo",
         headerPadding: "xs",
-        render: (value, item) => {
-          const systemStock = Number(item.stock_units) || 0;
-          const isNegativeSystemStock = systemStock < 0;
-          if (isNegativeSystemStock) {
-            return (
-              <div className="bg-red-50 border border-red-300 rounded-md p-1">
-                <EditableCell item={item} value={value} projectId={projectId} />
-              </div>
-            );
-          }
-          return <EditableCell item={item} value={value} projectId={projectId} />;
-        },
+        render: (value, item) => (
+          <EditableCell item={item} value={value} projectId={projectId} />
+        ),
       },
       {
         key: "stock_difference",
@@ -464,9 +455,10 @@ export function Stock() {
           columnsFilters
         ),
         header: "Diferencia",
-
-        render: (diff) => {
+        render: (diff, item) => {
           const value = Number(diff);
+          const systemStock = Number(item.stock_units) || 0;
+          const isNegativeSystemStock = systemStock < 0;
           if (value === 0) {
             return diff;
           }
@@ -474,6 +466,15 @@ export function Stock() {
             return (
               <span className="inline-flex items-center gap-1 px-2 py-1 text-[14px] rounded-md bg-green-100 text-green-900">
                 <Check className="w-4 h-4" />
+                {value}
+              </span>
+            );
+          }
+          // Si el stock de sistema es negativo, el rectángulo es rojo
+          if (isNegativeSystemStock) {
+            return (
+              <span className="inline-flex items-center gap-1 px-2 py-1 text-[14px] rounded-md bg-red-100 text-red-900 border border-red-300">
+                <AlertCircle className="w-4 h-4" />
                 {value}
               </span>
             );
