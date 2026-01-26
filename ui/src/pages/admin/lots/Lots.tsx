@@ -831,11 +831,6 @@ const filteredLots = useMemo(() => {
     };
   }, [filteredLots]);
 
-  const paginatedLots = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    // CAMBIO AQUÍ: usamos filteredLots en vez de lots
-    return filteredLots.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredLots, currentPage, itemsPerPage]);
 
   const handleCreateLot = () => {
     if (selectedField && projectId && selectedCustomer && selectedCampaignId) {
@@ -1293,7 +1288,7 @@ const filteredLots = useMemo(() => {
         </Drawer>
         {!message && !error && (
           <DataTable
-            data={paginatedLots}
+            data={filteredLots}
             columns={columnsToShow}
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
