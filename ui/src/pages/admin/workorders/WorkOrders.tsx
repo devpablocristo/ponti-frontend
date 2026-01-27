@@ -592,21 +592,16 @@ export function WorkOrders() {
           }
           return orderDate === normalizeDate(String(value));
         }
-
-        const orderVal = String(order[key as keyof OrdersData]).toLowerCase();
+        const orderValRaw = order[key as keyof OrdersData];
+        const orderVal = String(orderValRaw ?? "").toLowerCase();
         if (Array.isArray(value)) {
-          const values = value.map((v) => String(v).toLowerCase());
-          return values.includes(orderVal);
+          return value.some((v) => orderVal === String(v).toLowerCase());
         }
         return orderVal === String(value).toLowerCase();
       });
     });
   }, [orders, columnsFilters]);
 
-  const paginatedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredOrders.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredOrders, currentPage, itemsPerPage]);
 
   // Métricas derivadas en tiempo real según los filtros de la tabla
   const derivedMetrics: Metrics = useMemo(() => {
@@ -800,7 +795,7 @@ export function WorkOrders() {
         )}
         <DataTable
           key={`${projectId}-${selectedField?.id || 0}-${orders.length}`}
-          data={paginatedOrders}
+          data={filteredOrders}
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           columns={columnsToShow}

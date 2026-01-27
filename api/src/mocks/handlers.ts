@@ -294,10 +294,7 @@ export const handlers = [
     );
   }),
 
-// 5. MOCK DE CAMPAÑAS (¡AQUÍ ESTÁ LA CLAVE!)
-  // 1. Es un Objeto (evita error 500).
-  // 2. Tiene 'success: true' y 'data' directo (evita la triple caja).
-  // 3. Tiene 'customer_id' y 'project_id' (hace que el selector funcione).
+
 // 5. MOCK DE CAMPAÑAS (Array directo - el backend lo envuelve)
   http.get(new RegExp(configService.baseManagerApi + "/campaigns.*"), () => {
     console.log("Mocking campaigns...");
@@ -314,6 +311,275 @@ export const handlers = [
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   }),
+
+  // =======================
+// LABORS (Tasks) MOCK
+// =======================
+http.get(
+  new RegExp(configService.baseManagerApi + "/labors/group/\\d+.*"),
+  ({ request }) => {
+    logRequest("GET", request.url);
+
+    return new HttpResponse(
+      JSON.stringify({
+        data: [
+          {
+            workorder_id: 51,
+            workorder_number: "5.1",
+            date: "2025-10-15",
+            field_name: "campo alegre",
+            crop_name: "Maíz color",
+            contractor: "G.AYALA",
+            category_name: "Rolo",
+            surface_ha: 142,
+            cost_ha: 20,
+            net_total: 2840,
+            total_iva: 3138.2,
+            investor_name: "Oscar",
+            usd_avg_value: 1,
+            usd_cost_ha: 20,
+            usd_net_total: 2840,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 52,
+            workorder_number: "39.1",
+            date: "2025-12-10",
+            field_name: "campo alegre",
+            crop_name: "Maíz color",
+            contractor: "MUSTAFAD",
+            category_name: "Pulverización",
+            surface_ha: 142.5,
+            cost_ha: 5.5,
+            net_total: 783.75,
+            total_iva: 866.04,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 5.5,
+            usd_net_total: 783.75,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 53,
+            workorder_number: "29",
+            date: "2026-01-01",
+            field_name: "campo alegre",
+            crop_name: "Maíz color",
+            contractor: "BIANCHI",
+            category_name: "Siembra",
+            surface_ha: 140,
+            cost_ha: 55,
+            net_total: 7700,
+            total_iva: 8508.5,
+            investor_name: "Oscar",
+            usd_avg_value: 1,
+            usd_cost_ha: 55,
+            usd_net_total: 7700,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 54,
+            workorder_number: "33",
+            date: "2025-12-31",
+            field_name: "campo alegre",
+            crop_name: "Maíz color",
+            contractor: "CHARIF",
+            category_name: "Pulverización",
+            surface_ha: 25,
+            cost_ha: 5.5,
+            net_total: 137.5,
+            total_iva: 151.94,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 5.5,
+            usd_net_total: 137.5,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 55,
+            workorder_number: "33",
+            date: "2025-11-30",
+            field_name: "campo alegre",
+            crop_name: "Maíz Rojo",
+            contractor: "CHARIF",
+            category_name: "Pulverización",
+            surface_ha: 25,
+            cost_ha: 5.5,
+            net_total: 137.5,
+            total_iva: 151.94,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 5.5,
+            usd_net_total: 137.5,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 55,
+            workorder_number: "33",
+            date: "2025-11-30",
+            field_name: "campo alegre",
+            crop_name: "Maíz Rojo",
+            contractor: "CHARIF",
+            category_name: "Pulverización",
+            surface_ha: 25,
+            cost_ha: 5.5,
+            net_total: 137.5,
+            total_iva: 151.94,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 5.5,
+            usd_net_total: 137.5,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 55,
+            workorder_number: "33",
+            date: "2025-11-30",
+            field_name: "campo alegre",
+            crop_name: "Maíz Rojo",
+            contractor: "CHARIF",
+            category_name: "Pulverización",
+            surface_ha: 25,
+            cost_ha: 5.5,
+            net_total: 137.5,
+            total_iva: 151.94,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 5.5,
+            usd_net_total: 137.5,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 55,
+            workorder_number: "33",
+            date: "2025-11-30",
+            field_name: "campo alegre",
+            crop_name: "Maíz Rojo",
+            contractor: "CHARIF",
+            category_name: "Pulverización",
+            surface_ha: 25,
+            cost_ha: 5.5,
+            net_total: 137.5,
+            total_iva: 151.94,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 5.5,
+            usd_net_total: 137.5,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 55,
+            workorder_number: "33",
+            date: "2025-11-30",
+            field_name: "campo alegre",
+            crop_name: "Maíz Rojo",
+            contractor: "CHARIF",
+            category_name: "Pulverización",
+            surface_ha: 25,
+            cost_ha: 5.5,
+            net_total: 137.5,
+            total_iva: 151.94,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 5.5,
+            usd_net_total: 137.5,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 55,
+            workorder_number: "32",
+            date: "2025-11-30",
+            field_name: "campo alegre",
+            crop_name: "Maíz Rojo",
+            contractor: "CHARIF",
+            category_name: "Pulverización",
+            surface_ha: 25,
+            cost_ha: 5.5,
+            net_total: 137.5,
+            total_iva: 151.94,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 5.5,
+            usd_net_total: 137.5,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          },
+          {
+            workorder_id: 55,
+            workorder_number: "32.1",
+            date: "2025-11-30",
+            field_name: "campo alegre",
+            crop_name: "Maíz Rojo",
+            contractor: "CHARIF",
+            category_name: "Pulverización",
+            surface_ha: 25,
+            cost_ha: 6.5,
+            net_total: 137.5,
+            total_iva: 151.94,
+            investor_name: "Carla",
+            usd_avg_value: 1,
+            usd_cost_ha: 6.5,
+            usd_net_total: 137.5,
+            invoice_id: 0,
+            invoice_number: "",
+            invoice_company: "",
+            invoice_date: "",
+            invoice_status: ""
+          }
+        ],
+        page_info: {
+          total: 4,
+          page: 1,
+          per_page: 1000,
+          max_page: 1
+        }
+      }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      }
+    );
+  }
+),
 
   // =======================
 // STOCK SUMMARY (Manager API)
