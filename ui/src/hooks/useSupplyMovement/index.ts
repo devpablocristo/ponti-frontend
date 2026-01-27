@@ -43,9 +43,15 @@ const useSupplyMovements = () => {
         );
 
         if (response.success) {
+          const summaryPayload = response.data.summary ?? {
+            total_kg: 0,
+            total_lt: 0,
+            total_usd: 0,
+          };
+
           dispatch({
             type: actions.SET_SUMMARY,
-            payload: response.data.summary,
+            payload: summaryPayload,
           });
 
           dispatch({

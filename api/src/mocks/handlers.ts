@@ -1382,12 +1382,58 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
     return new HttpResponse(
       JSON.stringify({
         success: true,
-        data: [
-          { id: 1, supply_id: 1, supply_name: "Glifosato", type: "IN", quantity: "100", unit: "L", date: "2025-12-01", provider_id: 1 },
-          { id: 2, supply_id: 3, supply_name: "Urea", type: "IN", quantity: "5000", unit: "KG", date: "2025-12-05", provider_id: 3 },
-          { id: 3, supply_id: 1, supply_name: "Glifosato", type: "OUT", quantity: "20", unit: "L", date: "2025-12-15", lot_id: 20 }
-        ],
-        page_info: { total: 3 }
+        data: {
+          summary: {
+            total_kg: 5000,
+            total_lt: 120,
+            total_usd: 12345,
+          },
+          entries: [
+            {
+              id: 1,
+              entry_type: "Ingreso",
+              reference_number: "REM-1001",
+              entry_date: "2025-12-01T00:00:00.000Z",
+              investor_name: "Oscar",
+              supply_name: "Glifosato",
+              quantity: "100",
+              category: "Insumos",
+              type: "Líquido",
+              provider_name: "AgroSur S.A.",
+              price_usd: 40,
+              total_usd: 4000,
+            },
+            {
+              id: 2,
+              entry_type: "Ingreso",
+              reference_number: "REM-1002",
+              entry_date: "2025-12-05T00:00:00.000Z",
+              investor_name: "Carla",
+              supply_name: "Urea",
+              quantity: "5000",
+              category: "Fertilizantes",
+              type: "Sólido",
+              provider_name: "Fertilizantes Pro",
+              price_usd: 2,
+              total_usd: 10000,
+            },
+            {
+              id: 3,
+              entry_type: "Egreso",
+              reference_number: "REM-1003",
+              entry_date: "2025-12-15T00:00:00.000Z",
+              investor_name: "Oscar",
+              supply_name: "Glifosato",
+              quantity: "20",
+              category: "Insumos",
+              type: "Líquido",
+              provider_name: "AgroSur S.A.",
+              price_usd: 40,
+              total_usd: 800,
+            },
+          ],
+          page_info: { total: 3, page: 1, per_page: 100, max_page: 1 },
+        },
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );

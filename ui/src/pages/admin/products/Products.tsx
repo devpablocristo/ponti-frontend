@@ -18,26 +18,31 @@ const request = new APIClient({
   baseURL: "/api",
 });
 
-function ItemsIndicators({ summary }: { summary: Summary }) {
+function ItemsIndicators({ summary }: { summary?: Summary }) {
+  const safeSummary = summary ?? {
+    total_kg: 0,
+    total_lt: 0,
+    total_usd: 0,
+  };
   return (
     <div className="flex flex-col md:flex-row gap-4">
       <IndicatorCard
         title="Total insumos invertidos Kg"
-        value={formatNumberAr(summary.total_kg) + " Kg"}
+        value={formatNumberAr(safeSummary.total_kg) + " Kg"}
         color="gray"
         height="85px"
         width="220px"
       />
       <IndicatorCard
         title="Total insumos invertido Lts"
-        value={formatNumberAr(summary.total_lt) + " Lts"}
+        value={formatNumberAr(safeSummary.total_lt) + " Lts"}
         color="gray"
         height="85px"
         width="220px"
       />
       <IndicatorCard
         title="Total u$ / Neto"
-        value={formatNumberAr(summary.total_usd) + " u$"}
+        value={formatNumberAr(safeSummary.total_usd) + " u$"}
         color="gray"
         height="85px"
         width="220px"
