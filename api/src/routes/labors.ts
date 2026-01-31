@@ -75,7 +75,7 @@ router.post("/invoice", async (req: Request, res: Response) => {
     };
 
     const { data: workorder } = await apiClient.post<any>(
-      `/invoice/${req.body.workorder_id}`,
+      `/invoices/${req.body.workorder_id}`,
       requestData,
       headers
     );
@@ -158,7 +158,7 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
     };
 
     const { data: workorder } = await apiClient.put<any>(
-      `/invoice/${req.body.workorder_id}`,
+      `/invoices/${req.body.workorder_id}`,
       requestData,
       headers
     );

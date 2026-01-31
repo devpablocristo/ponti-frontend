@@ -166,7 +166,7 @@ const useProjects = () => {
       try {
         const response = await request.get<
           SuccessResponse<ProjectDropdownPayload>
-        >(`/projects/customer/${id}` + (queryString ? `?${queryString}` : ""));
+        >(`/projects/customers/${id}` + (queryString ? `?${queryString}` : ""));
 
         if (response.success) {
           dispatch({

@@ -184,7 +184,7 @@ const useTask = () => {
 
       try {
         const response = await request.put<SuccessResponse<any>>(
-          `/labors/invoice/${id}`,
+          `/labors/invoices/${id}`,
           invoice
         );
 

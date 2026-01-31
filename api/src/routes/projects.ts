@@ -37,8 +37,24 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: perPage.toString(),
+    });
+
+    // Solo enviar filtros validos para evitar 400 por customer_id/campaign_id = 0
+    if (customer_id > 0) {
+      params.set("customer_id", customer_id.toString());
+    }
+    if (campaign_id > 0) {
+      params.set("campaign_id", campaign_id.toString());
+    }
+    if (name) {
+      params.set("name", name);
+    }
+
     const { data: projects } = await apiClient.get<any>(
-      `/projects?page=${page}&per_page=${perPage}&customer_id=${customer_id}&campaign_id=${campaign_id}&name=${name}`,
+      `/projects?${params.toString()}`,
       headers
     );
 
@@ -103,7 +119,7 @@ router.get("", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/customer/:id", async (req: Request, res: Response) => {
+const handleProjectsByCustomer = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userID;
@@ -120,7 +136,7 @@ router.get("/customer/:id", async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 1000;
 
-    const url = `projects/customer/${id}?page=${page}&per_page=${perPage}`;
+    const url = `projects/customers/${id}?page=${page}&per_page=${perPage}`;
 
     const cachedProjects = cache.get(url);
     if (cachedProjects) {
@@ -162,7 +178,11 @@ router.get("/customer/:id", async (req: Request, res: Response) => {
       error: { status: 500, details: "No se pudo procesar la solicitud" },
     });
   }
-});
+};
+
+// Soporta /customers (plural) y /customer (singular)
+router.get("/customers/:id", handleProjectsByCustomer);
+router.get("/customer/:id", handleProjectsByCustomer);
 
 router.get("/:id", async (req: Request, res: Response) => {
   try {

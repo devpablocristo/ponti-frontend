@@ -43,6 +43,8 @@ router.use("/crops", crops);
 router.use("/supplies", supplies);
 router.use("/categories", categories);
 router.use("/types", types);
+// Soporta /work-orders (backend) y /workorders (legacy)
+router.use("/work-orders", workorders);
 router.use("/workorders", workorders);
 router.use("/labors", labors);
 router.use("/providers", providers);
