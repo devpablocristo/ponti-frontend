@@ -338,22 +338,24 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.delete<SuccessResponse<string>>(
-          "/projects/" + id
+        const response = await request.put<SuccessResponse<string>>(
+          "/projects/" + id + "/archive"
         );
 
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Proyecto eliminado con exito",
+            payload: "Proyecto archivado con éxito",
           });
           return;
         }
 
+        const message = "Ocurrió un error al intentar archivar un proyecto.";
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrio un error al intentar eliminar un proyecto.",
+          payload: message,
         });
+        throw new Error(message);
       } catch (error) {
         const axiosError = error as AxiosError;
 
@@ -363,20 +365,22 @@ const useProjects = () => {
           if (errorResponse.error) {
             const message =
               errorResponse.error.details ||
-              "Error desconocido al intentar eliminar un proyecto.";
+              "Error desconocido al intentar archivar un proyecto.";
 
             dispatch({
               type: actions.SET_ERROR,
               payload: message,
             });
-            return;
+            throw new Error(message);
           }
         }
 
+        const message = "Error en el servicio, inténtalo más tarde.";
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Error en el servicio, inténtalo más tarde.",
+          payload: message,
         });
+        throw new Error(message);
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
       }

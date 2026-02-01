@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 
 import * as actions from "./actions";
 
@@ -16,6 +16,7 @@ const request = new APIClient({
 const useCustomers = () => {
   const [{ total, customers, processing, error }, dispatch] =
     useCustomersReducer();
+  const lastQueryRef = useRef<string>("limit=1000");
 
   const getCustomers = React.useCallback(
     async (queryString: string): Promise<void> => {
@@ -24,6 +25,7 @@ const useCustomers = () => {
 
       let queryParams = "";
       if (queryString !== "") {
+        lastQueryRef.current = queryString;
         queryParams = `?${queryString}`;
       }
 
@@ -79,8 +81,116 @@ const useCustomers = () => {
     [dispatch]
   );
 
+  const archiveCustomer = React.useCallback(
+    async (id: number): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      try {
+        const response = await request.put<SuccessResponse<string>>(
+          "/customers/" + id + "/archive"
+        );
+
+        if (response.success) {
+          await getCustomers(lastQueryRef.current || "limit=1000");
+          return;
+        }
+
+        const message = "Ocurrió un error al intentar archivar el cliente.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } catch (error) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response) {
+          const errorResponse = axiosError.response.data as ErrorResponse;
+
+          if (errorResponse.error) {
+            const message =
+              errorResponse.error.details ||
+              "Error desconocido al intentar archivar el cliente.";
+
+            dispatch({
+              type: actions.SET_ERROR,
+              payload: message,
+            });
+            throw new Error(message);
+          }
+        }
+
+        const message = "Error en el servicio, inténtalo más tarde.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch, getCustomers]
+  );
+
+  const restoreCustomer = React.useCallback(
+    async (id: number): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      try {
+        const response = await request.put<SuccessResponse<string>>(
+          "/customers/" + id + "/restore"
+        );
+
+        if (response.success) {
+          await getCustomers(lastQueryRef.current || "limit=1000");
+          return;
+        }
+
+        const message = "Ocurrió un error al intentar restaurar el cliente.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } catch (error) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response) {
+          const errorResponse = axiosError.response.data as ErrorResponse;
+
+          if (errorResponse.error) {
+            const message =
+              errorResponse.error.details ||
+              "Error desconocido al intentar restaurar el cliente.";
+
+            dispatch({
+              type: actions.SET_ERROR,
+              payload: message,
+            });
+            throw new Error(message);
+          }
+        }
+
+        const message = "Error en el servicio, inténtalo más tarde.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch, getCustomers]
+  );
+
   return {
     getCustomers,
+    archiveCustomer,
+    restoreCustomer,
     total,
     customers,
     processing,

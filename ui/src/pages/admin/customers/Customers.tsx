@@ -9,6 +9,8 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../hooks/useDatabase/projects";
 import ExpandedRow from "./ExpandedRow";
 import { BaseModal } from "../../../components/Modal/BaseModal";
+import useCustomers from "../../../hooks/useCustomers";
+import { useSelection } from "../../login/context/SelectionContext";
 
 const columns: Column<ProjectData>[] = [
   { key: "customer", header: "Cliente/Sociedad" },
@@ -35,6 +37,11 @@ export function Customers() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"project" | "customer" | null>(
+    null
+  );
+  const [archiveCustomerWithProject, setArchiveCustomerWithProject] =
+    useState(false);
   const [modalConfig, setModalConfig] = useState({
     title: "",
     message: "",
@@ -52,6 +59,9 @@ export function Customers() {
     processing,
     error,
   } = useProjects();
+  const { archiveCustomer } = useCustomers();
+  const { setCustomer, setProject, setCampaign, setProjectId, setField } =
+    useSelection();
 
   const {
     selectedCustomer,
@@ -98,10 +108,12 @@ export function Customers() {
   };
 
   const handlePreFinish = (id: number) => {
+    setModalMode("project");
+    setArchiveCustomerWithProject(false);
     setModalConfig({
-      title: "Confirmar eliminación",
-      message: "¿Está seguro que desea eliminar el proyecto?",
-      primaryButtonText: "Sí, eliminar",
+      title: "Confirmar archivo",
+      message: "¿Está seguro que desea archivar el proyecto?",
+      primaryButtonText: "Sí, archivar",
       secondaryButtonText: "Cancelar",
       onConfirm: () => handleFinishConfirmed(id),
     });
@@ -110,9 +122,22 @@ export function Customers() {
 
   const handleFinishConfirmed = async (id: number) => {
     setIsProcessing(true);
+    let successMessage = "";
+    let errorMessage = "";
 
     try {
       await deleteProject(Number(id));
+      if (archiveCustomerWithProject && selectedCustomer) {
+        await archiveCustomer(Number(selectedCustomer.id));
+        setCustomer(undefined);
+        setProject(undefined);
+        setCampaign(undefined);
+        setProjectId(undefined);
+        setField(undefined);
+      }
+      successMessage = archiveCustomerWithProject
+        ? "El proyecto y el cliente han sido archivados."
+        : "El proyecto ha sido archivado.";
       getProjects(
         `customer_id=${selectedCustomer?.id}${
           selectedProject && selectedProject.id !== 0
@@ -126,16 +151,90 @@ export function Customers() {
       );
     } catch (error) {
       console.error("Error al finalizar:", error);
+      errorMessage =
+        error instanceof Error
+          ? error.message
+          : "No se pudo archivar el proyecto.";
     } finally {
-      setModalConfig({
-        title: "Confirmación",
-        message: "El proyecto ha sido eliminado.",
-        primaryButtonText: "Volver",
-        secondaryButtonText: "Volver",
-        onConfirm: () => {
-          window.location.href = "/admin/customers";
-        },
-      });
+      if (errorMessage) {
+        setModalConfig({
+          title: "Error",
+          message: errorMessage,
+          primaryButtonText: "Volver",
+          secondaryButtonText: "Volver",
+          onConfirm: () => {
+            setIsModalOpen(false);
+          },
+        });
+      } else {
+        setModalConfig({
+          title: "Confirmación",
+          message: successMessage,
+          primaryButtonText: "Volver",
+          secondaryButtonText: "Volver",
+          onConfirm: () => {
+            window.location.href = "/admin/customers";
+          },
+        });
+      }
+      setIsModalOpen(true);
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePreArchiveCustomer = () => {
+    if (!selectedCustomer) return;
+    setModalMode("customer");
+    setModalConfig({
+      title: "Confirmar archivo",
+      message: "¿Está seguro que desea archivar el cliente?",
+      primaryButtonText: "Sí, archivar",
+      secondaryButtonText: "Cancelar",
+      onConfirm: handleArchiveCustomerConfirmed,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleArchiveCustomerConfirmed = async () => {
+    if (!selectedCustomer) return;
+    setIsProcessing(true);
+    let errorMessage = "";
+
+    try {
+      await archiveCustomer(Number(selectedCustomer.id));
+      setCustomer(undefined);
+      setProject(undefined);
+      setCampaign(undefined);
+      setProjectId(undefined);
+      setField(undefined);
+    } catch (error) {
+      console.error("Error al archivar el cliente:", error);
+      errorMessage =
+        error instanceof Error
+          ? error.message
+          : "No se pudo archivar el cliente.";
+    } finally {
+      if (errorMessage) {
+        setModalConfig({
+          title: "Error",
+          message: errorMessage,
+          primaryButtonText: "Volver",
+          secondaryButtonText: "Volver",
+          onConfirm: () => {
+            setIsModalOpen(false);
+          },
+        });
+      } else {
+        setModalConfig({
+          title: "Confirmación",
+          message: "El cliente ha sido archivado.",
+          primaryButtonText: "Volver",
+          secondaryButtonText: "Volver",
+          onConfirm: () => {
+            window.location.href = "/admin/customers";
+          },
+        });
+      }
       setIsModalOpen(true);
       setIsProcessing(false);
     }
@@ -151,6 +250,13 @@ export function Customers() {
             variant: "success",
             isPrimary: true,
             href: "/admin/database/customers",
+          },
+          {
+            label: "Archivar cliente",
+            variant: "danger",
+            onClick: handlePreArchiveCustomer,
+            disabled:
+              !selectedCustomer || selectedCustomer.id === 0 || isProcessing,
           },
         ]}
       >
@@ -227,9 +333,27 @@ export function Customers() {
           setIsModalOpen(false);
         }}
       >
-        <div className="flex flex-col items-center gap-2">
-          <p>{modalConfig.message}</p>
-        </div>
+        {modalMode === "project" ? (
+          <div className="flex flex-col items-center gap-3 text-sm text-gray-700">
+            <p>{modalConfig.message}</p>
+            {selectedCustomer && (
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={archiveCustomerWithProject}
+                  onChange={(event) =>
+                    setArchiveCustomerWithProject(event.target.checked)
+                  }
+                />
+                <span>Archivar también el cliente</span>
+              </label>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-2">
+            <p>{modalConfig.message}</p>
+          </div>
+        )}
       </BaseModal>
     </div>
   );
