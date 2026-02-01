@@ -388,6 +388,185 @@ const useProjects = () => {
     [dispatch]
   );
 
+  const getArchivedProjects = React.useCallback(
+    async (queryString: string): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      let queryParams = "";
+      if (queryString !== "") {
+        queryParams = `?${queryString}`;
+      }
+
+      try {
+        const response = await request.get<SuccessResponse<ProjectPayload>>(
+          "/projects/archived" + queryParams
+        );
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_PROJECTS,
+            payload: response.data.data,
+          });
+
+          dispatch({
+            type: actions.SET_PAGINATION,
+            payload: response.data.page_info,
+          });
+
+          dispatch({
+            type: actions.SET_TOTAL_HECTARES,
+            payload: response.data.total_hectares,
+          });
+          return;
+        }
+
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: "Ocurrió un error en la búsqueda de proyectos archivados",
+        });
+      } catch (error) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response) {
+          const errorResponse = axiosError.response.data as ErrorResponse;
+
+          if (errorResponse.error) {
+            const message =
+              errorResponse.error.details ||
+              "Error desconocido en la búsqueda de proyectos archivados.";
+
+            dispatch({
+              type: actions.SET_ERROR,
+              payload: message,
+            });
+            return;
+          }
+        }
+
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: "Error en el servicio, inténtalo más tarde.",
+        });
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch]
+  );
+
+  const restoreProject = React.useCallback(
+    async (id: number): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      try {
+        const response = await request.put<SuccessResponse<string>>(
+          "/projects/" + id + "/restore"
+        );
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_RESULT,
+            payload: "Proyecto restaurado con éxito",
+          });
+          return;
+        }
+
+        const message = "Ocurrió un error al intentar restaurar un proyecto.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } catch (error) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response) {
+          const errorResponse = axiosError.response.data as ErrorResponse;
+
+          if (errorResponse.error) {
+            const message =
+              errorResponse.error.details ||
+              "Error desconocido al intentar restaurar un proyecto.";
+
+            dispatch({
+              type: actions.SET_ERROR,
+              payload: message,
+            });
+            throw new Error(message);
+          }
+        }
+
+        const message = "Error en el servicio, inténtalo más tarde.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch]
+  );
+
+  const hardDeleteProject = React.useCallback(
+    async (id: number): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      try {
+        const response = await request.delete<SuccessResponse<string>>(
+          "/projects/" + id + "/hard"
+        );
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_RESULT,
+            payload: "Proyecto eliminado con éxito",
+          });
+          return;
+        }
+
+        const message = "Ocurrió un error al intentar eliminar un proyecto.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } catch (error) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response) {
+          const errorResponse = axiosError.response.data as ErrorResponse;
+
+          if (errorResponse.error) {
+            const message =
+              errorResponse.error.details ||
+              "Error desconocido al intentar eliminar un proyecto.";
+
+            dispatch({
+              type: actions.SET_ERROR,
+              payload: message,
+            });
+            throw new Error(message);
+          }
+        }
+
+        const message = "Error en el servicio, inténtalo más tarde.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch]
+  );
+
   return {
     projects,
     totalHectares,
@@ -400,11 +579,14 @@ const useProjects = () => {
     processingDropdown,
     result,
     getProjects,
+    getArchivedProjects,
     getProjectsDropdown,
     getProject,
     saveProject,
     updateProject,
     deleteProject,
+    restoreProject,
+    hardDeleteProject,
   };
 };
 

@@ -119,6 +119,79 @@ router.get("", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data: projects } = await apiClient.get<any>(
+      "/projects/archived",
+      headers
+    );
+
+    const adaptedProjects = projects.data.map((project: any) => {
+      const client = project.customer?.name || "No client";
+      const projectName = project.name;
+
+      const managers =
+        project.managers?.map((m: any) => m.name).join(", ") || "No managers";
+
+      const investors =
+        project.investors
+          ?.map((inv: any) => {
+            return `${inv.name} - ${inv.percentage}%`;
+          })
+          .join(", ") || "No investors";
+
+      return {
+        id: project.id,
+        name: projectName,
+        customer: client,
+        campaign: project.campaign?.name || "No campaign",
+        managers,
+        investors,
+      };
+    });
+
+    const data = {
+      success: true,
+      data: {
+        data: adaptedProjects,
+        total_hectares: projects.total_hectares,
+        page_info: {
+          per_page: projects.page_info.per_page,
+          page: projects.page_info.page,
+          max_page: projects.page_info.max_page,
+          total: projects.page_info.total,
+        },
+      },
+    };
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 const handleProjectsByCustomer = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

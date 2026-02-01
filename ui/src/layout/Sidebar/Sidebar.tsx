@@ -69,6 +69,18 @@ const menuDatabase = {
       route: "/admin/database/customers",
     },
     {
+      name: "Clientes",
+      route: "/admin/database/customers/archived",
+    },
+    {
+      name: "Proyectos",
+      route: "/admin/database/projects/archived",
+    },
+    {
+      name: "Integridad de datos",
+      route: "/admin/database/data-integrity",
+    },
+    {
       name: "Labores",
       route: "/admin/database/tasks",
     },
@@ -301,7 +313,7 @@ function SidebarSubmenuItem({
   setIsSidebarOpen,
 }: SidebarSubItemProps) {
   const location = useLocation();
-  const isActive = (route: string) => location.pathname.startsWith(route);
+  const isActive = (route: string) => location.pathname === route;
 
   useEffect(() => {
     if (isActive(item.route)) {

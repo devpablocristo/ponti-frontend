@@ -15,10 +15,10 @@ interface ErrorResponse {
 export class ApiClient {
   private axiosInstance: AxiosInstance;
 
-  constructor(baseURL: string) {
+  constructor(baseURL: string, timeout = 8000) {
     this.axiosInstance = axios.create({
       baseURL,
-      timeout: 8000,
+      timeout,
     });
 
     this.axiosInstance.interceptors.response.use(
@@ -28,14 +28,24 @@ export class ApiClient {
   }
 
   private handleErrorResponse(error: AxiosError): Promise<ApiResponse<null>> {
+    // Resolver el mensaje más útil posible del backend
+    const data = error.response?.data as {
+      error?: { details?: string };
+      message?: string;
+      error_message?: string;
+    };
+    const details =
+      data?.error?.details ||
+      data?.message ||
+      data?.error_message ||
+      "Detalles no disponibles";
+
     return Promise.reject<ApiResponse<null>>({
       success: false,
       message: "Error en la solicitud",
       error: {
         status: error.response?.status ?? 500,
-        details:
-          (error.response?.data as { error?: string })?.error ||
-          "Detalles no disponibles",
+        details,
       },
     });
   }

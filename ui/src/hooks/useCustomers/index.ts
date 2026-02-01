@@ -81,6 +81,68 @@ const useCustomers = () => {
     [dispatch]
   );
 
+  const getArchivedCustomers = React.useCallback(
+    async (queryString: string): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      let queryParams = "";
+      if (queryString !== "") {
+        queryParams = `?${queryString}`;
+      }
+
+      try {
+        const response = await request.get<SuccessResponse<CustomerPayload>>(
+          "/customers/archived" + queryParams
+        );
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_CUSTOMERS,
+            payload: response.data.data,
+          });
+
+          dispatch({
+            type: actions.SET_TOTAL,
+            payload: response.data.total,
+          });
+          return;
+        }
+
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: "Ocurrió un error en la búsqueda de clientes archivados.",
+        });
+      } catch (error) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response) {
+          const errorResponse = axiosError.response.data as ErrorResponse;
+
+          if (errorResponse.error) {
+            const message =
+              errorResponse.error.details ||
+              "Error desconocido en la búsqueda de clientes archivados.";
+
+            dispatch({
+              type: actions.SET_ERROR,
+              payload: message,
+            });
+            return;
+          }
+        }
+
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: "Error en el servicio, inténtalo más tarde.",
+        });
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch]
+  );
+
   const archiveCustomer = React.useCallback(
     async (id: number): Promise<void> => {
       dispatch({ type: actions.SET_ERROR, payload: "" });
@@ -187,10 +249,65 @@ const useCustomers = () => {
     [dispatch, getCustomers]
   );
 
+  const hardDeleteCustomer = React.useCallback(
+    async (id: number): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      try {
+        const response = await request.delete<SuccessResponse<string>>(
+          "/customers/" + id + "/hard"
+        );
+
+        if (response.success) {
+          await getArchivedCustomers("limit=1000");
+          return;
+        }
+
+        const message = "Ocurrió un error al intentar eliminar el cliente.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } catch (error) {
+        const axiosError = error as AxiosError;
+
+        if (axiosError.response) {
+          const errorResponse = axiosError.response.data as ErrorResponse;
+
+          if (errorResponse.error) {
+            const message =
+              errorResponse.error.details ||
+              "Error desconocido al intentar eliminar el cliente.";
+
+            dispatch({
+              type: actions.SET_ERROR,
+              payload: message,
+            });
+            throw new Error(message);
+          }
+        }
+
+        const message = "Error en el servicio, inténtalo más tarde.";
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: message,
+        });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch, getArchivedCustomers]
+  );
+
   return {
     getCustomers,
+    getArchivedCustomers,
     archiveCustomer,
     restoreCustomer,
+    hardDeleteCustomer,
     total,
     customers,
     processing,
