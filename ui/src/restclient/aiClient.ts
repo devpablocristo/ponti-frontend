@@ -17,6 +17,15 @@ export type AskResponse = {
   answer: string;
   sources: Array<Record<string, unknown>>;
   warnings: string[];
+  related_insights_count: number;
+  related_insights: RelatedInsight[];
+};
+
+export type RelatedInsight = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  title: string;
 };
 
 type AskHeaders = {
@@ -77,6 +86,15 @@ export type InsightItem = {
   computed_at: string;
   valid_until: string;
   status: string;
+  impact_min?: number | null;
+  impact_max?: number | null;
+  impact_unit?: string | null;
+  confidence?: string | null;
+  dedupe_key?: string | null;
+  cooldown_until?: string | null;
+  computed_by?: string | null;
+  job_run_id?: string | null;
+  rules_version?: string | null;
 };
 
 export type InsightsSummary = {

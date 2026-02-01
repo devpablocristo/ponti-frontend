@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 import Button from "../../../components/Button/Button";
 import { askAICopilot, AskResponse } from "../../../restclient/aiClient";
@@ -12,6 +13,15 @@ const AICopilot: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [response, setResponse] = useState<AskResponse | null>(null);
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const preset = params.get("q");
+    if (preset) {
+      setQuestion(preset);
+    }
+  }, [location.search]);
 
   const handleSubmit = async () => {
     setError("");
@@ -118,6 +128,37 @@ const AICopilot: React.FC = () => {
             <pre className="text-xs text-slate-700 whitespace-pre-wrap">
               {JSON.stringify(response.warnings, null, 2)}
             </pre>
+          </div>
+          <div className="border rounded-md p-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Insights relacionados</h3>
+              <Link
+                className="text-sm text-blue-600 hover:underline"
+                to="/admin/ai-insights"
+              >
+                Ver insights
+              </Link>
+            </div>
+            <div className="mt-2 text-sm text-slate-700">
+              Relacionados: {response.related_insights_count}
+            </div>
+            {response.related_insights.length === 0 ? (
+              <div className="mt-2 text-sm text-slate-500">
+                No hay insights activos para este proyecto.
+              </div>
+            ) : (
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                {response.related_insights.map((item) => (
+                  <Link
+                    key={item.id}
+                    className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                    to={`/admin/ai-insights?entity_type=${item.entity_type}&entity_id=${item.entity_id}`}
+                  >
+                    {item.title}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

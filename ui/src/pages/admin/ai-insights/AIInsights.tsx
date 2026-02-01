@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 import Button from "../../../components/Button/Button";
 import {
@@ -18,8 +19,32 @@ const AIInsights: React.FC = () => {
   const [error, setError] = useState("");
   const [summary, setSummary] = useState<InsightsSummary | null>(null);
   const [insights, setInsights] = useState<InsightItem[]>([]);
+  const [showAll, setShowAll] = useState(false);
 
   const headers = projectId ? { projectId: String(projectId) } : null;
+  const location = useLocation();
+
+  const getWindowLabel = (item: InsightItem): string => {
+    const raw = item.evidence?.["window"];
+    return typeof raw === "string" ? raw : "all";
+  };
+
+  const getCtaLabel = (item: InsightItem): string | null => {
+    const raw = item.action?.["cta_label"];
+    return typeof raw === "string" ? raw : null;
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const presetType = params.get("entity_type");
+    const presetId = params.get("entity_id");
+    if (presetType) {
+      setEntityType(presetType);
+    }
+    if (presetId) {
+      setEntityId(presetId);
+    }
+  }, [location.search]);
 
   const handleSummary = async () => {
     setLoading(true);
@@ -130,9 +155,43 @@ const AIInsights: React.FC = () => {
 
       <div className="border rounded-md p-4">
         <h3 className="font-semibold mb-2">Top insights</h3>
-        <pre className="text-xs text-slate-700 whitespace-pre-wrap">
-          {JSON.stringify(summary?.top_insights ?? [], null, 2)}
-        </pre>
+        {summary?.top_insights?.length ? (
+          <div className="grid grid-cols-1 gap-3">
+            {summary.top_insights.map((item) => (
+              <div key={item.id} className="rounded-md border p-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold">{item.title}</div>
+                  <div className="text-xs text-slate-500">
+                    {item.type} · {item.severity}
+                  </div>
+                </div>
+                <div className="text-sm text-slate-600">{item.summary}</div>
+                {item.impact_min !== undefined && item.impact_max !== undefined && (
+                  <div className="mt-2 text-xs text-slate-500">
+                    Impacto: {item.impact_min?.toFixed(2)}–{item.impact_max?.toFixed(2)}
+                    {item.impact_unit ?? ""}
+                  </div>
+                )}
+                <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                  <span>Confianza: {item.confidence ?? "n/a"}</span>
+                  <span>Ventana: {getWindowLabel(item)}</span>
+                </div>
+                <div className="mt-2">
+                  <Link
+                    className="text-sm text-blue-600 hover:underline"
+                    to={`/admin/ai-copilot?q=${encodeURIComponent(
+                      `Explicame el insight: ${item.title}`
+                    )}`}
+                  >
+                    Preguntar al Copilot
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-slate-500">Sin insights activos.</div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -170,9 +229,58 @@ const AIInsights: React.FC = () => {
 
       <div className="border rounded-md p-4">
         <h3 className="font-semibold mb-2">Listado de insights</h3>
-        <pre className="text-xs text-slate-700 whitespace-pre-wrap">
-          {JSON.stringify(insights ?? [], null, 2)}
-        </pre>
+        {insights.length === 0 ? (
+          <div className="text-sm text-slate-500">Sin resultados.</div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3">
+            {(showAll ? insights : insights.slice(0, 3)).map((item) => (
+              <div key={item.id} className="rounded-md border p-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold">{item.title}</div>
+                  <div className="text-xs text-slate-500">
+                    {item.type} · {item.severity}
+                  </div>
+                </div>
+                <div className="text-sm text-slate-600">{item.summary}</div>
+                {getCtaLabel(item) && (
+                  <div className="mt-2 text-sm text-slate-700">
+                    CTA: {getCtaLabel(item)}
+                  </div>
+                )}
+                {item.impact_min !== undefined && item.impact_max !== undefined && (
+                  <div className="mt-2 text-xs text-slate-500">
+                    Impacto: {item.impact_min?.toFixed(2)}–{item.impact_max?.toFixed(2)}
+                    {item.impact_unit ?? ""}
+                  </div>
+                )}
+                <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                  <span>Confianza: {item.confidence ?? "n/a"}</span>
+                  <span>Cooldown: {item.cooldown_until ?? "n/a"}</span>
+                  <span>Regla: {item.rules_version ?? "v1"}</span>
+                </div>
+                <div className="mt-2">
+                  <Link
+                    className="text-sm text-blue-600 hover:underline"
+                    to={`/admin/ai-copilot?q=${encodeURIComponent(
+                      `Necesito contexto sobre: ${item.title}`
+                    )}`}
+                  >
+                    Preguntar al Copilot
+                  </Link>
+                </div>
+              </div>
+            ))}
+            {insights.length > 3 && (
+              <button
+                type="button"
+                className="text-sm text-blue-600 hover:underline"
+                onClick={() => setShowAll((prev) => !prev)}
+              >
+                {showAll ? "Mostrar menos" : "Mostrar todos"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
