@@ -14,12 +14,16 @@ type IntegrityCheck = {
   data_to_verify: string;
   target_module: string;
   control_rule: string;
+  description: string;
   left_calculation: string;
   left_value: string;
   left_source?: string;
+  left_interpretation: string;
   right_calculation: string;
   right_value: string;
   right_source?: string;
+  right_interpretation: string;
+  calculation_interpretation: string;
   difference: string;
   status: string;
   tolerance: string;
@@ -119,20 +123,100 @@ export default function Integrity() {
         columns={columns}
         message="No hay controles disponibles"
         expandableRowRender={(item: IntegrityCheck) => (
-          <div className="text-sm text-gray-700 space-y-1">
-            <div>
-              <strong>Regla:</strong> {item.control_rule}
+          <div className="text-sm text-gray-700 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
+                Control #{item.control_number}
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  item.status === "OK"
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {item.status}
+              </span>
+              {item.difference && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                  Diferencia: {item.difference}
+                </span>
+              )}
             </div>
-            <div>
-              <strong>LEFT:</strong> {item.left_calculation} ={" "}
-              {item.left_value}
-              {item.left_source ? ` (${item.left_source})` : ""}
+
+            {item.description && (
+              <div className="p-3 rounded-md bg-slate-50 border border-slate-200">
+                <div className="text-xs font-semibold uppercase text-slate-500 mb-1">
+                  Descripción
+                </div>
+                <div className="text-slate-800">{item.description}</div>
+              </div>
+            )}
+
+            <div className="p-3 rounded-md bg-white border border-slate-200">
+              <div className="text-xs font-semibold uppercase text-slate-500 mb-1">
+                Regla
+              </div>
+              <div className="text-slate-800">{item.control_rule}</div>
             </div>
-            <div>
-              <strong>RIGHT:</strong> {item.right_calculation} ={" "}
-              {item.right_value}
-              {item.right_source ? ` (${item.right_source})` : ""}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="p-3 rounded-md bg-emerald-50 border border-emerald-200">
+                <div className="text-xs font-semibold uppercase text-emerald-700 mb-1">
+                  LEFT (origen)
+                </div>
+                <div className="text-slate-800">
+                  {item.left_calculation} ={" "}
+                  <span className="font-semibold">{item.left_value}</span>
+                  {item.left_source ? (
+                    <span className="text-slate-500"> ({item.left_source})</span>
+                  ) : null}
+                </div>
+                {item.left_interpretation && (
+                  <div className="mt-2 text-slate-600">
+                    <span className="font-semibold text-emerald-700">
+                      Interpretación:
+                    </span>{" "}
+                    {item.left_interpretation}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-3 rounded-md bg-sky-50 border border-sky-200">
+                <div className="text-xs font-semibold uppercase text-sky-700 mb-1">
+                  RIGHT (destino)
+                </div>
+                <div className="text-slate-800">
+                  {item.right_calculation} ={" "}
+                  <span className="font-semibold">{item.right_value}</span>
+                  {item.right_source ? (
+                    <span className="text-slate-500">
+                      {" "}
+                      ({item.right_source})
+                    </span>
+                  ) : null}
+                </div>
+                {item.right_interpretation && (
+                  <div className="mt-2 text-slate-600">
+                    <span className="font-semibold text-sky-700">
+                      Interpretación:
+                    </span>{" "}
+                    {item.right_interpretation}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {item.calculation_interpretation && (
+              <div className="p-3 rounded-md bg-violet-50 border border-violet-200">
+                <div className="text-xs font-semibold uppercase text-violet-700 mb-1">
+                  Interpretación del cálculo
+                </div>
+                <div className="text-slate-800">
+                  {item.calculation_interpretation}
+                </div>
+              </div>
+            )}
           </div>
         )}
       />

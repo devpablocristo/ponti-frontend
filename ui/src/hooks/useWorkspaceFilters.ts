@@ -144,6 +144,17 @@ export const useWorkspaceFilters = (
     contextSetField(value);
   };
 
+  const normalizedSelectedProject =
+    selectedProject && typeof selectedProject.id === "number" && selectedProject.id > 0
+      ? selectedProject
+      : undefined;
+  const normalizedProjectId =
+    typeof projectId === "number" && projectId > 0 ? projectId : undefined;
+  const normalizedSelectedField =
+    selectedField && typeof selectedField.id === "number" && selectedField.id > 0
+      ? selectedField
+      : undefined;
+
   const [queryCustomer, setQueryCustomer] = useState<string>("");
   const [queryProject, setQueryProject] = useState<string>("");
 
@@ -299,10 +310,10 @@ export const useWorkspaceFilters = (
   }
 
   useEffect(() => {
-    if (enabledFilters.includes("field") && projectId && projectId !== 0) {
-      getFields(`project_id=${projectId}`);
+    if (enabledFilters.includes("field") && normalizedProjectId) {
+      getFields(`project_id=${normalizedProjectId}`);
     }
-  }, [getFields, projectId]);
+  }, [getFields, normalizedProjectId]);
 
   if (enabledFilters.includes("field")) {
     filters.push({
@@ -311,18 +322,18 @@ export const useWorkspaceFilters = (
       label: "Campo",
       placeholder: "Seleccione campo",
       options:
-        selectedCustomer && selectedProject
+        selectedCustomer && normalizedSelectedProject
           ? [{ id: 0, name: "Todos los campos" }, ...(Array.isArray(fields) ? fields : [])]
           : [],
       total: selectedCustomer ? totalFields : 0,
-      value: selectedField?.id ?? 0,
+      value: normalizedSelectedField?.id ?? 0,
       onChange: () => {},
       setData: setSelectedField,
       disabled:
         !selectedCustomer ||
         selectedCustomer.id === 0 ||
-        !selectedProject ||
-        selectedProject.id === 0 ||
+        !normalizedSelectedProject ||
+        normalizedSelectedProject.id === 0 ||
         loadingFields,
     });
   }
@@ -334,10 +345,10 @@ export const useWorkspaceFilters = (
     fields: (fields as Field[]) || [],
     projectPageInfo: projectPageInfo,
     selectedCustomer,
-    selectedProject,
-    projectId,
+    selectedProject: normalizedSelectedProject,
+    projectId: normalizedProjectId ?? null,
     selectedCampaignId,
-    selectedField,
+    selectedField: normalizedSelectedField,
     filters,
     seasons,
     loading: {
