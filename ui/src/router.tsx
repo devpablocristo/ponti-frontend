@@ -27,6 +27,8 @@ import ListTasks from "./pages/admin/database/tasks/List";
 import ByFieldOrCropReport from "./pages/admin/reports/ByFieldOrCropReport.tsx";
 import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
 import InvestorContribution from "./pages/admin/reports/InvestorContributionReport.tsx";
+import AICopilot from "./pages/admin/ai-copilot/AICopilot";
+import AIInsights from "./pages/admin/ai-insights/AIInsights";
 
 export default [
   {
@@ -58,6 +60,14 @@ export default [
       {
         path: "dashboard",
         element: <Dashboard />,
+      },
+      {
+        path: "ai-copilot",
+        element: <AICopilot />,
+      },
+      {
+        path: "ai-insights",
+        element: <AIInsights />,
       },
       {
         path: "customers",

@@ -22,6 +22,7 @@ import stock from "./stock";
 import dashboard from "./dashboard";
 import reports from "./reports";
 import dataIntegrity from "./data-integrity";
+import ai from "./ai";
 
 const router: Router = Router();
 export const cache = new NodeCache({ stdTTL: 1800, checkperiod: 1800 });
@@ -54,6 +55,7 @@ router.use("/stock", stock);
 router.use("/dashboard", dashboard);
 router.use("/reports", reports);
 router.use("/data-integrity", dataIntegrity);
+router.use("/ai", ai);
 
 router.use("/form-options", options);
 
