@@ -132,12 +132,21 @@ router.get("/archived", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const { data: projects } = await apiClient.get<any>(
-      "/projects/archived",
+    const { data: projects } = await apiClient.get<any>("/projects/archived", headers);
+    const { data: archivedCustomers } = await apiClient.get<any>(
+      "/customers/archived",
       headers
     );
 
-    const adaptedProjects = projects.data.map((project: any) => {
+    const archivedCustomerIds = new Set<number>(
+      (archivedCustomers?.data ?? []).map((customer: any) => Number(customer.id))
+    );
+    const filteredProjects = projects.data.filter((project: any) => {
+      const customerId = Number(project.customer?.id ?? 0);
+      return !archivedCustomerIds.has(customerId);
+    });
+
+    const adaptedProjects = filteredProjects.map((project: any) => {
       const client = project.customer?.name || "No client";
       const projectName = project.name;
 
@@ -170,7 +179,7 @@ router.get("/archived", async (req: Request, res: Response) => {
           per_page: projects.page_info.per_page,
           page: projects.page_info.page,
           max_page: projects.page_info.max_page,
-          total: projects.page_info.total,
+          total: adaptedProjects.length,
         },
       },
     };
