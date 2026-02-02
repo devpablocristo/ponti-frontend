@@ -34,10 +34,10 @@ export interface FilterBarFilter {
   placeholder: string;
   ref?: string;
   total?: number;
-  options: Customer[] | Project[] | Campaign[];
-  value: any;
-  onChange: (value: any) => void;
-  setData: (data: any | undefined) => void;
+  options: Array<{ id: number; name: string }>;
+  value: string | number | null;
+  onChange: (value: string) => void;
+  setData: (data: unknown) => void;
   disabled?: boolean;
 }
 
@@ -46,7 +46,7 @@ export interface UseWorkspaceFiltersReturn {
   projectsDropdown: Project[];
   campaigns: Campaign[];
   fields: Field[];
-  projectPageInfo: any; // Replace 'any' with your actual PageInfo type from useProjects
+  projectPageInfo: unknown; // Replace 'unknown' with your actual PageInfo type from useProjects
   selectedCustomer: Customer | undefined;
   selectedProject: Project | undefined;
   projectId: number | null;

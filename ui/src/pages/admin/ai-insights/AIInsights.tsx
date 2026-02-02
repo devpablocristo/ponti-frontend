@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import Button from "../../../components/Button/Button";
+import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {
   computeInsights,
   getInsights,
@@ -9,10 +11,14 @@ import {
   InsightsSummary,
   InsightItem,
 } from "../../../restclient/aiClient";
-import { useSelection } from "../../login/context/SelectionContext";
 
 const AIInsights: React.FC = () => {
-  const { projectId, project } = useSelection();
+  const { filters, projectId } = useWorkspaceFilters([
+    "customer",
+    "project",
+    "campaign",
+    "field",
+  ]);
   const [entityType, setEntityType] = useState("project");
   const [entityId, setEntityId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,6 +29,9 @@ const AIInsights: React.FC = () => {
 
   const headers = projectId ? { projectId: String(projectId) } : null;
   const location = useLocation();
+  const resolvedEntityType = entityType || "project";
+  const resolvedEntityId =
+    entityId || (projectId ? String(projectId) : "");
 
   const getWindowLabel = (item: InsightItem): string => {
     const raw = item.evidence?.["window"];
@@ -87,7 +96,10 @@ const AIInsights: React.FC = () => {
       if (!headers) {
         throw new Error("Proyecto obligatorio");
       }
-      const res = await getInsights(headers, entityType, entityId);
+      if (!resolvedEntityId) {
+        throw new Error("Entity ID obligatorio");
+      }
+      const res = await getInsights(headers, resolvedEntityType, resolvedEntityId);
       setInsights(res.insights);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error inesperado";
@@ -99,17 +111,7 @@ const AIInsights: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 px-6 py-4">
-      <div>
-        <h2 className="text-xl font-semibold">AI Insights</h2>
-        <p className="text-sm text-slate-500">
-          Resumen de alertas y recomendaciones generadas por IA.
-        </p>
-      </div>
-
-      <div className="text-sm text-slate-600">
-        Proyecto actual: {project?.name ?? "No seleccionado"}
-      </div>
-
+      <FilterBar filters={filters} />
       <div className="flex items-center gap-3">
         <Button
           size="sm"
@@ -192,27 +194,6 @@ const AIInsights: React.FC = () => {
         ) : (
           <div className="text-sm text-slate-500">Sin insights activos.</div>
         )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Entity type</label>
-          <input
-            className="border rounded-md px-3 py-2"
-            value={entityType}
-            onChange={(e) => setEntityType(e.target.value)}
-            placeholder="project"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Entity ID</label>
-          <input
-            className="border rounded-md px-3 py-2"
-            value={entityId}
-            onChange={(e) => setEntityId(e.target.value)}
-            placeholder="demo-project"
-          />
-        </div>
       </div>
 
       <div className="flex items-center gap-3">

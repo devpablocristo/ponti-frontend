@@ -2,11 +2,29 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import Button from "../../../components/Button/Button";
+import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { askAICopilot, AskResponse } from "../../../restclient/aiClient";
-import { useSelection } from "../../login/context/SelectionContext";
 
 const AICopilot: React.FC = () => {
-  const { projectId, project } = useSelection();
+  const { filters, projectId } = useWorkspaceFilters([
+    "customer",
+    "project",
+    "campaign",
+    "field",
+  ]);
+  const suggestedQuestions = [
+    "Cuanto se gasto en costos directos del proyecto?",
+    "Cual es el costo directo por hectarea?",
+    "Cuanto se uso de insumos en total?",
+    "Cuantos workorders tiene el proyecto?",
+    "Cuantas ordenes se hicieron en los ultimos 30 dias?",
+    "Cual es la variacion de stock real vs inicial?",
+    "Cuantas hectareas totales tiene el proyecto?",
+    "Hectareas por lote del proyecto",
+    "Indicadores operativos de la campana activa",
+    "Insumos por categoria del proyecto",
+  ];
   const [question, setQuestion] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -51,17 +69,7 @@ const AICopilot: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 px-6 py-4">
-      <div>
-        <h2 className="text-xl font-semibold">AI Copilot</h2>
-        <p className="text-sm text-slate-500">
-          Consultas read-only por proyecto con auditoria y fuentes.
-        </p>
-      </div>
-
-      <div className="text-sm text-slate-600">
-        Proyecto actual: {project?.name ?? "No seleccionado"}
-      </div>
-
+      <FilterBar filters={filters} />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex flex-col gap-2 md:col-span-2">
           <label className="text-sm font-medium">Pregunta</label>
@@ -71,6 +79,18 @@ const AICopilot: React.FC = () => {
             onChange={(e) => setQuestion(e.target.value)}
             placeholder="Necesito el resumen del proyecto"
           />
+          <div className="flex flex-wrap gap-2 pt-2">
+            {suggestedQuestions.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className="rounded-full border px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                onClick={() => setQuestion(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium">Fecha desde</label>
