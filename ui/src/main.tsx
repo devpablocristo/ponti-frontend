@@ -8,3 +8,4 @@ import routes from "./router";
 createRoot(document.getElementById("root")!).render(
   <RouterProvider router={createBrowserRouter(routes)} />
 );
+//prueba

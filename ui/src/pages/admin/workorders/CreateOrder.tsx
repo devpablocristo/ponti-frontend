@@ -11,6 +11,7 @@ import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useProducts from "../../../hooks/useProducts";
+import useCategories from "../../../hooks/useCategories";
 
 const emptyItems = [
   {
@@ -121,6 +122,8 @@ export default function CreateOrder({
   const [orderNumber, setOrderNumber] = useState("");
   const [surface, setSurface] = useState("");
   const [date, setDate] = useState("");
+  const [openCreateSupply, setOpenCreateSupply] = useState(false);
+  const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
     null
   );
@@ -135,6 +138,160 @@ export default function CreateOrder({
       dose: string;
     }[]
   >(emptyItems);
+
+
+
+  function CreateSupplyInline({
+    projectId,
+    onCreated,
+    onCancel,
+  }: {
+    projectId: number | null;
+    onCreated: (newSupplyId: number) => void;
+    onCancel: () => void;
+  }) {
+    const { saveProducts, result, error } = useProducts();
+    const { categories, types, getCategories, getTypes } = useCategories();
+    const [saving, setSaving] = useState(false);
+    const [success, setSuccess] = useState<string | null>(null);
+
+    const [name, setName] = useState("");
+    const [unit, setUnit] = useState("");
+    const [price, setPrice] = useState("");
+    const [category, setCategory] = useState("");
+    const [type, setType] = useState("");
+
+    // Forzar mayúsculas en el nombre
+    const normalizedName = name.trim().replace(/\s+/g, " ").toUpperCase();
+    useEffect(() => {
+      getCategories("");
+      getTypes();
+    }, []);
+
+    useEffect(() => {
+      if (!result) return;
+
+      const createdId = Number(String(result).trim());
+      setSaving(false);
+
+      if (!isNaN(createdId)) {
+        setSuccess("Insumo creado correctamente");
+      } else {
+        setSuccess("Insumo creado correctamente");
+      }
+    }, [result]);
+
+    useEffect(() => {
+      if (error) {
+        setSaving(false);
+      }
+    }, [error]);
+
+    return (
+      <div className="space-y-4">
+        {success && (
+          <div className="p-3 rounded bg-green-50 text-green-700 text-sm flex items-center justify-between">
+            <span>{success}</span>
+            <Button size="xs" variant="success" onClick={() => {
+              setSuccess(null);
+              onCreated(Number(result));
+            }}>OK</Button>
+          </div>
+        )}
+
+        {!success && <>
+          <InputField
+            label="Nombre del insumo"
+            name="suplyName"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            size="sm"
+          />
+
+          <SelectField
+            label="Unidad"
+            name="unit"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            options={[
+              { id: 1, name: "Lts" },
+              { id: 2, name: "Kg" },
+            ]}
+            size="sm"
+          />
+
+          <InputField
+            label="Precio"
+            name="supplyPrice"
+            value={price}
+            onChange={(e) => {
+              let value = e.target.value.replace(/,/g, ".");
+              if (/^\d*\.?\d{0,2}$/.test(value)) {
+                setPrice(value);
+              }
+            }}
+            size="sm"
+          />
+
+          <SelectField
+            label="Rubro"
+            name="category"
+            value={category}
+            onChange={(e) => {
+              const selectedCategory = categories.find(
+                (c: { id: number; type_id?: number }) => c.id === Number(e.target.value)
+              );
+              setCategory(e.target.value);
+              setType(selectedCategory?.type_id?.toString() || "");
+            }}
+            options={categories}
+            size="sm"
+          />
+
+          <SelectField
+            label="Tipo / Clase"
+            name="type"
+            value={type}
+            options={types}
+            disabled
+            onChange={() => { }}
+            size="sm"
+          />
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outlineGray" onClick={onCancel} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button
+              variant="success"
+              disabled={saving}
+              onClick={() => {
+                if (!projectId || !name || !unit || !price || !category || !type) {
+                  return;
+                }
+                setSaving(true);
+                setSuccess(null);
+                saveProducts(
+                  [
+                    {
+                      name: normalizedName,
+                      unit: Number(unit),
+                      price: Number(price),
+                      category: Number(category),
+                      type: Number(type),
+                    },
+                  ],
+                  projectId
+                );
+              }}
+            >
+              {saving ? "Guardando..." : "Guardar insumo"}
+            </Button>
+          </div>
+        </>}
+      </div>
+    );
+  }
 
   const clearForm = () => {
     setItems(emptyItems);
@@ -387,9 +544,9 @@ export default function CreateOrder({
                   options={
                     selectedProject
                       ? selectedProject.fields.map((field) => ({
-                          id: field.id,
-                          name: field.name,
-                        }))
+                        id: field.id,
+                        name: field.name,
+                      }))
                       : []
                   }
                   value={field?.id?.toString() || ""}
@@ -436,7 +593,7 @@ export default function CreateOrder({
                     name="crop"
                     type="text"
                     value={lot?.current_crop_name || ""}
-                    onChange={() => {}}
+                    onChange={() => { }}
                     disabled
                     size="sm"
                   />
@@ -486,7 +643,7 @@ export default function CreateOrder({
                   type="text"
                   value={contractor}
                   disabled
-                  onChange={() => {}}
+                  onChange={() => { }}
                   size="sm"
                 />
                 <SelectField
@@ -526,14 +683,32 @@ export default function CreateOrder({
                         <SelectField
                           label=""
                           name={`item-${i}`}
-                          options={supplies}
-                          value={item.item}
+                          options={[
+                            { id: 0, name: "Seleccionar" }, // 👈 CLAVE
+                            ...supplies,
+                            { id: -1, name: "+ Crear nuevo insumo" },
+                          ]}
+                          value={item.item || ""}
                           onChange={(e) => {
-                            const selectedSupply = supplies.find(
-                              (l) => l.id === Number(e.target.value)
-                            );
+                            const value = Number(e.target.value);
+
+                            // 👉 Placeholder
+                            if (value === 0) {
+                              handleItemChange(i, "item", "");
+                              return;
+                            }
+
+                            // 👉 Crear nuevo insumo
+                            if (value === -1) {
+                              setItemIndexToUpdate(i);
+                              setOpenCreateSupply(true);
+                              return;
+                            }
+
+                            // 👉 Insumo real
+                            const selectedSupply = supplies.find((s) => s.id === value);
                             if (selectedSupply) {
-                              handleItemChange(i, "item", e.target.value);
+                              handleItemChange(i, "item", value.toString());
                               handleItemChange(i, "dose", "");
                               handleItemChange(i, "totalUsed", "");
                             }
@@ -725,6 +900,48 @@ export default function CreateOrder({
           </>
         )}
       </div>
+
+      {/* ============================
+      DRAWER CREAR INSUMO
+  ============================ */}
+      <Drawer
+        open={openCreateSupply}
+        onClose={() => {
+          setOpenCreateSupply(false);
+          setItemIndexToUpdate(null);
+        }}
+      >
+        <div className="flex flex-col h-full">
+          <h2 className="text-lg font-semibold mb-4">
+            Crear nuevo insumo
+          </h2>
+          {/* FORMULARIO SIMPLE DE INSUMO */}
+          <CreateSupplyInline
+            projectId={projectId}
+            onCreated={async (newSupplyId) => {
+              if (projectId) {
+                await getSupplies(projectId); // 🔥 CLAVE
+              }
+
+              if (itemIndexToUpdate !== null) {
+                handleItemChange(
+                  itemIndexToUpdate,
+                  "item",
+                  newSupplyId.toString()
+                );
+              }
+
+              setOpenCreateSupply(false);
+              setItemIndexToUpdate(null);
+            }}
+            onCancel={() => {
+              setOpenCreateSupply(false);
+              setItemIndexToUpdate(null);
+            }}
+          />
+        </div>
+      </Drawer>
     </Drawer>
+
   );
 }
