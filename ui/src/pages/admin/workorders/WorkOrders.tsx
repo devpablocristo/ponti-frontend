@@ -1,12 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-
 import DataTable from "../../../components/Table/DataTable";
-import {
-  Metrics,
-  OrdersData,
-  WorkorderData,
-} from "../../../hooks/useWorkOrders/types";
+import {Metrics, OrdersData, WorkorderData} from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -166,7 +161,6 @@ export function WorkOrders() {
     getOrders,
     deleteOrder,
     getMetrics,
-    metrics,
     processingMetrics,
     errorMetrics,
     orders,
@@ -174,16 +168,65 @@ export function WorkOrders() {
     error,
   } = useOrders();
 
-  const columns: Column<OrdersData>[] = React.useMemo(
-    () => [
+  const normalizeDate = (date: string) => {
+    if (!date) return "";
+    return date.includes("/")
+      ? date.split("/").reverse().join("-") // DD/MM/YYYY → YYYY-MM-DD
+      : date.split("T")[0]; // ISO → YYYY-MM-DD
+  };
+
+  // Filtros activos por columna
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  // Helper: filtra las órdenes según todos los filtros activos
+  const filterOrders = (data: OrdersData[], filters: Record<string, any>) => {
+    return data.filter((order) => {
+      return Object.entries(filters).every(([key, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+        if (key === "date") {
+          const orderDate = normalizeDate(String(order.date));
+          if (Array.isArray(value)) {
+            return value.some((v) => orderDate === normalizeDate(String(v)));
+          }
+          return orderDate === normalizeDate(String(value));
+        }
+
+        const orderVal = String(order[key as keyof OrdersData]).toLowerCase();
+        if (Array.isArray(value)) {
+          const values = value.map((v) => String(v).toLowerCase());
+          return values.includes(orderVal);
+        }
+        return orderVal === String(value).toLowerCase();
+      });
+    });
+  };
+
+  // Helper: obtiene las opciones válidas para una columna, considerando todos los filtros excepto el de esa columna
+  const getFilterOptionsForColumn = (
+    key: keyof OrdersData,
+    customSort?: (a: any, b: any) => number
+  ) => {
+    // Aplica todos los filtros excepto el de la columna actual
+    const filtersExceptCurrent = { ...columnsFilters };
+    delete filtersExceptCurrent[key];
+    const filtered = filterOrders(orders, filtersExceptCurrent);
+    let options = [...new Set(filtered.map((order) => order[key]))];
+    if (customSort) {
+      options.sort(customSort);
+    } else {
+      options.sort();
+    }
+    return options.map(String);
+  };
+
+  const columns: Column<OrdersData>[] = React.useMemo(() => {
+    return [
       {
         key: "number",
         header: "N°",
         filterable: true,
         filterType: "select",
-        filterOptions: [...new Set(orders.map((order) => order.number))].sort(
-          (a, b) => Number(a) - Number(b)
-        ),
+        filterOptions: getFilterOptionsForColumn("number", (a, b) => Number(a) - Number(b)),
         render: (value, data) => (
           <strong className="text-blue-700">
             <a
@@ -202,45 +245,38 @@ export function WorkOrders() {
         header: "Proyecto",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.project_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("project_name"),
       },
       {
         key: "field_name",
         header: "Campo",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.field_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("field_name"),
       },
       {
         key: "lot_name",
         header: "Lote",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.lot_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("lot_name"),
       },
       {
         key: "date",
         header: "Fecha",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(
-            orders.map((order) => {
-              if (!order.date) return "";
-              const datePart = order.date.split("T")[0];
-              const [year, month, day] = datePart.split("-").map(Number);
-              const dayStr = String(day).padStart(2, "0");
-              const monthStr = String(month).padStart(2, "0");
-              return `${dayStr}/${monthStr}/${year}`;
-            })
-          ),
-        ],
+        filterOptions: getFilterOptionsForColumn("date")
+          .map((dateString) => {
+            if (!dateString) return "";
+            const datePart = String(dateString).split("T")[0];
+            const [year, month, day] = datePart.split("-").map(Number);
+            const dayStr = String(day).padStart(2, "0");
+            const monthStr = String(month).padStart(2, "0");
+            return `${dayStr}/${monthStr}/${year}`;
+          })
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .sort(),
         render: (dateString) => {
           if (!dateString) return "";
           const datePart = dateString.split("T")[0];
@@ -250,20 +286,16 @@ export function WorkOrders() {
           return `${dayStr}/${monthStr}/${year}`;
         },
       },
-
       {
         key: "crop_name",
         header: "Cultivo",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.crop_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("crop_name"),
         render: (crop) => (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${
-              cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-            }`}
+            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
           >
             {crop}
           </span>
@@ -274,14 +306,11 @@ export function WorkOrders() {
         header: "Labor",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.labor_category_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("labor_category_name"),
         render: (labor) => (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${
-              laborColors[labor] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-            }`}
+            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[labor] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
           >
             {labor}
           </span>
@@ -292,50 +321,51 @@ export function WorkOrders() {
         header: "Tipo/Clase",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.type_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("type_name"),
       },
       {
         key: "contractor",
         header: "Contratista",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.contractor)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("contractor"),
       },
       {
         key: "surface_ha",
         header: "Superficie",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("surface_ha"),
       },
       {
         key: "supply_name",
         header: "Insumo",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.supply_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("supply_name"),
       },
       {
         key: "consumption",
         header: "Consumo",
-        filterable: false,
+        filterable: true,
+        filterType: "select", // Permite filtrar por texto o número
+        filterOptions: getFilterOptionsForColumn("consumption"),
       },
       {
         key: "category_name",
         header: "Rubro",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(orders.map((order) => order.category_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("category_name"),
       },
-      { key: "dose", header: "Dosis", filterable: false, render: (value: any) => {
-          return <strong>{value}</strong>;
-        }},
+      {
+        key: "dose",
+        header: "Dosis",
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("dose"),
+        render: (value: any) => <strong>{value}</strong>
+      },
       {
         key: "cost_per_ha",
         header: "Costo USD/Ha",
@@ -355,9 +385,9 @@ export function WorkOrders() {
           return <>{isNaN(num) ? "-" : `u$${formatNumberAr(num)}`}</>;
         },
       },
-    ],
-    [orders]
-  );
+    ];
+    // IMPORTANTE: Ahora dependemos de 'orders' Y de 'columnsFilters'
+  }, [orders, columnsFilters]);
 
   const allColumnsMap = new Map();
   [...columns].forEach((col) => {
@@ -373,8 +403,20 @@ export function WorkOrders() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const { projectId, selectedProject, selectedField, filters } =
-    useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+  const {
+    projectId,
+    selectedProject,
+    selectedField,
+    selectedCustomer,
+    selectedCampaignId,
+    filters,
+  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+
+  // Filtros globales de workspace y limpiar filtros al cambiar de cliente
+  useEffect(() => {
+    setColumnsFilters({});
+    setCurrentPage(1);
+  }, [selectedCustomer]);
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -385,10 +427,8 @@ export function WorkOrders() {
     message: "",
     primaryButtonText: "",
     secondaryButtonText: "Cancelar",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
-
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (!error) return;
@@ -399,6 +439,76 @@ export function WorkOrders() {
     setColumnsToShow(columns);
   }, [columns]);
 
+  const filterHierarchy = {
+    project_name: ["field_name", "lot_name"],
+    field_name: ["lot_name"],
+  };
+
+  useEffect(() => {
+    Object.entries(filterHierarchy).forEach(([parent, children]) => {
+      if (!columnsFilters[parent]) return;
+
+      const parentFilter = columnsFilters[parent];
+      const validData = orders.filter((o) => {
+        const orderValue = String(o[parent as keyof OrdersData]).toLowerCase();
+        if (Array.isArray(parentFilter)) {
+          // Si el filtro padre es un array, verificar si el valor está incluido
+          return parentFilter.some(
+            (val) => String(val).toLowerCase() === orderValue
+          );
+        } else {
+          // Si es un valor único
+          return orderValue === String(parentFilter).toLowerCase();
+        }
+      });
+
+      children.forEach((child) => {
+        const validValues = new Set(
+          validData.map((o) => o[child as keyof OrdersData])
+        );
+
+        const childFilter = columnsFilters[child];
+        if (childFilter) {
+          if (Array.isArray(childFilter)) {
+            // Si el filtro hijo es un array, verificar si algún valor es inválido
+            const validChildValues = childFilter.filter((val) =>
+              validValues.has(val)
+            );
+            if (validChildValues.length !== childFilter.length) {
+              setColumnsFilters((prev) => {
+                const updated = { ...prev };
+                if (validChildValues.length > 0) {
+                  updated[child] = validChildValues;
+                } else {
+                  delete updated[child];
+                }
+                return updated;
+              });
+            }
+          } else {
+            // Si es un valor único
+            if (!validValues.has(childFilter)) {
+              setColumnsFilters((prev) => {
+                const updated = { ...prev };
+                delete updated[child];
+                return updated;
+              });
+            }
+          }
+        }
+      });
+    });
+  }, [columnsFilters, orders]);
+
+  const buildQueryParams = () => {
+    const params: Record<string, string> = {};
+    if (selectedCustomer && selectedCustomer.id !== 0) params.customer_id = String(selectedCustomer.id);
+    if (projectId) params.project_id = String(projectId);
+    if (selectedCampaignId) params.campaign_id = String(selectedCampaignId);
+    if (selectedField && selectedField.id !== 0) params.field_id = String(selectedField.id);
+    return new URLSearchParams(params).toString();
+  };
+
   useEffect(() => {
     if (!projectId && !selectedField) {
       setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
@@ -407,25 +517,14 @@ export function WorkOrders() {
     setErrorMessage("");
     setVisibleColumns(columns.map((col) => col.key));
 
-    let query = "";
-    if (selectedField && selectedField.id !== 0) {
-      query += `field_id=${selectedField.id}`;
-    } else {
-      query += `project_id=${projectId}`;
-    }
-
+    const query = buildQueryParams();
     setCurrentPage(1);
     getOrders(query);
     getMetrics(query);
-  }, [projectId, selectedField]);
+  }, [projectId, selectedField, selectedCampaignId, selectedCustomer]);
 
   const handleOrderCreated = () => {
-    let query = "";
-    if (selectedField && selectedField.id !== 0) {
-      query += `field_id=${selectedField.id}`;
-    } else {
-      query += `project_id=${projectId}`;
-    }
+    const query = buildQueryParams();
     setCurrentPage(1);
     getOrders(query);
     getMetrics(query);
@@ -484,19 +583,117 @@ export function WorkOrders() {
   const filteredOrders = useMemo(() => {
     return orders.filter((order) => {
       return Object.entries(columnsFilters).every(([key, value]) => {
-        if (!value) return true;
-        return (
-          String(order[key as keyof OrdersData]).toLowerCase() ===
-          String(value).toLowerCase()
-        );
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+        if (key === "date") {
+          const orderDate = normalizeDate(String(order.date));
+          if (Array.isArray(value)) {
+            return value.some((v) => orderDate === normalizeDate(String(v)));
+          }
+          return orderDate === normalizeDate(String(value));
+        }
+        const orderValRaw = order[key as keyof OrdersData];
+        const orderVal = String(orderValRaw ?? "").toLowerCase();
+        if (Array.isArray(value)) {
+          return value.some((v) => orderVal === String(v).toLowerCase());
+        }
+        return orderVal === String(value).toLowerCase();
       });
     });
   }, [orders, columnsFilters]);
 
-  const paginatedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredOrders.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredOrders, currentPage, itemsPerPage]);
+
+  // Métricas derivadas en tiempo real según los filtros de la tabla
+  const derivedMetrics: Metrics = useMemo(() => {
+    const toNumber = (v: any) => {
+      const n = Number(v);
+      return isNaN(n) ? 0 : n;
+    };
+
+    let surface_ha = 0;
+    let totalLiters = 0;
+    let totalKilograms = 0;
+    let direct_cost = 0;
+
+    filteredOrders.forEach((order) => {
+      // Sumar superficie
+      surface_ha += toNumber(order.surface_ha);
+      
+      // Extraer valor numérico del consumo
+      const consumption = String(order.consumption || "").trim();
+      const numberMatch = consumption.match(/[\d.]+/);
+      const consumptionValue = numberMatch ? parseFloat(numberMatch[0]) || 0 : 0;
+      
+      // Detectar unidad según estructura real
+      const upperConsumption = consumption.toUpperCase();
+      const supplyNameUpper = String(order.supply_name || "").toUpperCase();
+      const categoryNameUpper = String(order.category_name || "").toUpperCase();
+      const typeNameUpper = String(order.type_name || "").toUpperCase();
+      
+      let isLiter = false;
+      let isKilo = false;
+      
+      // 1. Si el consumo tiene unidad explícita
+      if (upperConsumption.includes("L") || upperConsumption.includes("LT")) {
+        isLiter = true;
+      }
+      else if (upperConsumption.includes("KG") || upperConsumption.includes("K")) {
+        isKilo = true;
+      }
+      // 2. Por Tipo/Clase (Agroquímicos = Litros, Semilla = Kg)
+      else if (typeNameUpper.includes("AGROQUÍMICO") || typeNameUpper.includes("AGROQUIMICO")) {
+        isLiter = true;
+      }
+      else if (typeNameUpper.includes("SEMILLA")) {
+        isKilo = true;
+      }
+      // 3. Por Rubro
+      // LITROS: Herbicidas, Coadyuvantes, Curasemillas, Insecticidas, Fungicidas
+      else if (categoryNameUpper.includes("HERBICIDA") || 
+               categoryNameUpper.includes("COADYUVANTE") || 
+               categoryNameUpper.includes("CURASEMILLA") || 
+               categoryNameUpper.includes("INSECTICIDA") || 
+               categoryNameUpper.includes("FUNGICIDA")) {
+        isLiter = true;
+      }
+      // KILOS: Semilla, Fertilizantes
+      else if (categoryNameUpper.includes("SEMILLA") || categoryNameUpper.includes("FERTILIZANTE")) {
+        isKilo = true;
+      }
+      // 4. Por nombre del insumo
+      else if (supplyNameUpper.includes("HERBICIDA") || 
+               supplyNameUpper.includes("ACEITE") || 
+               supplyNameUpper.includes("INSECTICIDA") || 
+               supplyNameUpper.includes("FUNGICIDA") || 
+               supplyNameUpper.includes("LITRO")) {
+        isLiter = true;
+      }
+      else if (supplyNameUpper.includes("SEMILLA") || 
+               supplyNameUpper.includes("FERTILIZANTE") || 
+               supplyNameUpper.includes("KILO")) {
+        isKilo = true;
+      }
+      // Nota: "Otros Insumos" no se detecta (puede ser L o Kg)
+      // Labores (Siembra, Pulverización, Riego, Cosecha, Otras Labores) no tienen unidades
+      
+      // Sumar al total correspondiente
+      if (isLiter) {
+        totalLiters += consumptionValue;
+      } else if (isKilo) {
+        totalKilograms += consumptionValue;
+      }
+      
+      // Sumar todos los costos
+      direct_cost += toNumber(order.total_cost);
+    });
+
+    return {
+      surface_ha,
+      liters: totalLiters,
+      kilograms: totalKilograms,
+      direct_cost,
+    };
+  }, [filteredOrders, columnsFilters]);
 
   const handleExport = async () => {
     if (!projectId) return;
@@ -522,7 +719,7 @@ export function WorkOrders() {
     }
   };
 
-  // Handler para resetear página al aplicar filtros
+  // Handler para cambio de filtros (simple, sin lógica compleja)
   const handleFilterChange = (filters: Record<string, any>) => {
     setColumnsFilters(filters);
     setCurrentPage(1);
@@ -536,7 +733,7 @@ export function WorkOrders() {
           {
             label: "Exportar órdenes",
             icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             ,
             variant: "outlinePonti",
@@ -566,7 +763,8 @@ export function WorkOrders() {
       )}
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
-          <OrdersIndicators metrics={metrics} processing={processingMetrics} />
+          {/* Métricas dinámicas que reflejan filtros de la tabla */}
+          <OrdersIndicators metrics={derivedMetrics} processing={processingMetrics} />
         </div>
       )}
       <div className="mt-4 relative">
@@ -596,8 +794,8 @@ export function WorkOrders() {
           />
         )}
         <DataTable
-          key={orders.length}
-          data={paginatedOrders}
+          key={`${projectId}-${selectedField?.id || 0}-${orders.length}`}
+          data={filteredOrders}
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           columns={columnsToShow}

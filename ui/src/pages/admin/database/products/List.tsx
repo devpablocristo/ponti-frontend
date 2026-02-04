@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
@@ -134,10 +134,7 @@ export default function ListItems() {
     }
   };
 
-  const paginatedSupplies = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return supplies.slice(startIndex, startIndex + itemsPerPage);
-  }, [supplies, currentPage, itemsPerPage]);
+
 
   const handleExport = async () => {
     if (!projectId) return;
@@ -332,7 +329,7 @@ export default function ListItems() {
             </div>
           </BaseModal>
           <DataTable
-            data={paginatedSupplies}
+            data={supplies}
             columns={columns}
             onDelete={(item) => handleDelete(item.id)}
             onEdit={(item) => handleEdit(item)}

@@ -166,7 +166,7 @@ function TasksIndicators({
           processing
             ? "Cargando..."
             : " u$" +
-              formatNumberAr(metrics.avg_cost_per_ha)
+            formatNumberAr(metrics.avg_cost_per_ha)
         }
         color="gray"
         height="85px"
@@ -178,7 +178,7 @@ function TasksIndicators({
           processing
             ? "Cargando..."
             : " u$" +
-              formatNumberAr(metrics.net_total_cost)
+            formatNumberAr(metrics.net_total_cost)
         }
         color="gray"
         height="85px"
@@ -192,9 +192,7 @@ export function Tasks() {
   const {
     getTasks,
     tasks,
-    metrics,
     getMetrics,
-    processingMetrics,
     processing,
     error,
     errorMetrics,
@@ -265,6 +263,40 @@ export function Tasks() {
     }
   }, [errorInvoice]);
 
+  function getFilterOptionsForColumn(
+    key: keyof TaskData,
+    data: TaskData[],
+    filters: Record<string, any>
+  ) {
+    const otherFilters = { ...filters };
+    delete otherFilters[key];
+
+    const filtered = data.filter((task) =>
+      Object.entries(otherFilters).every(([k, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+        if (k === "date") {
+          const normalize = (d: string) =>
+            d.includes("/") ? d.split("/").reverse().join("-") : d.split("T")[0];
+          if (Array.isArray(value)) {
+            return value.some((v) => normalize(String(v)) === normalize(String(task.date)));
+          }
+          return normalize(String(value)) === normalize(String(task.date));
+        }
+
+        const val = String(task[k as keyof TaskData] ?? "").toLowerCase();
+
+        if (Array.isArray(value)) {
+          return value.some((v) => val.includes(String(v).toLowerCase()));
+        }
+
+        return val.includes(String(value).toLowerCase());
+      })
+    );
+
+    return [...new Set(filtered.map((t) => String(t[key] ?? "")))].filter(Boolean).sort();
+  }
+
   const columns: Column<TaskData>[] = useMemo(
     () => [
       {
@@ -272,9 +304,7 @@ export function Tasks() {
         header: "OT N°",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(tasks.map((task) => task.workorder_number)),
-        ].sort((a, b) => Number(a) - Number(b)),
+        filterOptions: getFilterOptionsForColumn("workorder_number", tasks, taskFilters),
         render: (value) => <strong className="text-gray-900">{value}</strong>,
       },
       {
@@ -282,20 +312,14 @@ export function Tasks() {
         header: "Fecha",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(
-            tasks.map((task) => {
-              const datePart = task.date.split("T")[0];
-              const [year, month, day] = datePart.split("-").map(Number);
-              const dayStr = String(day).padStart(2, "0");
-              const monthStr = String(month).padStart(2, "0");
-              return `${dayStr}/${monthStr}/${year}`;
-            })
-          ),
-        ],
+        filterOptions: getFilterOptionsForColumn("date", tasks, taskFilters).map((d) => {
+          const datePart = d.split("T")[0];
+          const [y, m, day] = datePart.split("-");
+          return `${day}/${m}/${y}`;
+        }),
         render: (dateString) => {
           if (!dateString) return "";
-          const datePart = dateString.split("T")[0];
+          const datePart = (dateString ?? "").split("T")[0];
           const [year, month, day] = datePart.split("-").map(Number);
           const dayStr = String(day).padStart(2, "0");
           const monthStr = String(month).padStart(2, "0");
@@ -307,21 +331,18 @@ export function Tasks() {
         header: "Campo",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(tasks.map((task) => task.field_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("field_name", tasks, taskFilters),
       },
       {
         key: "crop_name",
         header: "Cultivo",
         filterable: true,
         filterType: "select",
-        filterOptions: [...new Set(tasks.map((task) => task.crop_name))].sort(),
+        filterOptions: getFilterOptionsForColumn("crop_name", tasks, taskFilters),
         render: (crop) => (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${
-              cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-            }`}
+            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
           >
             {crop}
           </span>
@@ -332,23 +353,18 @@ export function Tasks() {
         header: "Contratista",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(tasks.map((task) => task.contractor)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("contractor", tasks, taskFilters),
       },
       {
         key: "category_name",
         header: "Labor",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(tasks.map((task) => task.category_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("category_name", tasks, taskFilters),
         render: (crop) => (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${
-              laborColors[crop] || "bg-green-200 text-green-800"
-            }`}
+            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[crop] || "bg-green-200 text-green-800"
+              }`}
           >
             {crop}
           </span>
@@ -357,7 +373,8 @@ export function Tasks() {
       {
         key: "surface_ha",
         header: "Superficie",
-        filterable: false,
+        filterable: true,
+        filterOptions: getFilterOptionsForColumn("surface_ha", tasks, taskFilters),
         render: (value) => (
           <strong className="text-gray-900">{formatNumberAr(value)} Has</strong>
         ),
@@ -365,7 +382,8 @@ export function Tasks() {
       {
         key: "cost_ha",
         header: "Costo $/Ha",
-        filterable: false,
+        filterable: true,
+        filterOptions: getFilterOptionsForColumn("cost_ha", tasks, taskFilters),
         render: (value) => <strong className="text-gray-700">${formatNumberAr(value)}</strong>,
       },
       {
@@ -389,9 +407,7 @@ export function Tasks() {
         header: "Inversor",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(tasks.map((task) => task.investor_name)),
-        ].sort(),
+        filterOptions: getFilterOptionsForColumn("investor_name", tasks, taskFilters),
       },
       {
         key: "usd_avg_value",
@@ -404,7 +420,9 @@ export function Tasks() {
       {
         key: "usd_cost_ha",
         header: "Costo U$/Ha",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("usd_cost_ha", tasks, taskFilters),
         render: (value) => (
           <>u${formatNumberAr(value)}</>
         ),
@@ -420,7 +438,9 @@ export function Tasks() {
       {
         key: "invoice_number",
         header: "N° Factura",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("invoice_number", tasks, taskFilters),
         render: (value) => (
           <input
             type="text"
@@ -433,7 +453,9 @@ export function Tasks() {
       {
         key: "invoice_company",
         header: "Empresa",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("invoice_company", tasks, taskFilters),
         render: (value) => (
           <input
             type="text"
@@ -446,7 +468,9 @@ export function Tasks() {
       {
         key: "invoice_date",
         header: "Fecha",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("invoice_date", tasks, taskFilters),
         render: (dateString) => {
           if (
             !dateString ||
@@ -462,7 +486,7 @@ export function Tasks() {
               />
             );
           }
-          const datePart = dateString.split("T")[0];
+          const datePart = (dateString ?? "").split("T")[0];
           const [year, month, day] = datePart.split("-").map(Number);
           const dayStr = String(day).padStart(2, "0");
           const monthStr = String(month).padStart(2, "0");
@@ -474,16 +498,7 @@ export function Tasks() {
         header: "Estado",
         filterable: true,
         filterType: "select",
-        filterOptions: [
-          ...new Set(
-            tasks.map((task) => {
-              if (!task.invoice_status) {
-                return emptyStatus;
-              }
-              return task.invoice_status;
-            })
-          ),
-        ],
+        filterOptions: getFilterOptionsForColumn("invoice_status", tasks, taskFilters),
         render: (status) => {
           if (!status) {
             status = emptyStatus;
@@ -505,7 +520,7 @@ export function Tasks() {
         },
       },
     ],
-    [tasks]
+    [tasks, taskFilters]
   );
 
   const allColumnsMap = new Map();
@@ -520,34 +535,73 @@ export function Tasks() {
   );
   const [visibleColumns, setVisibleColumns] = useState(selectedColumns);
 
+  const normalizeDate = (date: string) => {
+    if (!date) return "";
+    if (date.includes("/")) {
+      const [d, m, y] = date.split("/");
+      return `${y}-${m}-${d}`;
+    }
+    return date.split("T")[0];
+  };
+
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       return Object.entries(taskFilters).every(([key, value]) => {
-        if (!value) return true;
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        if (key === "invoice_status") {
-          if (value === emptyStatus) {
-            return (
-              !task.invoice_status ||
-              task.invoice_status === "" ||
-              task.invoice_status === value
-            );
+        if (key === "date") {
+          const taskDate = normalizeDate(String(task.date));
+          if (Array.isArray(value)) {
+            return value.some((v) => normalizeDate(String(v)) === taskDate);
           }
-          return task.invoice_status === value;
+          return normalizeDate(String(value)) === taskDate;
         }
 
-        return (
-          String(task[key as keyof TaskData]).toLowerCase() ===
-          String(value).toLowerCase()
-        );
+        if (key === "invoice_status") {
+          const taskStatus = task.invoice_status || emptyStatus;
+          if (Array.isArray(value)) return value.includes(taskStatus);
+          return taskStatus === value;
+        }
+        const taskValRaw = task[key as keyof TaskData];
+        const taskVal = String(taskValRaw ?? "").toLowerCase();
+
+        if (Array.isArray(value)) {
+          return value.some((v) => taskVal === String(v).toLowerCase());
+        }
+
+        return taskVal === String(value).toLowerCase();
       });
     });
   }, [tasks, taskFilters]);
 
-  const paginatedTasks = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredTasks.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredTasks, currentPage, itemsPerPage]);
+  const derivedMetrics: Metrics = useMemo(() => {
+    if (!filteredTasks.length) {
+      return {
+        surface_ha: 0,
+        avg_cost_per_ha: 0,
+        net_total_cost: 0,
+      };
+    }
+
+    const surface = filteredTasks.reduce(
+      (sum, t) => sum + Number(t.surface_ha || 0),
+      0
+    );
+
+    const totalCost = filteredTasks.reduce(
+      (sum, t) => sum + Number(t.net_total || 0),
+      0
+    );
+
+    const avgCost = surface > 0 ? totalCost / surface : 0;
+
+    return {
+      surface_ha: surface,
+      avg_cost_per_ha: avgCost,
+      net_total_cost: totalCost,
+    };
+  }, [filteredTasks]);
+
 
   useEffect(() => {
     setColumnsToShow(columns);
@@ -609,7 +663,7 @@ export function Tasks() {
           {
             label: "Exportar labores",
             icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             ,
             variant: "outlinePonti",
@@ -623,7 +677,7 @@ export function Tasks() {
         {errorMetrics ? (
           <div className="text-red-500">{errorMetrics}</div>
         ) : (
-          <TasksIndicators metrics={metrics} processing={processingMetrics} />
+          <TasksIndicators metrics={derivedMetrics} processing={processing} />
         )}
       </div>
 
@@ -635,7 +689,7 @@ export function Tasks() {
         )}
         <DataTable
           key={tasks.length}
-          data={paginatedTasks}
+          data={filteredTasks}
           columns={columnsToShow}
           filters={taskFilters}
           onFilterChange={handleFilterChange}
@@ -669,7 +723,7 @@ export function Tasks() {
               invoice_number: item.invoice_number,
               invoice_company: item.invoice_company,
               invoice_date: item.invoice_date
-                ? item.invoice_date.split("T")[0]
+                ? (item.invoice_date ?? "").split("T")[0]
                 : "",
               invoice_status: statusOption ? statusOption.id.toString() : "",
             });
@@ -687,11 +741,11 @@ export function Tasks() {
           pagination={
             pageInfo
               ? {
-                  page: currentPage,
-                  perPage: itemsPerPage,
-                  total: filteredTasks.length,
-                  onPageChange: handlePageChange,
-                }
+                page: currentPage,
+                perPage: itemsPerPage,
+                total: filteredTasks.length,
+                onPageChange: handlePageChange,
+              }
               : undefined
           }
         />

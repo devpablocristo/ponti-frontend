@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
+import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import SelectField from "../../../components/Input/SelectField";
-import Button from "../../../components/Button/Button";
 import { ByFieldOrCropTable } from "./ByFieldOrCropTable.tsx";
 import useReporting from "../../../hooks/useReporting";
 import { RowToRender } from "../../../hooks/useReporting/types.ts";
@@ -27,8 +26,8 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `${ value } Tn/Has`,
     },
-    classNameRows: "text-black font-bold h-14",
-    classNameHeader: "text-black font-bold h-14",
+    classNameRows: "text-black font-bold ",
+    classNameHeader: "text-black font-bold ",
   },
   {
     label: "Precio bruto",
@@ -69,27 +68,27 @@ const rowsToRender: RowToRender[] = [
   },
   {
     label: "Siembra", key: "labor_siembra", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Pulverizacion", key: "labor_pulverizacion", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Riego", key: "labor_riego", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Cosecha", key: "labor_cosecha", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Otras Labores", key: "labor_otras", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
@@ -98,47 +97,47 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
     },
-    classNameRows: "text-black bg-[#E5E7EB] font-bold h-12",
-    classNameHeader: "text-black bg-[#E5E7EB] font-bold h-12",
+    classNameRows: "text-black bg-[#E5E7EB] font-bold ",
+    classNameHeader: "text-black bg-[#E5E7EB] font-bold ",
   },
   {
     label: "Semillas", key: "supply_semillas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Curasemillas", key: "supply_curasemillas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Herbicidas", key: "supply_herbicidas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Insecticidas", key: "supply_insecticidas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Coadyuvantes", key: "supply_coadyuvantes", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
     label: "Fertilizantes", key: "supply_fertilizantes", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Fungicidas", key: "supply_fungicidas", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) } `,
     },
   },
   {
     label: "Otros insumos", key: "supply_otros", valueFormat: {
-      crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      crop: (value) => `${ formatNumberAr(value) }`,
     },
   },
   {
@@ -220,11 +219,13 @@ const rowsToRender: RowToRender[] = [
 export function ByFieldOrCropReport() {
   const [selectedField, setSelectedField] = useState<string>("0");
   const [selectedCrop, setSelectedCrop] = useState<string>("0");
+  
+  const { fieldCropReportingData: reportingData, processing, error, getFieldCropReportingData } = useReporting();
 
   const { filters, projectId, selectedCampaignId, loading } =
     useWorkspaceFilters(["project", "campaign"]);
 
-  const { fieldCropReportingData: reportingData, processing, error, getFieldCropReportingData } = useReporting();
+  // ...existing code...
 
   const buildQueryParams = () => {
     const params: Record<string, string> = {};
@@ -313,12 +314,13 @@ export function ByFieldOrCropReport() {
                     name="field"
                     value={ selectedField }
                     onChange={ (e) => setSelectedField(e.target.value) }
-                    options={ reportingData ? reportingData.columns.reduce((acc, crop) => {
-                        if (acc.findIndex(f => f.id === crop.field_id) === -1) {
-                          acc.push({ id: crop.field_id, name: crop.field_name });
-                        }
-                        return acc;
-                      }, [{ id: 0, name: "Todos" }])
+                    options={ reportingData && reportingData.columns
+                      ? reportingData.columns.reduce((acc, crop) => {
+                          if (acc.findIndex(f => f.id === crop.field_id) === -1) {
+                            acc.push({ id: crop.field_id, name: crop.field_name });
+                          }
+                          return acc;
+                        }, [{ id: 0, name: "Todos" }])
                       : [] }
                     size="sm"
                     fullWidth
@@ -330,7 +332,7 @@ export function ByFieldOrCropReport() {
                     name="crop"
                     value={ selectedCrop }
                     onChange={ (e) => setSelectedCrop(e.target.value) }
-                    options={ reportingData ? [
+                    options={ reportingData && reportingData.columns ? [
                       { id: 0, name: "Todos" },
                       ...reportingData.columns.map((crop) => ({
                         id: crop.crop_id,
@@ -358,17 +360,6 @@ export function ByFieldOrCropReport() {
                 rows={ rowsToRender }
               />
             ) }
-          </div>
-          <div className="flex justify-end mr-2 mb-6">
-            <Button
-              variant="outlineGreen"
-              className="gap-2"
-              onClick={ toPDF }
-              disabled={ processing }
-            >
-              <ExternalLink/>
-              Exportar informe
-            </Button>
           </div>
         </>
       ) }

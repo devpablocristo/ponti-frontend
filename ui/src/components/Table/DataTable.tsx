@@ -19,6 +19,18 @@ type Column<T> = {
   filterType?: FilterType;
   filterOptions?: string[];
   sortable?: boolean;
+
+  // 👇 NUEVO (opción 3)
+  width?: string;
+  minWidth?: string;
+  maxWidth?: string;
+  align?: "left" | "center" | "right";
+  // 👇 NUEVO
+  padding?: "xs" | "sm" | "md";
+  wrap?: boolean; // 👈 NUEVO
+  headerAlign?: "left" | "center" | "right";
+  headerPadding?: "xs" | "sm" | "md";
+  headerWrap?: boolean;
 };
 
 type DataTableProps<T> = {
@@ -137,6 +149,14 @@ const DataTable = <T,>({
 
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
+  // 2️⃣ Paginación después del ordenamiento
+  const paginatedData = React.useMemo(() => {
+    if (!pagination) return sortedData;
+    const start = (pagination.page - 1) * pagination.perPage;
+    const end = start + pagination.perPage;
+    return sortedData.slice(start, end);
+  }, [sortedData, pagination]);
+
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const filterRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -196,23 +216,39 @@ const DataTable = <T,>({
             <tr>
               {expandableRowRender && <th className="w-8 p-2"></th>}
               {columns.map((column) => {
-                const isFilterActive =
-                  filters?.[String(column.key)] &&
-                  filters[String(column.key)] !== "";
+                const filterVal = filters?.[String(column.key)];
+                const isFilterActive = Array.isArray(filterVal)
+                  ? filterVal.length > 0
+                  : filterVal !== undefined && filterVal !== "";
                 const isSorted = sortKey === String(column.key);
                 return (
-                  <th key={String(column.key)} className="p-4">
+                  <th
+                    key={String(column.key)}
+                    className={`p-4 uppercase font-bold text-xs ${column.headerAlign === "center"
+                        ? "text-center"
+                        : column.headerAlign === "right"
+                          ? "text-right"
+                          : "text-left"
+                      } ${column.headerPadding
+                        ? column.headerPadding === "xs"
+                          ? "px-2 py-1"
+                          : column.headerPadding === "sm"
+                            ? "px-3 py-2"
+                            : "px-4 py-3"
+                        : "" // 👈 CLAVE: si no se define, queda p-4
+                      } ${column.headerWrap ? "whitespace-normal break-words" : ""
+                      }`}
+                  >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         {/* Ícono de ordenamiento */}
                         {column.sortable !== false && (
                           <button
                             onClick={() => toggleSort(String(column.key))}
-                            className={`mr-1 focus:outline-none ${
-                              isSorted
-                                ? "text-blue-600"
-                                : "text-gray-300 hover:text-blue-400"
-                            }`}
+                            className={`mr-1 focus:outline-none ${isSorted
+                              ? "text-blue-600"
+                              : "text-gray-300 hover:text-blue-400"
+                              }`}
                             title={
                               isSorted
                                 ? sortDirection === "asc"
@@ -243,15 +279,16 @@ const DataTable = <T,>({
                         >
                           <button
                             onClick={() => toggleFilter(String(column.key))}
-                            className={`ml-1 relative ${
-                              activeFilter === String(column.key) ||
+                            className={`ml-1 relative ${activeFilter === String(column.key) ||
                               isFilterActive
-                                ? "text-blue-500"
-                                : "text-gray-200 hover:text-blue-600"
-                            } focus:outline-none`}
+                              ? "text-blue-500"
+                              : "text-gray-200 hover:text-blue-600"
+                              } focus:outline-none`}
                             title={
                               isFilterActive
-                                ? `Filtro: ${filters[String(column.key)]}`
+                                ? Array.isArray(filterVal)
+                                  ? `Filtro: ${filterVal.join(", ")}`
+                                  : `Filtro: ${filterVal}`
                                 : "Filtrar"
                             }
                           >
@@ -267,36 +304,43 @@ const DataTable = <T,>({
 
                           {activeFilter === String(column.key) && (
                             <div
-                              className={`absolute z-[9999] ${
-                                columns.indexOf(column) === 0
-                                  ? "left-0"
-                                  : "right-0"
-                              } mt-2 w-48 bg-white rounded-md shadow-lg p-2 border border-gray-200`}
+                              className={`absolute z-[9999] ${columns.indexOf(column) === 0
+                                ? "left-0"
+                                : "right-0"
+                                } mt-2 w-48 bg-white rounded-md shadow-lg p-2 border border-gray-200`}
                             >
                               <div className="p-2">
                                 <label className="block text-gray-700 text-xs mb-1">
-                                  Filter
+                                  Filtro
                                 </label>
 
                                 {column.filterType === "select" &&
-                                column.filterOptions ? (
-                                  <select
-                                    className="border border-gray-300 rounded px-2 py-1 w-full text-xs text-gray-700"
-                                    value={filters?.[String(column.key)] || ""}
-                                    onChange={(e) =>
-                                      handleFilterChange(
-                                        String(column.key),
-                                        e.target.value
-                                      )
-                                    }
-                                  >
-                                    <option value="">All</option>
-                                    {column.filterOptions.map((option) => (
-                                      <option key={option} value={option}>
-                                        {option}
-                                      </option>
-                                    ))}
-                                  </select>
+                                  column.filterOptions ? (
+                                  <div className="max-h-48 overflow-auto pr-1 text-gray-700">
+                                    {/*       <div className="text-xs text-gray-500 mb-1">Selecciona uno o varios</div> */}
+                                    {column.filterOptions.map((option) => {
+                                      const current = filters?.[String(column.key)];
+                                      const selected = Array.isArray(current)
+                                        ? current.includes(option)
+                                        : false;
+                                      return (
+                                        <label key={option} className="flex items-center gap-2 text-xs py-1 text-gray-700">
+                                          <input
+                                            type="checkbox"
+                                            checked={selected}
+                                            onChange={(e) => {
+                                              const prev = Array.isArray(current) ? current : [];
+                                              const next = e.target.checked
+                                                ? [...prev, option]
+                                                : prev.filter((v: string) => v !== option);
+                                              handleFilterChange(String(column.key), next);
+                                            }}
+                                          />
+                                          {option}
+                                        </label>
+                                      );
+                                    })}
+                                  </div>
                                 ) : column.filterType === "date" ? (
                                   <input
                                     type="date"
@@ -367,14 +411,13 @@ const DataTable = <T,>({
             </tr>
           </thead>
           <tbody>
-            {sortedData.length > 0 ? (
-              sortedData.map((item, index) => (
+            {paginatedData.length > 0 ? (
+              paginatedData.map((item, index) => (
                 <React.Fragment key={index}>
                   <tr
                     key={index}
-                    className={`border-t border-gray-100 text-gray-900 ${
-                      index % 2 === 0 ? "bg-white" : "bg-[#EBF5FF]"
-                    }`}
+                    className={`border-t border-gray-100 text-gray-900 ${index % 2 === 0 ? "bg-white" : "bg-[#EBF5FF]"
+                      }`}
                   >
                     {expandableRowRender && (
                       <td
@@ -385,9 +428,8 @@ const DataTable = <T,>({
                         }}
                       >
                         <svg
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            expandedRow === index ? "rotate-90" : ""
-                          }`}
+                          className={`w-4 h-4 transition-transform duration-200 ${expandedRow === index ? "rotate-90" : ""
+                            }`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -405,8 +447,24 @@ const DataTable = <T,>({
                     {columns.map((column) => (
                       <td
                         key={String(column.key)}
-                        className="px-6 py-4 min-w-[100px] max-w-[180px] whitespace-nowrap truncate"
-                        title={String(item[column.key])}
+                        className={`truncate ${column.wrap ? "whitespace-normal break-words" : "whitespace-nowrap"
+                          } ${column.align === "center"
+                            ? "text-center"
+                            : column.align === "right"
+                              ? "text-right"
+                              : "text-left"
+                          } ${column.padding === "xs"
+                            ? "px-2 py-1"
+                            : column.padding === "sm"
+                              ? "px-3 py-2"
+                              : "px-4 py-3"
+                          }`}
+                        style={{
+                          width: column.width,
+                          minWidth: column.minWidth ?? "100px",
+                          maxWidth: column.maxWidth ?? "180px",
+                        }}
+                        title={!column.wrap ? String(item[column.key]) : undefined}
                       >
                         {column.render
                           ? column.render(item[column.key], item)
@@ -483,7 +541,7 @@ const DataTable = <T,>({
         </table>
       </div>
       <div className="bg-white z-10 border-t sticky bottom-0">
-        {pagination && data.length > 0 && (
+        {pagination && sortedData.length > 0 && (
           <nav
             className="bg-white flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
             aria-label="Table navigation"
@@ -537,11 +595,10 @@ const DataTable = <T,>({
                   <li key={page}>
                     <button
                       onClick={() => pagination.onPageChange(page)}
-                      className={`flex items-center justify-center text-sm py-2 px-3 border ${
-                        pagination.page === page
-                          ? "bg-gray-200 text-black font-bold"
-                          : "bg-white text-gray-600 hover:bg-gray-100"
-                      }`}
+                      className={`flex items-center justify-center text-sm py-2 px-3 border ${pagination.page === page
+                        ? "bg-gray-200 text-black font-bold"
+                        : "bg-white text-gray-600 hover:bg-gray-100"
+                        }`}
                     >
                       {page}
                     </button>

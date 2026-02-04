@@ -24,7 +24,7 @@ export const units = [
 ];
 
 export default function Items() {
-  const { saveProducts, result, error } = useProducts();
+  const { saveProducts, result, error, supplies, getSupplies } = useProducts();
 
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -66,6 +66,7 @@ export default function Items() {
         }))
       )
     );
+
 
     // Add browser refresh/close protection
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -111,6 +112,12 @@ export default function Items() {
       document.removeEventListener("click", handleLinkClick, true);
     };
   }, [getCategories, getTypes, hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (projectId) {
+      getSupplies(projectId);
+    }
+  }, [projectId]);
 
   function cleanForm() {
     const emptyRows = Array.from({ length: 5 }, (_, i) => ({
@@ -169,6 +176,45 @@ export default function Items() {
     });
   }
 
+  function findDuplicateNames(
+    rows: Row[],
+    existingSupplies: { name: string }[]
+  ) {
+    const errors: string[] = [];
+
+    const normalized = (v: string) => v.trim().toLowerCase();
+
+    // 1. Duplicados dentro del formulario
+    const namesInForm = rows
+      .filter((r) => r.name)
+      .map((r) => normalized(r.name));
+
+    const duplicatedInForm = namesInForm.filter(
+      (name, i, arr) => arr.indexOf(name) !== i
+    );
+
+    duplicatedInForm.forEach((name) => {
+      errors.push(`El insumo "${name}" está duplicado en el formulario.`);
+    });
+
+    // 2. Duplicados contra BD
+    rows.forEach((row, index) => {
+      if (!row.name) return;
+
+      const exists = existingSupplies.some(
+        (p) => normalized(p.name) === normalized(row.name)
+      );
+
+      if (exists) {
+        errors.push(
+          `Fila ${index + 1}: ya existe un insumo con el nombre "${row.name}".`
+        );
+      }
+    });
+
+    return errors;
+  }
+
   const handleCreateSupply = () => {
     if (!projectId) {
       setErrorMessage(
@@ -204,9 +250,14 @@ export default function Items() {
       return;
     }
 
-    if (projectId) {
-      saveProducts(suppliesToSave, projectId);
+    const duplicateErrors = findDuplicateNames(rows, supplies || []);
+
+    if (duplicateErrors.length > 0) {
+      setErrorMessage(duplicateErrors.join(" "));
+      return;
     }
+
+    saveProducts(suppliesToSave, projectId);
   };
 
   const handleAddRow = () => {
@@ -440,7 +491,7 @@ export default function Items() {
                       name={`type-${index}`}
                       value={row.type.toString()}
                       disabled
-                      onChange={() => {}}
+                      onChange={() => { }}
                       options={types}
                     />
                   </div>
