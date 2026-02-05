@@ -23,8 +23,8 @@ jobs:
       - name: Enable corepack
         run: corepack enable
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+      - name: Install UI dependencies
+        run: yarn --cwd ui install --frozen-lockfile
 
       - name: Lint UI
         run: yarn --cwd ui lint
@@ -44,8 +44,8 @@ jobs:
       - name: Enable corepack
         run: corepack enable
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+      - name: Install UI dependencies
+        run: yarn --cwd ui install --frozen-lockfile
 
       - name: Build UI
         run: yarn --cwd ui build
