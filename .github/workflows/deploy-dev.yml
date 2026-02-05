@@ -15,7 +15,6 @@ jobs:
   deploy-dev:
     if: ${{ github.ref_name == 'develop' }}
     runs-on: ubuntu-latest
-    environment: dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,7 +43,6 @@ jobs:
   deploy-develop:
     if: ${{ github.ref_name == 'main' }}
     runs-on: ubuntu-latest
-    environment: develop
     steps:
       - name: Checkout
         uses: actions/checkout@v4
