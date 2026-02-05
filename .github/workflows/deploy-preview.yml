@@ -1,8 +1,13 @@
+<<<<<<< HEAD
 name: Deploy Preview (on-demand)
+=======
+name: Deploy Preview
+>>>>>>> d45695c (actions)
 
 on:
   workflow_dispatch:
     inputs:
+<<<<<<< HEAD
       pr_number:
         description: "Número de PR (del backend) para nombrar el preview"
         required: true
@@ -20,15 +25,36 @@ on:
 permissions:
   contents: read
   id-token: write
+=======
+      fe_branch:
+        description: "FE Branch"
+        required: false
+        default: "develop"
+        type: string
+      backend_service_url:
+        description: "URL base del BE preview"
+        required: true
+        type: string
+      preview_ident:
+        description: "Identificador de preview (opcional)"
+        required: false
+        type: string
+>>>>>>> d45695c (actions)
 
 env:
   # Variables configurables desde GitHub Actions (Settings → Variables)
   GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   GCP_REGION: ${{ vars.GCP_REGION }}
+<<<<<<< HEAD
   SERVICE_NAME: ${{ vars.SERVICE_NAME }}
   PREVIEW_SERVICE_PREFIX: ${{ vars.PREVIEW_SERVICE_PREFIX }}
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
   ARTIFACT_REGISTRY: ${{ vars.ARTIFACT_REGISTRY }}
+=======
+  ARTIFACT_REGISTRY: ${{ vars.ARTIFACT_REGISTRY }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+  FRONTEND_PREVIEW_SERVICE_PREFIX: ${{ vars.FRONTEND_PREVIEW_SERVICE_PREFIX }}
+>>>>>>> d45695c (actions)
   WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
   WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
   # Variables sensibles (Settings → Secrets and variables → Actions)
@@ -36,22 +62,39 @@ env:
   X_API_KEY: ${{ secrets.X_API_KEY }}
 
 jobs:
+<<<<<<< HEAD
   deploy-preview:
     runs-on: ubuntu-latest
+=======
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+>>>>>>> d45695c (actions)
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+<<<<<<< HEAD
           ref: ${{ inputs.ref }}
+=======
+          ref: ${{ inputs.fe_branch }}
+>>>>>>> d45695c (actions)
 
       - name: Validar config mínima
         run: |
           missing=()
+<<<<<<< HEAD
           for var in GCP_PROJECT_ID GCP_REGION SERVICE_NAME IMAGE_NAME ARTIFACT_REGISTRY WIF_PROVIDER WIF_SERVICE_ACCOUNT BASE_LOGIN_API X_API_KEY; do
+=======
+          for var in GCP_PROJECT_ID GCP_REGION ARTIFACT_REGISTRY IMAGE_NAME FRONTEND_PREVIEW_SERVICE_PREFIX WIF_PROVIDER WIF_SERVICE_ACCOUNT BASE_LOGIN_API X_API_KEY; do
+>>>>>>> d45695c (actions)
             if [[ -z "${!var}" ]]; then
               missing+=("$var")
             fi
           done
+<<<<<<< HEAD
           if [[ -z "${{ inputs.pr_number }}" ]]; then
             missing+=("inputs.pr_number")
           fi
@@ -76,11 +119,34 @@ jobs:
           BACKEND_URL="${{ inputs.backend_service_url }}"
 
           # Normalizar BASE_MANAGER_API: debe incluir /api/v1
+=======
+          if (( ${#missing[@]} )); then
+            echo "::error::Faltan variables: ${missing[*]}"
+            exit 1
+          fi
+        shell: bash
+
+      - name: Resolver identificador de preview
+        run: |
+          REF="${{ inputs.fe_branch }}"
+          PREVIEW_IDENT="${{ inputs.preview_ident }}"
+          if [ -z "$PREVIEW_IDENT" ]; then
+            PREVIEW_IDENT="$(echo "$REF" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g' | cut -c1-30)"
+          fi
+          echo "PREVIEW_IDENT=$PREVIEW_IDENT" >> "$GITHUB_ENV"
+          echo "SERVICE_NAME=${FRONTEND_PREVIEW_SERVICE_PREFIX}${PREVIEW_IDENT}" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Resolver BASE_MANAGER_API
+        run: |
+          BACKEND_URL="${{ inputs.backend_service_url }}"
+>>>>>>> d45695c (actions)
           if [[ "$BACKEND_URL" == */api/v1 ]]; then
             BASE_MANAGER_API="$BACKEND_URL"
           else
             BASE_MANAGER_API="${BACKEND_URL%/}/api/v1"
           fi
+<<<<<<< HEAD
 
           SERVICE_PREVIEW="${PREVIEW_SERVICE_PREFIX}${PR}"
           IMAGE_TAG="pr-${PR}-${GITHUB_SHA}"
@@ -92,6 +158,9 @@ jobs:
           echo "::notice::Backend preview: $BACKEND_URL"
           echo "::notice::BASE_MANAGER_API (BFF): $BASE_MANAGER_API"
           echo "::notice::Frontend service preview: $SERVICE_PREVIEW"
+=======
+          echo "BASE_MANAGER_API=$BASE_MANAGER_API" >> "$GITHUB_ENV"
+>>>>>>> d45695c (actions)
         shell: bash
 
       - name: Authenticate to Google Cloud (WIF)
@@ -114,17 +183,29 @@ jobs:
       - name: Build Docker image
         run: |
           IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
+<<<<<<< HEAD
           docker build -t "${IMAGE_URI}:${{ steps.preview.outputs.IMAGE_TAG }}" .
+=======
+          IMAGE_TAG="preview-${PREVIEW_IDENT}-${GITHUB_SHA}"
+          docker build -t "${IMAGE_URI}:${IMAGE_TAG}" .
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV"
+>>>>>>> d45695c (actions)
         shell: bash
 
       - name: Push Docker image
         run: |
+<<<<<<< HEAD
           IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
           docker push "${IMAGE_URI}:${{ steps.preview.outputs.IMAGE_TAG }}"
+=======
+          docker push "${IMAGE_URI}:${IMAGE_TAG}"
+>>>>>>> d45695c (actions)
         shell: bash
 
       - name: Deploy to Cloud Run (Preview)
         run: |
+<<<<<<< HEAD
           IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
           gcloud run deploy "${{ steps.preview.outputs.SERVICE_PREVIEW }}" \
             --project="${GCP_PROJECT_ID}" \
@@ -146,3 +227,24 @@ jobs:
           echo "::notice::Frontend Preview URL: ${SERVICE_URL}"
         shell: bash
 
+=======
+          gcloud run deploy "${SERVICE_NAME}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --image="${IMAGE_URI}:${IMAGE_TAG}" \
+            --allow-unauthenticated \
+            --set-env-vars="NODE_ENV=dev" \
+            --set-env-vars="BASE_LOGIN_API=${BASE_LOGIN_API}" \
+            --set-env-vars="BASE_MANAGER_API=${BASE_MANAGER_API}" \
+            --set-env-vars="X_API_KEY=${X_API_KEY}"
+        shell: bash
+
+      - name: Mostrar URL del FE preview
+        run: |
+          FE_URL=$(gcloud run services describe "${SERVICE_NAME}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --format='value(status.url)')
+          echo "::notice::FE URL: ${FE_URL}"
+        shell: bash
+>>>>>>> d45695c (actions)
