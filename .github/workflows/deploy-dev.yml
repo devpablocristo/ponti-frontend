@@ -1,71 +1,84 @@
-name: Deploy Frontend
+name: Deploy Frontend to Cloud Run
 
 on:
   push:
-    branches: [develop, main]
+    branches:
+      - develop
+      - main
 
-permissions:
-  contents: read
-
-concurrency:
-  group: deploy-${{ github.ref_name }}
-  cancel-in-progress: true
+env:
+  PROJECT_ID: new-ponti-dev
+  REGION: us-central1
+  SERVICE_NAME: ponti-frontend
+  REGISTRY: us-central1-docker.pkg.dev
+  REPOSITORY: ponti-frontend-registry
 
 jobs:
-  deploy-dev:
-    if: ${{ github.ref_name == 'develop' }}
+  deploy:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Set environment based on branch
+        id: env
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "ENV=staging" >> "$GITHUB_OUTPUT"
+            echo "TAG=stg" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+            echo "ENV=dev" >> "$GITHUB_OUTPUT"
+            echo "TAG=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          node-version: 20
-          cache: yarn
-          cache-dependency-path: ui/yarn.lock
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Enable corepack
-        run: corepack enable
-
-      - name: Install UI dependencies
-        run: yarn --cwd ui install --frozen-lockfile
-
-      - name: Build UI
-        run: yarn --cwd ui build
-
-      - name: Upload UI artifact
-        uses: actions/upload-artifact@v4
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          name: ui-dist-dev
-          path: ui/dist
+          project_id: ${{ env.PROJECT_ID }}
 
-  deploy-develop:
-    if: ${{ github.ref_name == 'main' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${{ env.REGISTRY }}" --quiet
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
-          cache-dependency-path: ui/yarn.lock
+      - name: Build frontend
+        run: |
+          corepack enable
+          yarn --cwd ui install --frozen-lockfile
+          yarn --cwd ui build
 
-      - name: Enable corepack
-        run: corepack enable
+      - name: Build Docker image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
+          docker build -t "$IMAGE" .
+          docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
 
-      - name: Install UI dependencies
-        run: yarn --cwd ui install --frozen-lockfile
+      - name: Push Docker image
+        run: |
+          docker push "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
+          docker push "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
 
-      - name: Build UI
-        run: yarn --cwd ui build
+      - name: Deploy to Cloud Run
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
+          gcloud run deploy "${{ env.SERVICE_NAME }}" \
+            --project="${{ env.PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --image="$IMAGE" \
+            --service-account="cloudrun-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com" \
+            --allow-unauthenticated \
+            --port=3000 \
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_LOGIN_API=${{ secrets.BASE_LOGIN_API }},BASE_MANAGER_API=${{ secrets.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }}"
 
-      - name: Upload UI artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-dist-develop
-          path: ui/dist
+      - name: Show deployment URL
+        run: |
+          echo "✅ Deployed to: https://${{ env.SERVICE_NAME }}-1087442197188.${{ env.REGION }}.run.app"
