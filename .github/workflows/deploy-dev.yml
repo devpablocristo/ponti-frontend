@@ -1,19 +1,21 @@
-name: Build Frontend
+name: Deploy Frontend
 
 on:
   push:
-    branches: [main]
+    branches: [develop, main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-dev
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy-dev:
+    if: ${{ github.ref_name == 'develop' }}
     runs-on: ubuntu-latest
+    environment: dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,5 +38,34 @@ jobs:
       - name: Upload UI artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ui-dist
+          name: ui-dist-dev
+          path: ui/dist
+
+  deploy-develop:
+    if: ${{ github.ref_name == 'main' }}
+    runs-on: ubuntu-latest
+    environment: develop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install UI dependencies
+        run: yarn --cwd ui install --frozen-lockfile
+
+      - name: Build UI
+        run: yarn --cwd ui build
+
+      - name: Upload UI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist-develop
           path: ui/dist
