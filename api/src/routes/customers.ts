@@ -57,4 +57,146 @@ router.get("", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data: customers } = await apiClient.get<any>(
+      "/customers/archived",
+      headers
+    );
+
+    const data = {
+      success: true,
+      data: {
+        data: customers.data,
+        total: customers.page_info.total,
+      },
+    };
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.put("/:id/archive", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const data = await apiClient.put<any>(`/customers/${id}/archive`, {}, headers);
+    setImmediate(() => cache.flushAll());
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.put("/:id/restore", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const data = await apiClient.put<any>(`/customers/${id}/restore`, {}, headers);
+    setImmediate(() => cache.flushAll());
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.delete("/:id/hard", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const data = await apiClient.delete<any>(`/customers/${id}/hard`, headers);
+    setImmediate(() => cache.flushAll());
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 export default router;

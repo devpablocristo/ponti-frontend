@@ -6,6 +6,22 @@ import { cache } from ".";
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
 
+const buildLotsQueryParams = (
+  fieldId: number,
+  projectId: number,
+  page?: number,
+  perPage?: number
+) => {
+  const queryParams = new URLSearchParams();
+  if (fieldId > 0) queryParams.set("field_id", String(fieldId));
+  if (projectId > 0) queryParams.set("project_id", String(projectId));
+  if (page && perPage) {
+    queryParams.set("page", String(page));
+    queryParams.set("per_page", String(perPage));
+  }
+  return queryParams.toString();
+};
+
 router.get("", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -38,7 +54,7 @@ router.get("", async (req: Request, res: Response) => {
     const perPage = parseInt(req.query.per_page as string) || 1000;
 
     const { data: lots } = await apiClient.get<any>(
-      `/lots?field_id=${field_id}&project_id=${project_id}&page=${page}&per_page=${perPage}`,
+      `/lots?${buildLotsQueryParams(field_id, project_id, page, perPage)}`,
       headers
     );
 
@@ -119,7 +135,7 @@ router.get("/kpis", async (req: Request, res: Response) => {
     };
 
     const { data: metrics } = await apiClient.get<any>(
-      `/lots/metrics?field_id=${field_id}&project_id=${project_id}`,
+      `/lots/metrics?${buildLotsQueryParams(field_id, project_id)}`,
       headers
     );
 

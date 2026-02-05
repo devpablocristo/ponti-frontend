@@ -25,7 +25,7 @@ router.post("", async (req: Request, res: Response) => {
     };
 
     const { data: workorder } = await apiClient.post<any>(
-      "/workorders",
+      "/work-orders",
       requestData,
       headers
     );
@@ -73,7 +73,7 @@ router.put("/:id", async (req: Request, res: Response) => {
     };
 
     const { data: workorder } = await apiClient.put<any>(
-      `/workorders/${req.params.id}`,
+      `/work-orders/${req.params.id}`,
       requestData,
       headers
     );
@@ -138,7 +138,7 @@ router.get("", async (req: Request, res: Response) => {
     };
 
     const { data: workorders } = await apiClient.get<any>(
-      `/workorders${query}`,
+      `/work-orders${query}`,
       headers
     );
 
@@ -198,7 +198,7 @@ router.get("/metrics", async (req: Request, res: Response) => {
     }
 
     const { data: metrics } = await apiClient.get<any>(
-      `/workorders/metrics${query}`,
+      `/work-orders/metrics${query}`,
       headers
     );
 
@@ -244,7 +244,7 @@ router.get("/export/:id", async (req, res) => {
     };
 
     const response = await apiClient.get<any>(
-      `/workorders/export?project_id=${project_id}`,
+      `/work-orders/export?project_id=${project_id}`,
       { headers, responseType: "arraybuffer" }
     );
 
@@ -275,7 +275,7 @@ router.get("/:id", async (req: Request, res: Response) => {
     };
 
     const { data: workorder } = await apiClient.get<any>(
-      `/workorders/${req.params.id}`,
+      `/work-orders/${req.params.id}`,
       headers
     );
 
@@ -315,7 +315,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
     };
 
     const { data: workorder } = await apiClient.delete<any>(
-      `/workorders/${req.params.id}`,
+      `/work-orders/${req.params.id}`,
       headers
     );
 

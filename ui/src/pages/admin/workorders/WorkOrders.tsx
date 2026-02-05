@@ -700,7 +700,7 @@ export function WorkOrders() {
 
     try {
       const response = await request.get<Blob>(
-        `/workorders/export/${projectId}`,
+        `/work-orders/export/${projectId}`,
         undefined,
         { responseType: "blob" }
       );

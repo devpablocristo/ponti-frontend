@@ -69,6 +69,18 @@ const menuDatabase = {
       route: "/admin/database/customers",
     },
     {
+      name: "Clientes",
+      route: "/admin/database/customers/archived",
+    },
+    {
+      name: "Proyectos",
+      route: "/admin/database/projects/archived",
+    },
+    {
+      name: "Integridad de datos",
+      route: "/admin/database/data-integrity",
+    },
+    {
       name: "Labores",
       route: "/admin/database/tasks",
     },
@@ -84,6 +96,36 @@ const menuDatabase = {
       name: "Comercialización",
       route: "/admin/database/commerce",
     },
+  ],
+};
+
+const menuAI = {
+  name: "AI",
+  icon: (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8 2.6665V4.6665M8 11.3332V13.3332M4.66667 8H2.66667M13.3333 8H11.3333M5.33333 5.33317L4 3.99984M12 12.0002L10.6667 10.6668M10.6667 5.33317L12 3.99984M4 12.0002L5.33333 10.6668"
+        stroke="#64748B"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 8C10 9.10457 9.10457 10 8 10C6.89543 10 6 9.10457 6 8C6 6.89543 6.89543 6 8 6C9.10457 6 10 6.89543 10 8Z"
+        stroke="#64748B"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  children: [
+    { name: "Copilot", route: "/admin/ai-copilot" },
+    { name: "Insights", route: "/admin/ai-insights" },
   ],
 };
 
@@ -274,7 +316,7 @@ function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
       }}
     >
       {item.icon(iconColor)}
-      <span>{item.name}</span>
+      <span className="flex-1">{item.name}</span>
     </Link>
   );
 }
@@ -301,7 +343,7 @@ function SidebarSubmenuItem({
   setIsSidebarOpen,
 }: SidebarSubItemProps) {
   const location = useLocation();
-  const isActive = (route: string) => location.pathname.startsWith(route);
+  const isActive = (route: string) => location.pathname === route;
 
   useEffect(() => {
     if (isActive(item.route)) {
@@ -447,6 +489,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         <SidebarSubmenu
           setTitle={setTitle}
           item={menuDatabase}
+          setIsSidebarOpen={setIsSidebarOpen}
+        />
+        <SidebarSubmenu
+          setTitle={() => setTitle("AI")}
+          item={menuAI}
           setIsSidebarOpen={setIsSidebarOpen}
         />
       </div>

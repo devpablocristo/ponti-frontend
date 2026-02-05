@@ -34,10 +34,10 @@ export interface FilterBarFilter {
   placeholder: string;
   ref?: string;
   total?: number;
-  options: Customer[] | Project[] | Campaign[];
-  value: any;
-  onChange: (value: any) => void;
-  setData: (data: any | undefined) => void;
+  options: Array<{ id: number; name: string }>;
+  value: string | number | null;
+  onChange: (value: string) => void;
+  setData: (data: unknown) => void;
   disabled?: boolean;
 }
 
@@ -46,7 +46,7 @@ export interface UseWorkspaceFiltersReturn {
   projectsDropdown: Project[];
   campaigns: Campaign[];
   fields: Field[];
-  projectPageInfo: any; // Replace 'any' with your actual PageInfo type from useProjects
+  projectPageInfo: unknown; // Replace 'unknown' with your actual PageInfo type from useProjects
   selectedCustomer: Customer | undefined;
   selectedProject: Project | undefined;
   projectId: number | null;
@@ -144,6 +144,17 @@ export const useWorkspaceFilters = (
     contextSetField(value);
   };
 
+  const normalizedSelectedProject =
+    selectedProject && typeof selectedProject.id === "number" && selectedProject.id > 0
+      ? selectedProject
+      : undefined;
+  const normalizedProjectId =
+    typeof projectId === "number" && projectId > 0 ? projectId : undefined;
+  const normalizedSelectedField =
+    selectedField && typeof selectedField.id === "number" && selectedField.id > 0
+      ? selectedField
+      : undefined;
+
   const [queryCustomer, setQueryCustomer] = useState<string>("");
   const [queryProject, setQueryProject] = useState<string>("");
 
@@ -212,6 +223,13 @@ export const useWorkspaceFilters = (
     [setSelectedCustomer, setSelectedProject, setSelectedCampaign]
   );
 
+  const handleSetCustomerUnknown = useCallback(
+    (data: unknown) => {
+      handleSetCustomer(data as Customer | undefined);
+    },
+    [handleSetCustomer]
+  );
+
   if (enabledFilters.includes("customer")) {
     filters.push({
       type: "search",
@@ -223,7 +241,7 @@ export const useWorkspaceFilters = (
       total: totalCustomers,
       value: queryCustomer,
       onChange: setQueryCustomer,
-      setData: handleSetCustomer,
+      setData: handleSetCustomerUnknown,
       disabled: loadingCustomers,
     });
   }
@@ -245,6 +263,13 @@ export const useWorkspaceFilters = (
     [setSelectedProject, setSelectedCampaign]
   );
 
+  const handleSetProjectUnknown = useCallback(
+    (data: unknown) => {
+      handleSetProject(data as Project | undefined);
+    },
+    [handleSetProject]
+  );
+
   if (enabledFilters.includes("project")) {
     filters.push({
       type: "search",
@@ -256,7 +281,7 @@ export const useWorkspaceFilters = (
       total: projectPageInfo?.total || 0,
       value: queryProject,
       onChange: setQueryProject,
-      setData: handleSetProject,
+      setData: handleSetProjectUnknown,
       disabled:
         loadingProjects ||
         !selectedCustomer ||
@@ -286,9 +311,11 @@ export const useWorkspaceFilters = (
       placeholder: "Seleccione campaña",
       options: selectedCustomer && selectedProject ? campaigns || [] : [],
       total: selectedCustomer ? totalCampaigns : 0,
-      value: selectedCampaignId,
+      value: selectedCampaignId ?? null,
       onChange: () => {},
-      setData: setSelectedCampaign,
+      setData: (data: unknown) => {
+        setSelectedCampaign(data as Campaign | undefined);
+      },
       disabled:
         !selectedCustomer ||
         selectedCustomer.id === 0 ||
@@ -299,10 +326,10 @@ export const useWorkspaceFilters = (
   }
 
   useEffect(() => {
-    if (enabledFilters.includes("field") && projectId && projectId !== 0) {
-      getFields(`project_id=${projectId}`);
+    if (enabledFilters.includes("field") && normalizedProjectId) {
+      getFields(`project_id=${normalizedProjectId}`);
     }
-  }, [getFields, projectId]);
+  }, [getFields, normalizedProjectId]);
 
   if (enabledFilters.includes("field")) {
     filters.push({
@@ -311,18 +338,20 @@ export const useWorkspaceFilters = (
       label: "Campo",
       placeholder: "Seleccione campo",
       options:
-        selectedCustomer && selectedProject
+        selectedCustomer && normalizedSelectedProject
           ? [{ id: 0, name: "Todos los campos" }, ...(Array.isArray(fields) ? fields : [])]
           : [],
       total: selectedCustomer ? totalFields : 0,
-      value: selectedField?.id ?? 0,
+      value: normalizedSelectedField?.id ?? 0,
       onChange: () => {},
-      setData: setSelectedField,
+      setData: (data: unknown) => {
+        setSelectedField(data as Field | undefined);
+      },
       disabled:
         !selectedCustomer ||
         selectedCustomer.id === 0 ||
-        !selectedProject ||
-        selectedProject.id === 0 ||
+        !normalizedSelectedProject ||
+        normalizedSelectedProject.id === 0 ||
         loadingFields,
     });
   }
@@ -334,10 +363,10 @@ export const useWorkspaceFilters = (
     fields: (fields as Field[]) || [],
     projectPageInfo: projectPageInfo,
     selectedCustomer,
-    selectedProject,
-    projectId,
+    selectedProject: normalizedSelectedProject,
+    projectId: normalizedProjectId ?? null,
     selectedCampaignId,
-    selectedField,
+    selectedField: normalizedSelectedField,
     filters,
     seasons,
     loading: {

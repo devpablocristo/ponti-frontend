@@ -21,6 +21,8 @@ import movements from "./movements";
 import stock from "./stock";
 import dashboard from "./dashboard";
 import reports from "./reports";
+import dataIntegrity from "./data-integrity";
+import ai from "./ai";
 
 const router: Router = Router();
 export const cache = new NodeCache({ stdTTL: 1800, checkperiod: 1800 });
@@ -43,6 +45,8 @@ router.use("/crops", crops);
 router.use("/supplies", supplies);
 router.use("/categories", categories);
 router.use("/types", types);
+// Soporta /work-orders (backend) y /workorders (legacy)
+router.use("/work-orders", workorders);
 router.use("/workorders", workorders);
 router.use("/labors", labors);
 router.use("/providers", providers);
@@ -50,6 +54,8 @@ router.use("/supply_movements", movements);
 router.use("/stock", stock);
 router.use("/dashboard", dashboard);
 router.use("/reports", reports);
+router.use("/data-integrity", dataIntegrity);
+router.use("/ai", ai);
 
 router.use("/form-options", options);
 

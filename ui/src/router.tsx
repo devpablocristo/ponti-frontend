@@ -13,6 +13,9 @@ import { Stock } from "./pages/admin/stock/Stock";
 import { FormUser } from "./pages/admin/users/FormUser";
 import Customers from "./pages/admin/customers/Customers";
 import DatabaseCustomers from "./pages/admin/database/customers/Customers";
+import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
+import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
+import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
 import DatabaseTasksForm from "./pages/admin/database/tasks/TasksForm";
 import Lots from "./pages/admin/lots/Lots";
 import Items from "./pages/admin/database/products/Items";
@@ -24,6 +27,8 @@ import ListTasks from "./pages/admin/database/tasks/List";
 import ByFieldOrCropReport from "./pages/admin/reports/ByFieldOrCropReport.tsx";
 import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
 import InvestorContribution from "./pages/admin/reports/InvestorContributionReport.tsx";
+import AICopilot from "./pages/admin/ai-copilot/AICopilot";
+import AIInsights from "./pages/admin/ai-insights/AIInsights";
 
 export default [
   {
@@ -57,6 +62,14 @@ export default [
         element: <Dashboard />,
       },
       {
+        path: "ai-copilot",
+        element: <AICopilot />,
+      },
+      {
+        path: "ai-insights",
+        element: <AIInsights />,
+      },
+      {
         path: "customers",
         element: <Customers />,
       },
@@ -85,8 +98,20 @@ export default [
         element: <DatabaseCustomers />,
       },
       {
+        path: "database/customers/archived",
+        element: <ArchivedCustomers />,
+      },
+      {
         path: "database/customers/:id",
         element: <DatabaseCustomers />,
+      },
+      {
+        path: "database/projects/archived",
+        element: <ArchivedProjects />,
+      },
+      {
+        path: "database/data-integrity",
+        element: <DataIntegrity />,
       },
       {
         path: "database/tasks",
