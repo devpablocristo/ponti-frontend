@@ -1,0 +1,148 @@
+name: Deploy Preview (on-demand)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Número de PR (del backend) para nombrar el preview"
+        required: true
+        type: string
+      backend_service_url:
+        description: "URL del backend preview (ej: https://...run.app)"
+        required: true
+        type: string
+      ref:
+        description: "Ref del frontend a deployar (branch o SHA)"
+        required: true
+        type: string
+        default: "develop"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  # Variables configurables desde GitHub Actions (Settings → Variables)
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  GCP_REGION: ${{ vars.GCP_REGION }}
+  SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+  PREVIEW_SERVICE_PREFIX: ${{ vars.PREVIEW_SERVICE_PREFIX }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+  ARTIFACT_REGISTRY: ${{ vars.ARTIFACT_REGISTRY }}
+  WIF_PROVIDER: ${{ vars.WIF_PROVIDER }}
+  WIF_SERVICE_ACCOUNT: ${{ vars.WIF_SERVICE_ACCOUNT }}
+  # Variables sensibles (Settings → Secrets and variables → Actions)
+  BASE_LOGIN_API: ${{ secrets.BASE_LOGIN_API }}
+  X_API_KEY: ${{ secrets.X_API_KEY }}
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Validar config mínima
+        run: |
+          missing=()
+          for var in GCP_PROJECT_ID GCP_REGION SERVICE_NAME IMAGE_NAME ARTIFACT_REGISTRY WIF_PROVIDER WIF_SERVICE_ACCOUNT BASE_LOGIN_API X_API_KEY; do
+            if [[ -z "${!var}" ]]; then
+              missing+=("$var")
+            fi
+          done
+          if [[ -z "${{ inputs.pr_number }}" ]]; then
+            missing+=("inputs.pr_number")
+          fi
+          if [[ -z "${{ inputs.backend_service_url }}" ]]; then
+            missing+=("inputs.backend_service_url")
+          fi
+          if (( ${#missing[@]} )); then
+            echo "::error::Faltan variables/inputs: ${missing[*]}"
+            exit 1
+          fi
+
+          # Servicio preview: si no hay prefijo, usamos SERVICE_NAME + '-preview-'
+          if [[ -z "${PREVIEW_SERVICE_PREFIX}" ]]; then
+            echo "PREVIEW_SERVICE_PREFIX=${SERVICE_NAME}-preview-" >> "$GITHUB_ENV"
+          fi
+        shell: bash
+
+      - name: Resolver variables de preview
+        id: preview
+        run: |
+          PR="${{ inputs.pr_number }}"
+          BACKEND_URL="${{ inputs.backend_service_url }}"
+
+          # Normalizar BASE_MANAGER_API: debe incluir /api/v1
+          if [[ "$BACKEND_URL" == */api/v1 ]]; then
+            BASE_MANAGER_API="$BACKEND_URL"
+          else
+            BASE_MANAGER_API="${BACKEND_URL%/}/api/v1"
+          fi
+
+          SERVICE_PREVIEW="${PREVIEW_SERVICE_PREFIX}${PR}"
+          IMAGE_TAG="pr-${PR}-${GITHUB_SHA}"
+
+          echo "SERVICE_PREVIEW=$SERVICE_PREVIEW" >> "$GITHUB_OUTPUT"
+          echo "IMAGE_TAG=$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          echo "BASE_MANAGER_API=$BASE_MANAGER_API" >> "$GITHUB_OUTPUT"
+
+          echo "::notice::Backend preview: $BACKEND_URL"
+          echo "::notice::BASE_MANAGER_API (BFF): $BASE_MANAGER_API"
+          echo "::notice::Frontend service preview: $SERVICE_PREVIEW"
+        shell: bash
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT }}
+          token_format: "access_token"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${ARTIFACT_REGISTRY}" --quiet
+        shell: bash
+
+      - name: Build Docker image
+        run: |
+          IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
+          docker build -t "${IMAGE_URI}:${{ steps.preview.outputs.IMAGE_TAG }}" .
+        shell: bash
+
+      - name: Push Docker image
+        run: |
+          IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
+          docker push "${IMAGE_URI}:${{ steps.preview.outputs.IMAGE_TAG }}"
+        shell: bash
+
+      - name: Deploy to Cloud Run (Preview)
+        run: |
+          IMAGE_URI="${ARTIFACT_REGISTRY}/${GCP_PROJECT_ID}/${IMAGE_NAME}"
+          gcloud run deploy "${{ steps.preview.outputs.SERVICE_PREVIEW }}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --image="${IMAGE_URI}:${{ steps.preview.outputs.IMAGE_TAG }}" \
+            --allow-unauthenticated \
+            --set-env-vars="NODE_ENV=dev" \
+            --set-env-vars="BASE_LOGIN_API=${BASE_LOGIN_API}" \
+            --set-env-vars="BASE_MANAGER_API=${{ steps.preview.outputs.BASE_MANAGER_API }}" \
+            --set-env-vars="X_API_KEY=${X_API_KEY}"
+        shell: bash
+
+      - name: Obtener URL del servicio
+        run: |
+          SERVICE_URL=$(gcloud run services describe "${{ steps.preview.outputs.SERVICE_PREVIEW }}" \
+            --project="${GCP_PROJECT_ID}" \
+            --region="${GCP_REGION}" \
+            --format='value(status.url)')
+          echo "::notice::Frontend Preview URL: ${SERVICE_URL}"
+        shell: bash
+
