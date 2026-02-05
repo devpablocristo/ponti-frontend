@@ -92,7 +92,7 @@ export default function Integrity() {
       key: "status",
       header: "Estado",
       sortable: true,
-      render: (value) => (
+      render: (value: unknown) => (
         <span
           className={`font-semibold ${
             value === "OK" ? "text-green-700" : "text-red-700"

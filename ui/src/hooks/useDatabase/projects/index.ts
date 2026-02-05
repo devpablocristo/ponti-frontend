@@ -339,7 +339,8 @@ const useProjects = () => {
 
       try {
         const response = await request.put<SuccessResponse<string>>(
-          "/projects/" + id + "/archive"
+          "/projects/" + id + "/archive",
+          {}
         );
 
         if (response.success) {
@@ -462,7 +463,8 @@ const useProjects = () => {
 
       try {
         const response = await request.put<SuccessResponse<string>>(
-          "/projects/" + id + "/restore"
+          "/projects/" + id + "/restore",
+          {}
         );
 
         if (response.success) {

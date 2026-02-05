@@ -223,6 +223,13 @@ export const useWorkspaceFilters = (
     [setSelectedCustomer, setSelectedProject, setSelectedCampaign]
   );
 
+  const handleSetCustomerUnknown = useCallback(
+    (data: unknown) => {
+      handleSetCustomer(data as Customer | undefined);
+    },
+    [handleSetCustomer]
+  );
+
   if (enabledFilters.includes("customer")) {
     filters.push({
       type: "search",
@@ -234,7 +241,7 @@ export const useWorkspaceFilters = (
       total: totalCustomers,
       value: queryCustomer,
       onChange: setQueryCustomer,
-      setData: handleSetCustomer,
+      setData: handleSetCustomerUnknown,
       disabled: loadingCustomers,
     });
   }
@@ -256,6 +263,13 @@ export const useWorkspaceFilters = (
     [setSelectedProject, setSelectedCampaign]
   );
 
+  const handleSetProjectUnknown = useCallback(
+    (data: unknown) => {
+      handleSetProject(data as Project | undefined);
+    },
+    [handleSetProject]
+  );
+
   if (enabledFilters.includes("project")) {
     filters.push({
       type: "search",
@@ -267,7 +281,7 @@ export const useWorkspaceFilters = (
       total: projectPageInfo?.total || 0,
       value: queryProject,
       onChange: setQueryProject,
-      setData: handleSetProject,
+      setData: handleSetProjectUnknown,
       disabled:
         loadingProjects ||
         !selectedCustomer ||
@@ -297,9 +311,11 @@ export const useWorkspaceFilters = (
       placeholder: "Seleccione campaña",
       options: selectedCustomer && selectedProject ? campaigns || [] : [],
       total: selectedCustomer ? totalCampaigns : 0,
-      value: selectedCampaignId,
+      value: selectedCampaignId ?? null,
       onChange: () => {},
-      setData: setSelectedCampaign,
+      setData: (data: unknown) => {
+        setSelectedCampaign(data as Campaign | undefined);
+      },
       disabled:
         !selectedCustomer ||
         selectedCustomer.id === 0 ||
@@ -328,7 +344,9 @@ export const useWorkspaceFilters = (
       total: selectedCustomer ? totalFields : 0,
       value: normalizedSelectedField?.id ?? 0,
       onChange: () => {},
-      setData: setSelectedField,
+      setData: (data: unknown) => {
+        setSelectedField(data as Field | undefined);
+      },
       disabled:
         !selectedCustomer ||
         selectedCustomer.id === 0 ||

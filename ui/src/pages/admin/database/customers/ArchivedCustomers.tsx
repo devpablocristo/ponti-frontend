@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 
 import DataTable from "../../../../components/Table/DataTable";
@@ -71,7 +71,7 @@ export default function ArchivedCustomers() {
     {
       key: "actions",
       header: "Acciones",
-      render: (_value, item) => (
+      render: (_value: unknown, item: ArchivedCustomer) => (
         <div className="flex items-center justify-center gap-3">
           <button
             className="text-green-700 hover:text-green-900"

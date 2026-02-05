@@ -150,7 +150,8 @@ const useCustomers = () => {
 
       try {
         const response = await request.put<SuccessResponse<string>>(
-          "/customers/" + id + "/archive"
+          "/customers/" + id + "/archive",
+          {}
         );
 
         if (response.success) {
@@ -203,7 +204,8 @@ const useCustomers = () => {
 
       try {
         const response = await request.put<SuccessResponse<string>>(
-          "/customers/" + id + "/restore"
+          "/customers/" + id + "/restore",
+          {}
         );
 
         if (response.success) {

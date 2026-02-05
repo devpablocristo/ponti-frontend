@@ -240,7 +240,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         filter.placeholder ||
                         `Buscar ${filter.label.toLowerCase()}`
                       }
-                      value={filter.value || ""}
+                      value={String(filter.value ?? "")}
                       size={inputSize}
                       onClick={() => showSuggestions(filter.name)}
                       onChange={(e) => filter.onChange(e.target.value)}
