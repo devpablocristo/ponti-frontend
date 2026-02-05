@@ -6,3 +6,4 @@
 .cursorignore
 .cursorrules
 *.code-workspace
+.id
