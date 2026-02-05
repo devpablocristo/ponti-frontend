@@ -1,0 +1,51 @@
+name: CI PR Frontend
+
+on:
+  pull_request:
+    branches: [develop]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install UI dependencies
+        run: yarn --cwd ui install --frozen-lockfile
+
+      - name: Lint UI
+        run: yarn --cwd ui lint
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install UI dependencies
+        run: yarn --cwd ui install --frozen-lockfile
+
+      - name: Build UI
+        run: yarn --cwd ui build
