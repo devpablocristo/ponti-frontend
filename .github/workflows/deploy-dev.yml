@@ -1,4 +1,4 @@
-name: Build DEV Frontend
+name: Build Frontend
 
 on:
   push:
