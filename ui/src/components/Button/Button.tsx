@@ -22,6 +22,7 @@ interface ButtonProps {
   className?: string;
   type?: "button" | "submit" | "reset";
   disabled?: boolean;
+  title?: string;
 }
 
 const variantClasses = {
