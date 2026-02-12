@@ -8,6 +8,7 @@ import {
   computeInsights,
   getInsights,
   getInsightsSummary,
+  recomputeBaselines,
   InsightsSummary,
   InsightItem,
 } from "../../../restclient/aiClient";
@@ -23,6 +24,7 @@ const AIInsights: React.FC = () => {
   const [entityId, setEntityId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [summary, setSummary] = useState<InsightsSummary | null>(null);
   const [insights, setInsights] = useState<InsightItem[]>([]);
   const [showAll, setShowAll] = useState(false);
@@ -55,9 +57,14 @@ const AIInsights: React.FC = () => {
     }
   }, [location.search]);
 
+  const clearFeedback = () => {
+    setError("");
+    setSuccess("");
+  };
+
   const handleSummary = async () => {
     setLoading(true);
-    setError("");
+    clearFeedback();
     try {
       if (!headers) {
         throw new Error("Proyecto obligatorio");
@@ -74,12 +81,36 @@ const AIInsights: React.FC = () => {
 
   const handleCompute = async () => {
     setLoading(true);
-    setError("");
+    clearFeedback();
     try {
       if (!headers) {
         throw new Error("Proyecto obligatorio");
       }
-      await computeInsights(headers);
+      const result = await computeInsights(headers);
+      setSuccess(
+        `Insights: ${result.computed} evaluados, ${result.insights_created} creados.`
+      );
+      await handleSummary();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error inesperado";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecomputeBaselines = async () => {
+    setLoading(true);
+    clearFeedback();
+    try {
+      if (!headers) {
+        throw new Error("Proyecto obligatorio");
+      }
+      const result = await recomputeBaselines(headers);
+      setSuccess(
+        `Baselines: ${result.cohort_saved} cohorte, ${result.project_saved} proyecto. ` +
+          "Ahora podés recalcular insights."
+      );
       await handleSummary();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error inesperado";
@@ -91,7 +122,7 @@ const AIInsights: React.FC = () => {
 
   const handleFetchInsights = async () => {
     setLoading(true);
-    setError("");
+    clearFeedback();
     try {
       if (!headers) {
         throw new Error("Proyecto obligatorio");
@@ -112,7 +143,7 @@ const AIInsights: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 px-6 py-4">
       <FilterBar filters={filters} />
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Button
           size="sm"
           variant="primary"
@@ -127,11 +158,24 @@ const AIInsights: React.FC = () => {
           variant="outlineGreen"
           className="px-6"
           disabled={loading}
+          onClick={handleRecomputeBaselines}
+          title="Calcular baselines (p50/p75/p90). Ejecutar primero si no hay insights."
+        >
+          Recalcular baselines
+        </Button>
+        <Button
+          size="sm"
+          variant="outlineGreen"
+          className="px-6"
+          disabled={loading}
           onClick={handleCompute}
         >
           Recalcular insights
         </Button>
         {error && <span className="text-sm text-red-600">{error}</span>}
+        {success && (
+          <span className="text-sm text-green-600">{success}</span>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
