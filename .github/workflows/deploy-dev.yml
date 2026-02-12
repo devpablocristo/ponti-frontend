@@ -7,7 +7,6 @@ on:
       - main
 
 env:
-  PROJECT_ID: new-ponti-dev
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev
   REPOSITORY: ponti-frontend-registry
@@ -31,22 +30,28 @@ jobs:
             echo "ENV=staging" >> "$GITHUB_OUTPUT"
             echo "TAG=stg" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=ponti-frontend-staging" >> "$GITHUB_OUTPUT"
+            echo "PROJECT_ID=new-ponti-stg" >> "$GITHUB_OUTPUT"
+            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_STG }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.ref_name }}" == "develop" ]]; then
             echo "ENV=dev" >> "$GITHUB_OUTPUT"
             echo "TAG=dev" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=ponti-frontend-dev" >> "$GITHUB_OUTPUT"
+            echo "PROJECT_ID=new-ponti-dev" >> "$GITHUB_OUTPUT"
+            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER_DEV }}
-          service_account: ${{ vars.WIF_SERVICE_ACCOUNT_DEV }}
+          workload_identity_provider: ${{ steps.env.outputs.WIF_PROVIDER }}
+          service_account: ${{ steps.env.outputs.WIF_SERVICE_ACCOUNT }}
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: ${{ steps.env.outputs.PROJECT_ID }}
 
       - name: Configure Docker for Artifact Registry
         run: |
@@ -60,23 +65,23 @@ jobs:
 
       - name: Build Docker image
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
+          IMAGE="${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
           docker build -t "$IMAGE" .
-          docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
+          docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
 
       - name: Push Docker image
         run: |
-          docker push "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
-          docker push "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
+          docker push "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
+          docker push "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
 
       - name: Deploy to Cloud Run
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
+          IMAGE="${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
           gcloud run deploy "${{ steps.env.outputs.SERVICE_NAME }}" \
-            --project="${{ env.PROJECT_ID }}" \
+            --project="${{ steps.env.outputs.PROJECT_ID }}" \
             --region="${{ env.REGION }}" \
             --image="$IMAGE" \
-            --service-account="cloudrun-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com" \
+            --service-account="github-actions@${{ steps.env.outputs.PROJECT_ID }}.iam.gserviceaccount.com" \
             --allow-unauthenticated \
             --port=3000 \
             --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_LOGIN_API=${{ secrets.BASE_LOGIN_API }},BASE_MANAGER_API=${{ secrets.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }}"
