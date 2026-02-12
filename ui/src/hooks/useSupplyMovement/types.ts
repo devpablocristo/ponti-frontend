@@ -37,6 +37,8 @@ export interface SupplyMovement {
   entry_type: string;
   reference_number: string;
   entry_date: string;
+  origin_project_id?: number | null;
+  origin_project_name?: string | null;
   investor_name: string;
   supply_name: string;
   quantity: string;
