@@ -31,8 +31,8 @@ jobs:
             echo "TAG=stg" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=ponti-frontend-staging" >> "$GITHUB_OUTPUT"
             echo "PROJECT_ID=new-ponti-stg" >> "$GITHUB_OUTPUT"
-            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_STG }}" >> "$GITHUB_OUTPUT"
-            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.ref_name }}" == "develop" ]]; then
             echo "ENV=dev" >> "$GITHUB_OUTPUT"
             echo "TAG=dev" >> "$GITHUB_OUTPUT"
