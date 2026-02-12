@@ -3,7 +3,6 @@ import Button from "../../components/Button/Button";
 import Search from "../../components/Input/Search";
 import SelectField from "../../components/Input/SelectField";
 import { useClickOutside } from "../../pages/login/useClickOutside";
-import { Entity } from "../../hooks/useDatabase/options/types";
 
 interface FilterOption {
   id: number;
@@ -18,10 +17,10 @@ interface FilterItem {
   total?: number;
   placeholder?: string;
   options?: FilterOption[];
-  value?: string | null;
+  value?: string | number | null;
   disabled?: boolean;
   onChange: (value: string) => void;
-  setData: (c: Entity | undefined) => void;
+  setData: (c: unknown) => void;
 }
 
 export interface ActionButton {
@@ -129,9 +128,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
   const handleSuggestionClick = useCallback(
     (
       name: string,
-      option: any,
-      onChange: (val: any) => void,
-      setData: (c: Entity | undefined) => void
+      option: FilterOption,
+      onChange: (val: string) => void,
+      setData: (c: unknown) => void
     ) => {
       setData(option);
       onChange(option.name);
@@ -155,11 +154,11 @@ const FilterBar: React.FC<FilterBarProps> = ({
 
   const createHandleKeyDown = useCallback(
     (
-        name: string,
-        options: any[],
-        onChange: (val: any) => void,
-        setData: (c: any | undefined) => void
-      ) =>
+      name: string,
+      options: FilterOption[],
+      onChange: (val: string) => void,
+      setData: (c: unknown) => void
+    ) =>
       (e: React.KeyboardEvent<HTMLInputElement>) => {
         const currentIndex = highlightedIndex[name] || 0;
         let newIndex = currentIndex;
@@ -241,7 +240,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                         filter.placeholder ||
                         `Buscar ${filter.label.toLowerCase()}`
                       }
-                      value={filter.value || ""}
+                      value={String(filter.value ?? "")}
                       size={inputSize}
                       onClick={() => showSuggestions(filter.name)}
                       onChange={(e) => filter.onChange(e.target.value)}

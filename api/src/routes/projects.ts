@@ -37,8 +37,24 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: perPage.toString(),
+    });
+
+    // Solo enviar filtros validos para evitar 400 por customer_id/campaign_id = 0
+    if (customer_id > 0) {
+      params.set("customer_id", customer_id.toString());
+    }
+    if (campaign_id > 0) {
+      params.set("campaign_id", campaign_id.toString());
+    }
+    if (name) {
+      params.set("name", name);
+    }
+
     const { data: projects } = await apiClient.get<any>(
-      `/projects?page=${page}&per_page=${perPage}&customer_id=${customer_id}&campaign_id=${campaign_id}&name=${name}`,
+      `/projects?${params.toString()}`,
       headers
     );
 
@@ -103,7 +119,89 @@ router.get("", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/customer/:id", async (req: Request, res: Response) => {
+router.get("/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data: projects } = await apiClient.get<any>("/projects/archived", headers);
+    const { data: archivedCustomers } = await apiClient.get<any>(
+      "/customers/archived",
+      headers
+    );
+
+    const archivedCustomerIds = new Set<number>(
+      (archivedCustomers?.data ?? []).map((customer: any) => Number(customer.id))
+    );
+    const filteredProjects = projects.data.filter((project: any) => {
+      const customerId = Number(project.customer?.id ?? 0);
+      return !archivedCustomerIds.has(customerId);
+    });
+
+    const adaptedProjects = filteredProjects.map((project: any) => {
+      const client = project.customer?.name || "No client";
+      const projectName = project.name;
+
+      const managers =
+        project.managers?.map((m: any) => m.name).join(", ") || "No managers";
+
+      const investors =
+        project.investors
+          ?.map((inv: any) => {
+            return `${inv.name} - ${inv.percentage}%`;
+          })
+          .join(", ") || "No investors";
+
+      return {
+        id: project.id,
+        name: projectName,
+        customer: client,
+        campaign: project.campaign?.name || "No campaign",
+        managers,
+        investors,
+      };
+    });
+
+    const data = {
+      success: true,
+      data: {
+        data: adaptedProjects,
+        total_hectares: projects.total_hectares,
+        page_info: {
+          per_page: projects.page_info.per_page,
+          page: projects.page_info.page,
+          max_page: projects.page_info.max_page,
+          total: adaptedProjects.length,
+        },
+      },
+    };
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+const handleProjectsByCustomer = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userID;
@@ -120,7 +218,7 @@ router.get("/customer/:id", async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 1000;
 
-    const url = `projects/customer/${id}?page=${page}&per_page=${perPage}`;
+    const url = `projects/customers/${id}?page=${page}&per_page=${perPage}`;
 
     const cachedProjects = cache.get(url);
     if (cachedProjects) {
@@ -162,7 +260,11 @@ router.get("/customer/:id", async (req: Request, res: Response) => {
       error: { status: 500, details: "No se pudo procesar la solicitud" },
     });
   }
-});
+};
+
+// Soporta /customers (plural) y /customer (singular)
+router.get("/customers/:id", handleProjectsByCustomer);
+router.get("/customer/:id", handleProjectsByCustomer);
 
 router.get("/:id", async (req: Request, res: Response) => {
   try {
@@ -307,7 +409,7 @@ router.delete(
         "X-User-Id": userId,
       };
 
-      const data = await apiClient.delete<any>(`/projects/${id}`, headers);
+      const data = await apiClient.delete<any>(`/projects/${id}/hard`, headers);
       setImmediate(() => cache.flushAll());
       res.status(200).json(data);
     } catch (error: any) {
@@ -342,7 +444,109 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.delete<any>(`/projects/${id}`, headers);
+    const data = await apiClient.delete<any>(`/projects/${id}/hard`, headers);
+    setImmediate(() => cache.flushAll());
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.log(error);
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo obtener el proyecto" },
+    });
+  }
+});
+
+router.put("/:id/archive", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const data = await apiClient.put<any>(`/projects/${id}/archive`, {}, headers);
+    setImmediate(() => cache.flushAll());
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.log(error);
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo obtener el proyecto" },
+    });
+  }
+});
+
+router.put("/:id/restore", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const data = await apiClient.put<any>(`/projects/${id}/restore`, {}, headers);
+    setImmediate(() => cache.flushAll());
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.log(error);
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo obtener el proyecto" },
+    });
+  }
+});
+
+router.delete("/:id/hard", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const data = await apiClient.delete<any>(`/projects/${id}/hard`, headers);
     setImmediate(() => cache.flushAll());
     res.status(200).json(data);
   } catch (error: any) {

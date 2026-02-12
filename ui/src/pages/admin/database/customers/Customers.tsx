@@ -643,9 +643,9 @@ export default function Customers() {
 
   const handlePreFinish = () => {
     setModalConfig({
-      title: "Confirmar finalización",
-      message: "¿Está seguro que desea finalizar la campaña?",
-      primaryButtonText: "Sí, finalizar",
+      title: "Confirmar archivo",
+      message: "¿Está seguro que desea archivar el proyecto?",
+      primaryButtonText: "Sí, archivar",
       secondaryButtonText: "Volver",
       onConfirm: handleFinishConfirmed,
     });
@@ -656,23 +656,40 @@ export default function Customers() {
     if (!id) return;
     setIsSaving(true);
 
+    let errorMessage = "";
     try {
       await deleteProject(Number(id));
     } catch (error) {
       console.error("Error al finalizar:", error);
+      errorMessage =
+        error instanceof Error
+          ? error.message
+          : "No se pudo archivar el proyecto.";
     } finally {
-      setModalConfig({
-        title: "Confirmar finalización",
-        message: "La campaña ha sido finalizada.",
-        primaryButtonText: "Volver",
-        secondaryButtonText: "Volver",
-        onConfirm: () => {
-          window.location.href = "/admin/customers";
-        },
-      });
+      if (errorMessage) {
+        setModalConfig({
+          title: "Error",
+          message: errorMessage,
+          primaryButtonText: "Volver",
+          secondaryButtonText: "Volver",
+          onConfirm: () => {
+            setIsModalOpen(false);
+          },
+        });
+      } else {
+        setModalConfig({
+          title: "Confirmación",
+          message: "El proyecto ha sido archivado.",
+          primaryButtonText: "Volver",
+          secondaryButtonText: "Volver",
+          onConfirm: () => {
+            window.location.href = "/admin/customers";
+          },
+        });
+        cleanForm();
+      }
       setIsModalOpen(true);
       setIsSaving(false);
-      cleanForm();
     }
   };
 
@@ -985,7 +1002,7 @@ export default function Customers() {
               onClick={handlePreFinish}
               size="sm"
             >
-              Finalizar proyecto
+              Archivar proyecto
             </Button>
           )}
         </div>

@@ -1,13 +1,12 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 
-const apiClient = new ApiClient(configService.baseManagerApi);
+const apiClient = new ApiClient(configService.baseManagerApi, 60000);
 
 const router: Router = Router();
 
-router.get("", async (req: Request, res: Response) => {
+router.get("/costs-check", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
@@ -20,45 +19,21 @@ router.get("", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const customerId = req.query?.customer_id as string;
     const projectId = req.query?.project_id as string;
-    const campaign_id = req.query?.campaign_id as string;
-    const field_id = req.query?.field_id as string;
-
     const params: Record<string, string> = {};
-
-    if (customerId) {
-      params.customer_id = customerId;
-    }
 
     if (projectId) {
       params.project_id = projectId;
     }
-    if (campaign_id) {
-      params.campaign_id = campaign_id;
-    }
-    if (field_id) {
-      params.field_id = field_id;
-    }
 
     const queryParams = new URLSearchParams(params).toString();
+    const url = queryParams
+      ? `data-integrity/costs-check?${queryParams}`
+      : "data-integrity/costs-check";
 
-    const url = `dashboard?${queryParams}`;
+    const { data: report } = await apiClient.get<any>(url, headers);
 
-    const cachedCampaigns = cache.get(url);
-    if (cachedCampaigns) {
-      res.status(200).json(cachedCampaigns);
-      return;
-    }
-
-    const { data: dashboard } = await apiClient.get<any>(url, headers);
-
-    const data = {
-      success: true,
-      data: dashboard,
-    };
-
-    res.status(200).json(data);
+    res.status(200).json(report);
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 

@@ -37,7 +37,7 @@ const useOrders = () => {
 
       try {
         const response = await request.get<SuccessResponse<any>>(
-          `/workorders${queryParams}`
+          `/work-orders${queryParams}`
         );
 
         if (response.success) {
@@ -93,7 +93,7 @@ const useOrders = () => {
 
       try {
         const response = await request.get<SuccessResponse<Metrics>>(
-          "/workorders/metrics" + queryParams
+          "/work-orders/metrics" + queryParams
         );
 
         if (response.success) {
@@ -189,7 +189,7 @@ const useOrders = () => {
 
       try {
         const response = await request.put<SuccessResponse<any>>(
-          `/workorders/${id}`,
+          `/work-orders/${id}`,
           order
         );
 
@@ -229,7 +229,7 @@ const useOrders = () => {
   const getWorkorder = React.useCallback(async (id: number) => {
     try {
       const response = await request.get<SuccessResponse<WorkorderData>>(
-        `/workorders/${id}`
+        `/work-orders/${id}`
       );
 
       if (response.success) {
@@ -273,7 +273,7 @@ const useOrders = () => {
 
     try {
       const response = await request.delete<SuccessResponse<string>>(
-        "/workorders/" + id
+        "/work-orders/" + id
       );
 
       if (response.success) {

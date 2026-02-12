@@ -1,4 +1,9 @@
 **/node_modules
 **/.vscode/
 .env
+.idea
+
+.cursorignore
+.cursorrules
+*.code-workspace
 .id

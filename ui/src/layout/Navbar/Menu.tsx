@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button/Button";
+import { useSelection } from "../../pages/login/context/SelectionContext";
+import { getInsightsSummary } from "../../restclient/aiClient";
 
 interface NavbarProps {
   username: string;
@@ -10,8 +12,10 @@ interface NavbarProps {
 
 const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [insightsCount, setInsightsCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const { projectId } = useSelection();
 
   const toggleDropdown = () => {
     setIsDropdownOpen(!isDropdownOpen);
@@ -40,9 +44,36 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
     };
   }, [isDropdownOpen]);
 
+  useEffect(() => {
+    if (!projectId) {
+      setInsightsCount(0);
+      return;
+    }
+
+    const fetchSummary = async () => {
+      try {
+        const summary = await getInsightsSummary({
+          projectId: String(projectId),
+        });
+        setInsightsCount(summary.new_count_total ?? 0);
+      } catch {
+        setInsightsCount(0);
+      }
+    };
+
+    fetchSummary();
+  }, [projectId]);
+
   return (
-    <div className="relative flex items-center ms-3">
-      <div>
+    <div className="relative flex items-center ms-3 gap-3">
+      <div className="flex flex-col items-center justify-center">
+        <span className="text-[10px] text-slate-500">IA</span>
+        <span className="text-xs font-semibold bg-red-500 text-white rounded-full px-2 py-0.5">
+          {insightsCount}
+        </span>
+      </div>
+      <div className="h-8 border-l border-slate-300" />
+      <div className="relative">
         <button
           ref={buttonRef}
           type="button"

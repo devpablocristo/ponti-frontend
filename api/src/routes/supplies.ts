@@ -28,32 +28,40 @@ router.get("", async (req: Request, res: Response) => {
 
     const headers = {
       "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
+      "X-User-Id": String(userId),
     };
 
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 1000;
 
-    const { data: supplies } = await apiClient.get<any>(
-      `/supplies/${projectId}?page=${page}&per_page=${perPage}`,
+    const params = new URLSearchParams({
+      project_id: String(projectId),
+      page: String(page),
+      per_page: String(perPage),
+    });
+    const { data: backendResp } = await apiClient.get<any>(
+      `/supplies?${params.toString()}`,
       headers
     );
+
+    const items = Array.isArray(backendResp?.data) ? backendResp.data : backendResp?.data ?? [];
+    const pageInfo = backendResp?.page_info ?? {
+      per_page: perPage,
+      page,
+      max_page: 1,
+      total: items.length,
+    };
 
     const data = {
       success: true,
       data: {
-        data: supplies,
-        page_info: {
-          per_page: perPage,
-          page,
-          max_page: Math.ceil(supplies.total / perPage),
-          total: supplies.total,
-        },
+        data: items,
+        page_info: pageInfo,
       },
     };
 
-    if (supplies.length > 0) {
-      setImmediate(() => cache.set(`supplies:${userId}:${projectId}`, data));
+    if (items.length > 0) {
+      setImmediate(() => cache.set(`supplies:${projectId}`, data));
     }
 
     res.status(200).json(data);
@@ -84,7 +92,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
 
     const headers = {
       "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
+      "X-User-Id": String(userId),
     };
 
     //   ProjectID int64           `json:"project_id"`
@@ -151,7 +159,7 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     const headers = {
       "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
+      "X-User-Id": String(userId),
     };
 
     let supplies = req.body;
@@ -218,20 +226,31 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     const headers = {
       "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
+      "X-User-Id": String(userId),
     };
 
-    const { data: supplies } = await apiClient.get<any>(
+    const { data: backendResp } = await apiClient.get<any>(
       `/supplies?project_id=${projectId}&page=1&per_page=1000`,
       headers
     );
 
-    const data = {
-      success: true,
-      data: supplies,
+    const items = Array.isArray(backendResp?.data) ? backendResp.data : backendResp?.data ?? [];
+    const pageInfo = backendResp?.page_info ?? {
+      per_page: 1000,
+      page: 1,
+      max_page: 1,
+      total: items.length,
     };
 
-    if (supplies.length > 0) {
+    const data = {
+      success: true,
+      data: {
+        data: items,
+        page_info: pageInfo,
+      },
+    };
+
+    if (items.length > 0) {
       setImmediate(() => cache.set(`supplies:${projectId}`, data));
     }
 
@@ -269,7 +288,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
 
     const headers = {
       "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
+      "X-User-Id": String(userId),
     };
 
     const { data: supplies } = await apiClient.delete<any>(

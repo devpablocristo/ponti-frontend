@@ -857,8 +857,8 @@ http.get(
       ]
     };
     
-    // Si es /projects/customer/* -> manejarlo como listado por customer
-    if (path.includes("/customer/")) {
+    // Si es /projects/customers/* -> manejarlo como listado por customer
+    if (path.includes("/customers/")) {
       logRequest("GET", request.url);
       return new HttpResponse(
         JSON.stringify({
@@ -1327,7 +1327,7 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
   }),
 
   // 19. WORKORDERS METRICS (Debe ir ANTES del handler general)
-  http.get(new RegExp(configService.baseManagerApi + "/workorders/metrics"), ({ request }) => {
+  http.get(new RegExp(configService.baseManagerApi + "/work-orders/metrics"), ({ request }) => {
     logRequest("GET", request.url);
     const filtered = filterWorkorders(request.url);
     const metrics = calculateWorkorderMetrics(filtered);
@@ -1338,7 +1338,7 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
   }),
 
   // 19B. WORKORDERS (Órdenes de trabajo)
-  http.get(new RegExp(configService.baseManagerApi + "/workorders"), ({ request }) => {
+  http.get(new RegExp(configService.baseManagerApi + "/work-orders"), ({ request }) => {
     logRequest("GET", request.url);
     const filtered = filterWorkorders(request.url);
     return new HttpResponse(
@@ -1351,7 +1351,7 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
   }),
 
   // 20. WORKORDER POST (Crear)
-  http.post(new RegExp(configService.baseManagerApi + "/workorders.*"), async ({ request }) => {
+  http.post(new RegExp(configService.baseManagerApi + "/work-orders.*"), async ({ request }) => {
     logRequest("POST", request.url);
     const body = await request.json() as any;
     return new HttpResponse(
@@ -1364,7 +1364,7 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
   }),
 
   // 21. WORKORDER PUT (Actualizar)
-  http.put(new RegExp(configService.baseManagerApi + "/workorders/\\d+"), async ({ request }) => {
+  http.put(new RegExp(configService.baseManagerApi + "/work-orders/\\d+"), async ({ request }) => {
     logRequest("PUT", request.url);
     const body = await request.json();
     return new HttpResponse(
