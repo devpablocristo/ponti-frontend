@@ -31,15 +31,15 @@ jobs:
             echo "TAG=stg" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=ponti-frontend-staging" >> "$GITHUB_OUTPUT"
             echo "PROJECT_ID=new-ponti-stg" >> "$GITHUB_OUTPUT"
-            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
-            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_PROVIDER=projects/65243764597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider" >> "$GITHUB_OUTPUT"
+            echo "WIF_SERVICE_ACCOUNT=github-actions@new-ponti-stg.iam.gserviceaccount.com" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.ref_name }}" == "develop" ]]; then
             echo "ENV=dev" >> "$GITHUB_OUTPUT"
             echo "TAG=dev" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=ponti-frontend-dev" >> "$GITHUB_OUTPUT"
             echo "PROJECT_ID=new-ponti-dev" >> "$GITHUB_OUTPUT"
-            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
-            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_PROVIDER=projects/1087442197188/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider" >> "$GITHUB_OUTPUT"
+            echo "WIF_SERVICE_ACCOUNT=github-actions@new-ponti-dev.iam.gserviceaccount.com" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Authenticate to Google Cloud
