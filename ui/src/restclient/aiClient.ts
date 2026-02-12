@@ -138,7 +138,15 @@ export const getInsights = async (
   return (await response.json()) as { insights: InsightItem[] };
 };
 
-export const computeInsights = async (headers: AskHeaders): Promise<void> => {
+export type ComputeInsightsResult = {
+  request_id: string;
+  computed: number;
+  insights_created: number;
+};
+
+export const computeInsights = async (
+  headers: AskHeaders
+): Promise<ComputeInsightsResult> => {
   const baseUrl = getBaseUrl();
   const response = await fetch(`${baseUrl}/insights/compute`, {
     method: "POST",
@@ -148,4 +156,28 @@ export const computeInsights = async (headers: AskHeaders): Promise<void> => {
     const text = await response.text();
     throw new Error(text || "Error al recomputar insights");
   }
+  return (await response.json()) as ComputeInsightsResult;
+};
+
+export type RecomputeBaselinesResult = {
+  status: string;
+  job_run_id: string;
+  cohort_saved: number;
+  project_saved: number;
+};
+
+export const recomputeBaselines = async (
+  headers: AskHeaders
+): Promise<RecomputeBaselinesResult> => {
+  const baseUrl = getBaseUrl();
+  const response = await fetch(`${baseUrl}/jobs/recompute-baselines`, {
+    method: "POST",
+    headers: buildHeaders(headers.projectId),
+    body: JSON.stringify({}),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "Error al recalcular baselines");
+  }
+  return (await response.json()) as RecomputeBaselinesResult;
 };
