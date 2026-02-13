@@ -3,9 +3,12 @@ import React, { useState } from "react";
 import useTaskReducer from "./tasksReducer";
 import * as actions from "./actions";
 import { InvoiceData, Metrics, TaskInfo, TaskToSave } from "./types";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
+import { SuccessResponse } from "../../restclient/types";
 import APIClient from "../../restclient/apiInstance";
-import { AxiosError } from "axios";
+import {
+  getApiErrorMessage,
+  getApiErrorStatus,
+} from "../../utils/getApiErrorMessage";
 
 const request = new APIClient({
   timeout: 15000,
@@ -62,22 +65,9 @@ const useTask = () => {
 
         setError("Ocurrio un error en la busqueda de labores");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la busqueda de labores.";
-
-            setError(message);
-            return;
-          }
-        }
-
-        setError("Error en el servicio, inténtalo más tarde.");
+        setError(
+          getApiErrorMessage(error, "Error desconocido en la busqueda de labores.")
+        );
       } finally {
         setProcessing(false);
       }
@@ -105,22 +95,9 @@ const useTask = () => {
 
         setErrorMetrics("Ocurrio un error en la busqueda de kpis");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la busqueda de metricas.";
-
-            setErrorMetrics(message);
-            return;
-          }
-        }
-
-        setErrorMetrics("Error en el servicio, inténtalo más tarde.");
+        setErrorMetrics(
+          getApiErrorMessage(error, "Error desconocido en la busqueda de metricas.")
+        );
       } finally {
         setProcessingMetrics(false);
       }
@@ -152,22 +129,9 @@ const useTask = () => {
 
       setErrorInvoice("Ocurrio un error en la creación de la factura");
     } catch (error) {
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la creación de la factura.";
-
-          setErrorInvoice(message);
-          return;
-        }
-      }
-
-      setErrorInvoice("Error en el servicio, inténtalo más tarde.");
+      setErrorInvoice(
+        getApiErrorMessage(error, "Error desconocido en la creación de la factura.")
+      );
     } finally {
       setProcessingInvoice(false);
     }
@@ -184,7 +148,7 @@ const useTask = () => {
 
       try {
         const response = await request.put<SuccessResponse<any>>(
-          `/labors/invoices/${id}`,
+          `/labors/invoice/${id}`,
           invoice
         );
 
@@ -198,22 +162,12 @@ const useTask = () => {
 
         setErrorInvoice("Ocurrio un error en la actualización de la factura");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la actualización de la factura.";
-
-            setErrorInvoice(message);
-            return;
-          }
-        }
-
-        setErrorInvoice("Error en el servicio, inténtalo más tarde.");
+        setErrorInvoice(
+          getApiErrorMessage(
+            error,
+            "Error desconocido en la actualización de la factura."
+          )
+        );
       } finally {
         setProcessingInvoice(false);
       }
@@ -239,33 +193,24 @@ const useTask = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Se han creado los labores con éxito!",
+            payload: "Se han creado las labores con éxito!",
           });
           return;
         }
 
         setError("Ocurrio un error en la creación de los labores");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            if (errorResponse.error.status === 409) {
-              setError("Ya existe un insumo con el mismo nombre.");
-              return;
-            }
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la creación de los insumos.";
-
-            setError(message);
-            return;
-          }
+        if (getApiErrorStatus(error) === 409) {
+          setError("Ya existe una labor con el mismo nombre.");
+          return;
         }
 
-        setError("Error en el servicio, inténtalo más tarde.");
+        setError(
+          getApiErrorMessage(
+            error,
+            "Error desconocido en la creación de las labores."
+          )
+        );
       } finally {
         setProcessing(false);
       }
@@ -296,22 +241,9 @@ const useTask = () => {
 
       setError("Ocurrio un error en la busqueda de labores");
     } catch (error) {
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la busqueda de labores.";
-
-          setError(message);
-          return;
-        }
-      }
-
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(
+        getApiErrorMessage(error, "Error desconocido en la busqueda de labores.")
+      );
     } finally {
       setProcessing(false);
     }
@@ -340,26 +272,14 @@ const useTask = () => {
 
       setError("Ocurrio un error en la eliminación del labor");
     } catch (error) {
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          if (errorResponse.error.status === 409) {
-            setError("El labor esta siendo usado en una orden de trabajo.");
-            return;
-          }
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la eliminación del labor.";
-
-          setError(message);
-          return;
-        }
+      if (getApiErrorStatus(error) === 409) {
+        setError("La labor esta siendo usada en una orden de trabajo.");
+        return;
       }
 
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(
+        getApiErrorMessage(error, "Error desconocido en la eliminación de la labor.")
+      );
     } finally {
       setProcessing(false);
     }
@@ -384,26 +304,14 @@ const useTask = () => {
 
         setErrorUpdate("Ocurrio un error en la edicion del labor");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            if (errorResponse.error.status === 404) {
-              setErrorUpdate("El labor no existe.");
-              return;
-            }
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la edicion del labor.";
-
-            setErrorUpdate(message);
-            return;
-          }
+        if (getApiErrorStatus(error) === 404) {
+          setErrorUpdate("La labor no existe.");
+          return;
         }
 
-        setErrorUpdate("Error en el servicio, inténtalo más tarde.");
+        setErrorUpdate(
+          getApiErrorMessage(error, "Error desconocido en la edición de la labor.")
+        );
       } finally {
         setProcessing(false);
       }
