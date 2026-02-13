@@ -43,7 +43,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
           className={`bg-gray-50 border border-gray-400 text-gray-900 rounded-lg focus:ring-custom-btn focus:border-custom-btn block px-4 w-full appearance-none ${sizeClasses} ${className}`}
         >
           <option value="" disabled>
-            {placeholder ? placeholder : "Seleccionar..."}
+            {placeholder ? placeholder : "Seleccione una opción"}
           </option>
           {options.map((opt) => (
             <option key={opt.id} value={opt.id}>

@@ -22,6 +22,11 @@ const useProducts = () => {
   const [errorUpdate, setErrorUpdate] = useState<string | null>(null);
   const [resultUpdate, setResultUpdate] = useState<string | null>(null);
 
+  type CreatedSupply = {
+    id: number;
+    name: string;
+  };
+
   const getSupplies = React.useCallback(async (projectId: number) => {
     setProcessing(true);
     try {
@@ -61,7 +66,7 @@ const useProducts = () => {
       });
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await request.put<SuccessResponse<CreatedSupply[]>>(
           `/supplies/${projectId}`,
           products
         );
@@ -71,7 +76,7 @@ const useProducts = () => {
             type: actions.SET_RESULT,
             payload: "Se han creado los insumos con éxito!",
           });
-          return;
+          return response.data;
         }
 
         setError("Ocurrio un error en la creación de los insumos");

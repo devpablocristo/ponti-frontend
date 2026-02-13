@@ -177,13 +177,18 @@ router.put("/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    await apiClient.post<any>(`/supplies/bulk`, supplies, headers);
+    const { data: backendResp } = await apiClient.post<any>(
+      `/supplies/bulk`,
+      supplies,
+      headers
+    );
 
     setImmediate(() => cache.flushAll());
 
     const data = {
-      success: true,
-      message: "Lote actualizado exitosamente",
+      success: backendResp?.success ?? true,
+      message: backendResp?.message ?? "Lote actualizado exitosamente",
+      data: backendResp?.data ?? [],
     };
 
     res.status(200).json(data);

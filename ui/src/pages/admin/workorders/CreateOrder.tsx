@@ -147,13 +147,14 @@ export default function CreateOrder({
     onCancel,
   }: {
     projectId: number | null;
-    onCreated: () => void;
+    onCreated: (createdSupplyId: number | null) => void | Promise<void>;
     onCancel: () => void;
   }) {
     const { saveProducts, result, error } = useProducts();
     const { categories, types, getCategories, getTypes } = useCategories();
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
+    const [createdSupplyId, setCreatedSupplyId] = useState<number | null>(null);
 
     const [name, setName] = useState("");
     const [unit, setUnit] = useState("");
@@ -186,9 +187,15 @@ export default function CreateOrder({
         {success && (
           <div className="p-3 rounded bg-green-50 text-green-700 text-sm flex items-center justify-between">
             <span>{success}</span>
-            <Button size="xs" variant="success" onClick={() => {
+            <Button size="xs" variant="success" onClick={async () => {
               setSuccess(null);
-              onCreated();
+              await onCreated(createdSupplyId);
+              setName("");
+              setUnit("");
+              setPrice("");
+              setCategory("");
+              setType("");
+              setCreatedSupplyId(null);
             }}>OK</Button>
           </div>
         )}
@@ -264,24 +271,33 @@ export default function CreateOrder({
             <Button
               variant="success"
               disabled={saving}
-              onClick={() => {
+              onClick={async () => {
                 if (!projectId || !name || !unit || !price || !category || !type) {
                   return;
                 }
                 setSaving(true);
                 setSuccess(null);
-                saveProducts(
-                  [
-                    {
-                      name: normalizedName,
-                      unit: Number(unit),
-                      price: Number(price),
-                      category: Number(category),
-                      type: Number(type),
-                    },
-                  ],
-                  projectId
-                );
+                try {
+                  const createdSupplies = await saveProducts(
+                    [
+                      {
+                        name: normalizedName,
+                        unit: Number(unit),
+                        price: Number(price),
+                        category: Number(category),
+                        type: Number(type),
+                      },
+                    ],
+                    projectId
+                  );
+                  if (createdSupplies && Array.isArray(createdSupplies) && createdSupplies.length > 0) {
+                    setCreatedSupplyId(createdSupplies[0].id ?? null);
+                  } else {
+                    setCreatedSupplyId(null);
+                  }
+                } finally {
+                  setSaving(false);
+                }
               }}
             >
               {saving ? "Guardando..." : "Guardar insumo"}
@@ -924,21 +940,23 @@ export default function CreateOrder({
           {/* FORMULARIO SIMPLE DE INSUMO */}
           <CreateSupplyInline
             projectId={projectId}
-            onCreated={async () => {
-              if (projectId) {
-                await getSupplies(projectId); // 🔥 CLAVE
-              }
+            onCreated={async (createdSupplyId) => {
+              try {
+                if (projectId) {
+                  await getSupplies(projectId); // 🔥 CLAVE
+                }
 
-              if (itemIndexToUpdate !== null) {
-                handleItemChange(
-                  itemIndexToUpdate,
-                  "itemId",
-                  null
-                );
+                if (itemIndexToUpdate !== null && createdSupplyId) {
+                  handleItemChange(
+                    itemIndexToUpdate,
+                    "itemId",
+                    createdSupplyId
+                  );
+                }
+              } finally {
+                setOpenCreateSupply(false);
+                setItemIndexToUpdate(null);
               }
-
-              setOpenCreateSupply(false);
-              setItemIndexToUpdate(null);
             }}
             onCancel={() => {
               setOpenCreateSupply(false);
