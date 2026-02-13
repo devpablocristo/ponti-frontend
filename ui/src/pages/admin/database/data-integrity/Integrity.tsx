@@ -10,21 +10,23 @@ import { ErrorResponse } from "../../../../restclient/types";
 
 type IntegrityCheck = {
   control_number: number;
-  source_module: string;
   data_to_verify: string;
-  target_module: string;
-  control_rule: string;
   description: string;
-  left_calculation: string;
-  left_value: string;
-  left_source?: string;
-  left_interpretation: string;
-  right_calculation: string;
-  right_value: string;
-  right_source?: string;
-  right_interpretation: string;
-  calculation_interpretation: string;
-  difference: string;
+  control_rule: string;
+  system_calculation: string;
+  system_value: string;
+  system_source: string;
+  system_meaning: string;
+  recalc_a_calculation: string;
+  recalc_a_value: string;
+  recalc_a_source: string;
+  recalc_a_meaning: string;
+  recalc_b_calculation?: string;
+  recalc_b_value?: string;
+  recalc_b_source?: string;
+  recalc_b_meaning?: string;
+  difference_a: string;
+  difference_b?: string;
   status: string;
   tolerance: string;
 };
@@ -85,9 +87,8 @@ export default function Integrity() {
 
   const columns = [
     { key: "control_number", header: "#", sortable: true, width: "60px" },
-    { key: "source_module", header: "Origen", sortable: true },
-    { key: "target_module", header: "Destino", sortable: true },
     { key: "data_to_verify", header: "Dato", sortable: true },
+    { key: "system_value", header: "Valor sistema", sortable: true },
     {
       key: "status",
       header: "Estado",
@@ -102,7 +103,7 @@ export default function Integrity() {
         </span>
       ),
     },
-    { key: "difference", header: "Diferencia", sortable: true },
+    { key: "difference_a", header: "Diferencia", sortable: true },
     { key: "tolerance", header: "Tolerancia", sortable: true },
   ] as any;
 
@@ -123,7 +124,7 @@ export default function Integrity() {
         columns={columns}
         message="No hay controles disponibles"
         expandableRowRender={(item: IntegrityCheck) => (
-          <div className="text-sm text-gray-700 space-y-3">
+          <div className="text-sm text-gray-700 space-y-3 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-semibold">
                 Control #{item.control_number}
@@ -137,9 +138,12 @@ export default function Integrity() {
               >
                 {item.status}
               </span>
-              {item.difference && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
+                Diferencia A: {item.difference_a}
+              </span>
+              {item.difference_b != null && (
                 <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">
-                  Diferencia: {item.difference}
+                  Diferencia B: {item.difference_b}
                 </span>
               )}
             </div>
@@ -160,63 +164,57 @@ export default function Integrity() {
               <div className="text-slate-800">{item.control_rule}</div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="p-3 rounded-md bg-emerald-50 border border-emerald-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 min-w-0">
+              <div className="min-w-0 p-3 rounded-md bg-emerald-50 border border-emerald-200">
                 <div className="text-xs font-semibold uppercase text-emerald-700 mb-1">
-                  LEFT (origen)
+                  Sistema
                 </div>
-                <div className="text-slate-800">
-                  {item.left_calculation} ={" "}
-                  <span className="font-semibold">{item.left_value}</span>
-                  {item.left_source ? (
-                    <span className="text-slate-500"> ({item.left_source})</span>
+                <div className="text-slate-800 break-words">
+                  {item.system_calculation} ={" "}
+                  <span className="font-semibold">{item.system_value}</span>
+                  {item.system_source ? (
+                    <span className="text-slate-500"> ({item.system_source})</span>
                   ) : null}
                 </div>
-                {item.left_interpretation && (
-                  <div className="mt-2 text-slate-600">
-                    <span className="font-semibold text-emerald-700">
-                      Interpretación:
-                    </span>{" "}
-                    {item.left_interpretation}
-                  </div>
+                {item.system_meaning && (
+                  <div className="mt-2 text-slate-600 text-xs">{item.system_meaning}</div>
                 )}
               </div>
 
-              <div className="p-3 rounded-md bg-sky-50 border border-sky-200">
+              <div className="min-w-0 p-3 rounded-md bg-sky-50 border border-sky-200">
                 <div className="text-xs font-semibold uppercase text-sky-700 mb-1">
-                  RIGHT (destino)
+                  Recálculo A
                 </div>
-                <div className="text-slate-800">
-                  {item.right_calculation} ={" "}
-                  <span className="font-semibold">{item.right_value}</span>
-                  {item.right_source ? (
-                    <span className="text-slate-500">
-                      {" "}
-                      ({item.right_source})
-                    </span>
+                <div className="text-slate-800 break-words">
+                  {item.recalc_a_calculation} ={" "}
+                  <span className="font-semibold">{item.recalc_a_value}</span>
+                  {item.recalc_a_source ? (
+                    <span className="text-slate-500"> ({item.recalc_a_source})</span>
                   ) : null}
                 </div>
-                {item.right_interpretation && (
-                  <div className="mt-2 text-slate-600">
-                    <span className="font-semibold text-sky-700">
-                      Interpretación:
-                    </span>{" "}
-                    {item.right_interpretation}
-                  </div>
+                {item.recalc_a_meaning && (
+                  <div className="mt-2 text-slate-600 text-xs">{item.recalc_a_meaning}</div>
                 )}
               </div>
-            </div>
 
-            {item.calculation_interpretation && (
-              <div className="p-3 rounded-md bg-violet-50 border border-violet-200">
-                <div className="text-xs font-semibold uppercase text-violet-700 mb-1">
-                  Interpretación del cálculo
+              {(item.recalc_b_calculation ?? item.recalc_b_value ?? item.recalc_b_source) != null && (
+                <div className="min-w-0 p-3 rounded-md bg-violet-50 border border-violet-200">
+                  <div className="text-xs font-semibold uppercase text-violet-700 mb-1">
+                    Recálculo B
+                  </div>
+                  <div className="text-slate-800 break-words">
+                    {item.recalc_b_calculation ?? "-"} ={" "}
+                    <span className="font-semibold">{item.recalc_b_value ?? "-"}</span>
+                    {item.recalc_b_source ? (
+                      <span className="text-slate-500"> ({item.recalc_b_source})</span>
+                    ) : null}
+                  </div>
+                  {item.recalc_b_meaning && (
+                    <div className="mt-2 text-slate-600 text-xs">{item.recalc_b_meaning}</div>
+                  )}
                 </div>
-                <div className="text-slate-800">
-                  {item.calculation_interpretation}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
       />
