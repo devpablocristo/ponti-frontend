@@ -237,6 +237,9 @@ export function Stock() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
+    null
+  );
   const [disabledCloseStock, setDisabledCloseStock] = useState(false);
   const [enabledCloseStock, setEnabledCloseStock] = useState(false);
   const [stockPeriods, setStockPeriods] = useState<
@@ -623,6 +626,7 @@ export function Stock() {
     if (!projectId) return;
 
     try {
+      setExportErrorMessage(null);
       const response = await request.get<Blob>(
         `/stock/export/${projectId}`,
         undefined,
@@ -640,6 +644,7 @@ export function Stock() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
+      setExportErrorMessage("No se pudo exportar el stock.");
     }
   };
 
@@ -685,12 +690,13 @@ export function Stock() {
           </div>
         )}
 
-        {error && (
+        {(error || exportErrorMessage) && (
           <div
             className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
             role="alert"
           >
-            <span className="font-medium">Error!</span> {error}
+            <span className="font-medium">Error!</span>{" "}
+            {exportErrorMessage || error}
           </div>
         )}
         {stockPeriods && stockPeriods.length > 0 && (

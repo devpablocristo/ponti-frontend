@@ -13,24 +13,30 @@ import { WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useProducts from "../../../hooks/useProducts";
 import useCategories from "../../../hooks/useCategories";
 
-const emptyItems = [
+type WorkOrderItem = {
+  itemId: number | null;
+  totalUsed: string;
+  dose: string;
+};
+
+const emptyItems: WorkOrderItem[] = [
   {
-    item: "",
+    itemId: null,
     totalUsed: "",
     dose: "",
   },
   {
-    item: "",
+    itemId: null,
     totalUsed: "",
     dose: "",
   },
   {
-    item: "",
+    itemId: null,
     totalUsed: "",
     dose: "",
   },
   {
-    item: "",
+    itemId: null,
     totalUsed: "",
     dose: "",
   },
@@ -131,13 +137,7 @@ export default function CreateOrder({
     []
   );
 
-  const [items, setItems] = useState<
-    {
-      item: string;
-      totalUsed: string;
-      dose: string;
-    }[]
-  >(emptyItems);
+  const [items, setItems] = useState<WorkOrderItem[]>(emptyItems);
 
 
 
@@ -147,7 +147,7 @@ export default function CreateOrder({
     onCancel,
   }: {
     projectId: number | null;
-    onCreated: (newSupplyId: number) => void;
+    onCreated: () => void;
     onCancel: () => void;
   }) {
     const { saveProducts, result, error } = useProducts();
@@ -171,14 +171,8 @@ export default function CreateOrder({
     useEffect(() => {
       if (!result) return;
 
-      const createdId = Number(String(result).trim());
       setSaving(false);
-
-      if (!isNaN(createdId)) {
-        setSuccess("Insumo creado correctamente");
-      } else {
-        setSuccess("Insumo creado correctamente");
-      }
+      setSuccess("Insumo creado correctamente");
     }, [result]);
 
     useEffect(() => {
@@ -194,12 +188,17 @@ export default function CreateOrder({
             <span>{success}</span>
             <Button size="xs" variant="success" onClick={() => {
               setSuccess(null);
-              onCreated(Number(result));
+              onCreated();
             }}>OK</Button>
           </div>
         )}
 
         {!success && <>
+          {error && (
+            <div className="p-3 rounded bg-red-50 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
           <InputField
             label="Nombre del insumo"
             name="suplyName"
@@ -396,14 +395,14 @@ export default function CreateOrder({
       setContractor(orderToDuplicate.contractor);
       setObservations(orderToDuplicate.observations);
 
-      let loadedItems = orderToDuplicate.items.map((item) => ({
-        item: item.supply_id.toString(),
+      let loadedItems: WorkOrderItem[] = orderToDuplicate.items.map((item) => ({
+        itemId: item.supply_id,
         totalUsed: item.total_used.toString(),
         dose: item.final_dose.toString(),
       }));
 
       while (loadedItems.length < 4) {
-        loadedItems.push({ item: "", totalUsed: "", dose: "" });
+        loadedItems.push({ itemId: null, totalUsed: "", dose: "" });
       }
 
       setItems(loadedItems);
@@ -431,7 +430,11 @@ export default function CreateOrder({
     }
   }, [surface]);
 
-  const handleItemChange = (i: number, field: string, value: string) => {
+  const handleItemChange = <K extends keyof WorkOrderItem>(
+    i: number,
+    field: K,
+    value: WorkOrderItem[K]
+  ) => {
     setItems((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
     );
@@ -457,17 +460,21 @@ export default function CreateOrder({
     }
 
     const itemsWithAnyValue = items.filter(
-      (item) => item.item || item.totalUsed || item.dose
+      (item) => item.itemId !== null || item.totalUsed || item.dose
     );
 
     const hasPartial = itemsWithAnyValue.some(
-      (item) => !item.item || !item.totalUsed || !item.dose
+      (item) => item.itemId === null || !item.totalUsed || !item.dose
     );
 
     if (hasPartial) {
       setError("No se completaron todos los campos de los items cargados");
       return;
     }
+
+    const completedItems = itemsWithAnyValue.filter(
+      (item): item is WorkOrderItem & { itemId: number } => item.itemId !== null
+    );
 
     saveOrder({
       number: orderNumber,
@@ -480,8 +487,8 @@ export default function CreateOrder({
       contractor,
       investor_id: investor.id,
       effective_area: Number(surface),
-      items: itemsWithAnyValue.map((item) => ({
-        supply_id: Number(item.item),
+      items: completedItems.map((item) => ({
+        supply_id: item.itemId,
         total_used: Number(item.totalUsed),
         final_dose: Number(item.dose),
       })),
@@ -684,22 +691,21 @@ export default function CreateOrder({
                           label=""
                           name={`item-${i}`}
                           options={[
-                            { id: 0, name: "Seleccionar" }, // 👈 CLAVE
-                            ...supplies,
                             { id: -1, name: "+ Crear nuevo insumo" },
+                            ...supplies,
                           ]}
-                          value={item.item || ""}
+                          value={item.itemId?.toString() || ""}
                           onChange={(e) => {
-                            const value = Number(e.target.value);
-
-                            // 👉 Placeholder
-                            if (value === 0) {
-                              handleItemChange(i, "item", "");
+                            if (e.target.value === "") {
+                              handleItemChange(i, "itemId", null);
                               return;
                             }
 
-                            // 👉 Crear nuevo insumo
+                            const value = Number(e.target.value);
+
+                            // 👉 Acción crear nuevo insumo
                             if (value === -1) {
+                              handleItemChange(i, "itemId", null);
                               setItemIndexToUpdate(i);
                               setOpenCreateSupply(true);
                               return;
@@ -708,7 +714,7 @@ export default function CreateOrder({
                             // 👉 Insumo real
                             const selectedSupply = supplies.find((s) => s.id === value);
                             if (selectedSupply) {
-                              handleItemChange(i, "item", value.toString());
+                              handleItemChange(i, "itemId", value);
                               handleItemChange(i, "dose", "");
                               handleItemChange(i, "totalUsed", "");
                             }
@@ -781,7 +787,7 @@ export default function CreateOrder({
                     onClick={() => {
                       setItems([
                         ...items,
-                        { item: "", totalUsed: "", dose: "" },
+                        { itemId: null, totalUsed: "", dose: "" },
                       ]);
                     }}
                     className="text-blue-500 hover:underline max-w-fit"
@@ -918,7 +924,7 @@ export default function CreateOrder({
           {/* FORMULARIO SIMPLE DE INSUMO */}
           <CreateSupplyInline
             projectId={projectId}
-            onCreated={async (newSupplyId) => {
+            onCreated={async () => {
               if (projectId) {
                 await getSupplies(projectId); // 🔥 CLAVE
               }
@@ -926,8 +932,8 @@ export default function CreateOrder({
               if (itemIndexToUpdate !== null) {
                 handleItemChange(
                   itemIndexToUpdate,
-                  "item",
-                  newSupplyId.toString()
+                  "itemId",
+                  null
                 );
               }
 

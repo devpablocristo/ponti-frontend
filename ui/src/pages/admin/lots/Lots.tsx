@@ -908,6 +908,7 @@ const filteredLots = useMemo(() => {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
+      setErrorMessage("No se pudo exportar el listado de lotes.");
     }
   };
 

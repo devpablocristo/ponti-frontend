@@ -64,6 +64,13 @@ export function Products() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(
+    null
+  );
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
+    null
+  );
   const itemsPerPage = 10;
 
   const normalizeDate = (date: string) => {
@@ -312,19 +319,23 @@ export function Products() {
 
   useEffect(() => {
     if (deleteError) {
-      alert(deleteError);
+      setActionErrorMessage(deleteError);
+      setSuccessMessage(null);
     }
   }, [deleteError]);
 
   useEffect(() => {
     if (deleteResult && projectId) {
+      setSuccessMessage("Movimiento eliminado con éxito.");
+      setActionErrorMessage(null);
       getSupplyMovements(projectId);
-
     }
   }, [deleteResult, projectId]);
 
   const handleDelete = async (p: SupplyMovement) => {
     if (!projectId || !p.id) return;
+    setSuccessMessage(null);
+    setActionErrorMessage(null);
     window.confirm("¿Estás seguro de eliminar este movimiento?") &&
       deleteSupplyMovement(p.id, projectId);
   };
@@ -421,6 +432,7 @@ export function Products() {
     if (!projectId) return;
 
     try {
+      setExportErrorMessage(null);
       const response = await request.get<Blob>(
         `/supply_movements/export/${projectId}`,
         undefined,
@@ -438,6 +450,7 @@ export function Products() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
+      setExportErrorMessage("No se pudo exportar el listado de insumos.");
     }
   };
 
@@ -475,6 +488,14 @@ export function Products() {
           },
         ]}
       />
+      {successMessage && (
+        <div
+          className="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50"
+          role="alert"
+        >
+          <span className="font-medium">Éxito!</span> {successMessage}
+        </div>
+      )}
       {!error && (
         <div className="my-4">
           <ItemsIndicators summary={derivedSummary} />
@@ -487,12 +508,13 @@ export function Products() {
           </div>
         )}
 
-        {error && (
+        {(error || exportErrorMessage || actionErrorMessage) && (
           <div
             className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
             role="alert"
           >
-            <span className="font-medium">Error!</span> {error}
+            <span className="font-medium">Error!</span>{" "}
+            {actionErrorMessage || exportErrorMessage || error}
           </div>
         )}
         {projectId && (

@@ -255,4 +255,54 @@ router.post("/:project_id", async (req: Request, res: Response) => {
   }
 });
 
+router.put("/:id", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const movementId = parseInt(req.params.id as string) || 0;
+    if (movementId === 0) {
+      res.status(400).json({ message: "Id obligatorio" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data: result } = await apiClient.put<any>(
+      `/supply-movements/${movementId}`,
+      req.body,
+      headers
+    );
+
+    const data = {
+      success: true,
+      data: result,
+    };
+
+    setImmediate(() => cache.flushAll());
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    console.log(error);
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 export default router;
