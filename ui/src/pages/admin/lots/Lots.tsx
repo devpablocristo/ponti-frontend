@@ -817,10 +817,10 @@ const filteredLots = useMemo(() => {
     const totalSeededArea = filteredLots.reduce((sum, lot) => sum + (Number(lot.sowed_area) || 0), 0);
     const totalHarvestedArea = filteredLots.reduce((sum, lot) => sum + (Number(lot.harvested_area) || 0), 0);
     const totalTons = filteredLots.reduce((sum, lot) => sum + (Number(lot.tons) || 0), 0);
-    const totalCost = filteredLots.reduce((sum, lot) => sum + (Number(lot.cost_per_hectare) || 0), 0);
-    
+    const weightedCost = filteredLots.reduce((sum, lot) => sum + ((Number(lot.cost_per_hectare) || 0) * (Number(lot.sowed_area) || 0)), 0);
+
     const avgYield = totalHarvestedArea > 0 ? totalTons / totalHarvestedArea : 0;
-    const avgCostPerHa = filteredLots.length > 0 ? totalCost / filteredLots.length : 0;
+    const avgCostPerHa = totalSeededArea > 0 ? weightedCost / totalSeededArea : 0;
 
     return {
       seeded_area: totalSeededArea,
