@@ -51,7 +51,6 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
   );
 }
 
-
 export function Products() {
   const {
     getSupplyMovements,
@@ -161,7 +160,26 @@ export function Products() {
           supplyMovements,
           columnsFilters
         ),
-      }, {
+      },
+      {
+        key: "origin_project_name",
+        header: "Proyecto origen",
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn(
+          "origin_project_name",
+          supplyMovements,
+          columnsFilters
+        ),
+        render: (value: any) => {
+          const label = typeof value === "string" ? value : value == null ? "" : String(value);
+          if (!label) {
+            return <span className="block w-full text-center">—</span>;
+          }
+          return <span className="no-underline">{label}</span>;
+        },
+      },
+      {
         key: "entry_date",
         header: "Fecha",
         filterable: true,
@@ -289,6 +307,7 @@ export function Products() {
   useEffect(() => {
     if (!projectId) return;
     getSupplyMovements(projectId);
+    
   }, [getSupplyMovements, projectId]);
 
   useEffect(() => {
@@ -300,6 +319,7 @@ export function Products() {
   useEffect(() => {
     if (deleteResult && projectId) {
       getSupplyMovements(projectId);
+
     }
   }, [deleteResult, projectId]);
 

@@ -618,10 +618,10 @@ export default function CreateItem({
               {errorMessages.length > 0 && (
                 <div
                   id="alert-2"
-                  className="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50"
+                  className="relative p-4 pr-12 mb-4 text-red-800 rounded-lg bg-red-50"
                   role="alert"
                 >
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <ul className="mt-1.5 list-disc list-inside">
                       {errorMessages.map((msg, index) => (
                         <li key={index}>{msg}</li>
@@ -630,14 +630,14 @@ export default function CreateItem({
                   </div>
                   <button
                     type="button"
-                    className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
+                    className="absolute top-2 right-2 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-2 hover:bg-red-200 inline-flex items-center justify-center h-10 w-10 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
                     data-dismiss-target="#alert-2"
                     aria-label="Close"
                     onClick={() => setErrorMessages([])}
                   >
                     <span className="sr-only">Close</span>
                     <svg
-                      className="w-3 h-3"
+                      className="w-4 h-4"
                       aria-hidden="true"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
@@ -656,19 +656,19 @@ export default function CreateItem({
               )}
               {error && error !== "" && (
                 <div
-                  className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+                  className="relative p-4 pr-12 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
                   role="alert"
                 >
-                  <span className="font-medium">Error!</span> {error}
+                  <span className="font-medium">Error!</span>
                   <button
                     type="button"
-                    className="ms-auto -mx-1 -my-1 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
+                    className="absolute top-2 right-2 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-2 hover:bg-red-200 inline-flex items-center justify-center h-10 w-10 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
                     aria-label="Close"
                     onClick={() => setError("")}
                   >
                     <span className="sr-only">Close</span>
                     <svg
-                      className="w-2 h-2"
+                      className="w-4 h-4"
                       aria-hidden="true"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
@@ -683,11 +683,25 @@ export default function CreateItem({
                       />
                     </svg>
                   </button>
+                  {String(error).includes("\n") ? (
+                    <ul className="mt-1.5 list-disc list-inside">
+                      {String(error)
+                        .split("\n")
+                        .map((msg) => msg.trim())
+                        .filter(Boolean)
+                        .map((msg, idx) => (
+                          <li key={idx}>{msg}</li>
+                        ))}
+                    </ul>
+                  ) : (
+                    <span className="ml-1">{error}</span>
+                  )}
+                  
                 </div>
               )}
               {successMessage && successMessage !== "" && (
                 <div
-                  className="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
+                  className="relative flex items-center p-4 pr-12 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
                   role="alert"
                 >
                   <svg
@@ -705,14 +719,14 @@ export default function CreateItem({
                   </div>
                   <button
                     type="button"
-                    className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
+                    className="absolute top-2 right-2 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-2 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
                     data-dismiss-target="#alert-3"
                     aria-label="Close"
                     onClick={() => setSuccessMessage("")}
                   >
                     <span className="sr-only">Close</span>
                     <svg
-                      className="w-3 h-3"
+                      className="w-2 h-2"
                       aria-hidden="true"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
