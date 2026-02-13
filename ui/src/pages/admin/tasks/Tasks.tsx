@@ -222,6 +222,9 @@ export function Tasks() {
   const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(
     null
   );
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
+    null
+  );
 
   const { filters, projectId, selectedField } = useWorkspaceFilters([
     "customer",
@@ -629,6 +632,7 @@ export function Tasks() {
     if (!projectId) return;
 
     try {
+      setExportErrorMessage(null);
       const response = await request.get<Blob>(
         `/labors/export/${projectId}`,
         undefined,
@@ -646,6 +650,7 @@ export function Tasks() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
+      setExportErrorMessage("No se pudo exportar el listado de labores.");
     }
   };
 
@@ -858,12 +863,13 @@ export function Tasks() {
             </div>
           )}
         </BaseModal>
-        {error && (
+        {(error || exportErrorMessage) && (
           <div
             className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50"
             role="alert"
           >
-            <span className="font-medium">Error!</span> {error}
+            <span className="font-medium">Error!</span>{" "}
+            {exportErrorMessage || error}
           </div>
         )}
       </div>

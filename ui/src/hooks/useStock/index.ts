@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { AxiosError } from "axios";
 import APIClient from "../../restclient/apiInstance";
 
 import useStockReducer from "./useStockReducer";
 import * as actions from "./actions";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
+import { SuccessResponse } from "../../restclient/types";
 import { GetStocksResponse } from "./types";
+import { getApiErrorMessage } from "../../utils/getApiErrorMessage";
 
 const request = new APIClient({
   timeout: 15000,
@@ -57,22 +57,9 @@ const useStock = () => {
         }
         setError("Ocurrio un error en la busqueda de STOCK");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la busqueda de stock.";
-
-            setError(message);
-            return;
-          }
-        }
-
-        setError("Error en el servicio, inténtalo más tarde.");
+        setError(
+          getApiErrorMessage(error, "Error desconocido en la busqueda de stock.")
+        );
       } finally {
         setProcessing(false);
       }
@@ -96,22 +83,9 @@ const useStock = () => {
         }
         setErrorPeriods("Ocurrio un error en la busqueda de PERIODOS");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la busqueda de stock.";
-
-            setErrorPeriods(message);
-            return;
-          }
-        }
-
-        setErrorPeriods("Error en el servicio, inténtalo más tarde.");
+        setErrorPeriods(
+          getApiErrorMessage(error, "Error desconocido en la busqueda de periodos.")
+        );
       } finally {
         setProcessingPeriods(false);
       }
@@ -138,22 +112,12 @@ const useStock = () => {
 
         setErrorStock("Ocurrio un error en la modificacion del stock");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la modificacion del stock.";
-
-            setErrorStock(message);
-            return;
-          }
-        }
-
-        setErrorStock("Error en el servicio, inténtalo más tarde.");
+        setErrorStock(
+          getApiErrorMessage(
+            error,
+            "Error desconocido en la modificacion del stock."
+          )
+        );
       } finally {
         setProcessingStock(false);
       }
@@ -180,22 +144,9 @@ const useStock = () => {
 
         setErrorCloseStock("Ocurrio un error en el cierre del stock");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en el cierre del stock.";
-
-            setErrorCloseStock(message);
-            return;
-          }
-        }
-
-        setErrorCloseStock("Error en el servicio, inténtalo más tarde.");
+        setErrorCloseStock(
+          getApiErrorMessage(error, "Error desconocido en el cierre del stock.")
+        );
       } finally {
         setProcessingCloseStock(false);
       }

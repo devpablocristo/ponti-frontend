@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { AxiosError } from "axios";
 import APIClient from "../../restclient/apiInstance";
 
 import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
+import { SuccessResponse } from "../../restclient/types";
 import { Metrics, Workorder, WorkorderData } from "./types";
+import {
+  getApiErrorMessage,
+  getApiErrorStatus,
+} from "../../utils/getApiErrorMessage";
 
 const request = new APIClient({
   timeout: 15000,
@@ -59,22 +62,9 @@ const useOrders = () => {
         }
         setError("Ocurrio un error en la busqueda de ordenes");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la busqueda de ordenes.";
-
-            setError(message);
-            return;
-          }
-        }
-
-        setError("Error en el servicio, inténtalo más tarde.");
+        setError(
+          getApiErrorMessage(error, "Error desconocido en la busqueda de ordenes.")
+        );
       } finally {
         setProcessing(false);
       }
@@ -106,22 +96,9 @@ const useOrders = () => {
 
         setErrorMetrics("Ocurrio un error en la busqueda de kpis");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la busqueda de metricas.";
-
-            setErrorMetrics(message);
-            return;
-          }
-        }
-
-        setErrorMetrics("Error en el servicio, inténtalo más tarde.");
+        setErrorMetrics(
+          getApiErrorMessage(error, "Error desconocido en la busqueda de metricas.")
+        );
       } finally {
         setProcessingMetrics(false);
       }
@@ -153,26 +130,14 @@ const useOrders = () => {
 
       setErrorCreation("Ocurrio un error en la creación de la orden");
     } catch (error) {
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          if (errorResponse.error.status === 409) {
-            setErrorCreation("Ya existe una orden con el mismo número.");
-            return;
-          }
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la creación de la orden.";
-
-          setErrorCreation(message);
-          return;
-        }
+      if (getApiErrorStatus(error) === 409) {
+        setErrorCreation("Ya existe una orden con el mismo número.");
+        return;
       }
 
-      setErrorCreation("Error en el servicio, inténtalo más tarde.");
+      setErrorCreation(
+        getApiErrorMessage(error, "Error desconocido en la creación de la orden.")
+      );
     } finally {
       setProcessingCreation(false);
     }
@@ -203,22 +168,12 @@ const useOrders = () => {
 
         setErrorCreation("Ocurrio un error en la actualización de la orden");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la actualización de la orden.";
-
-            setErrorCreation(message);
-            return;
-          }
-        }
-
-        setErrorCreation("Error en el servicio, inténtalo más tarde.");
+        setErrorCreation(
+          getApiErrorMessage(
+            error,
+            "Error desconocido en la actualización de la orden."
+          )
+        );
       } finally {
         setProcessingCreation(false);
       }
@@ -242,26 +197,14 @@ const useOrders = () => {
 
       setErrorCreation("Ocurrio un error en la creación de la orden");
     } catch (error) {
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          if (errorResponse.error.status === 404) {
-            setErrorCreation("No se encontro la orden.");
-            return;
-          }
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la busqueda de la orden.";
-
-          setErrorCreation(message);
-          return;
-        }
+      if (getApiErrorStatus(error) === 404) {
+        setErrorCreation("No se encontro la orden.");
+        return;
       }
 
-      setErrorCreation("Error en el servicio, inténtalo más tarde.");
+      setErrorCreation(
+        getApiErrorMessage(error, "Error desconocido en la busqueda de la orden.")
+      );
     } finally {
       setProcessingCreation(false);
     }
@@ -280,24 +223,16 @@ const useOrders = () => {
         return;
       }
 
-      setError("Ocurrio un error al intentar eliminar una orden.");
+      const message = "Ocurrio un error al intentar eliminar una orden.";
+      setError(message);
+      throw new Error(message);
     } catch (error) {
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido al intentar eliminar un proyecto.";
-
-          setError(message);
-          return;
-        }
-      }
-
-      setError("Error en el servicio, inténtalo más tarde.");
+      const message = getApiErrorMessage(
+        error,
+        "Error desconocido al intentar eliminar una orden."
+      );
+      setError(message);
+      throw new Error(message);
     } finally {
       setProcessing(false);
     }

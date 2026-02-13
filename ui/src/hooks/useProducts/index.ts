@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { AxiosError } from "axios";
 
 import useProductReducer from "./productsReducer";
 import * as actions from "./actions";
 import { Product, Supply, SupplyResponse } from "./types";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
+import { SuccessResponse } from "../../restclient/types";
 import APIClient from "../../restclient/apiInstance";
+import {
+  getApiErrorMessage,
+  getApiErrorStatus,
+} from "../../utils/getApiErrorMessage";
 
 const request = new APIClient({
   timeout: 15000,
@@ -35,26 +38,14 @@ const useProducts = () => {
       }
       setError("Ocurrio un error en la busqueda de lotes");
     } catch (err) {
-      const axiosError = err as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          if (errorResponse.error.status === 409) {
-            setError("Ya existe un insumo con el mismo nombre.");
-            return;
-          }
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la creación de los insumos.";
-
-          setError(message);
-          return;
-        }
+      if (getApiErrorStatus(err) === 409) {
+        setError("Ya existe un insumo con el mismo nombre.");
+        return;
       }
 
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(
+        getApiErrorMessage(err, "Error en el servicio, inténtalo más tarde.")
+      );
     } finally {
       setProcessing(false);
     }
@@ -85,26 +76,17 @@ const useProducts = () => {
 
         setError("Ocurrio un error en la creación de los insumos");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            if (errorResponse.error.status === 409) {
-              setError("Ya existe un insumo con el mismo nombre.");
-              return;
-            }
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la creación de los insumos.";
-
-            setError(message);
-            return;
-          }
+        if (getApiErrorStatus(error) === 409) {
+          setError("Ya existe un insumo con el mismo nombre.");
+          return;
         }
 
-        setError("Error en el servicio, inténtalo más tarde.");
+        setError(
+          getApiErrorMessage(
+            error,
+            "Error desconocido en la creación de los insumos."
+          )
+        );
       } finally {
         setProcessing(false);
       }
@@ -135,26 +117,17 @@ const useProducts = () => {
 
       setError("Ocurrio un error en la eliminación del insumo");
     } catch (error) {
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          if (errorResponse.error.status === 409) {
-            setError("El insumo esta siendo usado en una orden de trabajo.");
-            return;
-          }
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la eliminación del insumo.";
-
-          setError(message);
-          return;
-        }
+      if (getApiErrorStatus(error) === 409) {
+        setError("El insumo esta siendo usado en una orden de trabajo.");
+        return;
       }
 
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(
+        getApiErrorMessage(
+          error,
+          "Error desconocido en la eliminación del insumo."
+        )
+      );
     } finally {
       setProcessing(false);
     }
@@ -179,26 +152,14 @@ const useProducts = () => {
 
         setErrorUpdate("Ocurrio un error en la edicion del insumo");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            if (errorResponse.error.status === 404) {
-              setErrorUpdate("El insumo no existe.");
-              return;
-            }
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la edicion del insumo.";
-
-            setErrorUpdate(message);
-            return;
-          }
+        if (getApiErrorStatus(error) === 404) {
+          setErrorUpdate("El insumo no existe.");
+          return;
         }
 
-        setErrorUpdate("Error en el servicio, inténtalo más tarde.");
+        setErrorUpdate(
+          getApiErrorMessage(error, "Error desconocido en la edicion del insumo.")
+        );
       } finally {
         setProcessing(false);
       }

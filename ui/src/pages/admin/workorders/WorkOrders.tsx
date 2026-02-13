@@ -553,9 +553,6 @@ export function WorkOrders() {
 
     try {
       await deleteOrder(id);
-    } catch (error) {
-      setErrorMessage("Error al eliminar la orden.");
-    } finally {
       setModalConfig({
         title: "Confirmación",
         message: "La orden ha sido eliminada.",
@@ -565,6 +562,22 @@ export function WorkOrders() {
           window.location.href = "/admin/work-orders";
         },
       });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error al eliminar la orden.";
+      setErrorMessage(message);
+      setModalConfig({
+        title: "Error",
+        message,
+        primaryButtonText: "Volver",
+        secondaryButtonText: "Volver",
+        onConfirm: () => {
+          setIsModalOpen(false);
+        },
+      });
+    } finally {
       setIsModalOpen(true);
       setIsProcessing(false);
     }
@@ -716,6 +729,7 @@ export function WorkOrders() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
+      setErrorMessage("No se pudo exportar el listado de órdenes.");
     }
   };
 
