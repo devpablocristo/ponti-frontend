@@ -15,6 +15,10 @@ import Search from "../../../../components/Input/Search";
 import { useKeyboardNavigation } from "./hooks/useKeyboardNavigation";
 import { useClickOutside } from "./hooks/useClickOutside";
 import { useSelection } from "../../../login/context/SelectionContext";
+import {
+  mapProjectFieldsPayload,
+  parseProjectFieldErrorMessage,
+} from "./projectPayload";
 
 export default function Customers() {
   const { id } = useParams();
@@ -63,8 +67,8 @@ export default function Customers() {
     id: 0,
     name: "",
     leaseType: "",
-    leaseTypePercent: 0,
-    leaseTypeValue: 0,
+    leaseTypePercent: "",
+    leaseTypeValue: "",
     investors: [],
     plots: [
       {
@@ -127,15 +131,22 @@ export default function Customers() {
   const convertFields = (
     fields: ProjectField[]
   ): Field[] => {
-    console.log(fields);
     return fields.map((field) => ({
       id: field.id,
       name: field.name,
       leaseType: String(field.lease_type_id),
-      leaseTypePercent: Number(field.lease_type_percent),
-      leaseTypeValue: Number(field.lease_type_value),
-      investors: field.investors,
-      plots: field.lots.map((lot) => ({
+      leaseTypePercent:
+        field.lease_type_percent === null ||
+        String(field.lease_type_percent).trim() === ""
+          ? ""
+          : Number(field.lease_type_percent),
+      leaseTypeValue:
+        field.lease_type_value === null ||
+        String(field.lease_type_value).trim() === ""
+          ? ""
+          : Number(field.lease_type_value),
+      investors: Array.isArray(field.investors) ? field.investors : [],
+      plots: (Array.isArray(field.lots) ? field.lots : []).map((lot) => ({
         id: lot.id,
         name: lot.name,
         hectares: lot.hectares,
@@ -216,9 +227,21 @@ export default function Customers() {
 
   useEffect(() => {
     if (projectError && projectError.trim() !== "") {
-      setErrorMessages((prev) =>
-        prev.includes(projectError) ? prev : [...prev, projectError]
-      );
+      const mappedFieldError = parseProjectFieldErrorMessage(projectError);
+      const nextErrors = [projectError];
+      if (mappedFieldError) {
+        nextErrors.push(mappedFieldError);
+      }
+
+      setErrorMessages((prev) => {
+        const merged = [...prev];
+        for (const msg of nextErrors) {
+          if (!merged.includes(msg)) {
+            merged.push(msg);
+          }
+        }
+        return merged;
+      });
     }
   }, [projectError]);
 
@@ -571,6 +594,15 @@ export default function Customers() {
       return;
     }
 
+    const { fields: mappedFields, errors: fieldPayloadErrors } =
+      mapProjectFieldsPayload(fields, Boolean(id));
+
+    if (fieldPayloadErrors.length > 0) {
+      setErrorMessages((prev) => [...prev, ...fieldPayloadErrors]);
+      setSuccessMessage("");
+      return;
+    }
+
     const payload = {
       name: projectName,
       updated_at: selectedProject?.updated_at,
@@ -598,24 +630,7 @@ export default function Customers() {
         name: inv.name,
         percentage: Number(inv.percentage) || 0,
       })),
-      fields: fields.map((field) => ({
-        id: id ? field.id || 0 : 0,
-        name: field.name,
-        lease_type_id: Number(field.leaseType),
-        lease_type_percent: String(field.leaseTypePercent),
-        lease_type_value: String(field.leaseTypeValue),
-        investors: field.investors,
-        lots: field.plots.map((plot) => ({
-          id: id ? plot.id || 0 : 0,
-          name: plot.name,
-          hectares: Number(plot.hectares),
-          previous_crop_id: Number(plot.previousCrop.id),
-          previous_crop_name: plot.previousCrop.name,
-          current_crop_id: Number(plot.currentCrop.id),
-          current_crop_name: plot.currentCrop.name,
-          season: plot.season || "",
-        })),
-      })),
+      fields: mappedFields,
     };
 
     setPendingPayload(payload);

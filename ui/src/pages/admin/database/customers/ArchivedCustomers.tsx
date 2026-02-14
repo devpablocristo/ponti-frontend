@@ -4,6 +4,7 @@ import { RotateCcw, Trash2 } from "lucide-react";
 import DataTable from "../../../../components/Table/DataTable";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import useCustomers from "../../../../hooks/useCustomers";
+import { getHardDeleteCustomerMessage } from "./hardDeleteCopy";
 
 type ArchivedCustomer = {
   id: number;
@@ -50,7 +51,7 @@ export default function ArchivedCustomers() {
   const handleHardDelete = (item: ArchivedCustomer) => {
     setModalConfig({
       title: "Confirmar eliminación definitiva",
-      message: `¿Eliminar definitivamente el cliente "${item.name}"?`,
+      message: getHardDeleteCustomerMessage(item.name),
       primaryButtonText: "Eliminar",
       secondaryButtonText: "Cancelar",
       onConfirm: async () => {

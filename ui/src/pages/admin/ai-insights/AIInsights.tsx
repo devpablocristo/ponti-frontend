@@ -8,7 +8,6 @@ import {
   computeInsights,
   getInsights,
   getInsightsSummary,
-  recomputeBaselines,
   InsightsSummary,
   InsightItem,
 } from "../../../restclient/aiClient";
@@ -99,27 +98,6 @@ const AIInsights: React.FC = () => {
     }
   };
 
-  const handleRecomputeBaselines = async () => {
-    setLoading(true);
-    clearFeedback();
-    try {
-      if (!headers) {
-        throw new Error("Proyecto obligatorio");
-      }
-      const result = await recomputeBaselines(headers);
-      setSuccess(
-        `Baselines: ${result.cohort_saved} cohorte, ${result.project_saved} proyecto. ` +
-          "Ahora podés recalcular insights."
-      );
-      await handleSummary();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Error inesperado";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFetchInsights = async () => {
     setLoading(true);
     clearFeedback();
@@ -152,16 +130,6 @@ const AIInsights: React.FC = () => {
           onClick={handleSummary}
         >
           {loading ? "Cargando..." : "Refrescar badge"}
-        </Button>
-        <Button
-          size="sm"
-          variant="outlineGreen"
-          className="px-6"
-          disabled={loading}
-          onClick={handleRecomputeBaselines}
-          title="Calcular baselines (p50/p75/p90). Ejecutar primero si no hay insights."
-        >
-          Recalcular baselines
         </Button>
         <Button
           size="sm"

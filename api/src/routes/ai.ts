@@ -50,35 +50,7 @@ const handleError = (res: Response, error: any) => {
   });
 };
 
-router.post("/ask", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { data } = await apiClient.post<any>("/ai/ask", req.body, headers);
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
-router.post("/rag/ingest", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { data } = await apiClient.post<any>("/ai/rag/ingest", req.body, headers);
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
+// --- Insights endpoints ---
 
 router.post("/insights/compute", async (req: Request, res: Response) => {
   const userId = requireUser(req, res);
@@ -140,40 +112,6 @@ router.post("/insights/:insight_id/actions", async (req: Request, res: Response)
     const { insight_id } = req.params;
     const { data } = await apiClient.post<any>(
       `/ai/insights/${insight_id}/actions`,
-      req.body,
-      headers
-    );
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
-router.post("/jobs/recompute-active", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { data } = await apiClient.post<any>("/ai/jobs/recompute-active", req.body, headers);
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
-router.post("/jobs/recompute-baselines", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { data } = await apiClient.post<any>(
-      "/ai/jobs/recompute-baselines",
       req.body,
       headers
     );

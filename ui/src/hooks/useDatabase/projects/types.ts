@@ -29,8 +29,8 @@ export type Field = {
   name: string;
   lease_type_name?: string;
   lease_type_id: number;
-  lease_type_percent: string;
-  lease_type_value: string;
+  lease_type_percent: number | string | null;
+  lease_type_value: number | string | null;
   investors: {
     id: number;
     name: string;

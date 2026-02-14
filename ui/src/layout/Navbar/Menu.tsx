@@ -1,9 +1,10 @@
-// import { Token, User } from "@/pages/auth/types";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button/Button";
 import { useSelection } from "../../pages/login/context/SelectionContext";
 import { getInsightsSummary } from "../../restclient/aiClient";
+
+const POLL_INTERVAL_MS = 60_000; // 60 segundos
 
 interface NavbarProps {
   username: string;
@@ -13,6 +14,7 @@ interface NavbarProps {
 const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [insightsCount, setInsightsCount] = useState(0);
+  const [highSeverityCount, setHighSeverityCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { projectId } = useSelection();
@@ -47,6 +49,7 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
   useEffect(() => {
     if (!projectId) {
       setInsightsCount(0);
+      setHighSeverityCount(0);
       return;
     }
 
@@ -56,22 +59,38 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
           projectId: String(projectId),
         });
         setInsightsCount(summary.new_count_total ?? 0);
+        setHighSeverityCount(summary.new_count_high_severity ?? 0);
       } catch {
-        setInsightsCount(0);
+        // Silencioso: si falla el polling no afecta la UI
       }
     };
 
     fetchSummary();
+
+    // Polling periódico
+    const interval = setInterval(fetchSummary, POLL_INTERVAL_MS);
+    return () => clearInterval(interval);
   }, [projectId]);
 
   return (
     <div className="relative flex items-center ms-3 gap-3">
-      <div className="flex flex-col items-center justify-center">
-        <span className="text-[10px] text-slate-500">IA</span>
-        <span className="text-xs font-semibold bg-red-500 text-white rounded-full px-2 py-0.5">
-          {insightsCount}
-        </span>
-      </div>
+      {/* Badge de insights — clickeable, visible solo si hay insights */}
+      {insightsCount > 0 && (
+        <Link
+          to="/admin/ai-insights"
+          className="flex flex-col items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
+          title={`${insightsCount} insight${insightsCount !== 1 ? "s" : ""} nuevo${insightsCount !== 1 ? "s" : ""}`}
+        >
+          <span className="text-[10px] text-slate-500">IA</span>
+          <span
+            className={`text-xs font-semibold text-white rounded-full px-2 py-0.5 ${
+              highSeverityCount > 0 ? "bg-red-500 animate-pulse" : "bg-blue-500"
+            }`}
+          >
+            {insightsCount}
+          </span>
+        </Link>
+      )}
       <div className="h-8 border-l border-slate-300" />
       <div className="relative">
         <button
