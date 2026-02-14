@@ -4,13 +4,8 @@ import { AxiosError } from "axios";
 import useDollarReducer from "./dollarReducer";
 import * as actions from "./actions";
 import { DollarData } from "./types";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
-import APIClient from "../../restclient/apiInstance";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { SuccessResponse, ErrorResponse } from "@/api/types";
+import { apiClient } from "@/api/client";
 
 const useDollar = () => {
   const [{ dollars, result }, dispatch] = useDollarReducer();
@@ -26,7 +21,7 @@ const useDollar = () => {
     });
 
     try {
-      const response = await request.get<SuccessResponse<DollarData[]>>(
+      const response = await apiClient.get<SuccessResponse<DollarData[]>>(
         `/projects/${id}/dollar-values`
       );
 
@@ -48,7 +43,7 @@ const useDollar = () => {
         if (errorResponse.error) {
           const message =
             errorResponse.error.details ||
-            "Error desconocido en la busqueda de campañas.";
+            "Error desconocido en la busqueda de valores del dólar.";
 
           setError(message);
           return;
@@ -71,7 +66,7 @@ const useDollar = () => {
       });
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SuccessResponse<any>>(
           `/projects/${id}/dollar-values`,
           dollar
         );

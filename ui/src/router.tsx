@@ -1,4 +1,5 @@
 import { ProtectedLayout } from "./layout/ProtectedLayout";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import ErrorPage from "./pages/ErrorPage";
 import { Navigate } from "react-router-dom";
 import { BaseLayout } from "./layout/BaseLayout";
@@ -54,7 +55,11 @@ export default [
   },
   {
     path: "/admin",
-    element: <ProtectedLayout />,
+    element: (
+      <ErrorBoundary>
+        <ProtectedLayout />
+      </ErrorBoundary>
+    ),
     errorElement: <ErrorPage />,
     children: [
       {

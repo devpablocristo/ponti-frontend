@@ -3,14 +3,14 @@ import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import { Field } from "../../../hooks/useWorkspaceFilters";
-import useTasks from "../../../hooks/useTasks";
-import { TaskInfo } from "../../../hooks/useTasks/types";
+import useLabors from "../../../hooks/useLabors";
+import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
 import { LoaderCircle } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
-import useProducts from "../../../hooks/useProducts";
+import useSupplies from "../../../hooks/useSupplies";
 import useCategories from "../../../hooks/useCategories";
 
 type WorkOrderItem = {
@@ -119,10 +119,10 @@ export default function CreateOrder({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [field, setField] = useState<Field | null>(null);
   const [lots, setLots] = useState<Plot[]>([]);
-  const { getSupplies, supplies } = useProducts();
-  const { getLabors, labors } = useTasks();
+  const { getSupplies, supplies } = useSupplies();
+  const { getLabors, labors } = useLabors();
   const [lot, setLot] = useState<Plot | null>(null);
-  const [labor, setLabor] = useState<TaskInfo | null>(null);
+  const [labor, setLabor] = useState<LaborInfo | null>(null);
   const [contractor, setContractor] = useState("");
   const [observations, setObservations] = useState("");
   const [orderNumber, setOrderNumber] = useState("");
@@ -137,7 +137,9 @@ export default function CreateOrder({
     []
   );
 
-  const [items, setItems] = useState<WorkOrderItem[]>(emptyItems);
+  const [items, setItems] = useState<WorkOrderItem[]>(() =>
+    emptyItems.map((item) => ({ ...item }))
+  );
 
 
 
@@ -150,7 +152,7 @@ export default function CreateOrder({
     onCreated: () => void;
     onCancel: () => void;
   }) {
-    const { saveProducts, result, error } = useProducts();
+    const { saveSupplies, result, error } = useSupplies();
     const { categories, types, getCategories, getTypes } = useCategories();
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState<string | null>(null);
@@ -270,7 +272,7 @@ export default function CreateOrder({
                 }
                 setSaving(true);
                 setSuccess(null);
-                saveProducts(
+                saveSupplies(
                   [
                     {
                       name: normalizedName,
@@ -293,7 +295,7 @@ export default function CreateOrder({
   }
 
   const clearForm = () => {
-    setItems(emptyItems);
+    setItems(emptyItems.map((item) => ({ ...item })));
     setField(null);
     setLot(null);
     setOrderNumber("");

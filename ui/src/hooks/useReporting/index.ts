@@ -1,16 +1,11 @@
 import React, { useState } from "react";
 import { AxiosError } from "axios";
 
-import useReportingReducer from "./useReportingReducer.ts";
+import useReportingReducer from "./useReportingReducer";
 import * as actions from "./actions";
 import { FieldCropReportData, InvestorContributionReportData, SummaryResultsReportData } from "./types";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
-import APIClient from "../../restclient/apiInstance";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { SuccessResponse, ErrorResponse } from "@/api/types";
+import { apiClient } from "@/api/client";
 
 const useReporting = () => {
   const [{
@@ -30,8 +25,8 @@ const useReporting = () => {
     }
 
     try {
-      const response = await request.get<SuccessResponse<FieldCropReportData>>(
-        `reports/field-crop` + queryParams
+      const response = await apiClient.get<SuccessResponse<FieldCropReportData>>(
+        `/reports/field-crop` + queryParams
       );
 
       if (response.success) {
@@ -78,8 +73,8 @@ const useReporting = () => {
     }
 
     try {
-      const response = await request.get<SuccessResponse<InvestorContributionReportData>>(
-        `reports/investor-contribution` + queryParams
+      const response = await apiClient.get<SuccessResponse<InvestorContributionReportData>>(
+        `/reports/investor-contribution` + queryParams
       );
 
       if (response.success) {
@@ -126,8 +121,8 @@ const useReporting = () => {
     }
 
     try {
-      const response = await request.get<SuccessResponse<SummaryResultsReportData>>(
-        `reports/summary-results` + queryParams
+      const response = await apiClient.get<SuccessResponse<SummaryResultsReportData>>(
+        `/reports/summary-results` + queryParams
       );
 
       if (response.success) {

@@ -5,8 +5,8 @@ import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { Product } from "../../../../hooks/useProducts/types";
-import useProducts from "../../../../hooks/useProducts";
+import { SupplyCreatePayload } from "../../../../hooks/useSupplies/types";
+import useSupplies from "../../../../hooks/useSupplies";
 import useCategories from "../../../../hooks/useCategories";
 
 interface Row {
@@ -24,7 +24,7 @@ export const units = [
 ];
 
 export default function Items() {
-  const { saveProducts, result, error, supplies, getSupplies } = useProducts();
+  const { saveSupplies, result, error, supplies, getSupplies } = useSupplies();
 
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -231,7 +231,7 @@ export default function Items() {
       return;
     }
 
-    const suppliesToSave: Product[] = rows
+    const suppliesToSave: SupplyCreatePayload[] = rows
       .filter(
         (row) => row.name && row.unit && row.price && row.type && row.category
       )
@@ -257,7 +257,7 @@ export default function Items() {
       return;
     }
 
-    saveProducts(suppliesToSave, projectId);
+    saveSupplies(suppliesToSave, projectId);
   };
 
   const handleAddRow = () => {

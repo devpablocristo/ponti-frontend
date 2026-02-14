@@ -7,9 +7,9 @@ import {
   FileXIcon,
 } from "lucide-react";
 
-import useTasks from "../../../hooks/useTasks";
+import useLabors from "../../../hooks/useLabors";
 import DataTable from "../../../components/Table/DataTable";
-import { InvoiceData, Metrics, TaskData } from "../../../hooks/useTasks/types";
+import { InvoiceData, Metrics, LaborGroupData } from "../../../hooks/useLabors/types";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -19,30 +19,25 @@ import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
-import APIClient from "../../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { formatNumberAr } from "../utils";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
   Pendiente: {
-    classes: "bg-red-100 text-red-700",
-    icon: <ClockIcon className="w-4 h-4" />,
+    classes: "bg-amber-50 text-amber-700 border border-amber-200",
+    icon: <ClockIcon className="w-3.5 h-3.5" />,
   },
   Pagada: {
-    classes: "bg-green-100 text-green-700",
-    icon: <CheckIcon className="w-4 h-4" />,
+    classes: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+    icon: <CheckIcon className="w-3.5 h-3.5" />,
   },
   Facturada: {
-    classes: "bg-blue-100 text-blue-700",
-    icon: <FileTextIcon className="w-4 h-4" />,
+    classes: "bg-blue-50 text-blue-700 border border-blue-200",
+    icon: <FileTextIcon className="w-3.5 h-3.5" />,
   },
   NoFacturada: {
-    classes: "bg-gray-100 text-gray-700",
-    icon: <FileXIcon className="w-4 h-4" />,
+    classes: "bg-gray-50 text-gray-500 border border-gray-200",
+    icon: <FileXIcon className="w-3.5 h-3.5" />,
   },
 };
 
@@ -148,50 +143,39 @@ function TasksIndicators({
   processing: boolean;
 }) {
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <IndicatorCard
-        title="Superficie total"
-        value={
-          processing
-            ? "Cargando..."
-            : formatNumberAr(metrics.surface_ha) + " Has"
-        }
-        color="gray"
-        height="85px"
-        width="200px"
-      />
-      <IndicatorCard
-        title="Costo promedio / Ha"
-        value={
-          processing
-            ? "Cargando..."
-            : " u$" +
-            formatNumberAr(metrics.avg_cost_per_ha)
-        }
-        color="gray"
-        height="85px"
-        width="200px"
-      />
-      <IndicatorCard
-        title="Total u$ / Neto"
-        value={
-          processing
-            ? "Cargando..."
-            : " u$" +
-            formatNumberAr(metrics.net_total_cost)
-        }
-        color="gray"
-        height="85px"
-        width="200px"
-      />
+    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+      {processing ? (
+        <div className="flex items-center justify-center py-4">
+          <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
+          <span className="text-sm text-gray-500 font-medium">Cargando indicadores...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <IndicatorCard
+            title="Superficie total"
+            value={formatNumberAr(metrics.surface_ha) + " Has"}
+            color="amber"
+          />
+          <IndicatorCard
+            title="Costo promedio / Ha"
+            value={"u$ " + formatNumberAr(metrics.avg_cost_per_ha)}
+            color="red"
+          />
+          <IndicatorCard
+            title="Total u$ / Neto"
+            value={"u$ " + formatNumberAr(metrics.net_total_cost)}
+            color="red"
+          />
+        </div>
+      )}
     </div>
   );
 }
 
 export function Tasks() {
   const {
-    getTasks,
-    tasks,
+    getLaborGroups,
+    laborGroups,
     getMetrics,
     processing,
     error,
@@ -202,7 +186,7 @@ export function Tasks() {
     processingInvoice,
     errorInvoice,
     resultInvoice,
-  } = useTasks();
+  } = useLabors();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [taskFilters, setTaskFilters] = useState<Record<string, any>>({});
@@ -242,7 +226,7 @@ export function Tasks() {
     }
     setVisibleColumns(columns.map((col) => col.key));
     setCurrentPage(1);
-    getTasks(projectId, query);
+    getLaborGroups(projectId, query);
     getMetrics(projectId, query);
   }, [projectId, selectedField]);
 
@@ -254,7 +238,7 @@ export function Tasks() {
         query += `?field_id=${selectedField.id}`;
       }
       setCurrentPage(1);
-      getTasks(projectId, query);
+      getLaborGroups(projectId, query);
       getMetrics(projectId, query);
     }
   }, [resultInvoice, projectId, selectedField]);
@@ -267,8 +251,8 @@ export function Tasks() {
   }, [errorInvoice]);
 
   function getFilterOptionsForColumn(
-    key: keyof TaskData,
-    data: TaskData[],
+    key: keyof LaborGroupData,
+    data: LaborGroupData[],
     filters: Record<string, any>
   ) {
     const otherFilters = { ...filters };
@@ -287,7 +271,7 @@ export function Tasks() {
           return normalize(String(value)) === normalize(String(task.date));
         }
 
-        const val = String(task[k as keyof TaskData] ?? "").toLowerCase();
+        const val = String(task[k as keyof LaborGroupData] ?? "").toLowerCase();
 
         if (Array.isArray(value)) {
           return value.some((v) => val.includes(String(v).toLowerCase()));
@@ -300,14 +284,14 @@ export function Tasks() {
     return [...new Set(filtered.map((t) => String(t[key] ?? "")))].filter(Boolean).sort();
   }
 
-  const columns: Column<TaskData>[] = useMemo(
+  const columns: Column<LaborGroupData>[] = useMemo(
     () => [
       {
         key: "workorder_number",
         header: "OT N°",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("workorder_number", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("workorder_number", laborGroups, taskFilters),
         render: (value) => <strong className="text-gray-900">{value}</strong>,
       },
       {
@@ -315,7 +299,7 @@ export function Tasks() {
         header: "Fecha",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("date", tasks, taskFilters).map((d) => {
+        filterOptions: getFilterOptionsForColumn("date", laborGroups, taskFilters).map((d) => {
           const datePart = d.split("T")[0];
           const [y, m, day] = datePart.split("-");
           return `${day}/${m}/${y}`;
@@ -334,14 +318,14 @@ export function Tasks() {
         header: "Campo",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("field_name", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("field_name", laborGroups, taskFilters),
       },
       {
         key: "crop_name",
         header: "Cultivo",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("crop_name", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("crop_name", laborGroups, taskFilters),
         render: (crop) => (
           <span
             className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
@@ -356,14 +340,14 @@ export function Tasks() {
         header: "Contratista",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("contractor", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("contractor", laborGroups, taskFilters),
       },
       {
         key: "category_name",
         header: "Labor",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("category_name", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("category_name", laborGroups, taskFilters),
         render: (crop) => (
           <span
             className={`px-2 py-1 text-[14px] rounded-md ${laborColors[crop] || "bg-green-200 text-green-800"
@@ -377,24 +361,24 @@ export function Tasks() {
         key: "surface_ha",
         header: "Superficie",
         filterable: true,
-        filterOptions: getFilterOptionsForColumn("surface_ha", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("surface_ha", laborGroups, taskFilters),
         render: (value) => (
-          <strong className="text-gray-900">{formatNumberAr(value)} Has</strong>
+          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
         ),
       },
       {
         key: "cost_ha",
         header: "Costo $/Ha",
         filterable: true,
-        filterOptions: getFilterOptionsForColumn("cost_ha", tasks, taskFilters),
-        render: (value) => <strong className="text-gray-700">${formatNumberAr(value)}</strong>,
+        filterOptions: getFilterOptionsForColumn("cost_ha", laborGroups, taskFilters),
+        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>,
       },
       {
         key: "net_total",
         header: "Total $ Neto",
         filterable: false,
         render: (value) => (
-          <strong className="text-gray-700">${formatNumberAr(value)}</strong>
+          <span className="font-bold text-rose-600">$ {formatNumberAr(value)}</span>
         ),
       },
       {
@@ -402,7 +386,7 @@ export function Tasks() {
         header: "Total $ IVA",
         filterable: false,
         render: (value) => (
-          <strong className="text-gray-700">${formatNumberAr(value)}</strong>
+          <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>
         ),
       },
       {
@@ -410,14 +394,14 @@ export function Tasks() {
         header: "Inversor",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("investor_name", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("investor_name", laborGroups, taskFilters),
       },
       {
         key: "usd_avg_value",
         header: "u$ Prom",
         filterable: false,
         render: (value) => (
-          <>u${formatNumberAr(value)}</>
+          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>
         ),
       },
       {
@@ -425,9 +409,9 @@ export function Tasks() {
         header: "Costo U$/Ha",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("usd_cost_ha", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("usd_cost_ha", laborGroups, taskFilters),
         render: (value) => (
-          <>u${formatNumberAr(value)}</>
+          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>
         ),
       },
       {
@@ -435,7 +419,7 @@ export function Tasks() {
         header: "Total u$ Neto",
         filterable: false,
         render: (value) => (
-          <>u${formatNumberAr(value)}</>
+          <span className="font-bold text-emerald-700">u$ {formatNumberAr(value)}</span>
         ),
       },
       {
@@ -443,7 +427,7 @@ export function Tasks() {
         header: "N° Factura",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("invoice_number", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("invoice_number", laborGroups, taskFilters),
         render: (value) => (
           <input
             type="text"
@@ -458,7 +442,7 @@ export function Tasks() {
         header: "Empresa",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("invoice_company", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("invoice_company", laborGroups, taskFilters),
         render: (value) => (
           <input
             type="text"
@@ -473,7 +457,7 @@ export function Tasks() {
         header: "Fecha",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("invoice_date", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("invoice_date", laborGroups, taskFilters),
         render: (dateString) => {
           if (
             !dateString ||
@@ -501,7 +485,7 @@ export function Tasks() {
         header: "Estado",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("invoice_status", tasks, taskFilters),
+        filterOptions: getFilterOptionsForColumn("invoice_status", laborGroups, taskFilters),
         render: (status) => {
           if (!status) {
             status = emptyStatus;
@@ -523,14 +507,16 @@ export function Tasks() {
         },
       },
     ],
-    [tasks, taskFilters]
+    [laborGroups, taskFilters]
   );
 
-  const allColumnsMap = new Map();
-  [...columns].forEach((col) => {
-    allColumnsMap.set(col.key, col);
-  });
-  const allColumns = Array.from(allColumnsMap.values());
+  const allColumns = useMemo(() => {
+    const map = new Map();
+    [...columns].forEach((col) => {
+      map.set(col.key, col);
+    });
+    return Array.from(map.values());
+  }, [columns]);
 
   const [columnsToShow, setColumnsToShow] = useState(columns);
   const [selectedColumns, setSelectedColumns] = useState(
@@ -548,7 +534,7 @@ export function Tasks() {
   };
 
   const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
+    return laborGroups.filter((task) => {
       return Object.entries(taskFilters).every(([key, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
@@ -565,7 +551,7 @@ export function Tasks() {
           if (Array.isArray(value)) return value.includes(taskStatus);
           return taskStatus === value;
         }
-        const taskValRaw = task[key as keyof TaskData];
+        const taskValRaw = task[key as keyof LaborGroupData];
         const taskVal = String(taskValRaw ?? "").toLowerCase();
 
         if (Array.isArray(value)) {
@@ -575,7 +561,7 @@ export function Tasks() {
         return taskVal === String(value).toLowerCase();
       });
     });
-  }, [tasks, taskFilters]);
+  }, [laborGroups, taskFilters]);
 
   const derivedMetrics: Metrics = useMemo(() => {
     if (!filteredTasks.length) {
@@ -633,7 +619,7 @@ export function Tasks() {
 
     try {
       setExportErrorMessage(null);
-      const response = await request.get<Blob>(
+      const response = await apiClient.get<Blob>(
         `/labors/export/${projectId}`,
         undefined,
         { responseType: "blob" }
@@ -649,7 +635,6 @@ export function Tasks() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error(error);
       setExportErrorMessage("No se pudo exportar el listado de labores.");
     }
   };
@@ -680,7 +665,10 @@ export function Tasks() {
       />
       <div className="my-4">
         {errorMetrics ? (
-          <div className="text-red-500">{errorMetrics}</div>
+          <div className="flex items-center gap-3 p-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+            <div><span className="font-semibold">Error:</span> {errorMetrics}</div>
+          </div>
         ) : (
           <TasksIndicators metrics={derivedMetrics} processing={processing} />
         )}
@@ -693,7 +681,7 @@ export function Tasks() {
           </div>
         )}
         <DataTable
-          key={tasks.length}
+          key={laborGroups.length}
           data={filteredTasks}
           columns={columnsToShow}
           filters={taskFilters}
@@ -736,7 +724,7 @@ export function Tasks() {
           }}
           headerComponent={
             <TaskHeader
-              taskAmount={tasks.length}
+              taskAmount={laborGroups.length}
               selectedColumns={selectedColumns}
               setSelectedColumns={setSelectedColumns}
               setVisibleColumns={setVisibleColumns}
@@ -847,29 +835,22 @@ export function Tasks() {
             />
           </div>
           {errorInvoiceMessage && (
-            <div
-              className="p-4 mt-4 text-sm text-red-800 rounded-lg bg-red-50"
-              role="alert"
-            >
-              <span className="font-medium">Error!</span> {errorInvoiceMessage}
+            <div className="flex items-center gap-3 p-3 mt-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+              <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+              <div><span className="font-semibold">Error:</span> {errorInvoiceMessage}</div>
             </div>
           )}
           {resultInvoiceMessage && (
-            <div
-              className="p-4 mt-4 text-sm text-green-800 rounded-lg bg-green-50"
-              role="alert"
-            >
-              <span className="font-medium">Exito!</span> {resultInvoiceMessage}
+            <div className="flex items-center gap-3 p-3 mt-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200" role="alert">
+              <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
+              <div><span className="font-semibold">{resultInvoiceMessage}</span></div>
             </div>
           )}
         </BaseModal>
         {(error || exportErrorMessage) && (
-          <div
-            className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50"
-            role="alert"
-          >
-            <span className="font-medium">Error!</span>{" "}
-            {exportErrorMessage || error}
+          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+            <div><span className="font-semibold">Error:</span> {exportErrorMessage || error}</div>
           </div>
         )}
       </div>

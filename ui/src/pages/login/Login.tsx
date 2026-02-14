@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthProvider";
 import { useEffect, useState } from "react";
 import { UserData } from "./types";
-import { RequestError } from "../../restclient/types";
+import { RequestError } from "@/api/types";
 import Cover from "./Cover";
 
 function Login() {

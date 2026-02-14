@@ -58,25 +58,10 @@ router.get("", async (req: Request, res: Response) => {
       headers
     );
 
-    const adaptedLots = lots.items.map((lot: any) => {
-      return {
-        ...lot,
-        harvest_date: lot.dates,
-        cost_per_hectare: lot.cost_usd_per_ha,
-        yield: lot.yield_tn_per_ha,
-        sowed_area: lot.hectares,
-        net_income: lot.income_net_per_ha,
-        cost_us_ha: lot.cost_usd_per_ha,
-        rent: lot.rent_per_ha,
-        total_assets: lot.active_total_per_ha,
-        operating_result: lot.operating_result_per_ha,
-      };
-    });
-
     const data = {
       success: true,
       data: {
-        data: adaptedLots,
+        data: lots.items,
         page_info: lots.page_info,
       },
     };
@@ -87,7 +72,6 @@ router.get("", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -103,7 +87,7 @@ router.get("", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/kpis", async (req: Request, res: Response) => {
+router.get("/metrics", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
@@ -150,7 +134,6 @@ router.get("/kpis", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -238,7 +221,6 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -284,7 +266,6 @@ router.put("/:id/tons", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {

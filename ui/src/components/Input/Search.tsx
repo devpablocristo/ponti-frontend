@@ -32,14 +32,14 @@ const Search: React.FC<SearchProps> = ({
   size = "md",
 }) => {
   const sizeClasses =
-    size === "sm" ? "text-sm py-2 px-4" : "text-base py-3 px-4";
+    size === "sm" ? "text-[13px] py-2 px-4" : "text-base py-3 px-4";
   const iconPositionClass = size === "sm" ? "top-2.5" : "top-4";
   const iconSizeClass = size === "sm" ? "h-4 w-4" : "h-5 w-5";
 
   return (
     <div className={`relative ${fullWidth ? "w-full" : ""}`}>
       {label !== "" && (
-        <label className="block mb-2 text-sm font-medium text-gray-900 leading-tight">
+        <label className="block mb-2 text-xs font-medium text-gray-900 leading-tight">
           {label}
         </label>
       )}

@@ -10,13 +10,8 @@ import useSupplyMovements from "../../../hooks/useSupplyMovement";
 import { SupplyMovement } from "../../../hooks/useSupplyMovement/types";
 import { Summary } from "../../../hooks/useSupplyMovement/types";
 import { Column } from "../types";
-import APIClient from "../../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { formatNumberAr } from "../utils";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 function ItemsIndicators({ summary }: { summary?: Summary }) {
   const safeSummary = summary ?? {
@@ -25,28 +20,24 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
     total_usd: 0,
   };
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <IndicatorCard
-        title="Total insumos invertidos Kg"
-        value={formatNumberAr(safeSummary.total_kg) + " Kg"}
-        color="gray"
-        height="85px"
-        width="220px"
-      />
-      <IndicatorCard
-        title="Total insumos invertido Lts"
-        value={formatNumberAr(safeSummary.total_lt) + " Lts"}
-        color="gray"
-        height="85px"
-        width="220px"
-      />
-      <IndicatorCard
-        title="Total u$ / Neto"
-        value={formatNumberAr(safeSummary.total_usd) + " u$"}
-        color="gray"
-        height="85px"
-        width="220px"
-      />
+    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <IndicatorCard
+          title="Total invertido Kg"
+          value={formatNumberAr(safeSummary.total_kg) + " Kg"}
+          color="gray"
+        />
+        <IndicatorCard
+          title="Total invertido Lts"
+          value={formatNumberAr(safeSummary.total_lt) + " Lts"}
+          color="gray"
+        />
+        <IndicatorCard
+          title="Total u$ / Neto"
+          value={"u$ " + formatNumberAr(safeSummary.total_usd)}
+          color="red"
+        />
+      </div>
     </div>
   );
 }
@@ -235,7 +226,7 @@ export function Products() {
           supplyMovements,
           columnsFilters
         ),
-        render: (value: any) => <strong>{value}</strong>,
+        render: (value: any) => <span className="font-semibold text-blue-700">{value}</span>,
       },
       {
         key: "category",
@@ -282,7 +273,7 @@ export function Products() {
         ),
         render: (value: any) => {
           const num = Number(value);
-          return <strong>{isNaN(num) ? "-" : `u$${formatNumberAr(num)}`}</strong>;
+          return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -297,7 +288,7 @@ export function Products() {
         ),
         render: (value: any) => {
           const num = Number(value);
-          return isNaN(num) ? "-" : `u$${formatNumberAr(num)}`;
+          return <span className="font-bold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
     ],
@@ -433,7 +424,7 @@ export function Products() {
 
     try {
       setExportErrorMessage(null);
-      const response = await request.get<Blob>(
+      const response = await apiClient.get<Blob>(
         `/supply_movements/export/${projectId}`,
         undefined,
         { responseType: "blob" }
@@ -449,7 +440,6 @@ export function Products() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error(error);
       setExportErrorMessage("No se pudo exportar el listado de insumos.");
     }
   };
@@ -489,11 +479,9 @@ export function Products() {
         ]}
       />
       {successMessage && (
-        <div
-          className="p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50"
-          role="alert"
-        >
-          <span className="font-medium">Éxito!</span> {successMessage}
+        <div className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200" role="alert">
+          <svg className="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
+          <div><span className="font-semibold">{successMessage}</span></div>
         </div>
       )}
       {!error && (
@@ -509,12 +497,9 @@ export function Products() {
         )}
 
         {(error || exportErrorMessage || actionErrorMessage) && (
-          <div
-            className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-            role="alert"
-          >
-            <span className="font-medium">Error!</span>{" "}
-            {actionErrorMessage || exportErrorMessage || error}
+          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+            <div><span className="font-semibold">Error:</span> {actionErrorMessage || exportErrorMessage || error}</div>
           </div>
         )}
         {projectId && (

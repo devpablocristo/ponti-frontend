@@ -1,34 +1,29 @@
 import React, { useState } from "react";
 import { AxiosError } from "axios";
 
-import useCommerceReducer from "./commerceReducer";
+import useCommercializationsReducer from "./commercializationsReducer";
 import * as actions from "./actions";
-import { CommerceData, CommerceInfoData } from "./types";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
-import APIClient from "../../restclient/apiInstance";
+import { CommercializationData, CommercializationInfoData } from "./types";
+import { SuccessResponse, ErrorResponse } from "@/api/types";
+import { apiClient } from "@/api/client";
 
-const request = new APIClient({
-  timeout: 8000,
-  baseURL: "/api",
-});
-
-const useCommerce = () => {
-  const [{ result, commerceInfoList }, dispatch] = useCommerceReducer();
+const useCommercializations = () => {
+  const [{ result, commercializations }, dispatch] = useCommercializationsReducer();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const getCommerceInfo = React.useCallback(async (id: number) => {
+  const getCommercializations = React.useCallback(async (id: number) => {
     setProcessing(true);
     setError(null);
 
     try {
-      const response = await request.get<SuccessResponse<CommerceInfoData[]>>(
-        `/projects/${id}/commerce`
+      const response = await apiClient.get<SuccessResponse<CommercializationInfoData[]>>(
+        `/projects/${id}/commercializations`
       );
 
       if (response.success) {
         dispatch({
-          type: actions.SET_COMMERCE_INFO_LIST,
+          type: actions.SET_COMMERCIALIZATIONS,
           payload: response.data,
         });
         return;
@@ -44,7 +39,7 @@ const useCommerce = () => {
         if (errorResponse.error) {
           if (errorResponse.error.status === 404) {
             dispatch({
-              type: actions.SET_COMMERCE_INFO_LIST,
+              type: actions.SET_COMMERCIALIZATIONS,
               payload: [],
             });
             return;
@@ -64,8 +59,8 @@ const useCommerce = () => {
     }
   }, []);
 
-  const saveCommerceInfo = React.useCallback(
-    async (commerce: CommerceData[], id: number) => {
+  const saveCommercializations = React.useCallback(
+    async (commercializationData: CommercializationData[], id: number) => {
       setProcessing(true);
       setError(null);
       dispatch({
@@ -74,9 +69,9 @@ const useCommerce = () => {
       });
 
       try {
-        const response = await request.post<SuccessResponse<any>>(
-          `/projects/${id}/commerce`,
-          commerce
+        const response = await apiClient.post<SuccessResponse<any>>(
+          `/projects/${id}/commercializations`,
+          commercializationData
         );
 
         if (response.success) {
@@ -119,11 +114,11 @@ const useCommerce = () => {
   return {
     processing,
     error,
-    getCommerceInfo,
-    saveCommerceInfo,
+    getCommercializations,
+    saveCommercializations,
     result,
-    commerceInfoList,
+    commercializations,
   };
 };
 
-export default useCommerce;
+export default useCommercializations;

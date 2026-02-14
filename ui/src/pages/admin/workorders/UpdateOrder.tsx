@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
-import useTasks from "../../../hooks/useTasks";
-import { TaskInfo } from "../../../hooks/useTasks/types";
+import useLabors from "../../../hooks/useLabors";
+import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
 import { LoaderCircle } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
-import useProducts from "../../../hooks/useProducts";
+import useSupplies from "../../../hooks/useSupplies";
 
 const emptyItems = [
   {
@@ -114,11 +114,11 @@ export default function UpdateOrder({
 
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const { getSupplies, supplies } = useProducts();
-  const { getLabors, labors } = useTasks();
+  const { getSupplies, supplies } = useSupplies();
+  const { getLabors, labors } = useLabors();
   const [lots, setLots] = useState<Plot[]>([]);
   const [lot, setLot] = useState<Plot | null>(null);
-  const [labor, setLabor] = useState<TaskInfo | null>(null);
+  const [labor, setLabor] = useState<LaborInfo | null>(null);
   const [contractor, setContractor] = useState("");
   const [observations, setObservations] = useState("");
   const [orderNumber, setOrderNumber] = useState("");

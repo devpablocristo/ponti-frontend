@@ -15,10 +15,8 @@ import { AuthService } from "../authService";
 import {
   clearLocalStorage,
   getRefreshToken,
-  setAccessToken,
   setLocalStorage,
 } from "./useLocalStorage";
-import { RequestError } from "../../../restclient/types";
 
 interface AuthContextType {
   loading: boolean;
@@ -36,6 +34,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  /* ---- force-logout: centralised handler ---- */
+
+  const forceLogout = useCallback(() => {
+    clearLocalStorage();
+    setUser(null);
+    setIsAuthenticated(false);
+    navigate("/login");
+  }, [navigate]);
+
+  useEffect(() => {
+    const handler = () => forceLogout();
+    window.addEventListener("auth:force-logout", handler);
+    return () => window.removeEventListener("auth:force-logout", handler);
+  }, [forceLogout]);
+
+  /* ---- verify token on route change ---- */
+
   const verifyToken = useCallback(async () => {
     const accessToken = localStorage.getItem("access_token");
     if (!accessToken) {
@@ -44,83 +59,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // try {
-    //   await AuthService.validateToken();
-    // } catch (error) {
-    //   if (error instanceof RequestError && error.getStatus() === 401) {
-    //     try {
-    //       const accessToken = await AuthService.refreshToken();
-    //       setAccessToken(accessToken);
-    //     } catch (refreshError) {
-    //       alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente");
-    //       await logout();
-    //       return;
-    //     }
-    //   } else {
-    //     alert("Tu sesión ha expirado. Por favor, inicia sesión nuevamente");
-    //     await logout();
-    //     return;
-    //   }
-    // }
-
-    // if (accessToken) {
-    const decoded = jwtDecode<DecodedToken>(accessToken);
-    setUser(decoded);
-    setIsAuthenticated(true);
-    // }
+    try {
+      const decoded = jwtDecode<DecodedToken>(accessToken);
+      setUser(decoded);
+      setIsAuthenticated(true);
+    } catch {
+      // Token malformed — clear and redirect
+      forceLogout();
+    }
 
     setLoading(false);
-  }, []);
+  }, [forceLogout]);
 
   useEffect(() => {
     verifyToken();
   }, [location.pathname, verifyToken]);
 
+  /* ---- login ---- */
+
   const login = useCallback(
     async (loginData: UserData) => {
-      try {
-        const { token, user } = await AuthService.login(loginData);
+      const { token, user } = await AuthService.login(loginData);
 
-        setLocalStorage(token);
-        setUser(user);
-        setIsAuthenticated(true);
+      setLocalStorage(token);
+      setUser(user);
+      setIsAuthenticated(true);
 
-        navigate("/workspace");
-      } catch (error) {
-        throw error;
-      }
+      navigate("/workspace");
     },
     [navigate]
   );
 
+  /* ---- logout ---- */
+
   const logout = useCallback(async () => {
     const refresh = getRefreshToken();
-    if (!refresh) return;
+    if (!refresh) {
+      forceLogout();
+      return;
+    }
 
     try {
       setLoading(true);
       await AuthService.logout(refresh);
+    } catch {
+      // If logout call fails (401, network, etc.) we still want to
+      // clear local state. The interceptor handles token refresh for
+      // regular API calls; for an explicit logout we just proceed.
+    } finally {
       clearLocalStorage();
       setUser(null);
       setIsAuthenticated(false);
-      navigate("/login");
-    } catch (error) {
-      if (error instanceof RequestError && error.getStatus() === 401) {
-        try {
-          const accessToken = await AuthService.refreshToken();
-          setAccessToken(accessToken);
-
-          await logout();
-        } catch (refreshError) {
-          throw refreshError;
-        }
-      } else {
-        throw error;
-      }
-    } finally {
       setLoading(false);
+      navigate("/login");
     }
-  }, [navigate]);
+  }, [navigate, forceLogout]);
+
+  /* ---- context value ---- */
 
   const value = useMemo(
     () => ({

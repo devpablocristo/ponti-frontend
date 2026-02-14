@@ -2,16 +2,11 @@ import React, { useState } from "react";
 
 import * as actions from "./actions";
 
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { TypeData, CategoryData } from "./types";
 import { AxiosError } from "axios";
-import { ErrorResponse, SuccessResponse } from "../../restclient/types";
+import { ErrorResponse, SuccessResponse } from "@/api/types";
 import useCategoriesReducer from "./useCategoriesReducer";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const useCategories = () => {
   const [processing, setProcessing] = useState(false);
@@ -30,7 +25,7 @@ const useCategories = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<CategoryData[]>>(
+        const response = await apiClient.get<SuccessResponse<CategoryData[]>>(
           "/categories" + queryParams
         );
 
@@ -72,7 +67,7 @@ const useCategories = () => {
     setError(null);
 
     try {
-      const response = await request.get<SuccessResponse<TypeData[]>>("/types");
+      const response = await apiClient.get<SuccessResponse<TypeData[]>>("/types");
 
       if (response.success) {
         dispatch({

@@ -1,19 +1,11 @@
 import React, { useState } from "react";
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 
 import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
-import { SuccessResponse } from "../../restclient/types";
+import { SuccessResponse } from "@/api/types";
 import { SupplyMovement, SupplyMovementRequest, SupplyResponse } from "./types";
-import {
-  getApiErrorMessage,
-  getApiErrorStatus,
-} from "../../utils/getApiErrorMessage";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
 const useSupplyMovements = () => {
   const [
@@ -41,7 +33,7 @@ const useSupplyMovements = () => {
       setError(null);
 
       try {
-        const response = await request.get<SuccessResponse<SupplyResponse>>(
+        const response = await apiClient.get<SuccessResponse<SupplyResponse>>(
           `/supply_movements/${projectId}`
         );
 
@@ -76,7 +68,7 @@ const useSupplyMovements = () => {
         setError("Ocurrio un error en la busqueda de movimientos");
       } catch (error) {
         setError(
-          getApiErrorMessage(error, "Error desconocido en la busqueda de movimientos.")
+          extractErrorMessage(error, "Error desconocido en la busqueda de movimientos.")
         );
       } finally {
         setProcessing(false);
@@ -97,7 +89,7 @@ const useSupplyMovements = () => {
       });
 
       try {
-        const response = await request.post<SuccessResponse<any>>(
+        const response = await apiClient.post<SuccessResponse<any>>(
           `/supply_movements/${projectId}`,
           supplyMovement
         );
@@ -113,7 +105,7 @@ const useSupplyMovements = () => {
         setErrorCreation("Ocurrio un error en la creación del movimiento");
       } catch (error) {
         setErrorCreation(
-          getApiErrorMessage(error, "Error desconocido en la creación del movimiento.")
+          extractErrorMessage(error, "Error desconocido en la creación del movimiento.")
         );
       } finally {
         setProcessingCreation(false);
@@ -123,7 +115,7 @@ const useSupplyMovements = () => {
   );
 
   const updateSupplyMovement = React.useCallback(
-    async (supplyMovementId: number, supplyMovement: SupplyMovementRequest) => {
+    async (supplyMovementId: number, projectId: number, supplyMovement: SupplyMovementRequest) => {
       setProcessingCreation(true);
       setErrorCreation(null);
       dispatch({
@@ -134,8 +126,8 @@ const useSupplyMovements = () => {
       });
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
-          `/supply_movements/${supplyMovementId}`,
+        const response = await apiClient.put<SuccessResponse<any>>(
+          `/supply_movements/${supplyMovementId}/project/${projectId}`,
           supplyMovement
         );
 
@@ -150,7 +142,7 @@ const useSupplyMovements = () => {
         setErrorCreation("Ocurrio un error en la actualización del movimiento");
       } catch (error) {
         setErrorCreation(
-          getApiErrorMessage(
+          extractErrorMessage(
             error,
             "Error desconocido en la actualización del movimiento."
           )
@@ -162,13 +154,17 @@ const useSupplyMovements = () => {
     []
   );
 
+  const [processingDelete, setProcessingDelete] = useState(false);
+  const [processingDetail, setProcessingDetail] = useState(false);
+
   const deleteSupplyMovement = React.useCallback(
     async (id: number, projectId: number) => {
-      try {
-        setDeleteError(null);
-        setDeleteResult(false);
+      setProcessingDelete(true);
+      setDeleteError(null);
+      setDeleteResult(false);
 
-        const response = await request.delete<SuccessResponse<any>>(
+      try {
+        const response = await apiClient.delete<SuccessResponse<any>>(
           `/supply_movements/${id}/project/${projectId}`
         );
 
@@ -179,7 +175,7 @@ const useSupplyMovements = () => {
 
         setDeleteError("Ocurrio un error en la eliminación del movimiento");
       } catch (error) {
-        if (getApiErrorStatus(error) === 409) {
+        if (extractErrorStatus(error) === 409) {
           setDeleteError(
             "No puede eliminar el movimiento porque existe un cierre de stock asociado."
           );
@@ -187,18 +183,19 @@ const useSupplyMovements = () => {
         }
 
         setDeleteError(
-          getApiErrorMessage(error, "Error desconocido en la eliminación del movimiento.")
+          extractErrorMessage(error, "Error desconocido en la eliminación del movimiento.")
         );
       } finally {
-        setProcessing(false);
+        setProcessingDelete(false);
       }
     },
     []
   );
 
   const getSupplyMovement = React.useCallback(async (id: number) => {
+    setProcessingDetail(true);
     try {
-      const response = await request.get<SuccessResponse<SupplyMovement>>(
+      const response = await apiClient.get<SuccessResponse<SupplyMovement>>(
         `/supply_movements/${id}`
       );
 
@@ -212,16 +209,16 @@ const useSupplyMovements = () => {
 
       setErrorCreation("Ocurrio un error en la busqueda del movimiento");
     } catch (error) {
-      if (getApiErrorStatus(error) === 404) {
+      if (extractErrorStatus(error) === 404) {
         setErrorCreation("No se encontro el movimiento.");
         return;
       }
 
       setErrorCreation(
-        getApiErrorMessage(error, "Error desconocido en la busqueda del movimiento.")
+        extractErrorMessage(error, "Error desconocido en la busqueda del movimiento.")
       );
     } finally {
-      setProcessingCreation(false);
+      setProcessingDetail(false);
     }
   }, []);
 
@@ -232,12 +229,14 @@ const useSupplyMovements = () => {
     deleteSupplyMovement,
     deleteError,
     deleteResult,
+    processingDelete,
     saveSupplyMovement,
     updateSupplyMovement,
     getSupplyMovement,
     selectedSupplyMovement,
     resultCreation,
     processing,
+    processingDetail,
     error,
     processingCreation,
     errorCreation,

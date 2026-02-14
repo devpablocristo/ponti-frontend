@@ -3,14 +3,14 @@ import React from "react";
 import * as actions from "./actions";
 import { CategoryData, TypeData } from "./types";
 
-interface ProductState {
+interface CategoriesState {
   categories: CategoryData[];
   types: TypeData[];
   processing: boolean;
   error: string;
 }
 
-const initialState: ProductState = {
+const initialState: CategoriesState = {
   categories: [],
   types: [],
   processing: false,

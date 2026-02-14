@@ -3,22 +3,17 @@ import { useEffect, useMemo, useState } from "react";
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import DataTable from "../../../../components/Table/DataTable";
-import { TaskInfo } from "../../../../hooks/useTasks/types";
+import { LaborInfo } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
-import useTasks from "../../../../hooks/useTasks";
+import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import useCategories from "../../../../hooks/useCategories";
-import APIClient from "../../../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
-
-const columns: Column<TaskInfo>[] = [
+const columns: Column<LaborInfo>[] = [
   { key: "id", header: "ID" },
   {
     key: "name",
@@ -53,12 +48,12 @@ export default function ListTasks() {
     resultUpdate,
     processing,
     errorUpdate,
-  } = useTasks();
+  } = useLabors();
   const { categories, getCategories } = useCategories();
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [labor, setLabor] = useState<TaskInfo | null>(null);
+  const [labor, setLabor] = useState<LaborInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -124,7 +119,7 @@ export default function ListTasks() {
     }
   };
 
-  const handleEdit = (item: TaskInfo) => {
+  const handleEdit = (item: LaborInfo) => {
     setLabor(item);
     setModalOpen(true);
   };
@@ -146,7 +141,7 @@ export default function ListTasks() {
     if (!projectId) return;
 
     try {
-      const response = await request.get<Blob>(
+      const response = await apiClient.get<Blob>(
         `/labors/database-export/${projectId}`,
         undefined,
         { responseType: "blob" }

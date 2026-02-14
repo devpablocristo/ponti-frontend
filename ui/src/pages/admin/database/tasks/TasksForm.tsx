@@ -5,8 +5,8 @@ import SelectField from "../../../../components/Input/SelectField";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import useCategories from "../../../../hooks/useCategories";
-import { TaskToSave } from "../../../../hooks/useTasks/types";
-import useTask from "../../../../hooks/useTasks";
+import { LaborToSave } from "../../../../hooks/useLabors/types";
+import useLabors from "../../../../hooks/useLabors";
 import { LoaderCircle } from "lucide-react";
 
 interface Labor {
@@ -18,7 +18,7 @@ interface Labor {
 }
 
 export default function TasksForm() {
-  const { saveTasks, result, error, processing } = useTask();
+  const { saveLabors, result, error, processing } = useLabors();
 
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -114,7 +114,7 @@ export default function TasksForm() {
       return;
     }
 
-    const laborsToSave: TaskToSave[] = rows
+    const laborsToSave: LaborToSave[] = rows
       .filter((row) => row.name && row.category && row.price && row.contractor)
       .map((row) => ({
         name: row.name,
@@ -130,7 +130,7 @@ export default function TasksForm() {
       return;
     }
 
-    saveTasks(laborsToSave, projectId);
+    saveLabors(laborsToSave, projectId);
   };
 
   return (

@@ -1,25 +1,17 @@
 import React, { useState } from "react";
 
-import useTaskReducer from "./tasksReducer";
+import useLaborReducer from "./laborsReducer";
 import * as actions from "./actions";
-import { InvoiceData, Metrics, TaskInfo, TaskToSave } from "./types";
-import { SuccessResponse } from "../../restclient/types";
-import APIClient from "../../restclient/apiInstance";
-import {
-  getApiErrorMessage,
-  getApiErrorStatus,
-} from "../../utils/getApiErrorMessage";
+import { InvoiceData, Metrics, LaborInfo, LaborToSave } from "./types";
+import { SuccessResponse } from "@/api/types";
+import { apiClient } from "@/api/client";
+import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
-
-const useTask = () => {
+const useLabors = () => {
   const [
-    { tasks, labors, result, pageInfo, resultInvoice, metrics },
+    { laborGroups, labors, result, pageInfo, resultInvoice, metrics },
     dispatch,
-  ] = useTaskReducer();
+  ] = useLaborReducer();
   const [processing, setProcessing] = useState(false);
   const [processingInvoice, setProcessingInvoice] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,24 +22,24 @@ const useTask = () => {
   const [processingMetrics, setProcessingMetrics] = useState(false);
   const [errorMetrics, setErrorMetrics] = useState<string | null>(null);
 
-  const getTasks = React.useCallback(
+  const getLaborGroups = React.useCallback(
     async (projectId: number, query: string) => {
       setProcessing(true);
       setError(null);
 
       dispatch({
-        type: actions.SET_TASKS,
+        type: actions.SET_LABOR_GROUPS,
         payload: [],
       });
 
       try {
-        const response = await request.get<SuccessResponse<any>>(
+        const response = await apiClient.get<SuccessResponse<any>>(
           `/labors/${projectId}${query}`
         );
 
         if (response.success) {
           dispatch({
-            type: actions.SET_TASKS,
+            type: actions.SET_LABOR_GROUPS,
             payload: response.data.data,
           });
 
@@ -66,7 +58,7 @@ const useTask = () => {
         setError("Ocurrio un error en la busqueda de labores");
       } catch (error) {
         setError(
-          getApiErrorMessage(error, "Error desconocido en la busqueda de labores.")
+          extractErrorMessage(error, "Error desconocido en la busqueda de labores.")
         );
       } finally {
         setProcessing(false);
@@ -81,7 +73,7 @@ const useTask = () => {
       setErrorMetrics(null);
 
       try {
-        const response = await request.get<SuccessResponse<Metrics>>(
+        const response = await apiClient.get<SuccessResponse<Metrics>>(
           `/labors/metrics/${projectId}` + queryString
         );
 
@@ -96,7 +88,7 @@ const useTask = () => {
         setErrorMetrics("Ocurrio un error en la busqueda de kpis");
       } catch (error) {
         setErrorMetrics(
-          getApiErrorMessage(error, "Error desconocido en la busqueda de metricas.")
+          extractErrorMessage(error, "Error desconocido en la busqueda de metricas.")
         );
       } finally {
         setProcessingMetrics(false);
@@ -114,7 +106,7 @@ const useTask = () => {
     });
 
     try {
-      const response = await request.post<SuccessResponse<any>>(
+      const response = await apiClient.post<SuccessResponse<any>>(
         `/labors/invoice`,
         invoice
       );
@@ -130,7 +122,7 @@ const useTask = () => {
       setErrorInvoice("Ocurrio un error en la creación de la factura");
     } catch (error) {
       setErrorInvoice(
-        getApiErrorMessage(error, "Error desconocido en la creación de la factura.")
+        extractErrorMessage(error, "Error desconocido en la creación de la factura.")
       );
     } finally {
       setProcessingInvoice(false);
@@ -147,7 +139,7 @@ const useTask = () => {
       });
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SuccessResponse<any>>(
           `/labors/invoice/${id}`,
           invoice
         );
@@ -163,7 +155,7 @@ const useTask = () => {
         setErrorInvoice("Ocurrio un error en la actualización de la factura");
       } catch (error) {
         setErrorInvoice(
-          getApiErrorMessage(
+          extractErrorMessage(
             error,
             "Error desconocido en la actualización de la factura."
           )
@@ -175,8 +167,8 @@ const useTask = () => {
     []
   );
 
-  const saveTasks = React.useCallback(
-    async (tasks: TaskToSave[], projectId: number) => {
+  const saveLabors = React.useCallback(
+    async (laborsToSave: LaborToSave[], projectId: number) => {
       setProcessing(true);
       setError(null);
       dispatch({
@@ -185,9 +177,9 @@ const useTask = () => {
       });
 
       try {
-        const response = await request.post<SuccessResponse<any>>(
+        const response = await apiClient.post<SuccessResponse<any>>(
           `/projects/${projectId}/labors`,
-          tasks
+          laborsToSave
         );
 
         if (response.success) {
@@ -200,13 +192,13 @@ const useTask = () => {
 
         setError("Ocurrio un error en la creación de los labores");
       } catch (error) {
-        if (getApiErrorStatus(error) === 409) {
+        if (extractErrorStatus(error) === 409) {
           setError("Ya existe una labor con el mismo nombre.");
           return;
         }
 
         setError(
-          getApiErrorMessage(
+          extractErrorMessage(
             error,
             "Error desconocido en la creación de las labores."
           )
@@ -227,7 +219,7 @@ const useTask = () => {
     });
 
     try {
-      const response = await request.get<SuccessResponse<any>>(
+      const response = await apiClient.get<SuccessResponse<any>>(
         `/projects/${projectId}/labors`
       );
 
@@ -242,7 +234,7 @@ const useTask = () => {
       setError("Ocurrio un error en la busqueda de labores");
     } catch (error) {
       setError(
-        getApiErrorMessage(error, "Error desconocido en la busqueda de labores.")
+        extractErrorMessage(error, "Error desconocido en la busqueda de labores.")
       );
     } finally {
       setProcessing(false);
@@ -258,7 +250,7 @@ const useTask = () => {
     });
 
     try {
-      const response = await request.delete<SuccessResponse<any>>(
+      const response = await apiClient.delete<SuccessResponse<any>>(
         `/labors/${id}`
       );
 
@@ -272,13 +264,13 @@ const useTask = () => {
 
       setError("Ocurrio un error en la eliminación del labor");
     } catch (error) {
-      if (getApiErrorStatus(error) === 409) {
+      if (extractErrorStatus(error) === 409) {
         setError("La labor esta siendo usada en una orden de trabajo.");
         return;
       }
 
       setError(
-        getApiErrorMessage(error, "Error desconocido en la eliminación de la labor.")
+        extractErrorMessage(error, "Error desconocido en la eliminación de la labor.")
       );
     } finally {
       setProcessing(false);
@@ -286,13 +278,13 @@ const useTask = () => {
   }, []);
 
   const updateLabor = React.useCallback(
-    async (projectId: number, labor: TaskInfo) => {
+    async (projectId: number, labor: LaborInfo) => {
       setProcessing(true);
       setErrorUpdate(null);
       setResultUpdate(null);
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SuccessResponse<any>>(
           `/labors/projects/${projectId}/${labor.id}`,
           labor
         );
@@ -304,13 +296,13 @@ const useTask = () => {
 
         setErrorUpdate("Ocurrio un error en la edicion del labor");
       } catch (error) {
-        if (getApiErrorStatus(error) === 404) {
+        if (extractErrorStatus(error) === 404) {
           setErrorUpdate("La labor no existe.");
           return;
         }
 
         setErrorUpdate(
-          getApiErrorMessage(error, "Error desconocido en la edición de la labor.")
+          extractErrorMessage(error, "Error desconocido en la edición de la labor.")
         );
       } finally {
         setProcessing(false);
@@ -320,14 +312,14 @@ const useTask = () => {
   );
 
   return {
-    tasks,
+    laborGroups,
     metrics,
-    getTasks,
+    getLaborGroups,
     getMetrics,
     getLabors,
     deleteLabor,
     updateLabor,
-    saveTasks,
+    saveLabors,
     updateInvoice,
     createInvoice,
     result,
@@ -345,4 +337,4 @@ const useTask = () => {
   };
 };
 
-export default useTask;
+export default useLabors;

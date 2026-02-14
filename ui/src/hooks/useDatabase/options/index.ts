@@ -2,15 +2,10 @@ import React, { useState } from "react";
 import { AxiosError } from "axios";
 
 import * as actions from "./actions";
-import APIClient from "../../../restclient/apiInstance";
-import { ErrorResponse, SuccessResponse } from "../../../restclient/types";
+import { apiClient } from "@/api/client";
+import { ErrorResponse, SuccessResponse } from "@/api/types";
 import { FormOptions } from "./types";
 import useOptionsReducer from "./reducer";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const useOptions = () => {
   const [{ options }, dispatch] = useOptionsReducer();
@@ -21,7 +16,7 @@ const useOptions = () => {
     setProcessing(true);
     setError(null);
     try {
-      const response = await request.get<SuccessResponse<FormOptions>>(
+      const response = await apiClient.get<SuccessResponse<FormOptions>>(
         "/form-options"
       );
 

@@ -2,15 +2,10 @@ import React from "react";
 import { AxiosError } from "axios";
 
 import * as actions from "./actions";
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { Payload } from "./types";
-import { ErrorResponse, SuccessResponse } from "../../restclient/types";
+import { ErrorResponse, SuccessResponse } from "@/api/types";
 import useFieldsReducer from "./useFieldsReducer";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const useFields = () => {
   const [{ total, fields, processing, error }, dispatch] = useFieldsReducer();
@@ -26,7 +21,7 @@ const useFields = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<Payload>>(
+        const response = await apiClient.get<SuccessResponse<Payload>>(
           "/fields" + queryParams
         );
 

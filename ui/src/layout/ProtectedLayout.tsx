@@ -5,7 +5,6 @@ import Sidebar from "./Sidebar/Sidebar";
 import { BaseModal } from "../components/Modal/BaseModal";
 import { AuthProvider, useAuth } from "../pages/login/context/AuthProvider";
 import { Outlet, useNavigate } from "react-router-dom";
-// import Footer from "./Footer/Footer";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 import { SelectionProvider } from "../pages/login/context/SelectionContext";
 

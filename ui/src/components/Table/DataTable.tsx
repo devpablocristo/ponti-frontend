@@ -417,7 +417,7 @@ const DataTable = <T,>({
                 <React.Fragment key={index}>
                   <tr
                     key={index}
-                    className={`border-t border-gray-100 text-gray-900 ${index % 2 === 0 ? "bg-white" : "bg-[#EBF5FF]"
+                    className={`border-t border-gray-100 text-gray-900 font-normal ${index % 2 === 0 ? "bg-white" : "bg-[#EBF5FF]"
                       }`}
                   >
                     {expandableRowRender && (
@@ -448,7 +448,7 @@ const DataTable = <T,>({
                     {columns.map((column) => (
                       <td
                         key={String(column.key)}
-                        className={`truncate ${column.wrap ? "whitespace-normal break-words" : "whitespace-nowrap"
+                        className={`truncate font-normal ${column.wrap ? "whitespace-normal break-words" : "whitespace-nowrap"
                           } ${column.align === "center"
                             ? "text-center"
                             : column.align === "right"
@@ -535,7 +535,7 @@ const DataTable = <T,>({
             className="bg-white flex flex-col md:flex-row justify-between items-start md:items-center space-y-3 md:space-y-0 p-4"
             aria-label="Table navigation"
           >
-            <span className="text-sm font-normal text-gray-500">
+            <span className="text-xs font-normal text-gray-500">
               Mostrar
               <span className="mx-1 font-semibold text-gray-900">
                 {(pagination.page - 1) * pagination.perPage + 1}-

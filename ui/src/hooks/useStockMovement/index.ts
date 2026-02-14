@@ -1,13 +1,8 @@
 import React, { useState } from "react";
 import { AxiosError } from "axios";
-import APIClient from "../../restclient/apiInstance";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
+import { apiClient } from "@/api/client";
+import { SuccessResponse, ErrorResponse } from "@/api/types";
 import { StockMovementRequest } from "./types";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const useStockMovement = () => {
   const [resultCreation, setResultCreation] = useState<{
@@ -23,7 +18,7 @@ const useStockMovement = () => {
       setResultCreation({ supply_movements: [] });
 
       try {
-        const response = await request.post<SuccessResponse<any>>(
+        const response = await apiClient.post<SuccessResponse<any>>(
           `/stock_movements/${projectId}`,
           stockMovement
         );

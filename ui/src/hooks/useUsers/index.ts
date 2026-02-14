@@ -1,16 +1,11 @@
 import React from "react";
 
 import * as actions from "./actions";
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { UserData, UserNew } from "./types";
-import { ErrorResponse, SuccessResponse } from "../../restclient/types";
+import { ErrorResponse, SuccessResponse } from "@/api/types";
 import { AxiosError } from "axios";
 import useUserReducer from "./userReducer";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const useUsers = () => {
   const [
@@ -25,7 +20,7 @@ const useUsers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.post<SuccessResponse<UserData>>(
+        const response = await apiClient.post<SuccessResponse<UserData>>(
           "/users",
           userData
         );
@@ -51,7 +46,7 @@ const useUsers = () => {
           if (errorResponse.error) {
             // const status = errorResponse.error.status;
             const message =
-              errorResponse.error.details || "Error desconocido en el login.";
+              errorResponse.error.details || "Error desconocido al crear usuario.";
 
             dispatch({
               type: actions.SET_ERROR,
@@ -83,7 +78,7 @@ const useUsers = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<UserData[]>>(
+        const response = await apiClient.get<SuccessResponse<UserData[]>>(
           "/users" + queryParams
         );
 
@@ -137,7 +132,7 @@ const useUsers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.get<SuccessResponse<UserData>>(
+        const response = await apiClient.get<SuccessResponse<UserData>>(
           "/users/" + id
         );
 
@@ -190,7 +185,7 @@ const useUsers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.put<SuccessResponse<UserData>>(
+        const response = await apiClient.put<SuccessResponse<UserData>>(
           "/users/" + id,
           user
         );
@@ -244,7 +239,7 @@ const useUsers = () => {
       dispatch({ type: actions.START_DELETING });
 
       try {
-        const response = await request.delete<SuccessResponse<UserData>>(
+        const response = await apiClient.delete<SuccessResponse<UserData>>(
           "/users/" + id
         );
 

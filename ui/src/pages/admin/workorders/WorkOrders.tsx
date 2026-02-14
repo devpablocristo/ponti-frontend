@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 import DataTable from "../../../components/Table/DataTable";
 import {Metrics, OrdersData, WorkorderData} from "../../../hooks/useWorkOrders/types";
@@ -11,13 +12,8 @@ import { BaseModal } from "../../../components/Modal/BaseModal";
 import Button from "../../../components/Button/Button";
 import UpdateOrder from "./UpdateOrder";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
-import APIClient from "../../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { formatNumberAr } from "../utils";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 function OrdersHeader({
   ordersAmount,
@@ -117,40 +113,42 @@ function OrdersIndicators({
   processing: boolean;
 }) {
   return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <IndicatorCard
-        title="Superficie ejecutada"
-        value={processing ? "Cargando..." : formatNumberAr(metrics.surface_ha) + " Has"}
-        color="gray"
-        height="85px"
-        width="200px"
-      />
-      <IndicatorCard
-        title="Consumo en litros"
-        value={processing ? "Cargando..." : formatNumberAr(metrics.liters) + " Lts"}
-        color="gray"
-        height="85px"
-        width="200px"
-      />
-      <IndicatorCard
-        title="Consumo en kilos"
-        value={processing ? "Cargando..." : formatNumberAr(metrics.kilograms) + " Kg"}
-        color="gray"
-        height="85px"
-        width="200px"
-      />
-      <IndicatorCard
-        title="Costos directos"
-        value={processing ? "Cargando..." : " u$" + formatNumberAr(metrics.direct_cost)}
-        color="gray"
-        height="85px"
-        width="200px"
-      />
+    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+      {processing ? (
+        <div className="flex items-center justify-center py-4">
+          <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
+          <span className="text-sm text-gray-500 font-medium">Cargando indicadores...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <IndicatorCard
+            title="Sup. ejecutada"
+            value={formatNumberAr(metrics.surface_ha) + " Has"}
+            color="amber"
+          />
+          <IndicatorCard
+            title="Consumo en litros"
+            value={formatNumberAr(metrics.liters) + " Lts"}
+            color="gray"
+          />
+          <IndicatorCard
+            title="Consumo en kilos"
+            value={formatNumberAr(metrics.kilograms) + " Kg"}
+            color="gray"
+          />
+          <IndicatorCard
+            title="Costos directos"
+            value={"u$ " + formatNumberAr(metrics.direct_cost)}
+            color="red"
+          />
+        </div>
+      )}
     </div>
   );
 }
 
 export function WorkOrders() {
+  const navigate = useNavigate();
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerUpdateOpen, setDrawerUpdateOpen] = useState(false);
@@ -336,6 +334,9 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("surface_ha"),
+        render: (value: any) => (
+          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+        ),
       },
       {
         key: "supply_name",
@@ -348,8 +349,9 @@ export function WorkOrders() {
         key: "consumption",
         header: "Consumo",
         filterable: true,
-        filterType: "select", // Permite filtrar por texto o número
+        filterType: "select",
         filterOptions: getFilterOptionsForColumn("consumption"),
+        render: (value: any) => <span className="font-semibold text-blue-700">{value}</span>,
       },
       {
         key: "category_name",
@@ -364,7 +366,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("dose"),
-        render: (value: any) => <strong>{value}</strong>
+        render: (value: any) => <span className="font-semibold text-blue-700">{value}</span>
       },
       {
         key: "cost_per_ha",
@@ -372,28 +374,38 @@ export function WorkOrders() {
         filterable: false,
         render: (value: any) => {
           const num = Number(value);
-          return <>{isNaN(num) ? "-" : `u$${formatNumberAr(num)}`}</>;
+          return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
-      { key: "unit_price", header: "Precio unidad", filterable: false },
+      {
+        key: "unit_price",
+        header: "Precio unidad",
+        filterable: false,
+        render: (value: any) => {
+          const num = Number(value);
+          return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+        },
+      },
       {
         key: "total_cost",
         header: "Total costo (USD)",
         filterable: false,
         render: (value: any) => {
           const num = Number(value);
-          return <>{isNaN(num) ? "-" : `u$${formatNumberAr(num)}`}</>;
+          return <span className="font-bold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
     ];
     // IMPORTANTE: Ahora dependemos de 'orders' Y de 'columnsFilters'
   }, [orders, columnsFilters]);
 
-  const allColumnsMap = new Map();
-  [...columns].forEach((col) => {
-    allColumnsMap.set(col.key, col);
-  });
-  const allColumns = Array.from(allColumnsMap.values());
+  const allColumns = useMemo(() => {
+    const map = new Map();
+    [...columns].forEach((col) => {
+      map.set(col.key, col);
+    });
+    return Array.from(map.values());
+  }, [columns]);
   const [columnsToShow, setColumnsToShow] = useState(columns);
   const [selectedColumns, setSelectedColumns] = useState(
     allColumns.map((col) => col.key)
@@ -559,7 +571,7 @@ export function WorkOrders() {
         primaryButtonText: "Volver",
         secondaryButtonText: "Volver",
         onConfirm: () => {
-          window.location.href = "/admin/work-orders";
+          navigate("/admin/work-orders");
         },
       });
     } catch (error) {
@@ -712,7 +724,7 @@ export function WorkOrders() {
     if (!projectId) return;
 
     try {
-      const response = await request.get<Blob>(
+      const response = await apiClient.get<Blob>(
         `/work-orders/export/${projectId}`,
         undefined,
         { responseType: "blob" }
@@ -728,7 +740,6 @@ export function WorkOrders() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error(error);
       setErrorMessage("No se pudo exportar el listado de órdenes.");
     }
   };
@@ -768,11 +779,9 @@ export function WorkOrders() {
         ]}
       />
       {errorMessage && (
-        <div
-          className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-          role="alert"
-        >
-          <span className="font-medium">Error!</span> {errorMessage}
+        <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+          <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+          <div><span className="font-semibold">Error:</span> {errorMessage}</div>
         </div>
       )}
       {!processing && !errorMetrics && orders.length > 0 && (
@@ -782,12 +791,11 @@ export function WorkOrders() {
         </div>
       )}
       <div className="mt-4 relative">
-        {processing ||
-          (isProcessing && (
+        {(processing || isProcessing) && (
             <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
               <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
             </div>
-          ))}
+          )}
         {selectedProject && (
           <CreateOrder
             drawerOpen={drawerOpen}

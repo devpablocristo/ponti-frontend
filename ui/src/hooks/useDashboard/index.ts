@@ -4,13 +4,8 @@ import { AxiosError } from "axios";
 import useDashboardReducer from "./useDashboardReducer";
 import * as actions from "./actions";
 import { DashboardData } from "./types";
-import { SuccessResponse, ErrorResponse } from "../../restclient/types";
-import APIClient from "../../restclient/apiInstance";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { SuccessResponse, ErrorResponse } from "@/api/types";
+import { apiClient } from "@/api/client";
 
 const useDashboard = () => {
   const [{ dashboard }, dispatch] = useDashboardReducer();
@@ -26,8 +21,8 @@ const useDashboard = () => {
     }
 
     try {
-      const response = await request.get<SuccessResponse<DashboardData>>(
-        `dashboard` + queryParams
+      const response = await apiClient.get<SuccessResponse<DashboardData>>(
+        `/dashboard` + queryParams
       );
 
       if (response.success) {

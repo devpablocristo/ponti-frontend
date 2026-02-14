@@ -2,16 +2,11 @@ import React from "react";
 
 import * as actions from "./actions";
 
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { Payload } from "./types";
 import { AxiosError } from "axios";
-import { ErrorResponse, SuccessResponse } from "../../restclient/types";
+import { ErrorResponse, SuccessResponse } from "@/api/types";
 import useProvidersReducer from "./useProvidersReducer";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const useProviders = () => {
   const [{ total, providers, processing, error }, dispatch] =
@@ -28,7 +23,7 @@ const useProviders = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<Payload>>(
+        const response = await apiClient.get<SuccessResponse<Payload>>(
           "/providers" + queryParams
         );
 

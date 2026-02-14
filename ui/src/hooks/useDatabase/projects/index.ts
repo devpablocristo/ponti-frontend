@@ -2,17 +2,12 @@ import React from "react";
 import { AxiosError } from "axios";
 
 import * as actions from "./actions";
-import APIClient from "../../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { Project, ProjectPayload, ProjectDropdownPayload } from "./types";
-import { ErrorResponse, SuccessResponse } from "../../../restclient/types";
-import { getApiErrorMessage, getApiErrorStatus } from "../../../utils/getApiErrorMessage";
+import { ErrorResponse, SuccessResponse } from "@/api/types";
+import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
 import useProjectReducer from "./projectReducer";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const useProjects = () => {
   const [
@@ -38,7 +33,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.post<SuccessResponse<Project>>(
+        const response = await apiClient.post<SuccessResponse<Project>>(
           "/projects",
           userData
         );
@@ -56,7 +51,7 @@ const useProjects = () => {
           payload: "Ocurrio un error al intentar guardar el proyecto",
         });
       } catch (error) {
-        const status = getApiErrorStatus(error);
+        const status = extractErrorStatus(error);
         if (status === 409) {
           dispatch({
             type: actions.SET_ERROR,
@@ -65,7 +60,7 @@ const useProjects = () => {
           return;
         }
 
-        const message = getApiErrorMessage(
+        const message = extractErrorMessage(
           error,
           "Error desconocido en la creación del proyecto."
         );
@@ -92,7 +87,7 @@ const useProjects = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<ProjectPayload>>(
+        const response = await apiClient.get<SuccessResponse<ProjectPayload>>(
           "/projects" + queryParams
         );
 
@@ -154,7 +149,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING_DROPDOWN });
 
       try {
-        const response = await request.get<
+        const response = await apiClient.get<
           SuccessResponse<ProjectDropdownPayload>
         >(`/projects/customers/${id}` + (queryString ? `?${queryString}` : ""));
 
@@ -213,7 +208,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.get<SuccessResponse<Project>>(
+        const response = await apiClient.get<SuccessResponse<Project>>(
           "/projects/" + id
         );
 
@@ -266,7 +261,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.put<SuccessResponse<Project>>(
+        const response = await apiClient.put<SuccessResponse<Project>>(
           "/projects/" + id,
           project
         );
@@ -284,7 +279,7 @@ const useProjects = () => {
           payload: "Ocurrio un error al intentar editar un proyecto.",
         });
       } catch (error) {
-        const status = getApiErrorStatus(error);
+        const status = extractErrorStatus(error);
         if (status === 404) {
           dispatch({
             type: actions.SET_ERROR,
@@ -294,7 +289,7 @@ const useProjects = () => {
           return;
         }
 
-        const message = getApiErrorMessage(
+        const message = extractErrorMessage(
           error,
           "Error desconocido al intentar editar un proyecto."
         );
@@ -316,7 +311,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.put<SuccessResponse<string>>(
+        const response = await apiClient.put<SuccessResponse<string>>(
           "/projects/" + id + "/archive",
           {}
         );
@@ -378,7 +373,7 @@ const useProjects = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<ProjectPayload>>(
+        const response = await apiClient.get<SuccessResponse<ProjectPayload>>(
           "/projects/archived" + queryParams
         );
 
@@ -440,7 +435,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.put<SuccessResponse<string>>(
+        const response = await apiClient.put<SuccessResponse<string>>(
           "/projects/" + id + "/restore",
           {}
         );
@@ -497,7 +492,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.delete<SuccessResponse<string>>(
+        const response = await apiClient.delete<SuccessResponse<string>>(
           "/projects/" + id + "/hard"
         );
 

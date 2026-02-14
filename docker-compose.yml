@@ -1,0 +1,49 @@
+services:
+  ponti-ui:
+    image: node:20.17.0
+    working_dir: /app
+    command: sh -c "yarn install --frozen-lockfile && yarn dev --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./ui:/app
+      - ui_node_modules:/app/node_modules
+    environment:
+      - VITE_API_BASE_URL=/api
+      # BFF con network_mode: host → alcanzable en host:3000
+      - BFF_URL=http://host.docker.internal:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - ponti-bff
+    networks:
+      - fe-network
+    restart: unless-stopped
+
+  ponti-bff:
+    image: node:20.17.0
+    working_dir: /app
+    command: sh -c "yarn install --frozen-lockfile && yarn dev"
+    network_mode: host
+    volumes:
+      - ./api:/app
+      - bff_node_modules:/app/node_modules
+    env_file:
+      - ./api/.env
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      # Con network_mode: host, localhost alcanza auth (8081) y backend (8080)
+      - BASE_LOGIN_API=http://localhost:8081/api/v1
+      - BASE_MANAGER_API=http://localhost:8080/api/v1
+      # ENABLE_MOCKS=1 solo para testing sin backend. NUNCA activar en local con stack real.
+      # - ENABLE_MOCKS=1
+    restart: unless-stopped
+
+networks:
+  fe-network:
+    driver: bridge
+
+volumes:
+  ui_node_modules:
+  bff_node_modules:

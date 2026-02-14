@@ -3,14 +3,14 @@ import React from "react";
 import * as actions from "./actions";
 import { CustomerData } from "./types";
 
-interface ProductState {
+interface CustomerState {
   customers: CustomerData[];
   total: number;
   processing: boolean;
   error: string;
 }
 
-const initialState: ProductState = {
+const initialState: CustomerState = {
   customers: [],
   total: 0,
   processing: false,
@@ -42,7 +42,7 @@ const customersReducer = (state: typeof initialState, action: Action) => {
       return {
         ...state,
         error: action.payload,
-        projects: [],
+        customers: [],
       };
 
     case actions.START_PROCESSING:

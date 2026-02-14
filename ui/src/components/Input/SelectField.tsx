@@ -25,12 +25,12 @@ const SelectField: React.FC<SelectFieldProps> = ({
   fullWidth = false,
   disabled = false,
 }) => {
-  const sizeClasses = size === "sm" ? "text-sm py-2" : "text-base py-3";
+  const sizeClasses = size === "sm" ? "text-[13px] py-2" : "text-base py-3";
 
   return (
     <div className={`${fullWidth ? "w-full" : ""}`}>
       {label !== "" && (
-        <label className="block mb-1 text-sm font-medium text-gray-900 leading-[1.5]">
+        <label className="block mb-1 text-xs font-medium text-gray-900 leading-[1.5]">
           {label}
         </label>
       )}

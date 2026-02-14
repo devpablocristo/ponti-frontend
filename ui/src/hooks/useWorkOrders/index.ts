@@ -1,19 +1,11 @@
 import React, { useState } from "react";
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 
 import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
-import { SuccessResponse } from "../../restclient/types";
+import { SuccessResponse } from "@/api/types";
 import { Metrics, Workorder, WorkorderData } from "./types";
-import {
-  getApiErrorMessage,
-  getApiErrorStatus,
-} from "../../utils/getApiErrorMessage";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
 const useOrders = () => {
   const [
@@ -39,7 +31,7 @@ const useOrders = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<any>>(
+        const response = await apiClient.get<SuccessResponse<any>>(
           `/work-orders${queryParams}`
         );
 
@@ -63,7 +55,7 @@ const useOrders = () => {
         setError("Ocurrio un error en la busqueda de ordenes");
       } catch (error) {
         setError(
-          getApiErrorMessage(error, "Error desconocido en la busqueda de ordenes.")
+          extractErrorMessage(error, "Error desconocido en la busqueda de ordenes.")
         );
       } finally {
         setProcessing(false);
@@ -82,7 +74,7 @@ const useOrders = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<Metrics>>(
+        const response = await apiClient.get<SuccessResponse<Metrics>>(
           "/work-orders/metrics" + queryParams
         );
 
@@ -97,7 +89,7 @@ const useOrders = () => {
         setErrorMetrics("Ocurrio un error en la busqueda de kpis");
       } catch (error) {
         setErrorMetrics(
-          getApiErrorMessage(error, "Error desconocido en la busqueda de metricas.")
+          extractErrorMessage(error, "Error desconocido en la busqueda de metricas.")
         );
       } finally {
         setProcessingMetrics(false);
@@ -115,8 +107,8 @@ const useOrders = () => {
     });
 
     try {
-      const response = await request.post<SuccessResponse<any>>(
-        `/workorders`,
+      const response = await apiClient.post<SuccessResponse<any>>(
+        `/work-orders`,
         order
       );
 
@@ -130,13 +122,13 @@ const useOrders = () => {
 
       setErrorCreation("Ocurrio un error en la creación de la orden");
     } catch (error) {
-      if (getApiErrorStatus(error) === 409) {
+      if (extractErrorStatus(error) === 409) {
         setErrorCreation("Ya existe una orden con el mismo número.");
         return;
       }
 
       setErrorCreation(
-        getApiErrorMessage(error, "Error desconocido en la creación de la orden.")
+        extractErrorMessage(error, "Error desconocido en la creación de la orden.")
       );
     } finally {
       setProcessingCreation(false);
@@ -153,7 +145,7 @@ const useOrders = () => {
       });
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SuccessResponse<any>>(
           `/work-orders/${id}`,
           order
         );
@@ -169,7 +161,7 @@ const useOrders = () => {
         setErrorCreation("Ocurrio un error en la actualización de la orden");
       } catch (error) {
         setErrorCreation(
-          getApiErrorMessage(
+          extractErrorMessage(
             error,
             "Error desconocido en la actualización de la orden."
           )
@@ -181,9 +173,12 @@ const useOrders = () => {
     []
   );
 
+  const [processingDetail, setProcessingDetail] = useState(false);
+
   const getWorkorder = React.useCallback(async (id: number) => {
+    setProcessingDetail(true);
     try {
-      const response = await request.get<SuccessResponse<WorkorderData>>(
+      const response = await apiClient.get<SuccessResponse<WorkorderData>>(
         `/work-orders/${id}`
       );
 
@@ -195,18 +190,18 @@ const useOrders = () => {
         return;
       }
 
-      setErrorCreation("Ocurrio un error en la creación de la orden");
+      setErrorCreation("Ocurrio un error al buscar la orden");
     } catch (error) {
-      if (getApiErrorStatus(error) === 404) {
+      if (extractErrorStatus(error) === 404) {
         setErrorCreation("No se encontro la orden.");
         return;
       }
 
       setErrorCreation(
-        getApiErrorMessage(error, "Error desconocido en la busqueda de la orden.")
+        extractErrorMessage(error, "Error desconocido en la busqueda de la orden.")
       );
     } finally {
-      setProcessingCreation(false);
+      setProcessingDetail(false);
     }
   }, []);
 
@@ -215,7 +210,7 @@ const useOrders = () => {
     setError(null);
 
     try {
-      const response = await request.delete<SuccessResponse<string>>(
+      const response = await apiClient.delete<SuccessResponse<string>>(
         "/work-orders/" + id
       );
 
@@ -227,7 +222,7 @@ const useOrders = () => {
       setError(message);
       throw new Error(message);
     } catch (error) {
-      const message = getApiErrorMessage(
+      const message = extractErrorMessage(
         error,
         "Error desconocido al intentar eliminar una orden."
       );
@@ -254,6 +249,7 @@ const useOrders = () => {
     processing,
     error,
     processingCreation,
+    processingDetail,
     errorCreation,
     pageInfo,
   };

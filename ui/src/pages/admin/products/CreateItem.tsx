@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
-import useProducts from "../../../hooks/useProducts";
+import useSupplies from "../../../hooks/useSupplies";
 import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
@@ -130,7 +130,7 @@ export default function CreateItem({
     number | null
   >(null);
 
-  const { getSupplies, supplies } = useProducts();
+  const { getSupplies, supplies } = useSupplies();
   const { projectsDropdown, getProjectsDropdown } = useProjects();
   const { campaigns, getCampaigns } = useCampaigns();
   const { getStock, stock } = useStock();

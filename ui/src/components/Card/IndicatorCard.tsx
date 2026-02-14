@@ -1,19 +1,33 @@
+type ColorOption =
+  | "green"
+  | "red"
+  | "gray"
+  | "default"
+  | "blue"
+  | "amber"
+  | "purple";
+
 interface IndicatorCardProps {
   title: string;
   value: string;
   subtext?: string;
   icon?: React.ReactNode;
-  color?: "green" | "red" | "gray" | "default";
+  color?: ColorOption;
+  /** Override subtext color independently of the card color */
+  subtextColor?: ColorOption;
   height?: string;
   width?: string;
   className?: string;
 }
 
-const colorMap = {
-  green: "text-custom-green",
-  red: "text-red-600",
-  gray: "text-gray-500",
-  default: "text-gray-700",
+const valueColors: Record<string, string> = {
+  green: "text-gray-900",
+  red: "text-gray-900",
+  gray: "text-gray-900",
+  default: "text-gray-900",
+  blue: "text-gray-900",
+  amber: "text-gray-900",
+  purple: "text-gray-900",
 };
 
 export function IndicatorCard({
@@ -22,24 +36,54 @@ export function IndicatorCard({
   subtext,
   icon,
   color = "default",
-  height = "130px",
-  width = "170px",
+  subtextColor,
+  height = "auto",
+  width = "auto",
   className = "",
 }: IndicatorCardProps) {
+  const resolvedSubtextColor = subtextColor ?? color;
   return (
     <div
-      className={`bg-white rounded-xl border border-gray-300 px-4 py-2 min-h-[${height}] min-w-[${width}] flex flex-col justify-between shadow-sm ${className}`}
+      className={`bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex-1 min-w-0 ${className}`}
+      style={{ minHeight: height, minWidth: width }}
     >
-      <div className="text-[14px] font-medium text-gray-950">{title}</div>
-      <div className={`text-[24px] font-light ${colorMap[color]}`}>{value}</div>
-      {subtext && (
-        <div
-          className={`text-sm ${colorMap[color]} mt-2 flex items-center gap-1}`}
+      <div
+        className="h-1.5 w-full"
+        style={{ backgroundColor: barColors[color] ?? barColors.default }}
+      />
+      <div className="px-3 py-2 flex flex-col gap-0">
+        <span className="text-[9px] font-semibold text-gray-700 uppercase tracking-wider leading-tight">
+          {title}
+        </span>
+        <span
+          className={`text-sm font-bold leading-snug ${valueColors[color] ?? valueColors.default}`}
         >
-          {icon}
-          {subtext}
-        </div>
-      )}
+          {value}
+        </span>
+        {subtext && (
+          <span
+            className="text-[10px] flex items-center gap-1 mt-0.5"
+            style={{
+              color:
+                barColors[resolvedSubtextColor] ?? barColors.default,
+            }}
+          >
+            {icon}
+            {subtext}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
+
+/** Inline hex colors ensure the bar always renders, regardless of Tailwind purge / Material-Tailwind overrides */
+const barColors: Record<string, string> = {
+  green: "#166534",
+  red: "#dc2626",
+  gray: "#9ca3af",
+  default: "#547792",
+  blue: "#1e3a8a",
+  amber: "#b45309",
+  purple: "#5b21b6",
+};

@@ -280,12 +280,12 @@ export const handlers = [
     );
   }),  
 
-  // 4. MOCK DE CUSTOMERS (Estrategia: Objeto con propiedad data)
+  // 4. MOCK DE CUSTOMERS
   http.get(configService.baseManagerApi + "/customers", ({ request }) => {
     logRequest("GET", request.url);
     return new HttpResponse(
       JSON.stringify({
-        data: [
+        items: [
           { id: 1, name: "Oscar Salomon", status: "active" }
         ],
         page_info: { total: 1 }
@@ -295,7 +295,7 @@ export const handlers = [
   }),
 
 
-// 5. MOCK DE CAMPAÑAS (Array directo - el backend lo envuelve)
+// 5. MOCK DE CAMPAÑAS
   http.get(new RegExp(configService.baseManagerApi + "/campaigns.*"), () => {
     console.log("Mocking campaigns...");
     return new HttpResponse(
@@ -834,7 +834,7 @@ http.get(
   }
 ),
 
-  // 6. MOCK DE PROYECTOS (Consolidado para todas las variantes)
+  // 6. MOCK DE PROYECTOS
   http.get(new RegExp(configService.baseManagerApi + "/projects($|/|\\?)"), ({ request }) => {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -932,7 +932,7 @@ http.get(
     );
   }),
 
-// 8. DASHBOARD METRICS (Estructura completa)
+// 8. DASHBOARD METRICS
 http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }) => {
   logRequest("GET", request.url);
   return new HttpResponse(

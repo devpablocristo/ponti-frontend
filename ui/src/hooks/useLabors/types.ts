@@ -1,4 +1,4 @@
-export interface TaskData {
+export interface LaborGroupData {
   workorder_id: number;
   workorder_number: string;
   date: string;
@@ -33,14 +33,14 @@ export interface InvoiceData {
   invoice_status: string;
 }
 
-export interface TaskToSave {
+export interface LaborToSave {
   name: string;
   category_id: number;
   price: string;
   contractor_name: string;
 }
 
-export interface TaskInfo {
+export interface LaborInfo {
   id: number;
   name: string;
   category_id: number;

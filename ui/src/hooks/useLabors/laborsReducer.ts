@@ -1,12 +1,12 @@
 import React from "react";
 
 import * as actions from "./actions";
-import { TaskData, TaskInfo, Metrics } from "./types";
+import { LaborGroupData, LaborInfo, Metrics } from "./types";
 import { PageInfo } from "../useDatabase/projects/types";
 
-interface TaskState {
-  tasks: TaskData[];
-  labors: TaskInfo[];
+interface LaborState {
+  laborGroups: LaborGroupData[];
+  labors: LaborInfo[];
   metrics: Metrics;
   processing: boolean;
   error: string;
@@ -15,8 +15,8 @@ interface TaskState {
   pageInfo: PageInfo | null;
 }
 
-const initialState: TaskState = {
-  tasks: [],
+const initialState: LaborState = {
+  laborGroups: [],
   labors: [],
   metrics: {
     surface_ha: 0,
@@ -31,24 +31,24 @@ const initialState: TaskState = {
 };
 
 type Action =
-  | { type: typeof actions.SET_TASKS; payload: TaskData[] }
+  | { type: typeof actions.SET_LABOR_GROUPS; payload: LaborGroupData[] }
   | { type: typeof actions.SET_PAGE_INFO; payload: PageInfo }
   | { type: typeof actions.SET_RESULT; payload: string }
-  | { type: typeof actions.SET_LABORS; payload: TaskInfo[] }
+  | { type: typeof actions.SET_LABORS; payload: LaborInfo[] }
   | { type: typeof actions.SET_RESULT_INVOICE; payload: string }
   | { type: typeof actions.SET_METRICS; payload: Metrics };
 
-const tasksReducer = (state: typeof initialState, action: Action) => {
+const laborsReducer = (state: typeof initialState, action: Action) => {
   switch (action.type) {
     case actions.SET_PAGE_INFO:
       return {
         ...state,
         pageInfo: action.payload,
       };
-    case actions.SET_TASKS:
+    case actions.SET_LABOR_GROUPS:
       return {
         ...state,
-        tasks: action.payload,
+        laborGroups: action.payload,
       };
     case actions.SET_LABORS:
       return {
@@ -75,6 +75,6 @@ const tasksReducer = (state: typeof initialState, action: Action) => {
   }
 };
 
-const useTaskReducer = () => React.useReducer(tasksReducer, initialState);
+const useLaborReducer = () => React.useReducer(laborsReducer, initialState);
 
-export default useTaskReducer;
+export default useLaborReducer;
