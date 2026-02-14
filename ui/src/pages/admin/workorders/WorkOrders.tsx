@@ -124,17 +124,17 @@ function OrdersIndicators({
           <IndicatorCard
             title="Sup. ejecutada"
             value={formatNumberAr(metrics.surface_ha) + " Has"}
-            color="green"
+            color="amber"
           />
           <IndicatorCard
             title="Consumo en litros"
             value={formatNumberAr(metrics.liters) + " Lts"}
-            color="blue"
+            color="gray"
           />
           <IndicatorCard
             title="Consumo en kilos"
             value={formatNumberAr(metrics.kilograms) + " Kg"}
-            color="blue"
+            color="gray"
           />
           <IndicatorCard
             title="Costos directos"

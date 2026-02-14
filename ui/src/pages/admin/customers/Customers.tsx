@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 
 import DataTable from "../../../components/Table/DataTable";
+import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ProjectData } from "../../../hooks/useDatabase/projects/types";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useNavigate } from "react-router-dom";
@@ -258,16 +259,12 @@ export function Customers() {
           },
         ]}
       >
-        <div className="flex items-center gap-2 bg-white rounded-xl px-4 shadow-sm py-2 border border-gray-400">
-          <div>
-            <p className="text-sm text-gray-900">
-              Superficie total de hectáreas
-            </p>
-            <p className="text-xl font-bold text-gray-600">
-              {totalHectares} Has
-            </p>
-          </div>
-        </div>
+        <IndicatorCard
+          title="Superficie total de hectáreas"
+          value={`${totalHectares} Has`}
+          color="amber"
+          className="w-[220px] max-w-[220px] flex-none"
+        />
       </FilterBar>
 
       {errors.customers ||

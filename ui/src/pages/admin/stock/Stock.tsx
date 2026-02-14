@@ -144,11 +144,13 @@ function CloseStockDate({
   }, [date]);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3">
-      <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
-        Cerrar stock a fecha
-      </label>
-      <div className="flex items-center gap-3">
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="h-1.5 w-full bg-gray-900" />
+      <div className="px-4 py-3">
+        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
+          Cerrar stock a fecha
+        </label>
+        <div className="flex items-center gap-3">
         <input
           type="date"
           disabled={disabledCloseStock}
@@ -156,23 +158,24 @@ function CloseStockDate({
           onChange={(e) => setInternalDate(e.target.value)}
           className="px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-custom-btn/30 focus:border-custom-btn disabled:bg-gray-100 disabled:text-gray-400"
         />
-        <label className={`inline-flex items-center gap-2 cursor-pointer ${disabledCloseStock ? "opacity-50 cursor-not-allowed" : ""}`}>
-          <input
-            type="checkbox"
-            checked={enabledCloseStock}
-            onChange={() => {
-              if (!enabledCloseStock && internalDate) {
-                setEnabledCloseStock(true);
-                onDateChange(internalDate);
-              } else {
-                setEnabledCloseStock(false);
-              }
-            }}
-            className="w-4 h-4 text-custom-btn border-gray-300 rounded focus:ring-custom-btn/30"
-            disabled={disabledCloseStock}
-          />
-          <span className="text-xs font-semibold text-gray-600">Cerrar stock</span>
-        </label>
+          <label className={`inline-flex items-center gap-2 cursor-pointer ${disabledCloseStock ? "opacity-50 cursor-not-allowed" : ""}`}>
+            <input
+              type="checkbox"
+              checked={enabledCloseStock}
+              onChange={() => {
+                if (!enabledCloseStock && internalDate) {
+                  setEnabledCloseStock(true);
+                  onDateChange(internalDate);
+                } else {
+                  setEnabledCloseStock(false);
+                }
+              }}
+              className="w-4 h-4 text-custom-btn border-gray-300 rounded focus:ring-custom-btn/30"
+              disabled={disabledCloseStock}
+            />
+            <span className="text-xs font-semibold text-gray-600">Cerrar stock</span>
+          </label>
+        </div>
       </div>
     </div>
   );
@@ -199,12 +202,12 @@ function ItemsIndicators({
         <IndicatorCard
           title="Total invertido Kg"
           value={formatNumberAr(summary.total_kg) + " Kg"}
-          color="blue"
+          color="gray"
         />
         <IndicatorCard
           title="Total invertido Lts"
           value={formatNumberAr(summary.total_lt) + " Lts"}
-          color="blue"
+          color="gray"
         />
         <IndicatorCard
           title="Total u$ / Neto"
@@ -402,7 +405,7 @@ export function Stock() {
         header: "Ingresados",
         render: (value, item) => {
           const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
-          return <span className="font-semibold text-blue-700">{formatNumberAr(value)} <span className="text-blue-400 font-normal text-xs">{unit}</span></span>;
+          return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
       },
       {
@@ -413,7 +416,7 @@ export function Stock() {
         headerPadding: "xs",
         render: (value, item) => {
           const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
-          return <span className="font-semibold text-blue-700">{formatNumberAr(value)} <span className="text-blue-400 font-normal text-xs">{unit}</span></span>;
+          return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -430,7 +433,7 @@ export function Stock() {
         padding: "xs",
         render: (value, item) => {
           const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
-          return <span className="font-bold text-blue-800">{formatNumberAr(value)} <span className="text-blue-400 font-normal text-xs">{unit}</span></span>;
+          return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(

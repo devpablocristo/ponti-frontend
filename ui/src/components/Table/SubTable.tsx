@@ -29,9 +29,9 @@ export const SubTable = <T,>({
         </thead>
         <tbody>
           {data.map((item, idx) => (
-            <tr key={idx} className="border-t border-gray-500">
+            <tr key={idx} className="border-t border-gray-500 font-normal">
               {columns.map((col) => (
-                <td key={String(col.key)} className="px-4 py-2">
+                <td key={String(col.key)} className="px-4 py-2 font-normal">
                   {col.render
                     ? col.render(item[col.key], item)
                     : String(item[col.key])}

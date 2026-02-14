@@ -35,7 +35,7 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
         value={`${metrics.sowing.progress_pct}%`}
         subtext={`${metrics.sowing.hectares} Has / ${metrics.sowing.total_hectares} Has`}
         icon={<ArrowUp className="w-4 h-4" />}
-        color="green"
+        color="blue"
       />
 
       <IndicatorCard
@@ -43,15 +43,15 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
         value={`${metrics.costs.progress_pct}%`}
         subtext={`u$${formatNumberAr(metrics.costs.executed_usd)} / u$${formatNumberAr(metrics.costs.budget_usd)}`}
         icon={<ArrowUp className="w-4 h-4" />}
-        color="green"
+        color="red"
       />
 
       <IndicatorCard
         title="Avance de cosecha"
         value={`${metrics.harvest.progress_pct}%`}
         subtext={`${metrics.harvest.hectares} / ${metrics.harvest.total_hectares} Has`}
-        icon={<Hourglass className="w-4 h-4 text-gray-500" />}
-        color="gray"
+        icon={<Hourglass className="w-4 h-4" />}
+        color="blue"
       />
 
       <IndicatorCard
@@ -73,14 +73,14 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
               .join(" - ")
             : "N/A"
         }
-        color="gray"
+        color="purple"
       />
 
       <IndicatorCard
         title="Renta (Rdo. Oper. / Total Activo.)"
         value={`${metrics.operating_result.margin_pct}%`}
         subtext={`u$${formatNumberAr(metrics.operating_result.result_usd)} / u$${formatNumberAr(metrics.operating_result.total_costs_usd)}`}
-        icon={<Wallet className="w-4 h-4 text-red-500" />}
+        icon={<Wallet className="w-4 h-4" />}
         color="red"
       />
     </div>

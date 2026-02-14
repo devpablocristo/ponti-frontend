@@ -25,12 +25,12 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
         <IndicatorCard
           title="Total invertido Kg"
           value={formatNumberAr(safeSummary.total_kg) + " Kg"}
-          color="blue"
+          color="gray"
         />
         <IndicatorCard
           title="Total invertido Lts"
           value={formatNumberAr(safeSummary.total_lt) + " Lts"}
-          color="blue"
+          color="gray"
         />
         <IndicatorCard
           title="Total u$ / Neto"

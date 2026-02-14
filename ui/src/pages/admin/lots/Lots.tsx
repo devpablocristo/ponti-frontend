@@ -140,27 +140,27 @@ function LotsIndicators({
           <IndicatorCard
             title="Sup. sembrada"
             value={formatNumberAr(kpis.seeded_area) + " Has"}
-            color="green"
+            color="amber"
           />
           <IndicatorCard
             title="Sup. cosechada"
             value={formatNumberAr(kpis.harvested_area) + " Has"}
-            color="green"
+            color="amber"
           />
           <IndicatorCard
             title="Tn / hectárea"
             value={formatNumberAr(kpis.yield_tn_per_ha) + " Tn"}
-            color="amber"
+            color="green"
           />
           <IndicatorCard
             title="Costo / hectárea"
             value={"u$ " + formatNumberAr(kpis.cost_per_hectare)}
-            color="amber"
+            color="red"
           />
           <IndicatorCard
             title="Superficie total"
             value={formatNumberAr(kpis.superficie_total) + " Has"}
-            color="green"
+            color="amber"
           />
         </div>
       )}

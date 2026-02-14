@@ -154,12 +154,12 @@ function TasksIndicators({
           <IndicatorCard
             title="Superficie total"
             value={formatNumberAr(metrics.surface_ha) + " Has"}
-            color="green"
+            color="amber"
           />
           <IndicatorCard
             title="Costo promedio / Ha"
             value={"u$ " + formatNumberAr(metrics.avg_cost_per_ha)}
-            color="amber"
+            color="red"
           />
           <IndicatorCard
             title="Total u$ / Neto"
