@@ -11,6 +11,7 @@ import { useClickOutside } from "../../login/useClickOutside";
 import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
+import useStock from "../../../hooks/useStock";
 import {
   Campaign,
   Customer,
@@ -132,6 +133,7 @@ export default function CreateItem({
   const { getSupplies, supplies } = useProducts();
   const { projectsDropdown, getProjectsDropdown } = useProjects();
   const { campaigns, getCampaigns } = useCampaigns();
+  const { getStock, stock } = useStock();
 
   const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState("");
@@ -233,6 +235,13 @@ export default function CreateItem({
     }
   }, [projectId]);
 
+  // Para Movimiento interno: cargar stock disponible para validar cantidades
+  useEffect(() => {
+    if (type?.id === 2 && projectId) {
+      getStock(projectId, "");
+    }
+  }, [type?.id, projectId, getStock]);
+
   useEffect(() => {
     if (!selectedProject) return;
     setInvestors(
@@ -287,6 +296,36 @@ export default function CreateItem({
     );
   };
 
+  // Stock disponible por supply_id (solo para Movimiento interno)
+  const stockBySupplyId = (() => {
+    if (type?.id !== 2 || !stock.length) return new Map<number, number>();
+    const map = new Map<number, number>();
+    for (const s of stock) {
+      const supply = supplies.find((sp) => sp.name === s.supply_name);
+      if (supply) {
+        const units =
+          typeof s.real_stock_units === "number"
+            ? s.real_stock_units
+            : Number(s.real_stock_units) || 0;
+        const current = map.get(supply.id) ?? 0;
+        map.set(supply.id, current + units);
+      }
+    }
+    return map;
+  })();
+
+  const getStockForSupply = (supplyId: string): number | null => {
+    if (!supplyId || type?.id !== 2) return null;
+    const id = Number(supplyId);
+    return stockBySupplyId.has(id) ? stockBySupplyId.get(id)! : null;
+  };
+
+  // Para Movimiento interno: solo insumos con stock disponible
+  const suppliesForDropdown =
+    type?.id === 2 && stock.length > 0
+      ? supplies.filter((s) => (getStockForSupply(String(s.id)) ?? 0) > 0)
+      : supplies;
+
   const handlePreSave = () => {
     const errors: string[] = [];
     setErrorMessages(errors);
@@ -338,6 +377,20 @@ export default function CreateItem({
     if (hasPartial) {
       errors.push("No se completaron todos los campos de los items cargados");
       return;
+    }
+
+    // Validar stock disponible para Movimiento interno
+    if (type?.id === 2) {
+      for (const item of itemsWithAnyValue) {
+        const available = getStockForSupply(item.item);
+        if (available !== null && Number(item.quantity) > available) {
+          const supplyName =
+            supplies.find((s) => s.id === Number(item.item))?.name ?? "insumo";
+          errors.push(
+            `La cantidad (${item.quantity}) supera el stock disponible (${available}) para ${supplyName}`
+          );
+        }
+      }
     }
 
     if (errors.length > 0) {
@@ -563,7 +616,7 @@ export default function CreateItem({
                         <SelectField
                           label=""
                           name={`item-${i}`}
-                          options={supplies}
+                          options={suppliesForDropdown}
                           value={item.item}
                           onChange={(e) =>
                             handleItemChange(i, "item", e.target.value)
@@ -572,6 +625,12 @@ export default function CreateItem({
                         />
                       </div>
                       <div className="sm:col-span-1">
+                        {type?.id === 2 && item.item && (
+                          <span className="block text-xs text-gray-600 mb-1">
+                            Stock disponible:{" "}
+                            {getStockForSupply(item.item) ?? "—"}
+                          </span>
+                        )}
                         <InputField
                           label=""
                           placeholder="Lts/kg"

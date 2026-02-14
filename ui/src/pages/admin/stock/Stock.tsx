@@ -12,6 +12,7 @@ import { Column } from "../types";
 import SelectField from "../../../components/Input/SelectField";
 import APIClient from "../../../restclient/apiInstance";
 import { formatNumberAr } from "../utils";
+import CreateStockItem from "./CreateStockItem";
 
 const request = new APIClient({
   timeout: 15000,
@@ -251,7 +252,9 @@ export function Stock() {
 
   const [period, setPeriod] = useState("0");
 
-  const { projectId, filters, selectedCustomer, selectedCampaignId } =
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const { projectId, filters, selectedCustomer, selectedCampaignId, customers } =
     useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const {
@@ -267,6 +270,12 @@ export function Stock() {
     errorPeriods,
     periods,
   } = useStock();
+
+  const handleStockCreated = () => {
+    if (!projectId) return;
+    setCurrentPage(1);
+    getStock(projectId, period === "0" ? "" : stockPeriods[Number(period)]?.name || "");
+  };
 
   const filteredStock = useMemo(() => {
     return (Array.isArray(stock) ? stock : []).filter((item) => {
@@ -669,6 +678,13 @@ export function Stock() {
             disabled: !projectId,
             onClick: () => handleExport(),
           },
+          {
+            label: "+ Ingreso de stock",
+            variant: "success",
+            isPrimary: true,
+            disabled: !projectId || disabledCloseStock,
+            onClick: () => setDrawerOpen(true),
+          },
         ]}
       />
       {!error && projectId && selectedCustomer && selectedCampaignId && (
@@ -711,6 +727,15 @@ export function Stock() {
           />
         )}
         {errorPeriods && <div>{errorPeriods}</div>}
+        {projectId && customers && (
+          <CreateStockItem
+            customers={customers}
+            drawerOpen={drawerOpen}
+            setDrawerOpen={setDrawerOpen}
+            projectId={projectId}
+            onStockCreated={handleStockCreated}
+          />
+        )}
         {projectId && selectedCustomer && selectedCampaignId && (
           <DataTable
             data={filteredStock}
