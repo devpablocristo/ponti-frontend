@@ -7,29 +7,11 @@ import Button from "../../../../components/Button/Button";
 import DataTable from "../../../../components/Table/DataTable";
 import APIClient from "../../../../restclient/apiInstance";
 import { ErrorResponse } from "../../../../restclient/types";
-
-type IntegrityCheck = {
-  control_number: number;
-  data_to_verify: string;
-  description: string;
-  control_rule: string;
-  system_calculation: string;
-  system_value: string;
-  system_source: string;
-  system_meaning: string;
-  recalc_a_calculation: string;
-  recalc_a_value: string;
-  recalc_a_source: string;
-  recalc_a_meaning: string;
-  recalc_b_calculation?: string;
-  recalc_b_value?: string;
-  recalc_b_source?: string;
-  recalc_b_meaning?: string;
-  difference_a: string;
-  difference_b?: string;
-  status: string;
-  tolerance: string;
-};
+import {
+  hasRecalcBData,
+  IntegrityCheck,
+  sortIntegrityChecks,
+} from "./integrityUtils";
 
 type IntegrityReportResponse = {
   checks: IntegrityCheck[];
@@ -62,7 +44,7 @@ export default function Integrity() {
         "data-integrity/costs-check",
         params
       );
-      setChecks(response.checks ?? []);
+      setChecks(sortIntegrityChecks(response.checks ?? []));
     } catch (error) {
       const axiosError = error as AxiosError;
       if (axiosError.response) {
@@ -115,6 +97,9 @@ export default function Integrity() {
         <Button onClick={handleRun} variant="success" disabled={processing}>
           {processing ? "Ejecutando..." : "Ejecutar controles"}
         </Button>
+        <span className="text-sm text-gray-600">
+          Se muestran {checks.length} controles.
+        </span>
         <span className="text-sm text-gray-600">
           Proyecto opcional: si no se selecciona, valida todos.
         </span>
@@ -197,7 +182,7 @@ export default function Integrity() {
                 )}
               </div>
 
-              {(item.recalc_b_calculation ?? item.recalc_b_value ?? item.recalc_b_source) != null && (
+              {hasRecalcBData(item) && (
                 <div className="min-w-0 p-3 rounded-md bg-violet-50 border border-violet-200">
                   <div className="text-xs font-semibold uppercase text-violet-700 mb-1">
                     Recálculo B

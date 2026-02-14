@@ -20,8 +20,8 @@ export type Field = {
   id: number;
   name: string;
   leaseType: string;
-  leaseTypePercent: number;
-  leaseTypeValue: number;
+  leaseTypePercent: number | "";
+  leaseTypeValue: number | "";
   investors: {
     id: number;
     name: string;
@@ -122,10 +122,16 @@ export default function Fields({
 
   const handleSaveLeaseTypeValue = () => {
     if (pendingLeaseType) {
-      const percent = Number(leaseTypePercent);
-      const dollar = Number(leaseTypeDollar);
+      const percent =
+        leaseTypePercent === "" ? "" : Number(leaseTypePercent);
+      const dollar = leaseTypeDollar === "" ? "" : Number(leaseTypeDollar);
 
-      if (isNaN(percent) || isNaN(dollar)) return;
+      if (
+        (percent !== "" && Number.isNaN(percent)) ||
+        (dollar !== "" && Number.isNaN(dollar))
+      ) {
+        return;
+      }
 
       handleFieldChange(
         pendingLeaseType.key,
@@ -158,8 +164,8 @@ export default function Fields({
         id: 0,
         name: "",
         leaseType: "",
-        leaseTypePercent: 0,
-        leaseTypeValue: 0,
+        leaseTypePercent: "",
+        leaseTypeValue: "",
         investors: [],
         plots: [
           {
@@ -594,7 +600,7 @@ export default function Fields({
                   const val = Number(e.target.value);
                   if (val > 100) return;
                   setLeaseTypePercent(e.target.value === "" ? "" : val);
-                  setLeaseTypeDollar(0);
+                  setLeaseTypeDollar("");
                 }}
                 placeholder="Porcentaje"
                 className="border rounded px-2 py-1 w-32 text-center"
@@ -617,7 +623,7 @@ export default function Fields({
                 onChange={(e) => {
                   const val = Number(e.target.value);
                   setLeaseTypeDollar(e.target.value === "" ? "" : val);
-                  setLeaseTypePercent(0);
+                  setLeaseTypePercent("");
                 }}
                 placeholder="Valor en USD"
                 className="border rounded px-2 py-1 w-32 text-center"

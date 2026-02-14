@@ -5,6 +5,7 @@ import * as actions from "./actions";
 import APIClient from "../../../restclient/apiInstance";
 import { Project, ProjectPayload, ProjectDropdownPayload } from "./types";
 import { ErrorResponse, SuccessResponse } from "../../../restclient/types";
+import { getApiErrorMessage, getApiErrorStatus } from "../../../utils/getApiErrorMessage";
 
 import useProjectReducer from "./projectReducer";
 
@@ -55,35 +56,24 @@ const useProjects = () => {
           payload: "Ocurrio un error al intentar guardar el proyecto",
         });
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            if (errorResponse.error.status === 409) {
-              dispatch({
-                type: actions.SET_ERROR,
-                payload: "Ya existe un proyecto con el mismo nombre y campaña.",
-              });
-              return;
-            }
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la creación del proyecto.";
-
-            dispatch({
-              type: actions.SET_ERROR,
-              payload: message,
-            });
-            return;
-          }
+        const status = getApiErrorStatus(error);
+        if (status === 409) {
+          dispatch({
+            type: actions.SET_ERROR,
+            payload: "Ya existe un proyecto con el mismo nombre y campaña.",
+          });
+          return;
         }
 
+        const message = getApiErrorMessage(
+          error,
+          "Error desconocido en la creación del proyecto."
+        );
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Error en el servicio, inténtalo más tarde",
+          payload: message,
         });
+        return;
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
       }
@@ -294,37 +284,25 @@ const useProjects = () => {
           payload: "Ocurrio un error al intentar editar un proyecto.",
         });
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            if (errorResponse.error.status === 404) {
-              dispatch({
-                type: actions.SET_ERROR,
-                payload:
-                  "No se encontró el proyecto o no tiene la última versión disponible.",
-              });
-              return;
-            }
-
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido al intentar editar un proyecto.";
-
-            dispatch({
-              type: actions.SET_ERROR,
-              payload: message,
-            });
-            return;
-          }
+        const status = getApiErrorStatus(error);
+        if (status === 404) {
+          dispatch({
+            type: actions.SET_ERROR,
+            payload:
+              "No se encontró el proyecto o no tiene la última versión disponible.",
+          });
+          return;
         }
 
+        const message = getApiErrorMessage(
+          error,
+          "Error desconocido al intentar editar un proyecto."
+        );
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Error en el servicio, inténtalo más tarde.",
+          payload: message,
         });
+        return;
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
       }

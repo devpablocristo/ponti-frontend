@@ -159,25 +159,3 @@ export const computeInsights = async (
   return (await response.json()) as ComputeInsightsResult;
 };
 
-export type RecomputeBaselinesResult = {
-  status: string;
-  job_run_id: string;
-  cohort_saved: number;
-  project_saved: number;
-};
-
-export const recomputeBaselines = async (
-  headers: AskHeaders
-): Promise<RecomputeBaselinesResult> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}/jobs/recompute-baselines`, {
-    method: "POST",
-    headers: buildHeaders(headers.projectId),
-    body: JSON.stringify({}),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al recalcular baselines");
-  }
-  return (await response.json()) as RecomputeBaselinesResult;
-};

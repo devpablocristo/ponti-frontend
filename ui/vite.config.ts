@@ -18,10 +18,10 @@ export default defineConfig(({ mode }: ConfigEnv) => {
             },
           }
         : undefined,
-    // resolve: {
-    //   alias: {
-    //     "@": path.resolve(__dirname, "./src"),
-    //   },
-    // },
+    test: {
+      environment: "jsdom",
+      setupFiles: "./src/test/setup.ts",
+      globals: true,
+    },
   };
 });

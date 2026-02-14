@@ -28,7 +28,7 @@ export const getApiErrorMessage = (
 
   const message =
     typeof data === "object" && data
-      ? data.error?.details || data.message || data.error_message || data.details
+      ? data.message || data.error_message || data.details || data.error?.details
       : undefined;
 
   if (typeof message === "string" && message.trim() !== "") {
