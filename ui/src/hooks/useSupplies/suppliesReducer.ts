@@ -1,7 +1,7 @@
 import React from "react";
 
 import * as actions from "./actions";
-import { SupplyData, Supply } from "./types";
+import { Supply } from "./types";
 import { PageInfo } from "../useDatabase/projects/types";
 
 interface SupplyState {

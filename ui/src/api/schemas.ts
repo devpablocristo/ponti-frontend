@@ -26,7 +26,7 @@ export const apiErrorSchema = z.object({
   code: z.number().optional(),
   message: z.string().optional(),
   details: z.string().optional(),
-  context: z.record(z.unknown()).optional(),
+  context: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type ApiError = z.infer<typeof apiErrorSchema>;

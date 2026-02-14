@@ -37,19 +37,19 @@ interface UseApiCallOptions {
   errorFallback?: string;
 }
 
-interface UseApiCallResult<T> {
+interface UseApiCallResult<T, Args extends unknown[]> {
   data: T | null;
   error: string | null;
   errorStatus: number | undefined;
   loading: boolean;
-  execute: (...args: never[]) => Promise<T | undefined>;
+  execute: (...args: Args) => Promise<T | undefined>;
   reset: () => void;
 }
 
 export function useApiCall<T, Args extends unknown[] = unknown[]>(
   apiFn: (...args: Args) => Promise<T>,
   options?: UseApiCallOptions
-): UseApiCallResult<T> {
+): UseApiCallResult<T, Args> {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorStatus, setErrorStatus] = useState<number | undefined>(undefined);
@@ -101,7 +101,7 @@ export function useApiCall<T, Args extends unknown[] = unknown[]>(
     setLoading(false);
   }, []);
 
-  return { data, error, errorStatus, loading, execute, reset } as UseApiCallResult<T>;
+  return { data, error, errorStatus, loading, execute, reset };
 }
 
 export { extractErrorMessage, extractErrorStatus };
