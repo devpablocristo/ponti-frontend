@@ -85,7 +85,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
     setImmediate(() => cache.flushAll());
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {

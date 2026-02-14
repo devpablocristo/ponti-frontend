@@ -675,7 +675,6 @@ export default function Customers() {
     try {
       await deleteProject(Number(id));
     } catch (error) {
-      console.error("Error al finalizar:", error);
       errorMessage =
         error instanceof Error
           ? error.message

@@ -42,7 +42,6 @@ router.get("", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {

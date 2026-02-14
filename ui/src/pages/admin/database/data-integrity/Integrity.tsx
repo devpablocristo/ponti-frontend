@@ -5,8 +5,8 @@ import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import Button from "../../../../components/Button/Button";
 import DataTable from "../../../../components/Table/DataTable";
-import APIClient from "../../../../restclient/apiInstance";
-import { ErrorResponse } from "../../../../restclient/types";
+import { apiClient } from "@/api/client";
+import { ErrorResponse } from "@/api/types";
 import {
   hasRecalcBData,
   IntegrityCheck,
@@ -16,11 +16,6 @@ import {
 type IntegrityReportResponse = {
   checks: IntegrityCheck[];
 };
-
-const request = new APIClient({
-  timeout: 60000,
-  baseURL: "/api",
-});
 
 export default function Integrity() {
   const { filters, projectId, selectedProject } = useWorkspaceFilters([
@@ -40,7 +35,7 @@ export default function Integrity() {
       const params = resolvedProjectId
         ? { project_id: resolvedProjectId }
         : undefined;
-      const response = await request.get<IntegrityReportResponse>(
+      const response = await apiClient.get<IntegrityReportResponse>(
         "data-integrity/costs-check",
         params
       );

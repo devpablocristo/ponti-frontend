@@ -58,7 +58,7 @@ router.get("", async (req: Request, res: Response) => {
       headers
     );
 
-    const adaptedProjects = projects.data.map((project: any) => {
+    const adaptedProjects = (projects.items ?? []).map((project: any) => {
       const client = project.customer?.name || "No client";
       const projectName = project.name;
 
@@ -87,17 +87,12 @@ router.get("", async (req: Request, res: Response) => {
       data: {
         data: adaptedProjects,
         total_hectares: projects.total_hectares,
-        page_info: {
-          per_page: projects.page_info.per_page,
-          page: projects.page_info.page,
-          max_page: projects.page_info.max_page,
-          total: projects.page_info.total,
-        },
+        page_info: projects.page_info,
       },
     };
 
     setImmediate(() => {
-      if (projects.data.length > 0) {
+      if (adaptedProjects.length > 0) {
         cache.set(cacheKey, data, 60 * 5);
       }
     });
@@ -139,9 +134,9 @@ router.get("/archived", async (req: Request, res: Response) => {
     );
 
     const archivedCustomerIds = new Set<number>(
-      (archivedCustomers?.data ?? []).map((customer: any) => Number(customer.id))
+      (archivedCustomers?.items ?? []).map((customer: any) => Number(customer.id))
     );
-    const filteredProjects = projects.data.filter((project: any) => {
+    const filteredProjects = (projects.items ?? []).filter((project: any) => {
       const customerId = Number(project.customer?.id ?? 0);
       return !archivedCustomerIds.has(customerId);
     });
@@ -176,9 +171,7 @@ router.get("/archived", async (req: Request, res: Response) => {
         data: adaptedProjects,
         total_hectares: projects.total_hectares,
         page_info: {
-          per_page: projects.page_info.per_page,
-          page: projects.page_info.page,
-          max_page: projects.page_info.max_page,
+          ...projects.page_info,
           total: adaptedProjects.length,
         },
       },
@@ -231,17 +224,12 @@ const handleProjectsByCustomer = async (req: Request, res: Response) => {
     const data = {
       success: true,
       data: {
-        data: projects.data,
-        page_info: {
-          per_page: projects.page_info.per_page,
-          page: projects.page_info.page,
-          max_page: projects.page_info.max_page,
-          total: projects.page_info.total,
-        },
+        data: projects.items ?? [],
+        page_info: projects.page_info,
       },
     };
 
-    if (projects.data.length > 0) {
+    if ((projects.items ?? []).length > 0) {
       cache.set(url, data);
     }
 
@@ -292,7 +280,6 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -334,7 +321,6 @@ router.post("", async (req: Request, res: Response) => {
       msg: "ok",
     });
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -377,7 +363,6 @@ router.put("/:id", async (req: Request, res: Response) => {
       msg: "ok",
     });
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -413,7 +398,6 @@ router.delete(
       setImmediate(() => cache.flushAll());
       res.status(200).json(data);
     } catch (error: any) {
-      console.log(error);
       const err = error as ApiResponse<null>;
 
       if ("error" in err) {
@@ -448,7 +432,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
     setImmediate(() => cache.flushAll());
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -482,7 +465,6 @@ router.put("/:id/archive", async (req: Request, res: Response) => {
     setImmediate(() => cache.flushAll());
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -516,7 +498,6 @@ router.put("/:id/restore", async (req: Request, res: Response) => {
     setImmediate(() => cache.flushAll());
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -550,7 +531,6 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
     setImmediate(() => cache.flushAll());
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -607,7 +587,6 @@ router.get("/:id/dollar-values", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -662,7 +641,6 @@ router.put("/:id/dollar-values", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -716,7 +694,6 @@ router.post("/:id/labors", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -773,7 +750,6 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -789,7 +765,7 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/:id/commerce", async (req: Request, res: Response) => {
+router.get("/:id/commercializations", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
@@ -830,7 +806,6 @@ router.get("/:id/commerce", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -846,7 +821,7 @@ router.get("/:id/commerce", async (req: Request, res: Response) => {
   }
 });
 
-router.post("/:id/commerce", async (req: Request, res: Response) => {
+router.post("/:id/commercializations", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
@@ -880,7 +855,6 @@ router.post("/:id/commerce", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {

@@ -1,24 +1,20 @@
 import { AxiosError } from "axios";
 import { jwtDecode } from "jwt-decode";
 
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { DecodedToken, LogoutData, TokenResponse, UserData } from "./types";
 import {
   ErrorResponse,
   RequestError,
   SuccessResponse,
-} from "../../restclient/types";
-
-const restClient = new APIClient({
-  baseURL: "/api",
-});
+} from "@/api/types";
 
 export class AuthService {
   static async login(
     userData: UserData
   ): Promise<{ token: TokenResponse; user: DecodedToken }> {
     try {
-      const response = await restClient.post<SuccessResponse<TokenResponse>>(
+      const response = await apiClient.post<SuccessResponse<TokenResponse>>(
         "/auth/login",
         userData
       );
@@ -57,7 +53,7 @@ export class AuthService {
     };
 
     try {
-      await restClient.post<any>("/auth/logout", logoutData);
+      await apiClient.post<any>("/auth/logout", logoutData);
       return;
     } catch (error) {
       const axiosError = error as AxiosError;
@@ -71,7 +67,7 @@ export class AuthService {
 
   static async refreshToken(): Promise<string> {
     try {
-      const response = await restClient.get<SuccessResponse<TokenResponse>>(
+      const response = await apiClient.get<SuccessResponse<TokenResponse>>(
         "/auth/access-token"
       );
 
@@ -92,7 +88,7 @@ export class AuthService {
 
   static async validateToken(): Promise<void> {
     try {
-      await restClient.get("/auth/session");
+      await apiClient.get("/auth/session");
     } catch (error) {
       const axiosError = error as AxiosError;
 

@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import useProducts from "../../../../hooks/useProducts";
+import useSupplies from "../../../../hooks/useSupplies";
 import DataTable from "../../../../components/Table/DataTable";
-import { Supply } from "../../../../hooks/useProducts/types";
+import { Supply } from "../../../../hooks/useSupplies/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
@@ -12,12 +12,7 @@ import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import { units } from "./Items";
 import useCategories from "../../../../hooks/useCategories";
-import APIClient from "../../../../restclient/apiInstance";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { apiClient } from "@/api/client";
 
 const columns: Column<Supply>[] = [
   { key: "id", header: "ID" },
@@ -54,7 +49,7 @@ export default function ListItems() {
     processing,
     errorUpdate,
     resultUpdate,
-  } = useProducts();
+  } = useSupplies();
   const { categories, types, getCategories, getTypes } = useCategories();
 
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -147,7 +142,7 @@ export default function ListItems() {
     if (!projectId) return;
 
     try {
-      const response = await request.get<Blob>(
+      const response = await apiClient.get<Blob>(
         `/supply_movements/database-export/${projectId}`,
         undefined,
         { responseType: "blob" }

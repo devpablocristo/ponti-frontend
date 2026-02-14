@@ -66,7 +66,6 @@ router.get("", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -128,7 +127,6 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
     if ("error" in err) {
       res.status(err.error?.status || 500).json(err);
@@ -188,7 +186,6 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -256,7 +253,6 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -305,7 +301,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {

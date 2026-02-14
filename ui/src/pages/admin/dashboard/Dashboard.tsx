@@ -101,7 +101,7 @@ export function Dashboard() {
   const buildQueryParams = () => {
     const params: Record<string, string> = {};
 
-    if (selectedCustomer && selectedCustomer.id != 0) {
+    if (selectedCustomer && selectedCustomer.id !== 0) {
       params.customer_id = String(selectedCustomer.id);
     }
 
@@ -120,7 +120,7 @@ export function Dashboard() {
 
   useEffect(() => {
     getDashboardInfo(buildQueryParams());
-  }, []);
+  }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
   if (processing) {
     return (
@@ -157,7 +157,7 @@ export function Dashboard() {
             variant: "success",
             isPrimary: true,
             disabled: true,
-            onClick: () => console.log("Exportar PDF"),
+            onClick: () => {},
           },
         ]}
       />

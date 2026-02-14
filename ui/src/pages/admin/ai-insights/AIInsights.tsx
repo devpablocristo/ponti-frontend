@@ -10,7 +10,7 @@ import {
   getInsightsSummary,
   InsightsSummary,
   InsightItem,
-} from "../../../restclient/aiClient";
+} from "@/api/aiClient";
 
 const AIInsights: React.FC = () => {
   const { filters, projectId } = useWorkspaceFilters([

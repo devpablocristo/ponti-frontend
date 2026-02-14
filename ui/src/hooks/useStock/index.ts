@@ -1,16 +1,11 @@
 import React, { useState } from "react";
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 
 import useStockReducer from "./useStockReducer";
 import * as actions from "./actions";
-import { SuccessResponse } from "../../restclient/types";
+import { SuccessResponse } from "@/api/types";
 import { GetStocksResponse } from "./types";
-import { getApiErrorMessage } from "../../utils/getApiErrorMessage";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
 const useStock = () => {
   const [{ currentPage, stock, summary }, dispatch] = useStockReducer();
@@ -35,7 +30,7 @@ const useStock = () => {
       setError(null);
 
       try {
-        const response = await request.get<SuccessResponse<GetStocksResponse>>(
+        const response = await apiClient.get<SuccessResponse<GetStocksResponse>>(
           `/stock/${projectId}?cutoff_date=${cutOffDate}`
         );
 
@@ -58,7 +53,7 @@ const useStock = () => {
         setError("Ocurrio un error en la busqueda de STOCK");
       } catch (error) {
         setError(
-          getApiErrorMessage(error, "Error desconocido en la busqueda de stock.")
+          extractErrorMessage(error, "Error desconocido en la busqueda de stock.")
         );
       } finally {
         setProcessing(false);
@@ -73,7 +68,7 @@ const useStock = () => {
       setErrorPeriods(null);
 
       try {
-        const response = await request.get<SuccessResponse<string[]>>(
+        const response = await apiClient.get<SuccessResponse<string[]>>(
           `/stock/periods/${projectId}`
         );
 
@@ -84,7 +79,7 @@ const useStock = () => {
         setErrorPeriods("Ocurrio un error en la busqueda de PERIODOS");
       } catch (error) {
         setErrorPeriods(
-          getApiErrorMessage(error, "Error desconocido en la busqueda de periodos.")
+          extractErrorMessage(error, "Error desconocido en la busqueda de periodos.")
         );
       } finally {
         setProcessingPeriods(false);
@@ -100,7 +95,7 @@ const useStock = () => {
       setResultStock(null);
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SuccessResponse<any>>(
           `/stock/${projectId}/${id}`,
           { real_stock_units: realStock }
         );
@@ -113,7 +108,7 @@ const useStock = () => {
         setErrorStock("Ocurrio un error en la modificacion del stock");
       } catch (error) {
         setErrorStock(
-          getApiErrorMessage(
+          extractErrorMessage(
             error,
             "Error desconocido en la modificacion del stock."
           )
@@ -132,7 +127,7 @@ const useStock = () => {
       setResultCloseStock(null);
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SuccessResponse<any>>(
           `/stock/close/${projectId}`,
           { close_date: closeDate }
         );
@@ -145,7 +140,7 @@ const useStock = () => {
         setErrorCloseStock("Ocurrio un error en el cierre del stock");
       } catch (error) {
         setErrorCloseStock(
-          getApiErrorMessage(error, "Error desconocido en el cierre del stock.")
+          extractErrorMessage(error, "Error desconocido en el cierre del stock.")
         );
       } finally {
         setProcessingCloseStock(false);

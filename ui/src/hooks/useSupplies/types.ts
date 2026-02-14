@@ -1,4 +1,4 @@
-export interface ProductData {
+export interface SupplyData {
   ingreso: string;
   remito: string;
   fecha: string;
@@ -12,7 +12,7 @@ export interface ProductData {
   totalNeto: number;
 }
 
-export type Product = {
+export type SupplyCreatePayload = {
   name: string;
   unit: number;
   price: number;

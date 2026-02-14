@@ -9,13 +9,17 @@ export interface ApiResponse<T = any> {
 
 interface ErrorResponse {
   status: number;
+  type?: string;
+  code?: number;
+  message?: string;
   details: string;
+  context?: Record<string, any>;
 }
 
 export class ApiClient {
   private axiosInstance: AxiosInstance;
 
-  constructor(baseURL: string, timeout = 8000) {
+  constructor(baseURL: string, timeout = 30000) {
     this.axiosInstance = axios.create({
       baseURL,
       timeout,
@@ -28,13 +32,19 @@ export class ApiClient {
   }
 
   private handleErrorResponse(error: AxiosError): Promise<ApiResponse<null>> {
-    // Resolver el mensaje más útil posible del backend
+    // Preservar la estructura de error del BE (type, code, message, details, context)
     const data = error.response?.data as {
-      error?: { details?: string };
+      type?: string;
+      code?: number;
       message?: string;
+      details?: string;
+      context?: Record<string, any>;
+      error?: { details?: string };
       error_message?: string;
     };
+
     const details =
+      data?.details ||
       data?.error?.details ||
       data?.message ||
       data?.error_message ||
@@ -42,10 +52,14 @@ export class ApiClient {
 
     return Promise.reject<ApiResponse<null>>({
       success: false,
-      message: "Error en la solicitud",
+      message: data?.message || "Error en la solicitud",
       error: {
         status: error.response?.status ?? 500,
+        type: data?.type,
+        code: data?.code,
+        message: data?.message,
         details,
+        context: data?.context,
       },
     });
   }

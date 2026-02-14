@@ -98,7 +98,6 @@ router.get("/:project_id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -154,7 +153,6 @@ router.delete(
 
       res.status(200).json(data);
     } catch (error: any) {
-      console.log(error);
       const err = error as ApiResponse<null>;
 
       if ("error" in err) {
@@ -205,7 +203,6 @@ router.post("/:project_id", async (req: Request, res: Response) => {
 
     res.status(201).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {

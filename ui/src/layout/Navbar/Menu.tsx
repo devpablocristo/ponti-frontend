@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import Button from "../../components/Button/Button";
 import { useSelection } from "../../pages/login/context/SelectionContext";
-import { getInsightsSummary } from "../../restclient/aiClient";
+import { getInsightsSummary } from "@/api/aiClient";
 
 const POLL_INTERVAL_MS = 60_000; // 60 segundos
 

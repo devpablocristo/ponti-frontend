@@ -132,7 +132,6 @@ router.get("/:project_id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -188,7 +187,6 @@ router.delete(
 
       res.status(200).json(data);
     } catch (error: any) {
-      console.log(error);
       const err = error as ApiResponse<null>;
 
       if ("error" in err) {
@@ -239,7 +237,6 @@ router.post("/:project_id", async (req: Request, res: Response) => {
 
     res.status(201).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {
@@ -255,7 +252,7 @@ router.post("/:project_id", async (req: Request, res: Response) => {
   }
 });
 
-router.put("/:id", async (req: Request, res: Response) => {
+router.put("/:id/project/:project_id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
@@ -269,13 +266,19 @@ router.put("/:id", async (req: Request, res: Response) => {
       return;
     }
 
+    const projectId = parseInt(req.params.project_id as string) || 0;
+    if (projectId === 0) {
+      res.status(400).json({ message: "Project Id obligatorio" });
+      return;
+    }
+
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
     };
 
     const { data: result } = await apiClient.put<any>(
-      `/supply-movements/${movementId}`,
+      `/projects/${projectId}/supply-movements/${movementId}`,
       req.body,
       headers
     );
@@ -289,7 +292,6 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     res.status(200).json(data);
   } catch (error: any) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {

@@ -31,12 +31,12 @@ router.get("", async (req: Request, res: Response) => {
     const data = {
       success: true,
       data: {
-        data: customers.data,
+        data: customers.items ?? [],
         total: customers.page_info.total,
       },
     };
 
-    if (customers.data.length > 0) {
+    if ((customers.items ?? []).length > 0) {
       cache.set("customers", data);
     }
 
@@ -78,7 +78,7 @@ router.get("/archived", async (req: Request, res: Response) => {
     const data = {
       success: true,
       data: {
-        data: customers.data,
+        data: customers.items ?? [],
         total: customers.page_info.total,
       },
     };

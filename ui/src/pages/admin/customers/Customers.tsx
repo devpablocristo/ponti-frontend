@@ -150,7 +150,6 @@ export function Customers() {
         }`
       );
     } catch (error) {
-      console.error("Error al finalizar:", error);
       errorMessage =
         error instanceof Error
           ? error.message
@@ -208,7 +207,6 @@ export function Customers() {
       setProjectId(undefined);
       setField(undefined);
     } catch (error) {
-      console.error("Error al archivar el cliente:", error);
       errorMessage =
         error instanceof Error
           ? error.message

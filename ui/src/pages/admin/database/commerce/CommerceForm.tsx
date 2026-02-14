@@ -4,7 +4,7 @@ import Button from "../../../../components/Button/Button";
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../../hooks/useDatabase/projects";
-import useCommerce from "../../../../hooks/useCommerce";
+import useCommercializations from "../../../../hooks/useCommercializations";
 import { LoaderCircle } from "lucide-react";
 
 interface Commerce {
@@ -31,13 +31,13 @@ export default function CommerceForm() {
   } = useProjects();
 
   const {
-    saveCommerceInfo,
-    getCommerceInfo,
+    saveCommercializations,
+    getCommercializations,
     processing,
     error,
     result,
-    commerceInfoList,
-  } = useCommerce();
+    commercializations,
+  } = useCommercializations();
   const [rows, setRows] = useState<Commerce[]>([]);
 
   const { filters, projectId } = useWorkspaceFilters([
@@ -61,7 +61,7 @@ export default function CommerceForm() {
       return;
     }
 
-    getCommerceInfo(projectId);
+    getCommercializations(projectId);
     setErrorMessage("");
   }, [projectId]);
 
@@ -85,7 +85,7 @@ export default function CommerceForm() {
     if (projectCropList.length && rows.length === 0) {
       setRows(
         projectCropList.map((crop) => {
-          const found = commerceInfoList.find((ci) => ci.crop_id === crop.id);
+          const found = commercializations.find((ci) => ci.crop_id === crop.id);
           return {
             id: found?.id || 0,
             cropId: crop.id,
@@ -98,7 +98,7 @@ export default function CommerceForm() {
         })
       );
     }
-  }, [projectCropList, commerceInfoList]);
+  }, [projectCropList, commercializations]);
 
   useEffect(() => {
     if (result !== "") {
@@ -172,7 +172,7 @@ export default function CommerceForm() {
       commercial_cost: row.commercialCost,
     }));
 
-    saveCommerceInfo(commerceData, projectId);
+    saveCommercializations(commerceData, projectId);
   };
 
   return (

@@ -7,8 +7,24 @@ export interface SuccessResponse<T> {
 export interface ErrorResponse {
   error: {
     status: number;
+    type?: string;
+    message?: string;
     details: string;
+    context?: Record<string, unknown>;
   };
+}
+
+export interface PageInfo {
+  per_page: number;
+  page: number;
+  max_page: number;
+  total: number;
+}
+
+export interface PaginatedResponse<T> {
+  data?: T[];
+  items?: T[];
+  page_info: PageInfo;
 }
 
 export class RequestError extends Error {
@@ -23,4 +39,11 @@ export class RequestError extends Error {
   getStatus(): number | undefined {
     return this.status;
   }
+}
+
+export interface WorkspaceFilter {
+  customer_id?: number;
+  project_id?: number;
+  campaign_id?: number;
+  field_id?: number;
 }

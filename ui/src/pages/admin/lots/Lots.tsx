@@ -12,13 +12,8 @@ import InputField from "../../../components/Input/InputField";
 import Button from "../../../components/Button/Button";
 import SelectField from "../../../components/Input/SelectField";
 import { cropColors } from "../colors";
-import APIClient from "../../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { formatNumberAr } from "../utils";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const EditableCell = ({
   item,
@@ -129,49 +124,45 @@ function LotsIndicators({
   error: string | null;
 }) {
   return (
-    <div className="flex gap-4">
+    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
       {processing ? (
-        <LoaderCircle className="animate-spin w-4 h-4 text-blue-500" />
+        <div className="flex items-center justify-center py-4">
+          <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
+          <span className="text-sm text-gray-500 font-medium">Cargando indicadores...</span>
+        </div>
       ) : error ? (
-        <span className="text-red-500">{error}</span>
+        <div className="flex items-center gap-2 text-red-600 text-sm font-medium">
+          <span className="inline-block w-2 h-2 rounded-full bg-red-500" />
+          {error}
+        </div>
       ) : (
-        <>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           <IndicatorCard
-            title="Superficie sembrada"
+            title="Sup. sembrada"
             value={formatNumberAr(kpis.seeded_area) + " Has"}
-            color="gray"
-            height="85px"
-            width="200px"
-          />
-          <IndicatorCard
-            title="Superficie cosechada"
-            value={formatNumberAr(kpis.harvested_area) + " Has"}
-            color="gray"
-            height="85px"
-            width="200px"
-          />
-          <IndicatorCard
-            title="Toneladas x hectárea"
-            value={formatNumberAr(kpis.yield_tn_per_ha) + " Tn"}
             color="green"
-            height="85px"
-            width="200px"
           />
           <IndicatorCard
-            title="Costo x hectárea"
-            value={formatNumberAr(kpis.cost_per_hectare) + " u$"}
-            color="red"
-            height="85px"
-            width="200px"
+            title="Sup. cosechada"
+            value={formatNumberAr(kpis.harvested_area) + " Has"}
+            color="green"
+          />
+          <IndicatorCard
+            title="Tn / hectárea"
+            value={formatNumberAr(kpis.yield_tn_per_ha) + " Tn"}
+            color="amber"
+          />
+          <IndicatorCard
+            title="Costo / hectárea"
+            value={"u$ " + formatNumberAr(kpis.cost_per_hectare)}
+            color="amber"
           />
           <IndicatorCard
             title="Superficie total"
             value={formatNumberAr(kpis.superficie_total) + " Has"}
-            color="red"
-            height="85px"
-            width="200px"
+            color="green"
           />
-        </>
+        </div>
       )}
     </div>
   );
@@ -202,10 +193,10 @@ function LotsHeader({
   const [showColumnsModal, setShowColumnsModal] = useState(false);
 
   const buttonBase =
-    "px-4 py-2 text-sm font-medium border border-gray-200 focus:z-10 focus:ring-2 focus:outline-none focus:ring-0 rounded-none";
-  const activeClass = "bg-[#547792] text-white";
+    "px-4 py-2 text-sm font-medium border border-gray-200 focus:z-10 focus:outline-none transition-colors duration-150 rounded-none";
+  const activeClass = "bg-custom-btn text-white shadow-sm";
   const inactiveClass =
-    "bg-white text-gray-900 hover:bg-gray-100 hover:text-blue-700 dark:bg-gray-800 dark:border-gray-700";
+    "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900";
 
   return (
     <div className="flex justify-between items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
@@ -533,6 +524,9 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("sowed_area"),
+        render: (value) => (
+          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+        ),
       },
       {
         key: "dates",
@@ -557,7 +551,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("cost_per_hectare"),
-        render: (value) => "$" + value,
+        render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>,
       },
     ];
 
@@ -569,6 +563,9 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("harvested_area"),
+        render: (value) => (
+          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+        ),
       },
       {
         key: "harvest_date",
@@ -603,7 +600,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("yield"),
-        render: (value) => value + " Tn/Has",
+        render: (value) => <span className="font-semibold text-amber-600">{formatNumberAr(value)} <span className="text-amber-400 font-normal text-xs">Tn/Has</span></span>,
       },
     ];
 
@@ -615,7 +612,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("net_income"),
-        render: (value) => "$" + value,
+        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>,
       },
       { 
         key: "rent", 
@@ -623,7 +620,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("rent"),
-        render: (value) => "$" + value 
+        render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(value)}</span>,
       },
       {
         key: "admin_cost",
@@ -631,7 +628,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("admin_cost"),
-        render: (value) => "$" + value,
+        render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(value)}</span>,
       },
       {
         key: "total_assets",
@@ -639,7 +636,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("total_assets"),
-        render: (value) => "$" + value,
+        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>,
       },
       {
         key: "operating_result",
@@ -647,7 +644,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("operating_result"),
-        render: (value) => "$" + value,
+        render: (value) => <span className="font-bold text-rose-700">$ {formatNumberAr(value)}</span>,
       },
     ];
 
@@ -891,7 +888,7 @@ const filteredLots = useMemo(() => {
     if (!projectId) return;
 
     try {
-      const response = await request.get<Blob>(
+      const response = await apiClient.get<Blob>(
         `/lots/export/${projectId}`,
         undefined,
         { responseType: "blob" }
@@ -907,7 +904,6 @@ const filteredLots = useMemo(() => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error(error);
       setErrorMessage("No se pudo exportar el listado de lotes.");
     }
   };
@@ -942,19 +938,15 @@ const filteredLots = useMemo(() => {
         ]}
       />
       {message && (
-        <div
-          className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-          role="alert"
-        >
+        <div className="flex items-center gap-3 p-4 mb-4 text-sm text-amber-800 rounded-xl bg-amber-50 border border-amber-200" role="alert">
+          <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
           <span className="font-medium">{message}</span>
         </div>
       )}
       {error && (
-        <div
-          className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-          role="alert"
-        >
-          <span className="font-medium">Error!</span> {error}
+        <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+          <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+          <div><span className="font-semibold">Error:</span> {error}</div>
         </div>
       )}
       {!message && !error && (
@@ -1192,77 +1184,20 @@ const filteredLots = useMemo(() => {
                     </div>
                   </div>
                   {errorMessage && errorMessage !== "" && (
-                    <div
-                      className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-                      role="alert"
-                    >
-                      <span className="font-medium">Error!</span> {errorMessage}
-                      <button
-                        type="button"
-                        className="ms-auto -mx-1 -my-1 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                        aria-label="Close"
-                        onClick={() => setErrorMessage("")}
-                      >
-                        <span className="sr-only">Close</span>
-                        <svg
-                          className="w-2 h-2"
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 14 14"
-                        >
-                          <path
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                          />
-                        </svg>
+                    <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+                      <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+                      <div className="flex-1"><span className="font-semibold">Error:</span> {errorMessage}</div>
+                      <button type="button" className="text-red-400 hover:text-red-600 transition-colors" aria-label="Close" onClick={() => setErrorMessage("")}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 14 14"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" /></svg>
                       </button>
                     </div>
                   )}
                   {successMessage && successMessage !== "" && (
-                    <div
-                      className="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
-                      role="alert"
-                    >
-                      <svg
-                        className="shrink-0 inline w-4 h-4 me-3"
-                        aria-hidden="true"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z" />
-                      </svg>
-                      <span className="sr-only">Info</span>
-                      <div>
-                        <span className="font-medium">{successMessage}</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
-                        data-dismiss-target="#alert-3"
-                        aria-label="Close"
-                        onClick={() => setSuccessMessage("")}
-                      >
-                        <span className="sr-only">Close</span>
-                        <svg
-                          className="w-3 h-3"
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 14 14"
-                        >
-                          <path
-                            stroke="currentColor"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                          />
-                        </svg>
+                    <div className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200" role="alert">
+                      <svg className="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
+                      <div className="flex-1"><span className="font-semibold">{successMessage}</span></div>
+                      <button type="button" className="text-emerald-400 hover:text-emerald-600 transition-colors" aria-label="Close" onClick={() => setSuccessMessage("")}>
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 14 14"><path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6" /></svg>
                       </button>
                     </div>
                   )}

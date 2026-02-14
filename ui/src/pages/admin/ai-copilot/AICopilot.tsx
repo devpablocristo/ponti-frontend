@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 import Button from "../../../components/Button/Button";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
-import { askAICopilot, AskResponse } from "../../../restclient/aiClient";
+import { askAICopilot, AskResponse } from "@/api/aiClient";
 
 const AICopilot: React.FC = () => {
   const { filters, projectId } = useWorkspaceFilters([

@@ -2,16 +2,11 @@ import React from "react";
 
 import * as actions from "./actions";
 
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { Payload } from "./types";
 import { AxiosError } from "axios";
-import { ErrorResponse, SuccessResponse } from "../../restclient/types";
+import { ErrorResponse, SuccessResponse } from "@/api/types";
 import useCampaignsReducer from "./useCampaignsReducer";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
 
 const useCampaigns = () => {
   const [{ total, campaigns, processing, error }, dispatch] =
@@ -28,7 +23,7 @@ const useCampaigns = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<Payload>>(
+        const response = await apiClient.get<SuccessResponse<Payload>>(
           "/campaigns" + queryParams
         );
 

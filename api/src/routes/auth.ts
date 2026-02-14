@@ -12,7 +12,6 @@ router.post("/login", async (req: Request, res: Response) => {
     const data = await apiClient.post<any>(`auth/login`, req.body);
     res.status(200).json(data);
   } catch (error) {
-    console.log(error);
     const err = error as ApiResponse<null>;
 
     if ("error" in err) {

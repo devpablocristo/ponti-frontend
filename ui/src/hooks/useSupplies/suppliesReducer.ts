@@ -1,20 +1,18 @@
 import React from "react";
 
 import * as actions from "./actions";
-import { ProductData, Supply } from "./types";
+import { SupplyData, Supply } from "./types";
 import { PageInfo } from "../useDatabase/projects/types";
 
-interface ProductState {
-  products: ProductData[];
+interface SupplyState {
+  supplies: Supply[];
   processing: boolean;
   error: string;
   pageInfo: PageInfo | null;
   result: string;
-  supplies: Supply[];
 }
 
-const initialState: ProductState = {
-  products: [],
+const initialState: SupplyState = {
   supplies: [],
   processing: false,
   error: "",
@@ -23,22 +21,16 @@ const initialState: ProductState = {
 };
 
 type Action =
-  | { type: typeof actions.SET_PRODUCTS; payload: ProductData[] }
   | { type: typeof actions.SET_PAGE_INFO; payload: PageInfo }
   | { type: typeof actions.SET_RESULT; payload: string }
   | { type: typeof actions.SET_SUPPLIES; payload: Supply[] };
 
-const productsReducer = (state: typeof initialState, action: Action) => {
+const suppliesReducer = (state: typeof initialState, action: Action) => {
   switch (action.type) {
     case actions.SET_PAGE_INFO:
       return {
         ...state,
         pageInfo: action.payload,
-      };
-    case actions.SET_PRODUCTS:
-      return {
-        ...state,
-        products: action.payload,
       };
     case actions.SET_RESULT:
       return {
@@ -55,6 +47,6 @@ const productsReducer = (state: typeof initialState, action: Action) => {
   }
 };
 
-const useProductReducer = () => React.useReducer(productsReducer, initialState);
+const useSupplyReducer = () => React.useReducer(suppliesReducer, initialState);
 
-export default useProductReducer;
+export default useSupplyReducer;

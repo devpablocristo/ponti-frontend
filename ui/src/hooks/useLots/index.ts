@@ -3,14 +3,9 @@ import { AxiosError } from "axios";
 
 import * as actions from "./actions";
 import useLotsReducer from "./useLotsReducer";
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { Crop, LotsDataUpdate, Payload, LotKPIs } from "./types";
-import { ErrorResponse, SuccessResponse } from "../../restclient/types";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { ErrorResponse, SuccessResponse } from "@/api/types";
 
 const useLots = () => {
   const [{ lots, pageInfo, crops, result, kpis }, dispatch] = useLotsReducer();
@@ -34,7 +29,7 @@ const useLots = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<Payload>>(
+        const response = await apiClient.get<SuccessResponse<Payload>>(
           "/lots" + queryParams
         );
 
@@ -61,7 +56,7 @@ const useLots = () => {
           if (errorResponse.error) {
             const message =
               errorResponse.error.details ||
-              "Error desconocido en la busqueda de campañas.";
+              "Error desconocido en la busqueda de lotes.";
 
             setError(message);
             return;
@@ -86,8 +81,8 @@ const useLots = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<LotKPIs>>(
-          "/lots/kpis" + queryParams
+        const response = await apiClient.get<SuccessResponse<LotKPIs>>(
+          "/lots/metrics" + queryParams
         );
 
         if (response.success) {
@@ -108,7 +103,7 @@ const useLots = () => {
           if (errorResponse.error) {
             const message =
               errorResponse.error.details ||
-              "Error desconocido en la busqueda de campañas.";
+              "Error desconocido en la busqueda de lotes.";
 
             setErrorKpis(message);
             return;
@@ -128,7 +123,7 @@ const useLots = () => {
     setError(null);
 
     try {
-      const response = await request.get<SuccessResponse<Crop[]>>("/crops");
+      const response = await apiClient.get<SuccessResponse<Crop[]>>("/crops");
 
       if (response.success) {
         dispatch({
@@ -148,7 +143,7 @@ const useLots = () => {
         if (errorResponse.error) {
           const message =
             errorResponse.error.details ||
-            "Error desconocido en la busqueda de campañas.";
+            "Error desconocido en la busqueda de lotes.";
 
           setError(message);
           return;
@@ -171,7 +166,7 @@ const useLots = () => {
       });
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SuccessResponse<any>>(
           `/lots/${lot.id}`,
           lot
         );
@@ -206,7 +201,7 @@ const useLots = () => {
         setProcessing(false);
       }
     },
-    [dispatch, lots]
+    [dispatch]
   );
 
   const updateTons = React.useCallback(
@@ -216,7 +211,7 @@ const useLots = () => {
       setResultTons(null);
 
       try {
-        const response = await request.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SuccessResponse<any>>(
           `/lots/${id}/tons`,
           { tons }
         );
@@ -248,7 +243,7 @@ const useLots = () => {
         setProcessingTons(false);
       }
     },
-    [dispatch, lots]
+    [dispatch]
   );
 
   return {

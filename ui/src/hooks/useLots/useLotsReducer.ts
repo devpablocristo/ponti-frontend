@@ -4,7 +4,7 @@ import * as actions from "./actions";
 import { Crop, LotsData, LotKPIs } from "./types";
 import { PageInfo } from "../useDatabase/projects/types";
 
-interface ProductState {
+interface LotsState {
   lots: LotsData[];
   kpis: LotKPIs;
   pageInfo: PageInfo | null;
@@ -15,7 +15,7 @@ interface ProductState {
   result: string;
 }
 
-const initialState: ProductState = {
+const initialState: LotsState = {
   lots: [],
   kpis: {
     seeded_area: 0,

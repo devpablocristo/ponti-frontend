@@ -3,15 +3,10 @@ import React, { useRef } from "react";
 import * as actions from "./actions";
 
 import useCustomersReducer from "./useCustomersReducer";
-import APIClient from "../../restclient/apiInstance";
+import { apiClient } from "@/api/client";
 import { CustomerPayload } from "./types";
 import { AxiosError } from "axios";
-import { ErrorResponse, SuccessResponse } from "../../restclient/types";
-
-const request = new APIClient({
-  timeout: 15000,
-  baseURL: "/api",
-});
+import { ErrorResponse, SuccessResponse } from "@/api/types";
 
 const useCustomers = () => {
   const [{ total, customers, processing, error }, dispatch] =
@@ -30,7 +25,7 @@ const useCustomers = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<CustomerPayload>>(
+        const response = await apiClient.get<SuccessResponse<CustomerPayload>>(
           "/customers" + queryParams
         );
 
@@ -92,7 +87,7 @@ const useCustomers = () => {
       }
 
       try {
-        const response = await request.get<SuccessResponse<CustomerPayload>>(
+        const response = await apiClient.get<SuccessResponse<CustomerPayload>>(
           "/customers/archived" + queryParams
         );
 
@@ -149,7 +144,7 @@ const useCustomers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.put<SuccessResponse<string>>(
+        const response = await apiClient.put<SuccessResponse<string>>(
           "/customers/" + id + "/archive",
           {}
         );
@@ -203,7 +198,7 @@ const useCustomers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.put<SuccessResponse<string>>(
+        const response = await apiClient.put<SuccessResponse<string>>(
           "/customers/" + id + "/restore",
           {}
         );
@@ -257,7 +252,7 @@ const useCustomers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await request.delete<SuccessResponse<string>>(
+        const response = await apiClient.delete<SuccessResponse<string>>(
           "/customers/" + id + "/hard"
         );
 
