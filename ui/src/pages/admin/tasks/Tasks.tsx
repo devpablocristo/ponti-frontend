@@ -20,7 +20,7 @@ import SelectField from "../../../components/Input/SelectField";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
-import { formatNumberAr } from "../utils";
+import { formatNumberAr, normalizeDate } from "../utils";
 
 const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
   Pendiente: {
@@ -523,15 +523,6 @@ export function Tasks() {
     allColumns.map((col) => col.key)
   );
   const [visibleColumns, setVisibleColumns] = useState(selectedColumns);
-
-  const normalizeDate = (date: string) => {
-    if (!date) return "";
-    if (date.includes("/")) {
-      const [d, m, y] = date.split("/");
-      return `${y}-${m}-${d}`;
-    }
-    return date.split("T")[0];
-  };
 
   const filteredTasks = useMemo(() => {
     return laborGroups.filter((task) => {

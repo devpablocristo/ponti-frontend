@@ -6,21 +6,6 @@ import { cache } from ".";
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
 
-const months = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
 router.post("/invoice", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -270,9 +255,16 @@ router.get("/export/:id", async (req, res) => {
     );
 
     res.send(response.data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Error al exportar labores");
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: { status: 500, details: "Error al exportar labores" },
+    });
   }
 });
 
@@ -307,9 +299,16 @@ router.get("/database-export/:id", async (req, res) => {
     );
 
     res.send(response.data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Error al exportar labores");
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: { status: 500, details: "Error al exportar labores" },
+    });
   }
 });
 
@@ -332,10 +331,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const currentMonthIndex = new Date().getMonth();
-    const currentMonthName = months[currentMonthIndex];
-
-    let query = `?usd_month=${currentMonthName}&page=${page}&per_page=${perPage}`;
+    let query = `?usd_month=${new Date().getMonth() + 1}&page=${page}&per_page=${perPage}`;
     if (field_id !== 0) {
       query += `&field_id=${field_id}`;
     }

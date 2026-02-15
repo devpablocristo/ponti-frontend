@@ -4,8 +4,8 @@ import * as actions from "./actions";
 
 import { apiClient } from "@/api/client";
 import { TypeData, CategoryData } from "./types";
-import { AxiosError } from "axios";
-import { ErrorResponse, SuccessResponse } from "@/api/types";
+import { SuccessResponse } from "@/api/types";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import useCategoriesReducer from "./useCategoriesReducer";
 
 const useCategories = () => {
@@ -39,22 +39,7 @@ const useCategories = () => {
 
         setError("Ocurrio un error en la busqueda de categorías");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la busqueda de categorías.";
-
-            setError(message);
-            return;
-          }
-        }
-
-        setError("Error en el servicio, inténtalo más tarde.");
+        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
       } finally {
         setProcessing(false);
       }
@@ -79,22 +64,7 @@ const useCategories = () => {
 
       setError("Ocurrio un error en la busqueda de tipos");
     } catch (error) {
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la busqueda de categorías.";
-
-          setError(message);
-          return;
-        }
-      }
-
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
     } finally {
       setProcessing(false);
     }

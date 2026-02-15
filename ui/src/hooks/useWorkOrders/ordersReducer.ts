@@ -2,7 +2,7 @@ import React from "react";
 
 import * as actions from "./actions";
 import { OrdersData, WorkorderData, Metrics } from "./types";
-import { PageInfo } from "../useDatabase/projects/types";
+import { PageInfo } from "@/api/types";
 
 interface OrdersState {
   orders: OrdersData[];

@@ -180,9 +180,16 @@ router.get("/export/:id", async (req, res) => {
     );
 
     res.send(response.data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Error al exportar ordenes");
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: { status: 500, details: "Error al exportar lotes" },
+    });
   }
 });
 

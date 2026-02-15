@@ -81,7 +81,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.delete<any>(`/${id}`, headers);
+    const data = await apiClient.delete<any>(`/fields/${id}`, headers);
     setImmediate(() => cache.flushAll());
     res.status(200).json(data);
   } catch (error: any) {

@@ -57,9 +57,9 @@ const ResponsiveButtonContainer: React.FC<ResponsiveButtonProps> = ({
     <div className="fixed bottom-6 right-6 z-50">
       {open && (
         <div className="mb-2 flex flex-col items-end gap-2">
-          {actions.map((action, index) => (
+          {actions.map((action) => (
             <Button
-              key={`floating-action-${index}`}
+              key={`floating-action-${action.label}`}
               variant={
                 action.variant ||
                 (action.isPrimary ? "success" : "outlineGreen")
@@ -193,14 +193,14 @@ const FilterBar: React.FC<FilterBarProps> = ({
     <div className={`w-full ${className}`}>
       <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3 sm:gap-4 px-1 py-2">
         <div className="flex flex-col w-full sm:flex-row sm:flex-1 gap-4">
-          {filters.map((filter, index) => {
+          {filters.map((filter) => {
             const ref = filter.ref
               ? refs[filter.ref as FilterRefKey]
               : undefined;
 
             return (
               <div
-                key={`filter-${index}`}
+                key={`filter-${filter.name}`}
                 className="w-full sm:w-auto flex-1 sm:max-w-60"
               >
                 {filter.type === "select" ? (
@@ -274,7 +274,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
                           {filter.options.length > 0 &&
                             filter.options.map((option, index) => (
                               <li
-                                key={index}
+                                key={option.id}
                                 onClick={() =>
                                   handleSuggestionClick(
                                     filter.name,
@@ -305,9 +305,9 @@ const FilterBar: React.FC<FilterBarProps> = ({
         {actions && actions.length > 0 && (
           <>
             <div className={`hidden sm:flex gap-2 items-center justify-end}`}>
-              {actions.map((action, index) => (
+              {actions.map((action) => (
                 <Button
-                  key={`action-${index}`}
+                  key={`action-${action.label}`}
                   variant={
                     action.variant ||
                     (action.isPrimary ? "success" : "outlineGreen")

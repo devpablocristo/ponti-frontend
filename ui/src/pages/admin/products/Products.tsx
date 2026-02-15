@@ -8,10 +8,10 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import CreateItem from "./CreateItem";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
 import { SupplyMovement } from "../../../hooks/useSupplyMovement/types";
-import { Summary } from "../../../hooks/useSupplyMovement/types";
+import { Summary } from "@/api/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
-import { formatNumberAr } from "../utils";
+import { formatNumberAr, normalizeDate } from "../utils";
 
 function ItemsIndicators({ summary }: { summary?: Summary }) {
   const safeSummary = summary ?? {
@@ -63,13 +63,6 @@ export function Products() {
     null
   );
   const itemsPerPage = 10;
-
-  const normalizeDate = (date: string) => {
-    if (!date) return "";
-    return date.includes("/")
-      ? date.split("/").reverse().join("-") // DD/MM/YYYY → YYYY-MM-DD
-      : date.split("T")[0]; // ISO → YYYY-MM-DD
-  };
 
   function getFilterOptionsForColumn(
     key: keyof SupplyMovement,

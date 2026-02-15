@@ -41,6 +41,17 @@ export class RequestError extends Error {
   }
 }
 
+export interface Provider {
+  id: number;
+  name: string;
+}
+
+export interface Summary {
+  total_kg: number;
+  total_lt: number;
+  total_usd: number;
+}
+
 export interface WorkspaceFilter {
   customer_id?: number;
   project_id?: number;

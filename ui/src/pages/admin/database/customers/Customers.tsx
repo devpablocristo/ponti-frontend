@@ -719,7 +719,7 @@ export default function Customers() {
         await updateProject(Number(id), pendingPayload);
       }
     } catch (error) {
-      console.error("Error al guardar:", error);
+      // error saving project
     } finally {
       setIsSaving(false);
       setIsModalOpen(false);

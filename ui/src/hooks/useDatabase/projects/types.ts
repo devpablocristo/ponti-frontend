@@ -39,6 +39,8 @@ export type Field = {
   lots: Plot[];
 };
 
+import { PageInfo } from "@/api/types";
+
 export type Plot = {
   id: number;
   name: string;
@@ -48,13 +50,6 @@ export type Plot = {
   current_crop_name?: string;
   previous_crop_name?: string;
   season: string;
-};
-
-export type PageInfo = {
-  per_page: number;
-  page: number;
-  max_page: number;
-  total: number;
 };
 
 export type ProjectPayload = {

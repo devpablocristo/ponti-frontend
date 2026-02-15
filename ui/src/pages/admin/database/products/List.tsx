@@ -158,7 +158,7 @@ export default function ListItems() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error(error);
+      // error exporting products
     }
   };
 

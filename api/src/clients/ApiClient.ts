@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+import { API_TIMEOUT } from "../configService";
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -19,7 +20,7 @@ interface ErrorResponse {
 export class ApiClient {
   private axiosInstance: AxiosInstance;
 
-  constructor(baseURL: string, timeout = 30000) {
+  constructor(baseURL: string, timeout = API_TIMEOUT) {
     this.axiosInstance = axios.create({
       baseURL,
       timeout,

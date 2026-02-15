@@ -2,8 +2,7 @@ import React from "react";
 
 import * as actions from "./actions";
 import { SupplyMovement } from "./types";
-import { PageInfo } from "../useDatabase/projects/types";
-import { Summary } from "./types";
+import { PageInfo, Summary } from "@/api/types";
 
 interface SupplyMovementsState {
   supplyMovements: SupplyMovement[];

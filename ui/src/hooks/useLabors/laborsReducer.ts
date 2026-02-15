@@ -2,7 +2,7 @@ import React from "react";
 
 import * as actions from "./actions";
 import { LaborGroupData, LaborInfo, Metrics } from "./types";
-import { PageInfo } from "../useDatabase/projects/types";
+import { PageInfo } from "@/api/types";
 
 interface LaborState {
   laborGroups: LaborGroupData[];

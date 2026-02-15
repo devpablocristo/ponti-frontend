@@ -157,7 +157,7 @@ export default function ListTasks() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error(error);
+      // error exporting tasks
     }
   };
 

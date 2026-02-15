@@ -1,4 +1,4 @@
-import { PageInfo } from "../useDatabase/projects/types";
+import { PageInfo } from "@/api/types";
 
 export type LotsData = {
   id: number;

@@ -1,8 +1,8 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
-import { configService } from "../configService";
+import { configService, LONG_API_TIMEOUT } from "../configService";
 
-const apiClient = new ApiClient(configService.baseManagerApi, 60000);
+const apiClient = new ApiClient(configService.baseManagerApi, LONG_API_TIMEOUT);
 
 const router: Router = Router();
 

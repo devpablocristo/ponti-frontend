@@ -13,7 +13,7 @@ import Button from "../../../components/Button/Button";
 import UpdateOrder from "./UpdateOrder";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { apiClient } from "@/api/client";
-import { formatNumberAr } from "../utils";
+import { formatNumberAr, normalizeDate } from "../utils";
 
 function OrdersHeader({
   ordersAmount,
@@ -165,13 +165,6 @@ export function WorkOrders() {
     processing,
     error,
   } = useOrders();
-
-  const normalizeDate = (date: string) => {
-    if (!date) return "";
-    return date.includes("/")
-      ? date.split("/").reverse().join("-") // DD/MM/YYYY → YYYY-MM-DD
-      : date.split("T")[0]; // ISO → YYYY-MM-DD
-  };
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
