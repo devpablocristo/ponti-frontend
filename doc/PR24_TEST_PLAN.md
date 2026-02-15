@@ -110,6 +110,12 @@ Se agregó la capacidad de importar labores masivamente desde archivos Excel/CSV
 - [ ] Editar una orden existente → verificar que carga los datos correctamente
 - [ ] En edición: verificar que se pueden agregar/quitar insumos
 - [ ] Guardar cambios y verificar que se reflejan en la lista
+- [ ] Verificar que existe la opción **"Dividir aporte"** en el bloque **Inversor del labor**
+- [ ] Caso 50/50: seleccionar 2 inversores (ej: El Sueño 50% y Savino 50%), guardar y verificar que se crean/actualizan órdenes prorrateadas
+- [ ] Validar que la suma de porcentajes debe ser exactamente 100% (si no, debe mostrar error)
+- [ ] Validar que no permite repetir el mismo inversor en dos filas de split
+- [ ] Verificar que `superficie realizada` y `total utilizado` de insumos se reparten proporcionalmente según % de split
+- [ ] Verificar que con split desactivado el flujo se mantiene igual que antes (1 solo inversor)
 
 ### 10. [FE] Dependencia nueva: xlsx
 **Archivo:** `ui/package.json`
