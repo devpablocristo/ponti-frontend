@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { AxiosError } from "axios";
 
 import useReportingReducer from "./useReportingReducer";
 import * as actions from "./actions";
 import { FieldCropReportData, InvestorContributionReportData, SummaryResultsReportData } from "./types";
-import { SuccessResponse, ErrorResponse } from "@/api/types";
+import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
 const useReporting = () => {
   const [{
@@ -43,22 +43,7 @@ const useReporting = () => {
         type: actions.SET_FIELD_CROP_REPORTING,
         payload: null,
       });
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la búsqueda del reporte.";
-
-          setError(message);
-          return;
-        }
-      }
-
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
     } finally {
       setProcessing(false);
     }
@@ -91,22 +76,7 @@ const useReporting = () => {
         type: actions.SET_INVESTOR_CONTRIBUTION_REPORTING,
         payload: null,
       });
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la búsqueda del reporte.";
-
-          setError(message);
-          return;
-        }
-      }
-
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
     } finally {
       setProcessing(false);
     }
@@ -139,22 +109,7 @@ const useReporting = () => {
         type: actions.SET_SUMMARY_RESULTS_REPORTING,
         payload: null,
       });
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la búsqueda del reporte.";
-
-          setError(message);
-          return;
-        }
-      }
-
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
     } finally {
       setProcessing(false);
     }

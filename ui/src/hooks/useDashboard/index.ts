@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { AxiosError } from "axios";
 
 import useDashboardReducer from "./useDashboardReducer";
 import * as actions from "./actions";
 import { DashboardData } from "./types";
-import { SuccessResponse, ErrorResponse } from "@/api/types";
+import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
 const useDashboard = () => {
   const [{ dashboard }, dispatch] = useDashboardReducer();
@@ -39,22 +39,7 @@ const useDashboard = () => {
         type: actions.SET_DASHBOARD,
         payload: null,
       });
-      const axiosError = error as AxiosError;
-
-      if (axiosError.response) {
-        const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const message =
-            errorResponse.error.details ||
-            "Error desconocido en la búsqueda del dashboard.";
-
-          setError(message);
-          return;
-        }
-      }
-
-      setError("Error en el servicio, inténtalo más tarde.");
+      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
     } finally {
       setProcessing(false);
     }

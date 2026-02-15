@@ -11,6 +11,7 @@ import { useClickOutside } from "../../login/useClickOutside";
 import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useStockMovement from "../../../hooks/useStockMovement";
+import useStock from "../../../hooks/useStock";
 import {
   Campaign,
   Customer,
@@ -120,6 +121,7 @@ export default function CreateStockItem({
   const { getSupplies, supplies } = useSupplies();
   const { projectsDropdown, getProjectsDropdown } = useProjects();
   const { campaigns, getCampaigns } = useCampaigns();
+  const { getStock, stock } = useStock();
 
   const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState("");
@@ -219,6 +221,12 @@ export default function CreateStockItem({
   }, [projectId]);
 
   useEffect(() => {
+    if (type?.id === 2 && projectId) {
+      getStock(projectId, "");
+    }
+  }, [type?.id, projectId, getStock]);
+
+  useEffect(() => {
     if (!selectedProject) return;
     setInvestors(
       selectedProject.investors
@@ -271,6 +279,28 @@ export default function CreateStockItem({
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
     );
   };
+
+  const stockBySupplyId = (() => {
+    if (type?.id !== 2 || !stock.length) return new Map<number, number>();
+    const map = new Map<number, number>();
+    for (const s of stock) {
+      const supply = supplies.find((sp) => sp.name === s.supply_name);
+      if (supply) {
+        const units =
+          typeof s.real_stock_units === "number"
+            ? s.real_stock_units
+            : Number(s.real_stock_units) || 0;
+        const current = map.get(supply.id) ?? 0;
+        map.set(supply.id, current + units);
+      }
+    }
+    return map;
+  })();
+
+  const suppliesForDropdown =
+    type?.id === 2
+      ? supplies.filter((s) => (stockBySupplyId.get(s.id) ?? 0) > 0)
+      : supplies;
 
   const handlePreSave = () => {
     const errors: string[] = [];
@@ -537,7 +567,7 @@ export default function CreateStockItem({
                         <SelectField
                           label=""
                           name={`item-${i}`}
-                          options={supplies}
+                          options={suppliesForDropdown}
                           value={item.item}
                           onChange={(e) =>
                             handleItemChange(i, "item", e.target.value)

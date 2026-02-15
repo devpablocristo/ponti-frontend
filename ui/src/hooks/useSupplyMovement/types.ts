@@ -1,4 +1,4 @@
-import { PageInfo } from "../useDatabase/projects/types";
+import { PageInfo, Provider, Summary } from "@/api/types";
 
 export interface SupplyMovementRequest {
   items: SupplyMovementItem[];
@@ -13,17 +13,6 @@ export interface SupplyMovementItem {
   supply_id: number;
   investor_id: number;
   provider: Provider;
-}
-
-export interface Provider {
-  id: number;
-  name: string;
-}
-
-export interface Summary {
-  total_kg: number;
-  total_lt: number;
-  total_usd: number;
 }
 
 export interface SupplyResponse {

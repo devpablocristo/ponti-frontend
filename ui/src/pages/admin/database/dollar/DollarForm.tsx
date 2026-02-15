@@ -249,7 +249,7 @@ export default function DollarForm() {
               <div className="grid grid-cols-1 sm:grid-cols-[1.2fr_1fr_1fr_1fr] gap-4">
                 {rows.map((row, index) => (
                   <div
-                    key={index}
+                    key={row.month}
                     className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                   >
                     <div className="sm:col-span-1 flex justify-end">

@@ -10,12 +10,6 @@ export interface StockData {
   totalNet: string;
 }
 
-export interface Summary {
-  total_kg: number;
-  total_lt: number;
-  total_usd: number;
-}
-
 export interface GetStocksResponse {
   items: GetStockItems[];
   net_total_usd: number;

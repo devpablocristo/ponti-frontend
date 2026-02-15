@@ -287,7 +287,7 @@ export default function CommerceForm() {
                 <div className="grid grid-cols-1 sm:grid-cols-[0.5fr_0.5fr_0.5fr_0.5fr_0.5fr] gap-4">
                   {rows.map((crop, index) => (
                     <div
-                      key={index}
+                      key={crop.cropId}
                       className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                     >
                       <div className="sm:col-span-1">

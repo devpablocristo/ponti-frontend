@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
-import { configService } from "../configService";
+import { configService, CACHE_TTL_SHORT } from "../configService";
 import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
@@ -44,7 +44,7 @@ router.get("", async (req: Request, res: Response) => {
     };
 
     setImmediate(() => {
-      cache.set(key, data, 60 * 5);
+      cache.set(key, data, CACHE_TTL_SHORT);
     });
 
     res.status(200).json(data);

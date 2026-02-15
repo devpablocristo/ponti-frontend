@@ -239,6 +239,11 @@ const DataTable = <T,>({
                         : "" // 👈 CLAVE: si no se define, queda p-4
                       } ${column.headerWrap ? "whitespace-normal break-words" : ""
                       }`}
+                    style={{
+                      width: column.width,
+                      minWidth: column.minWidth,
+                      maxWidth: column.maxWidth,
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
@@ -414,9 +419,8 @@ const DataTable = <T,>({
           <tbody>
             {paginatedData.length > 0 ? (
               paginatedData.map((item, index) => (
-                <React.Fragment key={index}>
+                <React.Fragment key={String((item as Record<string, unknown>).id ?? index)}>
                   <tr
-                    key={index}
                     className={`border-t border-gray-100 text-gray-900 font-normal ${index % 2 === 0 ? "bg-white" : "bg-[#EBF5FF]"
                       }`}
                   >

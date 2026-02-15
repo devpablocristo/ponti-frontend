@@ -3,8 +3,6 @@ import { FieldCropReportData, RowToRender } from "../../../hooks/useReporting/ty
 import { cropColors } from "../colors";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
-// Badge del cultivo
-// Simplificado: quitamos el margen hardcodeado y el flex para que se comporte bien en línea
 const CropBadge = ({ cropName }: { cropName: string }) => (
   <span
     className={`px-2 py-0.5 text-xs font-medium rounded-md whitespace-nowrap ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"

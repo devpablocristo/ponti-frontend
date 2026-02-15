@@ -38,9 +38,16 @@ router.get("/export/:id", async (req, res) => {
     );
 
     res.send(response.data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Error al exportar insumos");
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: { status: 500, details: "Error al exportar insumos" },
+    });
   }
 });
 
@@ -75,9 +82,16 @@ router.get("/database-export/:id", async (req, res) => {
     );
 
     res.send(response.data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Error al exportar insumos");
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: { status: 500, details: "Error al exportar insumos" },
+    });
   }
 });
 
@@ -100,7 +114,7 @@ router.get("/:project_id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const cachedMovements = cache.get(`movements/${project_id}`);
+    const cachedMovements = cache.get(`movements:${project_id}`);
     if (cachedMovements) {
       res.status(200).json(cachedMovements);
       return;
@@ -127,7 +141,7 @@ router.get("/:project_id", async (req: Request, res: Response) => {
     };
 
     if (entries.length > 0) {
-      cache.set(`movements/${project_id}`, data);
+      cache.set(`movements:${project_id}`, data);
     }
 
     res.status(200).json(data);

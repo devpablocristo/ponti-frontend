@@ -40,9 +40,16 @@ router.get("/export/:id", async (req, res) => {
     );
 
     res.send(response.data);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("Error al exportar stock");
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: { status: 500, details: "Error al exportar stock" },
+    });
   }
 });
 
@@ -65,7 +72,7 @@ router.get("/:project_id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const cacheKey = `${CACHE_PREFIX}/${project_id}`;
+    const cacheKey = `${CACHE_PREFIX}:${project_id}`;
     const cachedMovements = cache.get(cacheKey);
     if (cachedMovements) {
       res.status(200).json(cachedMovements);

@@ -1,7 +1,8 @@
 import React from "react";
 
 import * as actions from "./actions";
-import { GetStockItems, Summary } from "./types";
+import { GetStockItems } from "./types";
+import { Summary } from "@/api/types";
 
 interface StockState {
   stock: GetStockItems[];

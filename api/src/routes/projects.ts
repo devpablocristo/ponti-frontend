@@ -394,7 +394,7 @@ router.delete(
         "X-User-Id": userId,
       };
 
-      const data = await apiClient.delete<any>(`/projects/${id}/hard`, headers);
+      const data = await apiClient.delete<any>(`/labors/${id}`, headers);
       setImmediate(() => cache.flushAll());
       res.status(200).json(data);
     } catch (error: any) {
@@ -408,7 +408,7 @@ router.delete(
       res.status(500).json({
         success: false,
         message: "Error inesperado",
-        error: { status: 500, details: "No se pudo obtener el proyecto" },
+        error: { status: 500, details: "No se pudo eliminar la labor" },
       });
     }
   }

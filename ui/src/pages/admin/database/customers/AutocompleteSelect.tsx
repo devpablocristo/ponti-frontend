@@ -157,9 +157,9 @@ function AutocompleteSelect<T extends BaseItem>({
           fullWidth
         />
         <div className="flex flex-wrap gap-2 mt-2">
-          {selectedItems.map((item, index) => (
+          {selectedItems.map((item) => (
             <div
-              key={index}
+              key={item.id}
               className="w-fit flex mt-1 items-center bg-custom-btn text-white text-sm font-sm rounded-full px-2 py-1"
             >
               <span>{renderTag ? renderTag(item) : item.name}</span>
@@ -194,7 +194,7 @@ function AutocompleteSelect<T extends BaseItem>({
             );
             return (
               <li
-                key={index}
+                key={item.id}
                 onClick={
                   !alreadySelected ? () => suggestionClick(item) : undefined
                 }
