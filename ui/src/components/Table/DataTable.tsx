@@ -239,6 +239,11 @@ const DataTable = <T,>({
                         : "" // 👈 CLAVE: si no se define, queda p-4
                       } ${column.headerWrap ? "whitespace-normal break-words" : ""
                       }`}
+                    style={{
+                      width: column.width,
+                      minWidth: column.minWidth,
+                      maxWidth: column.maxWidth,
+                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">

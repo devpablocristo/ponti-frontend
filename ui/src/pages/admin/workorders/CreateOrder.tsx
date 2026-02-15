@@ -675,6 +675,22 @@ export default function CreateOrder({
 
               {/* Tabla de insumos */}
               <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900">
+                    Carga de insumos
+                  </span>
+                  <Button
+                    variant="outlinePonti"
+                    size="xs"
+                    onClick={() => {
+                      setItemIndexToUpdate(null);
+                      setOpenCreateSupply(true);
+                    }}
+                    className="max-w-fit"
+                  >
+                    + Crear nuevo insumo
+                  </Button>
+                </div>
                 <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4 mb-2">
                   <span className="font-sm text-gray-900">Insumo</span>
                   <span className="font-sm text-gray-900">Total utilizado</span>
@@ -794,7 +810,7 @@ export default function CreateOrder({
                     }}
                     className="text-blue-500 hover:underline max-w-fit"
                   >
-                    + Agregar nuevo insumo
+                    + Agregar fila de insumo
                   </Button>
                 </div>
               </div>

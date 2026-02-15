@@ -10,6 +10,7 @@ import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useSupplies from "../../../hooks/useSupplies";
+import useCategories from "../../../hooks/useCategories";
 
 const emptyItems = [
   {
@@ -124,6 +125,8 @@ export default function UpdateOrder({
   const [orderNumber, setOrderNumber] = useState("");
   const [surface, setSurface] = useState("");
   const [date, setDate] = useState("");
+  const [openCreateSupply, setOpenCreateSupply] = useState(false);
+  const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
     null
   );
@@ -138,6 +141,171 @@ export default function UpdateOrder({
       dose: string;
     }[]
   >(emptyItems);
+
+  function CreateSupplyInline({
+    projectId,
+    onCreated,
+    onCancel,
+  }: {
+    projectId: number | null;
+    onCreated: () => void;
+    onCancel: () => void;
+  }) {
+    const { saveSupplies, result, error } = useSupplies();
+    const { categories, types, getCategories, getTypes } = useCategories();
+    const [saving, setSaving] = useState(false);
+    const [success, setSuccess] = useState<string | null>(null);
+
+    const [name, setName] = useState("");
+    const [unit, setUnit] = useState("");
+    const [price, setPrice] = useState("");
+    const [category, setCategory] = useState("");
+    const [type, setType] = useState("");
+
+    const normalizedName = name.trim().replace(/\s+/g, " ").toUpperCase();
+    useEffect(() => {
+      getCategories("");
+      getTypes();
+    }, []);
+
+    useEffect(() => {
+      if (!result) return;
+      setSaving(false);
+      setSuccess("Insumo creado correctamente");
+    }, [result]);
+
+    useEffect(() => {
+      if (error) {
+        setSaving(false);
+      }
+    }, [error]);
+
+    return (
+      <div className="space-y-4">
+        {success && (
+          <div className="p-3 rounded bg-green-50 text-green-700 text-sm flex items-center justify-between">
+            <span>{success}</span>
+            <Button
+              size="xs"
+              variant="success"
+              onClick={() => {
+                setSuccess(null);
+                onCreated();
+              }}
+            >
+              OK
+            </Button>
+          </div>
+        )}
+
+        {!success && (
+          <>
+            {error && (
+              <div className="p-3 rounded bg-red-50 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+            <InputField
+              label="Nombre del insumo"
+              name="suplyName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              size="sm"
+            />
+
+            <SelectField
+              label="Unidad"
+              name="unit"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              options={[
+                { id: 1, name: "Lts" },
+                { id: 2, name: "Kg" },
+              ]}
+              size="sm"
+            />
+
+            <InputField
+              label="Precio"
+              name="supplyPrice"
+              value={price}
+              onChange={(e) => {
+                let value = e.target.value.replace(/,/g, ".");
+                if (/^\d*\.?\d{0,2}$/.test(value)) {
+                  setPrice(value);
+                }
+              }}
+              size="sm"
+            />
+
+            <SelectField
+              label="Rubro"
+              name="category"
+              value={category}
+              onChange={(e) => {
+                const selectedCategory = categories.find(
+                  (c: { id: number; type_id?: number }) =>
+                    c.id === Number(e.target.value)
+                );
+                setCategory(e.target.value);
+                setType(selectedCategory?.type_id?.toString() || "");
+              }}
+              options={categories}
+              size="sm"
+            />
+
+            <SelectField
+              label="Tipo / Clase"
+              name="type"
+              value={type}
+              options={types}
+              disabled
+              onChange={() => {}}
+              size="sm"
+            />
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outlineGray" onClick={onCancel} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button
+                variant="success"
+                disabled={saving}
+                onClick={() => {
+                  if (
+                    !projectId ||
+                    !name ||
+                    !unit ||
+                    !price ||
+                    !category ||
+                    !type
+                  ) {
+                    return;
+                  }
+                  setSaving(true);
+                  setSuccess(null);
+                  saveSupplies(
+                    [
+                      {
+                        name: normalizedName,
+                        unit: Number(unit),
+                        price: Number(price),
+                        category: Number(category),
+                        type: Number(type),
+                      },
+                    ],
+                    projectId
+                  );
+                }}
+              >
+                {saving ? "Guardando..." : "Guardar insumo"}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   useEffect(() => {
     if (orderId) {
@@ -467,6 +635,22 @@ export default function UpdateOrder({
 
               {/* Tabla de insumos */}
               <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900">
+                    Carga de insumos
+                  </span>
+                  <Button
+                    variant="outlinePonti"
+                    size="xs"
+                    onClick={() => {
+                      setItemIndexToUpdate(null);
+                      setOpenCreateSupply(true);
+                    }}
+                    className="max-w-fit"
+                  >
+                    + Crear nuevo insumo
+                  </Button>
+                </div>
                 <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4 mb-2">
                   <span className="font-sm text-gray-900">Insumo</span>
                   <span className="font-sm text-gray-900">Total utilizado</span>
@@ -484,11 +668,32 @@ export default function UpdateOrder({
                         <SelectField
                           label=""
                           name={`item-${i}`}
-                          options={supplies}
+                          options={[
+                            { id: -1, name: "+ Crear nuevo insumo" },
+                            ...supplies,
+                          ]}
                           value={item.item}
-                          onChange={(e) =>
-                            handleItemChange(i, "item", e.target.value)
-                          }
+                          onChange={(e) => {
+                            if (e.target.value === "") {
+                              handleItemChange(i, "item", "");
+                              return;
+                            }
+
+                            const value = Number(e.target.value);
+                            if (value === -1) {
+                              handleItemChange(i, "item", "");
+                              setItemIndexToUpdate(i);
+                              setOpenCreateSupply(true);
+                              return;
+                            }
+
+                            const selectedSupply = supplies.find((s) => s.id === value);
+                            if (selectedSupply) {
+                              handleItemChange(i, "item", String(value));
+                              handleItemChange(i, "dose", "");
+                              handleItemChange(i, "totalUsed", "");
+                            }
+                          }}
                           size="sm"
                         />
                       </div>
@@ -562,7 +767,7 @@ export default function UpdateOrder({
                     }}
                     className="text-blue-500 hover:underline max-w-fit"
                   >
-                    + Agregar nuevo insumo
+                    + Agregar fila de insumo
                   </Button>
                 </div>
               </div>
@@ -685,6 +890,35 @@ export default function UpdateOrder({
           </>
         )}
       </div>
+
+      <Drawer
+        open={openCreateSupply}
+        onClose={() => {
+          setOpenCreateSupply(false);
+          setItemIndexToUpdate(null);
+        }}
+      >
+        <div className="flex flex-col h-full">
+          <h2 className="text-lg font-semibold mb-4">Crear nuevo insumo</h2>
+          <CreateSupplyInline
+            projectId={selectedOrder?.project_id || null}
+            onCreated={async () => {
+              if (selectedOrder?.project_id) {
+                await getSupplies(selectedOrder.project_id);
+              }
+              if (itemIndexToUpdate !== null) {
+                handleItemChange(itemIndexToUpdate, "item", "");
+              }
+              setOpenCreateSupply(false);
+              setItemIndexToUpdate(null);
+            }}
+            onCancel={() => {
+              setOpenCreateSupply(false);
+              setItemIndexToUpdate(null);
+            }}
+          />
+        </div>
+      </Drawer>
     </Drawer>
   );
 }

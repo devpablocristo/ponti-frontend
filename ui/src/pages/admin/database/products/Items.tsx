@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 // Eliminamos las importaciones no utilizadas
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
@@ -8,6 +8,7 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { SupplyCreatePayload } from "../../../../hooks/useSupplies/types";
 import useSupplies from "../../../../hooks/useSupplies";
 import useCategories from "../../../../hooks/useCategories";
+import * as XLSX from "xlsx";
 
 interface Row {
   id: number;
@@ -23,8 +24,98 @@ export const units = [
   { id: 2, name: "Kg" },
 ];
 
+const HEADER_ALIASES = {
+  name: ["insumo", "nombre", "name"],
+  unit: ["unidad", "unit"],
+  price: ["precio", "precio_usd", "usd", "u$s"],
+  category: ["rubro", "categoria", "category"],
+  type: ["tipo", "tipo_clase", "clase", "type"],
+} as const;
+
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+function parseCsvLine(line: string) {
+  const values: string[] = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (insideQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !insideQuotes) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  values.push(current.trim());
+  return values;
+}
+
+function parseCsv(content: string) {
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length < 2) {
+    return [];
+  }
+
+  const headers = parseCsvLine(lines[0]).map((h) => normalizeText(h));
+  return lines.slice(1).map((line) => {
+    const values = parseCsvLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((header, idx) => {
+      row[header] = values[idx] ?? "";
+    });
+    return row;
+  });
+}
+
+function normalizeSpreadsheetRow(row: Record<string, unknown>) {
+  const normalized: Record<string, string> = {};
+  Object.entries(row).forEach(([key, value]) => {
+    normalized[normalizeText(key)] = String(value ?? "").trim();
+  });
+  return normalized;
+}
+
+function getValueByAliases(
+  row: Record<string, string>,
+  aliases: readonly string[]
+) {
+  for (const alias of aliases) {
+    const normalizedAlias = normalizeText(alias);
+    if (row[normalizedAlias] !== undefined) {
+      return row[normalizedAlias];
+    }
+  }
+  return "";
+}
+
 export default function Items() {
   const { saveSupplies, result, error, supplies, getSupplies } = useSupplies();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -278,6 +369,173 @@ export default function Items() {
     });
   };
 
+  const handleImportFromFile = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!projectId) {
+      setErrorMessage(
+        "Por favor, seleccione un proyecto y campaña antes de importar."
+      );
+      return;
+    }
+
+    const lowerName = file.name.toLowerCase();
+    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
+    const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+
+    if (!isCsv && !isExcel) {
+      setErrorMessage("Formato no soportado. Use .xlsx, .xls o .csv.");
+      return;
+    }
+
+    try {
+      let parsedRows: Record<string, string>[] = [];
+      if (isCsv) {
+        const text = await file.text();
+        parsedRows = parseCsv(text);
+      } else {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const firstSheet = workbook.Sheets[firstSheetName];
+        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+          firstSheet,
+          {
+            defval: "",
+          }
+        );
+        parsedRows = jsonRows.map(normalizeSpreadsheetRow);
+      }
+
+      if (parsedRows.length === 0) {
+        setErrorMessage(
+          "El archivo no tiene datos válidos. Verifique que tenga encabezados y filas."
+        );
+        return;
+      }
+
+      const categoryByName = new Map(
+        categories.map((c) => [normalizeText(c.name), c])
+      );
+      const typeByName = new Map(types.map((t) => [normalizeText(t.name), t]));
+
+      const importedRows: Row[] = [];
+      const importErrors: string[] = [];
+
+      parsedRows.forEach((rawRow, idx) => {
+        const rowNumber = idx + 2;
+        const name = getValueByAliases(rawRow, HEADER_ALIASES.name).trim();
+        const unitRaw = getValueByAliases(rawRow, HEADER_ALIASES.unit).trim();
+        const priceRaw = getValueByAliases(rawRow, HEADER_ALIASES.price).trim();
+        const categoryRaw = getValueByAliases(
+          rawRow,
+          HEADER_ALIASES.category
+        ).trim();
+        const typeRaw = getValueByAliases(rawRow, HEADER_ALIASES.type).trim();
+
+        if (!name && !unitRaw && !priceRaw && !categoryRaw && !typeRaw) return;
+
+        const unitNormalized = normalizeText(unitRaw);
+        const unitId =
+          unitNormalized === "1" || unitNormalized === "lts" || unitNormalized === "lt" || unitNormalized === "litros"
+            ? 1
+            : unitNormalized === "2" || unitNormalized === "kg" || unitNormalized === "kilo" || unitNormalized === "kilos"
+              ? 2
+              : 0;
+
+        const normalizedPrice = priceRaw
+          .replace(/\$/g, "")
+          .replace(/\s/g, "")
+          .replace(",", ".");
+        const priceValue = Number(normalizedPrice);
+
+        const categoryByText = categoryByName.get(normalizeText(categoryRaw));
+        const categoryId = categoryByText?.id ?? Number(categoryRaw);
+        const typeFromCategory = categoryByText?.type_id;
+        const typeByText = typeByName.get(normalizeText(typeRaw));
+        const typeId = typeFromCategory ?? typeByText?.id ?? Number(typeRaw);
+
+        if (!name) importErrors.push(`Fila ${rowNumber}: falta "Insumo".`);
+        if (!unitId) importErrors.push(`Fila ${rowNumber}: "Unidad" inválida.`);
+        if (!priceRaw || Number.isNaN(priceValue) || priceValue <= 0) {
+          importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
+        }
+        if (!categoryId || Number.isNaN(categoryId)) {
+          importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
+        }
+        if (!typeId || Number.isNaN(typeId)) {
+          importErrors.push(
+            `Fila ${rowNumber}: "Tipo/Clase" inválido o no deducible por rubro.`
+          );
+        }
+
+        if (
+          name &&
+          unitId &&
+          !Number.isNaN(priceValue) &&
+          priceValue > 0 &&
+          categoryId &&
+          !Number.isNaN(categoryId) &&
+          typeId &&
+          !Number.isNaN(typeId)
+        ) {
+          importedRows.push({
+            id: importedRows.length + 1,
+            name,
+            unit: String(unitId),
+            price: String(priceValue),
+            category: String(categoryId),
+            type: String(typeId),
+          });
+        }
+      });
+
+      if (importedRows.length === 0) {
+        setErrorMessage(
+          importErrors.length > 0
+            ? importErrors.slice(0, 8).join(" ")
+            : "No se encontraron filas importables en el archivo."
+        );
+        return;
+      }
+
+      const rowsWithMinimum = [...importedRows];
+      while (rowsWithMinimum.length < 5) {
+        rowsWithMinimum.push({
+          id: rowsWithMinimum.length + 1,
+          name: "",
+          unit: "",
+          price: "",
+          type: "",
+          category: "",
+        });
+      }
+
+      setRows(rowsWithMinimum);
+      setHasUnsavedChanges(true);
+      if (importErrors.length > 0) {
+        setErrorMessage(
+          `Se importaron ${importedRows.length} insumos válidos. Se omitieron ${importErrors.length} filas con error: ${importErrors
+            .slice(0, 6)
+            .join(" ")}`
+        );
+        setSuccessMessage(null);
+      } else {
+        setErrorMessage("");
+        setSuccessMessage(
+          `Se importaron ${importedRows.length} insumos. Revise y presione Guardar.`
+        );
+      }
+    } catch {
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
+    }
+  };
+
   return (
     <div className="w-full mx-auto">
       <FilterBar filters={filters} />
@@ -372,28 +630,45 @@ export default function Items() {
           <h1 className="text-custom-text font-semibold text-xl leading-none">
             Agregar insumos
           </h1>
-          <Button
-            variant="primary"
-            size="sm"
-            className="text-sm font-medium flex items-center gap-1"
-            href="/admin/database/items/list"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              onChange={handleImportFromFile}
+              className="hidden"
+            />
+            <Button
+              variant="outlinePonti"
+              size="sm"
+              className="text-sm font-medium"
+              onClick={() => fileInputRef.current?.click()}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 6h16M4 10h16M4 14h16M4 18h16"
-              />
-            </svg>
-            Ver listado
-          </Button>
+              Importar Excel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              className="text-sm font-medium flex items-center gap-1"
+              href="/admin/database/items/list"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                />
+              </svg>
+              Ver listado
+            </Button>
+          </div>
         </div>
         <div className="mt-4">
           <div className="hidden sm:grid grid-cols-[1fr_0.5fr_0.5fr_1fr_1fr] gap-4 mb-2">

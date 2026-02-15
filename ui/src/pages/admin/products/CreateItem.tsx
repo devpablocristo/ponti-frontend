@@ -11,7 +11,6 @@ import { useClickOutside } from "../../login/useClickOutside";
 import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
-import useStock from "../../../hooks/useStock";
 import {
   Campaign,
   Customer,
@@ -133,7 +132,6 @@ export default function CreateItem({
   const { getSupplies, supplies } = useSupplies();
   const { projectsDropdown, getProjectsDropdown } = useProjects();
   const { campaigns, getCampaigns } = useCampaigns();
-  const { getStock, stock } = useStock();
 
   const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState("");
@@ -158,10 +156,16 @@ export default function CreateItem({
       quantity: string;
     }[]
   >(emptyItems);
+  const [itemErrors, setItemErrors] = useState<Record<number, string>>({});
+  const [lastSubmittedRowIndexes, setLastSubmittedRowIndexes] = useState<number[]>(
+    []
+  );
 
   const clearForm = () => {
     setError(null);
     setErrorMessages([]);
+    setItemErrors({});
+    setLastSubmittedRowIndexes([]);
     setProvider(undefined);
     setQueryProvider("");
     setShowProviderSuggestions(false);
@@ -175,6 +179,7 @@ export default function CreateItem({
     setSuccessMessage(null);
     setError(null);
     setErrorMessages([]);
+    setItemErrors({});
   }, [drawerOpen]);
 
   useEffect(() => {
@@ -210,23 +215,36 @@ export default function CreateItem({
   useEffect(() => {
     if (resultCreation.supply_movements.length > 0) {
       const errors: string[] = [];
-      resultCreation.supply_movements.forEach((movement) => {
+      const nextItemErrors: Record<number, string> = {};
+      resultCreation.supply_movements.forEach((movement, responseIndex) => {
         if (movement.error_detail !== "") {
-          errors.push(movement.error_detail.replace("VALIDATION_ERROR: ", ""));
+          const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
+          const selectedSupplyId = Number(items[uiRowIndex]?.item || 0);
+          const selectedSupplyName =
+            supplies.find((s) => s.id === selectedSupplyId)?.name ||
+            `fila ${uiRowIndex + 1}`;
+          const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
+          const message = `${selectedSupplyName}: ${detail}`;
+          errors.push(message);
+          nextItemErrors[uiRowIndex] = detail;
         }
       });
 
       if (errors.length > 0) {
         setError(errors.join("\n"));
+        setErrorMessages(errors);
+        setItemErrors(nextItemErrors);
         setSuccessMessage(null);
         return;
       }
 
+      setItemErrors({});
+      setErrorMessages([]);
       setSuccessMessage("Movimiento guardado correctamente");
       onProductCreated();
       clearForm();
     }
-  }, [resultCreation]);
+  }, [resultCreation, lastSubmittedRowIndexes, items, supplies]);
 
   useEffect(() => {
     if (projectId) {
@@ -234,13 +252,6 @@ export default function CreateItem({
       getProject(projectId);
     }
   }, [projectId]);
-
-  // Para Movimiento interno: cargar stock disponible para validar cantidades
-  useEffect(() => {
-    if (type?.id === 2 && projectId) {
-      getStock(projectId, "");
-    }
-  }, [type?.id, projectId, getStock]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -291,40 +302,16 @@ export default function CreateItem({
   };
 
   const handleItemChange = (i: number, field: string, value: string) => {
+    setItemErrors((prev) => {
+      if (!(i in prev)) return prev;
+      const clone = { ...prev };
+      delete clone[i];
+      return clone;
+    });
     setItems((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
     );
   };
-
-  // Stock disponible por supply_id (solo para Movimiento interno)
-  const stockBySupplyId = (() => {
-    if (type?.id !== 2 || !stock.length) return new Map<number, number>();
-    const map = new Map<number, number>();
-    for (const s of stock) {
-      const supply = supplies.find((sp) => sp.name === s.supply_name);
-      if (supply) {
-        const units =
-          typeof s.real_stock_units === "number"
-            ? s.real_stock_units
-            : Number(s.real_stock_units) || 0;
-        const current = map.get(supply.id) ?? 0;
-        map.set(supply.id, current + units);
-      }
-    }
-    return map;
-  })();
-
-  const getStockForSupply = (supplyId: string): number | null => {
-    if (!supplyId || type?.id !== 2) return null;
-    const id = Number(supplyId);
-    return stockBySupplyId.has(id) ? stockBySupplyId.get(id)! : null;
-  };
-
-  // Para Movimiento interno: solo insumos con stock disponible
-  const suppliesForDropdown =
-    type?.id === 2 && stock.length > 0
-      ? supplies.filter((s) => (getStockForSupply(String(s.id)) ?? 0) > 0)
-      : supplies;
 
   const handlePreSave = () => {
     const errors: string[] = [];
@@ -361,9 +348,9 @@ export default function CreateItem({
       errors.push("Debe seleccionar un proyecto destino.");
     }
 
-    const itemsWithAnyValue = items.filter(
-      (item) => item.item || item.quantity
-    );
+    const itemsWithAnyValue = items
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.item || item.quantity);
 
     if (itemsWithAnyValue.length === 0) {
       errors.push("Debe cargar al menos un insumo");
@@ -371,7 +358,7 @@ export default function CreateItem({
     }
 
     const hasPartial = itemsWithAnyValue.some(
-      (item) => !item.item || !item.quantity
+      ({ item }) => !item.item || !item.quantity
     );
 
     if (hasPartial) {
@@ -379,27 +366,15 @@ export default function CreateItem({
       return;
     }
 
-    // Validar stock disponible para Movimiento interno
-    if (type?.id === 2) {
-      for (const item of itemsWithAnyValue) {
-        const available = getStockForSupply(item.item);
-        if (available !== null && Number(item.quantity) > available) {
-          const supplyName =
-            supplies.find((s) => s.id === Number(item.item))?.name ?? "insumo";
-          errors.push(
-            `La cantidad (${item.quantity}) supera el stock disponible (${available}) para ${supplyName}`
-          );
-        }
-      }
-    }
-
     if (errors.length > 0) {
       setErrorMessages(errors);
       return;
     }
 
+    setLastSubmittedRowIndexes(itemsWithAnyValue.map(({ index }) => index));
+    setItemErrors({});
     saveSupplyMovement(projectId, {
-      items: itemsWithAnyValue.map((item) => ({
+      items: itemsWithAnyValue.map(({ item }) => ({
         supply_id: Number(item.item),
         quantity: Number(item.quantity),
         movement_type: type?.name || "",
@@ -616,8 +591,13 @@ export default function CreateItem({
                         <SelectField
                           label=""
                           name={`item-${i}`}
-                          options={suppliesForDropdown}
+                          options={supplies}
                           value={item.item}
+                          className={
+                            itemErrors[i]
+                              ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                              : ""
+                          }
                           onChange={(e) =>
                             handleItemChange(i, "item", e.target.value)
                           }
@@ -625,18 +605,17 @@ export default function CreateItem({
                         />
                       </div>
                       <div className="sm:col-span-1">
-                        {type?.id === 2 && item.item && (
-                          <span className="block text-xs text-gray-600 mb-1">
-                            Stock disponible:{" "}
-                            {getStockForSupply(item.item) ?? "—"}
-                          </span>
-                        )}
                         <InputField
                           label=""
                           placeholder="Lts/kg"
                           name={`quantity${i}`}
                           type="text"
                           value={item.quantity}
+                          inputClassName={
+                            itemErrors[i]
+                              ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                              : ""
+                          }
                           onChange={(e) => {
                             let value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
@@ -645,6 +624,9 @@ export default function CreateItem({
                           }}
                           size="sm"
                         />
+                        {itemErrors[i] && (
+                          <p className="mt-1 text-xs text-red-600">{itemErrors[i]}</p>
+                        )}
                       </div>
                       <div>
                         <Button

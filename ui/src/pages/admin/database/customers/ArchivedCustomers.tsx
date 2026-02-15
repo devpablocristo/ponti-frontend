@@ -68,10 +68,17 @@ export default function ArchivedCustomers() {
   };
 
   const columns = [
-    { key: "name", header: "Cliente/Sociedad" },
+    { key: "name", header: "Cliente/Sociedad", width: "1%", minWidth: "0", maxWidth: "none" },
     {
       key: "actions",
       header: "Acciones",
+      width: "96px",
+      minWidth: "96px",
+      maxWidth: "96px",
+      align: "center" as const,
+      headerAlign: "center" as const,
+      sortable: false,
+      filterable: false,
       render: (_value: unknown, item: ArchivedCustomer) => (
         <div className="flex items-center justify-center gap-3">
           <button
@@ -91,11 +98,23 @@ export default function ArchivedCustomers() {
         </div>
       ),
     },
+    {
+      key: "_spacer",
+      header: "",
+      sortable: false,
+      filterable: false,
+      width: "auto",
+      minWidth: "0",
+      maxWidth: "none",
+      padding: "xs" as const,
+      headerPadding: "xs" as const,
+      render: () => null,
+    },
   ] as any;
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Clientes</h2>
+      <p className="text-sm text-gray-500 mb-4">Restaurar o eliminar clientes de forma definitiva</p>
       <DataTable data={customers as ArchivedCustomer[]} columns={columns} />
       {error && (
         <div className="p-4 mt-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">

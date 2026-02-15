@@ -77,6 +77,8 @@ export default function ArchivedProjects() {
     {
       key: "actions",
       header: "Acciones",
+      align: "center" as const,
+      headerAlign: "center" as const,
       render: (_value: unknown, item: ProjectData) => (
         <div className="flex items-center justify-center gap-3">
           <button
@@ -100,7 +102,7 @@ export default function ArchivedProjects() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Proyectos</h2>
+      <p className="text-sm text-gray-500 mb-4">Restaurar o eliminar proyectos de forma definitiva</p>
       <DataTable data={projects} columns={columns} />
       {error && (
         <div className="p-4 mt-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">

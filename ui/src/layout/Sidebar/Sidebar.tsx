@@ -69,11 +69,11 @@ const menuDatabase = {
       route: "/admin/database/customers",
     },
     {
-      name: "Clientes",
+      name: "Clientes Archivados",
       route: "/admin/database/customers/archived",
     },
     {
-      name: "Proyectos",
+      name: "Proyectos Archivados",
       route: "/admin/database/projects/archived",
     },
     {
