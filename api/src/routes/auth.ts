@@ -8,7 +8,23 @@ const router: Router = Router();
 const identityToolkitBase = "https://identitytoolkit.googleapis.com/v1";
 const secureTokenBase = "https://securetoken.googleapis.com/v1";
 
+const identityConfigured = () =>
+  Boolean(configService.identityApiKey && configService.identityProjectId);
+
 router.post("/login", async (req: Request, res: Response) => {
+  if (!identityConfigured()) {
+    res.status(503).json({
+      success: false,
+      message: "Identity Platform no configurado",
+      error: {
+        status: 503,
+        details:
+          "Faltan IDENTITY_PLATFORM_API_KEY o IDENTITY_PLATFORM_PROJECT_ID",
+      },
+    });
+    return;
+  }
+
   try {
     const email = (req.body.email || req.body.username || "").trim();
     const password = (req.body.password || "").trim();
@@ -64,6 +80,19 @@ router.post("/logout", async (req: Request, res: Response) => {
 });
 
 router.get("/access-token", async (req: Request, res: Response) => {
+  if (!identityConfigured()) {
+    res.status(503).json({
+      success: false,
+      message: "Identity Platform no configurado",
+      error: {
+        status: 503,
+        details:
+          "Faltan IDENTITY_PLATFORM_API_KEY o IDENTITY_PLATFORM_PROJECT_ID",
+      },
+    });
+    return;
+  }
+
   try {
     const authHeader = req.headers.authorization;
     const refreshToken = authHeader?.split(" ")[1];
@@ -110,6 +139,19 @@ router.get("/access-token", async (req: Request, res: Response) => {
 });
 
 router.get("/session", async (req: Request, res: Response) => {
+  if (!identityConfigured()) {
+    res.status(503).json({
+      success: false,
+      message: "Identity Platform no configurado",
+      error: {
+        status: 503,
+        details:
+          "Faltan IDENTITY_PLATFORM_API_KEY o IDENTITY_PLATFORM_PROJECT_ID",
+      },
+    });
+    return;
+  }
+
   try {
     const authHeader = req.headers.authorization;
     const idToken = authHeader?.split(" ")[1];

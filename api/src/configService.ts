@@ -18,8 +18,9 @@ class ConfigService {
   public readonly baseLoginApi = process.env.BASE_LOGIN_API || "";
   public readonly baseManagerApi = requireEnv("BASE_MANAGER_API");
   public readonly apiKey = requireEnv("X_API_KEY");
-  public readonly identityApiKey = requireEnv("IDENTITY_PLATFORM_API_KEY");
-  public readonly identityProjectId = requireEnv("IDENTITY_PLATFORM_PROJECT_ID");
+  public readonly identityApiKey = process.env.IDENTITY_PLATFORM_API_KEY || "";
+  public readonly identityProjectId =
+    process.env.IDENTITY_PLATFORM_PROJECT_ID || "";
 }
 
 export const configService = new ConfigService();

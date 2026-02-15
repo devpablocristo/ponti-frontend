@@ -1,5 +1,9 @@
-import { PageInfo } from "@/api/types";
-export type { PageInfo };
+export type PageInfo = {
+  page: number;
+  per_page: number;
+  max_page: number;
+  total: number;
+};
 
 export type Project = {
   name: string;
