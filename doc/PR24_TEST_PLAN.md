@@ -4,11 +4,13 @@
 **Branch:** `feature/stock-supplies-inputs` → `develop`  
 **Título:** Importación Excel/CSV + mejoras UI en archivados y formularios
 
+> **Leyenda:** cada sección indica si el cambio es de **[FE]** (Frontend) o **[BE]** (Backend).
+
 ---
 
 ## Resumen de cambios
 
-### 1. Importación de insumos desde archivo (Excel/CSV)
+### 1. [FE] Importación de insumos desde archivo (Excel/CSV)
 **Archivo:** `ui/src/pages/admin/database/products/Items.tsx`
 
 Se agregó la capacidad de importar insumos masivamente desde archivos Excel (.xlsx, .xls) y CSV.
@@ -26,14 +28,14 @@ Se agregó la capacidad de importar insumos masivamente desde archivos Excel (.x
 - [ ] Probar con un archivo con formato incorrecto → debería mostrar error
 - [ ] Guardar los insumos importados y verificar que se crean en el backend
 
-### 2. Importación de labores desde archivo (Excel/CSV)
+### 2. [FE] Importación de labores desde archivo (Excel/CSV)
 **Archivo:** `ui/src/pages/admin/database/tasks/TasksForm.tsx`
 
-Se agregó la misma funcionalidad de importación para labores.
+Se agregó la capacidad de importar labores masivamente desde archivos Excel/CSV. La pantalla de **Base de Datos → Labores** queda para alta manual o importación (sin export).
 
 **Qué probar:**
-- [ ] Ir a **Base de Datos → Labores** (`/admin/database/tasks`)
-- [ ] Verificar que aparece un botón de importación
+- [ ] Ir a **Base de Datos → Labores** (`/admin/database/tasks`) — vista de formulario ("Agregar labores")
+- [ ] Verificar que aparece el botón **"Importar labores"** arriba a la derecha
 - [ ] Importar un archivo **Excel (.xlsx)** con columnas: Labor, Contratista
 - [ ] Importar un archivo **CSV** con las mismas columnas
 - [ ] Verificar que los datos aparecen en la tabla de previsualización
@@ -41,8 +43,10 @@ Se agregó la misma funcionalidad de importación para labores.
 - [ ] Probar con archivo vacío → error
 - [ ] Probar con archivo con formato incorrecto → error
 - [ ] Guardar las labores importadas y verificar creación en backend
+- [ ] Click en **"Ver listado"** → verificar que las labores creadas aparecen en la tabla
+- [ ] Verificar que en la vista de listado **no** aparece botón "Exportar labores"
 
-### 3. Sidebar — Renombrado de menú
+### 3. [FE] Sidebar — Renombrado de menú
 **Archivo:** `ui/src/layout/Sidebar/Sidebar.tsx`
 
 **Qué probar:**
@@ -50,7 +54,7 @@ Se agregó la misma funcionalidad de importación para labores.
 - [ ] Verificar que dice **"Proyectos Archivados"** (antes decía "Proyectos")
 - [ ] Verificar que ambos links siguen navegando a las rutas correctas
 
-### 4. Clientes Archivados — Mejora de layout
+### 4. [FE] Clientes Archivados — Mejora de layout
 **Archivo:** `ui/src/pages/admin/database/customers/ArchivedCustomers.tsx`
 
 **Qué probar:**
@@ -61,7 +65,7 @@ Se agregó la misma funcionalidad de importación para labores.
 - [ ] Probar restaurar un cliente → debe volver a la lista de clientes activos
 - [ ] Probar eliminar definitivamente un cliente → debe pedir confirmación
 
-### 5. Proyectos Archivados — Mejora de layout
+### 5. [FE] Proyectos Archivados — Mejora de layout
 **Archivo:** `ui/src/pages/admin/database/projects/ArchivedProjects.tsx`
 
 **Qué probar:**
@@ -70,7 +74,7 @@ Se agregó la misma funcionalidad de importación para labores.
 - [ ] Verificar que la columna Acciones está centrada
 - [ ] Probar restaurar y eliminar un proyecto
 
-### 6. DataTable — Soporte de anchos en headers
+### 6. [FE] DataTable — Soporte de anchos en headers
 **Archivo:** `ui/src/components/Table/DataTable.tsx`
 
 **Qué probar:**
@@ -78,7 +82,7 @@ Se agregó la misma funcionalidad de importación para labores.
 - [ ] Verificar específicamente: Lotes, Órdenes de trabajo, Labores, Insumos, Stock
 - [ ] Los anchos de columna se respetan tanto en el header como en las celdas
 
-### 7. Crear Insumo — Mejoras en formulario
+### 7. [FE] Crear Insumo — Mejoras en formulario
 **Archivo:** `ui/src/pages/admin/products/CreateItem.tsx`
 
 **Qué probar:**
@@ -87,7 +91,7 @@ Se agregó la misma funcionalidad de importación para labores.
 - [ ] Verificar que se muestran errores por fila si el backend rechaza algún movimiento
 - [ ] Verificar que se removió la dependencia de stock (ya no se carga stock innecesariamente)
 
-### 8. Crear Stock Item — Mejoras
+### 8. [FE] Crear Stock Item — Mejoras
 **Archivo:** `ui/src/pages/admin/stock/CreateStockItem.tsx`
 
 **Qué probar:**
@@ -95,7 +99,7 @@ Se agregó la misma funcionalidad de importación para labores.
 - [ ] Verificar que el formulario funciona correctamente
 - [ ] Verificar manejo de errores por fila
 
-### 9. Crear/Editar Orden de Trabajo — Mejoras
+### 9. [FE] Crear/Editar Orden de Trabajo — Mejoras
 **Archivos:** `ui/src/pages/admin/workorders/CreateOrder.tsx`, `UpdateOrder.tsx`
 
 **Qué probar:**
@@ -105,7 +109,7 @@ Se agregó la misma funcionalidad de importación para labores.
 - [ ] En edición: verificar que se pueden agregar/quitar insumos
 - [ ] Guardar cambios y verificar que se reflejan en la lista
 
-### 10. Dependencia nueva: xlsx
+### 10. [FE] Dependencia nueva: xlsx
 **Archivo:** `ui/package.json`
 
 **Qué probar:**
@@ -150,6 +154,7 @@ Cosecha,Itines
 
 ## Regresión — verificar que no se rompió
 
+**[FE]**
 - [ ] Dashboard carga correctamente
 - [ ] Lotes — tabla y métricas se ven bien
 - [ ] Órdenes de trabajo — tabla y métricas se ven bien
@@ -158,3 +163,7 @@ Cosecha,Itines
 - [ ] Stock — tabla y métricas se ven bien
 - [ ] Clientes y sociedades — funciona normalmente
 - [ ] Navegación del sidebar funciona en todas las secciones
+
+**[BE]**
+- [ ] Export de **Labores** (pantalla principal, sidebar → Labores) sigue descargando con columnas OT, Fecha, Campo, Cultivo, etc. (no fue modificado)
+- [ ] Endpoints de export de otros módulos (Insumos, Stock) no se vieron afectados
