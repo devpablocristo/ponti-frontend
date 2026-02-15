@@ -21,7 +21,8 @@ const isIdentityConfigError = (error: unknown): boolean => {
   const message = String(error.response?.data?.error?.message || "");
   return (
     message.includes("CONFIGURATION_NOT_FOUND") ||
-    message.includes("SERVICE_DISABLED")
+    message.includes("SERVICE_DISABLED") ||
+    message.includes("INVALID_EMAIL")
   );
 };
 
@@ -41,6 +42,16 @@ router.post("/login", async (req: Request, res: Response) => {
         message: "Credenciales inválidas",
         error: { status: 400, details: "email y password son requeridos" },
       });
+      return;
+    }
+
+    const looksLikeUsername = !email.includes("@");
+    if (looksLikeUsername && legacyClient) {
+      const legacy = await legacyClient.post<any>(
+        "auth/login",
+        loginPayloadForLegacy(req.body || {})
+      );
+      res.status(200).json(legacy);
       return;
     }
 
