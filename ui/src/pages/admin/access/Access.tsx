@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Header from "../../../components/Header/Header";
 import Button from "../../../components/Button/Button";
-import APIClient from "../../../restclient/apiInstance";
+import APIClient from "@/restclient/apiInstance";
 
 type Tenant = { id: number; name: string };
 type UserRow = {
