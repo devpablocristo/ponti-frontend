@@ -10,6 +10,7 @@ import { Tasks } from "./pages/admin/tasks/Tasks";
 import { WorkOrders } from "./pages/admin/workorders/WorkOrders";
 import { Stock } from "./pages/admin/stock/Stock";
 import Customers from "./pages/admin/customers/Customers";
+import Access from "./pages/admin/access/Access";
 import DatabaseCustomers from "./pages/admin/database/customers/Customers";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
 import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
@@ -70,6 +71,10 @@ export default [
       {
         path: "customers",
         element: <Customers />,
+      },
+      {
+        path: "access",
+        element: <Access />,
       },
       {
         path: "lots",
