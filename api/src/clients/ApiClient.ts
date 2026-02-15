@@ -1,9 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
-<<<<<<< HEAD
-=======
 import { API_TIMEOUT } from "../configService";
 import { requestContext } from "../requestContext";
->>>>>>> da1c548 (done)
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -24,7 +21,7 @@ interface ErrorResponse {
 export class ApiClient {
   private axiosInstance: AxiosInstance;
 
-  constructor(baseURL: string, timeout = 30000) {
+  constructor(baseURL: string, timeout = API_TIMEOUT) {
     this.axiosInstance = axios.create({
       baseURL,
       timeout,
@@ -37,7 +34,6 @@ export class ApiClient {
   }
 
   private handleErrorResponse(error: AxiosError): Promise<ApiResponse<null>> {
-    // Preservar la estructura de error del BE (type, code, message, details, context)
     const data = error.response?.data as {
       type?: string;
       code?: number;
@@ -89,11 +85,9 @@ export class ApiClient {
 
   public async get<T>(
     url: string,
-    //headers?: Record<string, string | undefined>
     options?: Record<string, string | undefined> | AxiosRequestConfig
   ): Promise<ApiResponse<T>> {
     try {
-      //const config: AxiosRequestConfig = headers ? { headers } : {};
       let config: AxiosRequestConfig = {};
 
       if (options) {

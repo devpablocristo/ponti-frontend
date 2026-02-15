@@ -398,7 +398,7 @@ function SidebarSubmenu({
           <ul id="dropdown-menu" className="py-2 space-y-2">
             {item.children.map((subItem) => {
               return (
-                <li key={index}>
+                <li key={subItem.route}>
                   <SidebarSubmenuItem
                     setTitle={setTitle}
                     item={subItem}
