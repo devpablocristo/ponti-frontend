@@ -14,8 +14,6 @@ function requireEnv(name: string): string {
 }
 
 class ConfigService {
-  // Legacy only: while user administration is still migrating.
-  public readonly baseLoginApi = process.env.BASE_LOGIN_API || "";
   public readonly baseManagerApi = requireEnv("BASE_MANAGER_API");
   public readonly apiKey = requireEnv("X_API_KEY");
   public readonly identityApiKey = process.env.IDENTITY_PLATFORM_API_KEY || "";

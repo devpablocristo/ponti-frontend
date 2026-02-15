@@ -221,71 +221,12 @@ const calculateWorkorderMetrics = (data = MOCK_WORKORDERS) => {
 };
 
 export const handlers = [
-  // 1. LOGIN
-  http.post(configService.baseLoginApi + "/auth/login", async ({ request }) => {
-    logRequest("POST", request.url);
-    try {
-      const body = (await request.json()) as LoginRequest;
-      if (!body.username || !body.password) {
-        return new HttpResponse(JSON.stringify({ message: "Requeridos" }), { status: 400 });
-      }
-
-      if (body.username !== MOCK_USER.username || body.password !== MOCK_USER.password) {
-        return new HttpResponse(JSON.stringify({ message: "Inválidas" }), { status: 401 });
-      }
-
-      const now = Math.floor(Date.now() / 1000);
-      return new HttpResponse(
-        JSON.stringify({
-          access_token: generateToken({ id: MOCK_USER.id, username: MOCK_USER.username, exp: now + ACCESS_TOKEN_EXPIRATION }),
-          refresh_token: generateToken({ id: MOCK_USER.id, hash: MOCK_USER.tokenHash, exp: now + REFRESH_TOKEN_EXPIRATION }),
-        }),
-        { headers: { "Content-Type": "application/json" } }
-      );
-    } catch (error) {
-      return new HttpResponse(null, { status: 500 });
-    }
-  }),
-
-  // 2. VALIDATE-TOKEN
-  http.get(configService.baseLoginApi + "/auth/validate-token", ({ request }) => {
-    logRequest("GET", request.url);
-    return new HttpResponse(
-      JSON.stringify({
-        success: true,
-        data: {
-          status: "active",
-          userID: "1",
-          rolID: "1",
-          hash: "mockhash123",
-          exp: Math.floor(Date.now() / 1000) + 3600
-        }
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
-  }),
-
-  // 3. ACCESS-TOKEN
-  http.post(configService.baseLoginApi + "/auth/access-token", ({ request }) => {
-    logRequest("POST", request.url);
-    return new HttpResponse(
-      JSON.stringify({
-        success: true,
-        data: {
-          access_token: "nuevo-token-mock",
-          refresh_token: "nuevo-refresh-mock"
-        }
-      }),
-      { status: 200 }
-    );
-  }),  
-
-  // 4. MOCK DE CUSTOMERS
+  // MOCK DE CUSTOMERS (Estrategia: Objeto con propiedad data)
   http.get(configService.baseManagerApi + "/customers", ({ request }) => {
     logRequest("GET", request.url);
     return new HttpResponse(
       JSON.stringify({
-        items: [
+        data: [
           { id: 1, name: "Oscar Salomon", status: "active" }
         ],
         page_info: { total: 1 }
@@ -295,7 +236,7 @@ export const handlers = [
   }),
 
 
-// 5. MOCK DE CAMPAÑAS
+// 5. MOCK DE CAMPAÑAS (Array directo - el backend lo envuelve)
   http.get(new RegExp(configService.baseManagerApi + "/campaigns.*"), () => {
     console.log("Mocking campaigns...");
     return new HttpResponse(
@@ -834,7 +775,7 @@ http.get(
   }
 ),
 
-  // 6. MOCK DE PROYECTOS
+  // 6. MOCK DE PROYECTOS (Consolidado para todas las variantes)
   http.get(new RegExp(configService.baseManagerApi + "/projects($|/|\\?)"), ({ request }) => {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -932,7 +873,7 @@ http.get(
     );
   }),
 
-// 8. DASHBOARD METRICS
+// 8. DASHBOARD METRICS (Estructura completa)
 http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }) => {
   logRequest("GET", request.url);
   return new HttpResponse(
@@ -1002,29 +943,6 @@ http.get(new RegExp(configService.baseManagerApi + "/dashboard.*"), ({ request }
     { status: 200, headers: { "Content-Type": "application/json" } }
   );
 }),
-
-// 9. PROTECTED HI
-  http.get(configService.baseLoginApi + "/auth/protected/hi", ({ request }) => {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) return new HttpResponse(null, { status: 401 });
-    return new HttpResponse(JSON.stringify({ message: "Login successful" }), { status: 200 });
-  }),
-  
-  // 11. USERS
-  http.get(new RegExp(configService.baseManagerApi + "/users.*"), ({ request }) => {
-    logRequest("GET", request.url);
-    return new HttpResponse(
-      JSON.stringify({
-        success: true,
-        data: [
-          { id: 1, username: "testuser", email: "testuser@example.com", rol_id: 1, status: "active" },
-          { id: 2, username: "admin", email: "admin@example.com", rol_id: 1, status: "active" }
-        ],
-        page_info: { total: 2 }
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
-  }),
 
   // 12. CATEGORIES
   http.get(new RegExp(configService.baseManagerApi + "/categories.*"), ({ request }) => {

@@ -1,7 +1,6 @@
 import { Router } from "express";
 
 import auth from "./auth";
-import users from "./users";
 import options from "./options";
 import projects from "./projects";
 import customers from "./customers";
@@ -37,7 +36,6 @@ router.use("/auth", auth);
 
 router.use(verifyToken);
 
-router.use("/users", users);
 router.use("/projects", projects);
 router.use("/customers", customers);
 router.use("/campaigns", campaigns);
