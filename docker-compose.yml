@@ -33,8 +33,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=3000
-      # Con network_mode: host, localhost alcanza auth (8081) y backend (8080)
-      - BASE_LOGIN_API=http://localhost:8081/api/v1
+      # Con network_mode: host, localhost alcanza el backend (8080)
       - BASE_MANAGER_API=http://localhost:8080/api/v1
       # ENABLE_MOCKS=1 solo para testing sin backend. NUNCA activar en local con stack real.
       # - ENABLE_MOCKS=1
