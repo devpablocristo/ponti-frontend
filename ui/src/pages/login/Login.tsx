@@ -52,7 +52,7 @@ function Login() {
           <p className="text-center text-base text-gray-900 mb-6">
             Bienvenido a su software de gestión.
             <br />
-            Por favor ingrese su email y contraseña.
+            Por favor ingrese su email o usuario y contraseña.
           </p>
           <form className="space-y-4 md:space-y-6" onSubmit={handleLogin}>
             <div className="flex items-center h-[60px] bg-white border border-[#EEEEEE] rounded-xl px-[26px] py-[18px] gap-[10px]">
@@ -71,8 +71,8 @@ function Login() {
               </svg>
 
               <input
-                type="email"
-                placeholder="Email"
+                type="text"
+                placeholder="Email o usuario"
                 className="w-full bg-transparent focus:outline-none text-gray-700 text-base placeholder-gray-400"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

@@ -45,7 +45,8 @@ export const verifyToken = async (
     }
 
     const decoded = decodeTokenPayload(token);
-    if (!decoded || !decoded.sub || !decoded.exp) {
+    const subject = decoded?.sub || decoded?.ID || decoded?.id;
+    if (!decoded || !subject || !decoded.exp) {
       res.status(401).json({ message: "Sesión inválida" });
       return;
     }
@@ -58,9 +59,9 @@ export const verifyToken = async (
 
     req.user = {
       status: "active",
-      userID: String(decoded.sub),
-      rolID: null,
-      hash: "",
+      userID: String(subject),
+      rolID: decoded.Rol ? String(decoded.Rol) : null,
+      hash: decoded.Hash ? String(decoded.Hash) : "",
       exp,
     };
     next();

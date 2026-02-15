@@ -1,30 +1,37 @@
 import { Request, Response, Router } from "express";
 import axios from "axios";
 
+import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 
 const router: Router = Router();
 
 const identityToolkitBase = "https://identitytoolkit.googleapis.com/v1";
 const secureTokenBase = "https://securetoken.googleapis.com/v1";
+const legacyEnabled = Boolean(configService.baseLoginApi);
+const legacyClient = legacyEnabled
+  ? new ApiClient(configService.baseLoginApi)
+  : null;
 
 const identityConfigured = () =>
   Boolean(configService.identityApiKey && configService.identityProjectId);
 
-router.post("/login", async (req: Request, res: Response) => {
-  if (!identityConfigured()) {
-    res.status(503).json({
-      success: false,
-      message: "Identity Platform no configurado",
-      error: {
-        status: 503,
-        details:
-          "Faltan IDENTITY_PLATFORM_API_KEY o IDENTITY_PLATFORM_PROJECT_ID",
-      },
-    });
-    return;
-  }
+const isIdentityConfigError = (error: unknown): boolean => {
+  if (!axios.isAxiosError(error)) return false;
+  const message = String(error.response?.data?.error?.message || "");
+  return (
+    message.includes("CONFIGURATION_NOT_FOUND") ||
+    message.includes("SERVICE_DISABLED")
+  );
+};
 
+const loginPayloadForLegacy = (body: Record<string, unknown>) => ({
+  ...body,
+  username: String(body.username || body.email || "").trim(),
+  password: String(body.password || "").trim(),
+});
+
+router.post("/login", async (req: Request, res: Response) => {
   try {
     const email = (req.body.email || req.body.username || "").trim();
     const password = (req.body.password || "").trim();
@@ -34,6 +41,28 @@ router.post("/login", async (req: Request, res: Response) => {
         message: "Credenciales inválidas",
         error: { status: 400, details: "email y password son requeridos" },
       });
+      return;
+    }
+
+    if (!identityConfigured()) {
+      if (!legacyClient) {
+        res.status(503).json({
+          success: false,
+          message: "Identity Platform no configurado",
+          error: {
+            status: 503,
+            details:
+              "Faltan IDENTITY_PLATFORM_API_KEY o IDENTITY_PLATFORM_PROJECT_ID",
+          },
+        });
+        return;
+      }
+
+      const legacy = await legacyClient.post<any>(
+        "auth/login",
+        loginPayloadForLegacy(req.body || {})
+      );
+      res.status(200).json(legacy);
       return;
     }
 
@@ -56,6 +85,23 @@ router.post("/login", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    if (legacyClient && isIdentityConfigError(error)) {
+      try {
+        const legacy = await legacyClient.post<any>(
+          "auth/login",
+          loginPayloadForLegacy(req.body || {})
+        );
+        res.status(200).json(legacy);
+        return;
+      } catch (legacyError) {
+        const err = legacyError as ApiResponse<null>;
+        if ("error" in err) {
+          res.status(err.error?.status || 500).json(err);
+          return;
+        }
+      }
+    }
+
     const status = axios.isAxiosError(error)
       ? error.response?.status || 401
       : 500;
@@ -71,6 +117,18 @@ router.post("/login", async (req: Request, res: Response) => {
 });
 
 router.post("/logout", async (req: Request, res: Response) => {
+  if (legacyClient) {
+    try {
+      const authHeader = req.headers.authorization;
+      const headers = authHeader ? { Authorization: authHeader } : {};
+      const legacy = await legacyClient.post<any>("/auth/logout", req.body, headers);
+      res.status(200).json(legacy);
+      return;
+    } catch {
+      // Continue with no-op logout fallback.
+    }
+  }
+
   // Identity Platform no requiere logout server-side en este flujo.
   res.status(200).json({
     success: true,
@@ -81,6 +139,22 @@ router.post("/logout", async (req: Request, res: Response) => {
 
 router.get("/access-token", async (req: Request, res: Response) => {
   if (!identityConfigured()) {
+    if (legacyClient) {
+      try {
+        const authHeader = req.headers.authorization;
+        const headers = authHeader ? { Authorization: authHeader } : {};
+        const legacy = await legacyClient.post<any>("/auth/access-token", {}, headers);
+        res.status(200).json(legacy);
+        return;
+      } catch (legacyError) {
+        const err = legacyError as ApiResponse<null>;
+        if ("error" in err) {
+          res.status(err.error?.status || 500).json(err);
+          return;
+        }
+      }
+    }
+
     res.status(503).json({
       success: false,
       message: "Identity Platform no configurado",
@@ -127,6 +201,22 @@ router.get("/access-token", async (req: Request, res: Response) => {
       },
     });
   } catch (error) {
+    if (legacyClient && isIdentityConfigError(error)) {
+      try {
+        const authHeader = req.headers.authorization;
+        const headers = authHeader ? { Authorization: authHeader } : {};
+        const legacy = await legacyClient.post<any>("/auth/access-token", {}, headers);
+        res.status(200).json(legacy);
+        return;
+      } catch (legacyError) {
+        const err = legacyError as ApiResponse<null>;
+        if ("error" in err) {
+          res.status(err.error?.status || 500).json(err);
+          return;
+        }
+      }
+    }
+
     const status = axios.isAxiosError(error)
       ? error.response?.status || 401
       : 500;
@@ -140,6 +230,22 @@ router.get("/access-token", async (req: Request, res: Response) => {
 
 router.get("/session", async (req: Request, res: Response) => {
   if (!identityConfigured()) {
+    if (legacyClient) {
+      try {
+        const authHeader = req.headers.authorization;
+        const headers = authHeader ? { Authorization: authHeader } : {};
+        const legacy = await legacyClient.get<any>("/auth/validate-token", headers);
+        res.status(200).json(legacy);
+        return;
+      } catch (legacyError) {
+        const err = legacyError as ApiResponse<null>;
+        if ("error" in err) {
+          res.status(err.error?.status || 500).json(err);
+          return;
+        }
+      }
+    }
+
     res.status(503).json({
       success: false,
       message: "Identity Platform no configurado",
@@ -176,6 +282,22 @@ router.get("/session", async (req: Request, res: Response) => {
       data,
     });
   } catch (error) {
+    if (legacyClient && isIdentityConfigError(error)) {
+      try {
+        const authHeader = req.headers.authorization;
+        const headers = authHeader ? { Authorization: authHeader } : {};
+        const legacy = await legacyClient.get<any>("/auth/validate-token", headers);
+        res.status(200).json(legacy);
+        return;
+      } catch (legacyError) {
+        const err = legacyError as ApiResponse<null>;
+        if ("error" in err) {
+          res.status(err.error?.status || 500).json(err);
+          return;
+        }
+      }
+    }
+
     const status = axios.isAxiosError(error)
       ? error.response?.status || 401
       : 500;
