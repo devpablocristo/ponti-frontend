@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Header from "../../../components/Header/Header";
 import Button from "../../../components/Button/Button";
-import APIClient from "@/restclient/apiInstance";
+import { apiClient } from "@/api/client";
 
 type Tenant = { id: number; name: string };
 type UserRow = {
@@ -13,8 +13,6 @@ type UserRow = {
   tenant: string;
   role: string;
 };
-
-const request = new APIClient({ baseURL: "/api" });
 
 export default function Access() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -38,10 +36,10 @@ export default function Access() {
     setLoading(true);
     setError("");
     try {
-      const t = (await request.get<any>("/admin/tenants")).data as Tenant[];
+      const t = (await apiClient.get<any>("/admin/tenants")).data as Tenant[];
       setTenants(t || []);
 
-      const u = (await request.get<any>("/admin/users")).data as UserRow[];
+      const u = (await apiClient.get<any>("/admin/users")).data as UserRow[];
       setUsers(u || []);
     } catch (e: any) {
       setError(e?.message || "No se pudo cargar la informacion");
@@ -60,7 +58,7 @@ export default function Access() {
     setError("");
     setResult("");
     try {
-      await request.post("/admin/tenants", { name: newTenantName.trim() });
+      await apiClient.post("/admin/tenants", { name: newTenantName.trim() });
       setResult("Tenant creado");
       setNewTenantName("");
       await refresh();
@@ -87,7 +85,7 @@ export default function Access() {
         send_reset_link: sendResetLink,
       };
 
-      const resp = await request.post<any>("/admin/users", payload);
+      const resp = await apiClient.post<any>("/admin/users", payload);
       const link = resp?.data?.reset_link as string | undefined;
       if (link) setResetLink(link);
       setResult("Usuario creado / actualizado");
