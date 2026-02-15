@@ -14,6 +14,24 @@ type UserRow = {
   role: string;
 };
 
+function unwrapList<T>(body: any): T[] {
+  // BFF routes wrap backend responses (and sometimes wrap their own wrappers).
+  // Normalize to a plain array so the UI doesn't explode on map().
+  const candidates = [
+    body,
+    body?.data,
+    body?.data?.data,
+    body?.data?.data?.data,
+    body?.items,
+    body?.data?.items,
+    body?.data?.data?.items,
+  ];
+  for (const c of candidates) {
+    if (Array.isArray(c)) return c as T[];
+  }
+  return [];
+}
+
 export default function Access() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -36,11 +54,11 @@ export default function Access() {
     setLoading(true);
     setError("");
     try {
-      const t = (await apiClient.get<any>("/admin/tenants")).data as Tenant[];
-      setTenants(t || []);
+      const tenantsBody = await apiClient.get<any>("/admin/tenants");
+      setTenants(unwrapList<Tenant>(tenantsBody));
 
-      const u = (await apiClient.get<any>("/admin/users")).data as UserRow[];
-      setUsers(u || []);
+      const usersBody = await apiClient.get<any>("/admin/users");
+      setUsers(unwrapList<UserRow>(usersBody));
     } catch (e: any) {
       setError(e?.message || "No se pudo cargar la informacion");
     } finally {
