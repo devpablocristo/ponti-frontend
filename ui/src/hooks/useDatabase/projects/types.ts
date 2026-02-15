@@ -39,6 +39,12 @@ export type Field = {
   lots: Plot[];
 };
 
+<<<<<<< HEAD
+=======
+import { PageInfo } from "@/api/types";
+export type { PageInfo };
+
+>>>>>>> da1c548 (done)
 export type Plot = {
   id: number;
   name: string;

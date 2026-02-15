@@ -1,5 +1,5 @@
 export type UserData = {
-  username: string;
+  email: string;
   password: string;
 };
 
@@ -8,9 +8,11 @@ export type LogoutData = {
 };
 
 export interface DecodedToken {
-  ID: number;
-  Rol: number;
-  Username: string;
+  ID?: number;
+  Rol?: number;
+  Username?: string;
+  sub?: string;
+  email?: string;
   exp: number;
 }
 

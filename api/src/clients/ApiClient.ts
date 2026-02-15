@@ -1,4 +1,9 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+<<<<<<< HEAD
+=======
+import { API_TIMEOUT } from "../configService";
+import { requestContext } from "../requestContext";
+>>>>>>> da1c548 (done)
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -64,6 +69,24 @@ export class ApiClient {
     });
   }
 
+  private withForwardedAuth(
+    config: AxiosRequestConfig = {}
+  ): AxiosRequestConfig {
+    const auth = requestContext.getAuthorization();
+    if (!auth) {
+      return config;
+    }
+    return {
+      ...config,
+      headers: {
+        ...(config.headers || {}),
+        Authorization:
+          (config.headers as Record<string, string | undefined>)?.Authorization ||
+          auth,
+      },
+    };
+  }
+
   public async get<T>(
     url: string,
     //headers?: Record<string, string | undefined>
@@ -81,7 +104,10 @@ export class ApiClient {
         }
       }
 
-      const response = await this.axiosInstance.get<T>(url, config);
+      const response = await this.axiosInstance.get<T>(
+        url,
+        this.withForwardedAuth(config)
+      );
       return {
         success: true,
         message: "Operación exitosa",
@@ -98,7 +124,10 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const config: AxiosRequestConfig = headers ? { headers } : {};
-      const response = await this.axiosInstance.delete<T>(url, config);
+      const response = await this.axiosInstance.delete<T>(
+        url,
+        this.withForwardedAuth(config)
+      );
       return {
         success: true,
         message: "Operación exitosa",
@@ -116,7 +145,11 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const config: AxiosRequestConfig = headers ? { headers } : {};
-      const response = await this.axiosInstance.post<T>(url, data, config);
+      const response = await this.axiosInstance.post<T>(
+        url,
+        data,
+        this.withForwardedAuth(config)
+      );
       return {
         success: true,
         message: "Operación exitosa",
@@ -134,7 +167,11 @@ export class ApiClient {
   ): Promise<ApiResponse<T>> {
     try {
       const config: AxiosRequestConfig = headers ? { headers } : {};
-      const response = await this.axiosInstance.put<T>(url, data, config);
+      const response = await this.axiosInstance.put<T>(
+        url,
+        data,
+        this.withForwardedAuth(config)
+      );
       return {
         success: true,
         message: "Operación exitosa",

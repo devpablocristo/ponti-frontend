@@ -56,7 +56,7 @@ const MainLayout: React.FC = () => {
       <div className="flex flex-col flex-1 overflow-hidden">
         <Navbar
           title={title}
-          username={auth.user.Username}
+          username={auth.user.Username || auth.user.email || auth.user.sub || "Usuario"}
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
           setIsLogoutModalOpen={() => setIsLogoutModalOpen(true)}

@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import routes from "./routes";
 import path from "path";
+import { requestContext } from "./requestContext";
 
 dotenv.config();
 
@@ -13,6 +14,17 @@ app.use(express.static(frontendPath));
 
 app.use(express.json({ limit: "150mb" }));
 app.use(express.urlencoded({ extended: true, limit: "150mb" }));
+app.use((req, _res, next) => {
+  requestContext.run(
+    {
+      authorization:
+        typeof req.headers.authorization === "string"
+          ? req.headers.authorization
+          : undefined,
+    },
+    next
+  );
+});
 
 // MSW mocks: solo se activan si ENABLE_MOCKS=1 (opt-in explícito).
 // En local con backend real, NO se deben activar. Solo usar para testing aislado del BFF.

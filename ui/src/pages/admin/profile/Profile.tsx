@@ -22,8 +22,13 @@ export function Profile() {
 
   useEffect(() => {
     if (auth?.user && auth?.isAuthenticated) {
-      setId(auth.user.ID);
-      getUser(auth.user.ID);
+      if (auth.user.ID) {
+        setId(auth.user.ID);
+        getUser(auth.user.ID);
+      } else {
+        setId(null);
+        setUser(auth.user.email || auth.user.sub || "");
+      }
     }
   }, [auth?.user, auth?.isAuthenticated]);
 
@@ -59,7 +64,9 @@ export function Profile() {
     }
 
     if (id === null) {
-      setErrorMessage("ID inválido");
+      setErrorMessage(
+        "La edición de perfil legacy está en migración. Gestione su contraseña desde Identity Platform."
+      );
       return;
     }
 
@@ -69,7 +76,7 @@ export function Profile() {
     setPasswordConfirm("");
   };
 
-  if (processing || id === null)
+  if (processing)
     return <LoadingScreen title={["Cargando..."]} description={[""]} />;
 
   return (
@@ -114,7 +121,8 @@ export function Profile() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-indigo-600 focus:border-indigo-600 block w-full p-4 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                 placeholder="Password"
-                required={true}
+                required={id !== null}
+                disabled={id === null}
               />
             </div>
             <div className="sm:col-span-2">
@@ -133,13 +141,14 @@ export function Profile() {
                 onChange={(e) => setPasswordConfirm(e.target.value)}
                 className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-indigo-600 focus:border-indigo-600 block w-full p-4 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                 placeholder="Password"
-                required={true}
+                required={id !== null}
+                disabled={id === null}
               />
             </div>
           </div>
           <div className="flex justify-between mt-6">
             <Button disabled={processing} variant="primary" type="submit">
-              {processing ? "Guardando..." : "Editar perfil"}
+              {processing ? "Guardando..." : id === null ? "Migrando perfil" : "Editar perfil"}
             </Button>
           </div>
         </form>

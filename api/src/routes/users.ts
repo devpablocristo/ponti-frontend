@@ -8,6 +8,22 @@ const apiClient = new ApiClient(configService.baseLoginApi);
 
 const router: Router = Router();
 
+router.use((_req: Request, res: Response, next) => {
+  if (!configService.baseLoginApi) {
+    res.status(501).json({
+      success: false,
+      message: "Gestión de usuarios en migración",
+      error: {
+        status: 501,
+        details:
+          "Los endpoints legacy de usuarios fueron desactivados; utilice Identity Platform + memberships del backend.",
+      },
+    });
+    return;
+  }
+  next();
+});
+
 router.post("", async (req: Request, res: Response) => {
   try {
     const authHeader = req.headers.authorization;

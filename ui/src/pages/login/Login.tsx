@@ -9,7 +9,7 @@ function Login() {
   const { login, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(false);
   const [error, setError] = useState("");
@@ -24,7 +24,7 @@ function Login() {
     e.preventDefault();
 
     const loginUserData: UserData = {
-      username,
+      email,
       password,
     };
 
@@ -52,7 +52,7 @@ function Login() {
           <p className="text-center text-base text-gray-900 mb-6">
             Bienvenido a su software de gestión.
             <br />
-            Por favor ingrese su usuario y contraseña.
+            Por favor ingrese su email y contraseña.
           </p>
           <form className="space-y-4 md:space-y-6" onSubmit={handleLogin}>
             <div className="flex items-center h-[60px] bg-white border border-[#EEEEEE] rounded-xl px-[26px] py-[18px] gap-[10px]">
@@ -71,11 +71,11 @@ function Login() {
               </svg>
 
               <input
-                type="text"
-                placeholder="Usuario"
+                type="email"
+                placeholder="Email"
                 className="w-full bg-transparent focus:outline-none text-gray-700 text-base placeholder-gray-400"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required={true}
               />
             </div>

@@ -1,14 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-//import redis from "../clients/redisClient";
-
-import { ApiClient } from "../clients/ApiClient";
-import { configService } from "../configService";
-
-const apiClient = new ApiClient(configService.baseLoginApi);
-
-const AUTH_API_URL = "/auth/validate-token";
-const REFRESH_API_URL = "/auth/access-token";
 
 declare global {
   namespace Express {
@@ -21,9 +11,20 @@ declare global {
 export interface UserData {
   status: string;
   userID: string;
-  rolID: string;
+  rolID: string | null;
   hash: string;
   exp: number;
+}
+
+function decodeTokenPayload(token: string): Record<string, any> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = Buffer.from(parts[1], "base64url").toString("utf8");
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
 }
 
 export const verifyToken = async (
@@ -32,55 +33,37 @@ export const verifyToken = async (
   next: NextFunction
 ) => {
   try {
-    const authHeader = req.headers.authorization;
+    const authHeader =
+      typeof req.headers.authorization === "string"
+        ? req.headers.authorization
+        : "";
     const token = authHeader?.split(" ")[1];
-    
+
     if (!token || token.trim() === "") {
-      console.log("Token vacío o no proporcionado. Header:", authHeader);
       res.status(401).json({ message: "No autorizado" });
       return;
     }
 
-    console.log("Token recibido (primeros 20 chars):", token.substring(0, 20));
-
-    // En desarrollo, verificar el token localmente
-    const secretKey = process.env.JWT_SECRET;
-    if (secretKey && process.env.NODE_ENV === "development") {
-      try {
-        const decoded = jwt.verify(token, secretKey) as any;
-        req.user = {
-          status: "active",
-          userID: decoded.id,
-          rolID: decoded.rolId,
-          hash: decoded.hash || "",
-          exp: decoded.exp,
-        };
-        next();
-        return;
-      } catch (jwtError: any) {
-        console.error("Error validando JWT:", jwtError.message);
-        // Continuar con validación externa si JWT falla
-      }
+    const decoded = decodeTokenPayload(token);
+    if (!decoded || !decoded.sub || !decoded.exp) {
+      res.status(401).json({ message: "Sesión inválida" });
+      return;
     }
 
-    // Fallback: validar contra API externa
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const { data, success } = await apiClient.get<UserData>(
-        AUTH_API_URL,
-        headers
-      );
-
-      if (success) {
-        req.user = data;
-        next();
-        return;
-      }
-    } catch (error) {
-      console.error("Error validando el token:", error);
+    const exp = Number(decoded.exp);
+    if (!exp || exp <= Math.floor(Date.now() / 1000)) {
+      res.status(401).json({ message: "Sesión expirada" });
+      return;
     }
 
-    res.status(401).json({ message: "Sesión inválida" });
+    req.user = {
+      status: "active",
+      userID: String(decoded.sub),
+      rolID: null,
+      hash: "",
+      exp,
+    };
+    next();
   } catch (error) {
     console.error("Error en autenticación:", error);
     res.status(500).json({ message: "Error en autenticación" });
