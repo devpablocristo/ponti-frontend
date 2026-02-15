@@ -84,7 +84,7 @@ jobs:
             --service-account="github-actions@${{ steps.env.outputs.PROJECT_ID }}.iam.gserviceaccount.com" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_LOGIN_API=${{ secrets.BASE_LOGIN_API }},BASE_MANAGER_API=${{ secrets.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_LOGIN_API=${{ secrets.BASE_LOGIN_API }},BASE_MANAGER_API=${{ secrets.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ github.ref_name == 'main' && secrets.IDENTITY_PLATFORM_API_KEY_STG || secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
 
       - name: Show deployment URL
         run: |
