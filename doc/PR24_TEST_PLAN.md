@@ -18,10 +18,12 @@ Se agregó la capacidad de importar insumos masivamente desde archivos Excel (.x
 **Qué probar:**
 - [ ] Ir a **Base de Datos → Insumos** (`/admin/database/items`)
 - [ ] Verificar que aparece un botón de importación (además del botón existente "Agregar insumos")
+- [ ] Verificar que en **Unidad** existe la nueva opción **Bolsas** (además de Lts y Kg)
 - [ ] Importar un archivo **Excel (.xlsx)** con columnas: Insumo, Unidad, Precio, Rubro, Tipo
 - [ ] Importar un archivo **CSV** con las mismas columnas
 - [ ] Verificar que los datos aparecen en la tabla de previsualización
 - [ ] Verificar que las columnas se mapean correctamente (acepta aliases: "insumo"/"nombre"/"name", "unidad"/"unit", "precio"/"usd", "rubro"/"categoria", "tipo"/"clase")
+- [ ] Importar un archivo con unidad **Bolsas** (ej: "bolsa", "bolsas" o "3") y verificar que se mapea correctamente
 - [ ] Verificar que se detectan duplicados (insumos con el mismo nombre)
 - [ ] Probar con un archivo con headers en español y otro en inglés
 - [ ] Probar con un archivo vacío → debería mostrar error
@@ -115,6 +117,20 @@ Se agregó la capacidad de importar labores masivamente desde archivos Excel/CSV
 **Qué probar:**
 - [ ] Verificar que `yarn install` no falla
 - [ ] Verificar que el build de producción (`yarn build`) completa sin errores
+
+### 11. [FE] Informe Aporte por inversor — Arriendo / Ha corregido
+**Archivo:** `ui/src/pages/admin/reports/InvestorContributionReport.tsx`
+
+Se corrigió el indicador de cabecera para que **Arriendo / Ha** muestre el valor por hectárea (y no el total), y se agregó un campo separado para **Arriendo total** con el mismo estilo visual.
+
+**Qué probar:**
+- [ ] Ir a **Informes → Aportes por inversor**
+- [ ] Seleccionar proyecto y campaña, luego click en **Generar informe**
+- [ ] Verificar que en cabecera aparecen ambos campos: **Arriendo / Ha** y **Arriendo total**
+- [ ] Verificar que ambos campos tienen estilo consistente con los otros indicadores (mismo componente visual)
+- [ ] Validar cálculo: `Arriendo / Ha = Arriendo total / Superficie`
+- [ ] Con superficie > 0, confirmar que **Arriendo / Ha** no coincide con el total salvo que corresponda matemáticamente
+- [ ] Con superficie = 0 (si existe caso), verificar que no rompa la UI y muestre `u$ 0`
 
 ---
 

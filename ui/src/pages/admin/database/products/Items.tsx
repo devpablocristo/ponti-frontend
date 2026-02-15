@@ -21,6 +21,7 @@ interface Row {
 export const units = [
   { id: 1, name: "Lts" },
   { id: 2, name: "Kg" },
+  { id: 3, name: "Bolsas" },
 ];
 
 const HEADER_ALIASES = {
@@ -445,6 +446,8 @@ export default function Items() {
             ? 1
             : unitNormalized === "2" || unitNormalized === "kg" || unitNormalized === "kilo" || unitNormalized === "kilos"
               ? 2
+              : unitNormalized === "3" || unitNormalized === "bolsa" || unitNormalized === "bolsas" || unitNormalized === "bag" || unitNormalized === "bags"
+                ? 3
               : 0;
 
         const normalizedPrice = priceRaw
