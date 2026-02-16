@@ -116,8 +116,8 @@ export default function Customers() {
 
   useEffect(() => {
     if (options) {
-      setSuggestions(options.clients);
-      setCampaignSuggestions(options.campaigns);
+      setSuggestions(options.clients ?? []);
+      setCampaignSuggestions(options.campaigns ?? []);
     }
   }, [options]);
 
@@ -851,7 +851,7 @@ export default function Customers() {
             {showCustomerSuggestions && (
               <div className="flex justify-between items-center">
                 <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
-                  {suggestions.length > 0 &&
+                  {(suggestions?.length ?? 0) > 0 &&
                     suggestions.map((customer, index) => (
                       <li
                         key={index}
@@ -902,7 +902,7 @@ export default function Customers() {
             {showCampaingSuggestions && (
               <div className="flex justify-between items-center">
                 <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
-                  {campaignSuggestions.length > 0 &&
+                  {(campaignSuggestions?.length ?? 0) > 0 &&
                     campaignSuggestions.map((campaign, index) => (
                       <li
                         key={index}

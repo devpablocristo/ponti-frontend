@@ -38,11 +38,11 @@ router.get("", async (req: Request, res: Response) => {
     const data = {
       success: true,
       data: {
-        clients: customers.data,
+        clients: customers.items ?? customers.data ?? [],
         managers: managers,
-        investors: investors.data,
+        investors: investors.data ?? [],
         campaigns: campaigns,
-        crops: crops.data,
+        crops: crops.data ?? [],
         rentTypes: leaseTypes,
       },
     };
