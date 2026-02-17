@@ -246,20 +246,20 @@ function WorkspaceSelector() {
   return (
     <div className="flex flex-col md:flex-row h-screen">
       <Cover />
-      <div className="w-full md:w-2/5 flex-1 flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full md:w-2/5 flex-1 flex items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-sm">
-          <h2 className="text-4xl font-bold text-center mb-3">
+          <h2 className="text-3xl font-bold text-slate-800 mb-2 font-display tracking-tight">
             Hola {auth.user?.Username}!
           </h2>
-          <p className="text-center text-base text-gray-900 mb-6">
+          <p className="text-sm text-slate-500 mb-8 leading-relaxed">
             Para comenzar debes elegir un cliente, proyecto y campaña.
           </p>
-          <div className="ml-8 w-full max-w-xs">
+          <div className="w-full max-w-sm animate-fade-in-up">
             {customerError ||
               projectError ||
               (campaignError && (
                 <div
-                  className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+                  className="p-4 mb-4 text-sm text-red-700 rounded-xl bg-red-50 border border-red-100"
                   role="alert"
                 >
                   <span className="font-medium">Error!</span> {customerError}{" "}
@@ -291,12 +291,12 @@ function WorkspaceSelector() {
                   disabled={processing}
                 />
                 {suggestions.length === 0 && (
-                  <div className="px-4 py-2 text-red-600">
+                  <div className="px-4 py-3 text-sm text-red-600">
                     No hay clientes activos para operar. Presione el siguientebotón para agregar un nuevo cliente.
                     <button
                       type="button"
                       onClick={() => navigate("/admin/database/customers")}
-                      className={`mt-2 text-white font-semibold text-base w-full rounded-xl px-[26px] py-[12px] transition duration-300 bg-custom-btn hover:bg-custom-btn/80 cursor-pointer`}
+                      className="mt-2 text-white font-semibold text-sm w-full rounded-xl px-6 py-3 transition-all duration-200 bg-custom-btn hover:bg-custom-btn/85 active:scale-[0.98]"
                     >
                     Crear nuevo cliente
                   </button>
@@ -304,7 +304,7 @@ function WorkspaceSelector() {
                 )}
                 {showCustomerSuggestions && (
                   <div className="flex justify-between items-center">
-                    <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
+                    <ul className="absolute top-full mb-1 w-full bg-white border border-slate-200 rounded-xl z-10 max-h-[200px] overflow-y-auto" style={{ boxShadow: 'var(--shadow-lg)' }}>
                       {suggestions.length > 0 &&
                         suggestions.map((customer, index) => (
                           <li
@@ -312,10 +312,10 @@ function WorkspaceSelector() {
                             onClick={() =>
                               handleCustomerSuggestionClick(customer)
                             }
-                            className={`px-4 py-2 cursor-pointer ${
+                            className={`px-3.5 py-2.5 cursor-pointer text-sm transition-colors duration-150 ${
                               index === highlightedCustomerIndex
-                                ? "bg-gray-300 font-medium"
-                                : "hover:bg-gray-300 hover:font-medium"
+                                ? "bg-primary-50 text-primary-700 font-medium"
+                                : "hover:bg-slate-50"
                             }`}
                           >
                             {customer.name}
@@ -351,7 +351,7 @@ function WorkspaceSelector() {
                 />
                 {showProjectSuggestions && (
                   <div className="flex justify-between items-center">
-                    <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
+                    <ul className="absolute top-full mb-1 w-full bg-white border border-slate-200 rounded-xl z-10 max-h-[200px] overflow-y-auto" style={{ boxShadow: 'var(--shadow-lg)' }}>
                       {projectSuggestions.length > 0 &&
                         projectSuggestions.map((project, index) => (
                           <li
@@ -359,10 +359,10 @@ function WorkspaceSelector() {
                             onClick={() =>
                               handleProjectSuggestionClick(project)
                             }
-                            className={`px-4 py-2 cursor-pointer ${
+                            className={`px-3.5 py-2.5 cursor-pointer text-sm transition-colors duration-150 ${
                               index === highlightedProjectIndex
-                                ? "bg-gray-300 font-medium"
-                                : "hover:bg-gray-300 hover:font-medium"
+                                ? "bg-primary-50 text-primary-700 font-medium"
+                                : "hover:bg-slate-50"
                             }`}
                           >
                             {project.name}
@@ -374,7 +374,7 @@ function WorkspaceSelector() {
                 {customer &&
                   !processingProjects &&
                   projectsDropdown.length === 0 && (
-                    <div className="px-4 py-2 text-red-600">
+                    <div className="px-4 py-3 text-sm text-red-600">
                       No hay proyectos disponibles.
                     </div>
                   )}
@@ -404,7 +404,7 @@ function WorkspaceSelector() {
                 />
                 {showCampaignSuggestions && (
                   <div className="flex justify-between items-center">
-                    <ul className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-md z-10">
+                    <ul className="absolute top-full left-0 w-full bg-white border border-slate-200 rounded-xl z-10 max-h-[200px] overflow-y-auto" style={{ boxShadow: 'var(--shadow-lg)' }}>
                       {campaigns.length > 0 &&
                         campaignSuggestions.map((campaign, index) => (
                           <li
@@ -412,7 +412,7 @@ function WorkspaceSelector() {
                             onClick={() =>
                               handleCampaignSuggestionClick(campaign)
                             }
-                            className="px-4 py-2 cursor-pointer hover:bg-gray-300"
+                            className="px-3.5 py-2.5 cursor-pointer text-sm transition-colors duration-150 hover:bg-slate-50"
                           >
                             {campaign.name}
                           </li>
@@ -424,33 +424,38 @@ function WorkspaceSelector() {
               <button
                 type="submit"
                 disabled={!project || !campaign || !customer || isEntering}
-                className={`text-white font-semibold text-base w-full rounded-xl px-[26px] py-[16px] transition duration-300
+                className={`text-white font-semibold text-sm w-full rounded-xl px-6 py-3 transition-all duration-200
                   ${
                     !project || !campaign || !customer || isEntering
-                      ? "bg-gray-500 cursor-not-allowed"
-                      : "bg-custom-btn hover:bg-custom-btn/80 cursor-pointer"
+                      ? "bg-slate-300 cursor-not-allowed"
+                      : "bg-custom-btn hover:bg-custom-btn/85 active:scale-[0.98] cursor-pointer"
                   }`}
               >
                 {isEntering ? (
                   <>
                     <svg
-                      aria-hidden="true"
-                      role="status"
-                      className="inline w-4 h-4 me-3 text-white animate-spin"
-                      viewBox="0 0 100 101"
+                      className="w-4 h-4 animate-spinner"
+                      viewBox="0 0 24 24"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
                     >
-                      <path
-                        d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z"
-                        fill="#E5E7EB"
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        className="opacity-25"
                       />
                       <path
-                        d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z"
-                        fill="currentColor"
+                        d="M12 2a10 10 0 0 1 10 10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        className="opacity-75"
                       />
                     </svg>
-                    Loading...{" "}
+                    Ingresando...{" "}
                   </>
                 ) : (
                   "Ingresar"

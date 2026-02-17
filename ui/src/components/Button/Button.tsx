@@ -26,27 +26,33 @@ interface ButtonProps {
 }
 
 const variantClasses = {
-  primary: "bg-blue-700 hover:bg-blue-800 focus:ring-blue-300 text-white",
-  secondary: "bg-gray-200 hover:bg-gray-300 focus:ring-gray-400 text-gray-900",
+  primary:
+    "bg-primary-700 hover:bg-primary-800 text-white shadow-sm hover:shadow-md",
+  secondary:
+    "bg-slate-100 hover:bg-slate-200 text-slate-700 shadow-sm",
   success:
-    "bg-custom-btn hover:bg-custom-btn/80 focus:ring-green-300 text-white",
-  danger: "bg-red-700 hover:bg-red-800 focus:ring-red-300 text-white",
-  warning: "bg-yellow-400 hover:bg-yellow-500 focus:ring-yellow-300 text-white",
+    "bg-custom-btn hover:bg-custom-btn/85 text-white shadow-sm hover:shadow-md",
+  danger:
+    "bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md",
+  warning:
+    "bg-amber-500 hover:bg-amber-600 text-white shadow-sm hover:shadow-md",
   light:
-    "bg-white border border-gray-300 hover:bg-gray-100 focus:ring-gray-100 text-gray-900",
-  dark: "bg-gray-800 hover:bg-gray-900 focus:ring-gray-700 text-white",
-  outlineGreen: "border border-custom-btn text-custom-btn hover:bg-green-50",
+    "bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 shadow-sm",
+  dark:
+    "bg-slate-800 hover:bg-slate-900 text-white shadow-sm hover:shadow-md",
+  outlineGreen:
+    "border border-custom-btn text-custom-btn hover:bg-primary-50 bg-transparent",
   outlineGray:
-    "bg-white border border-gray-300 text-gray-900 hover:bg-gray-100",
+    "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50",
   outlinePonti:
-    "bg-transparent border border-[#547792] text-[#547792] hover:bg-gray-100",
+    "bg-transparent border border-custom-btn text-custom-btn hover:bg-primary-50",
 };
 
 const sizeClasses = {
-  xs: "px-2 py-1.5 text-xs",
-  sm: "px-3 py-2 text-sm",
-  md: "px-5 py-2.5 text-md",
-  lg: "px-6 py-3 text-lg",
+  xs: "px-2.5 py-1.5 text-xs gap-1.5",
+  sm: "px-3.5 py-2 text-sm gap-1.5",
+  md: "px-5 py-2.5 text-sm gap-2",
+  lg: "px-6 py-3 text-base gap-2",
 };
 
 export default function Button({
@@ -61,16 +67,16 @@ export default function Button({
   disabled = false,
   ...props
 }: ButtonProps) {
-  const classes = `inline-flex items-center font-medium rounded-lg focus:ring-4 focus:outline-none ${
-    disabled ? "opacity-60 cursor-not-allowed" : ""
+  const classes = `inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 active:scale-[0.97] ${
+    disabled ? "opacity-50 cursor-not-allowed active:scale-100" : ""
   } ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
 
   if (href) {
     return (
       <Link to={href} className={classes}>
-        {iconLeft && <span className="me-2">{iconLeft}</span>}
+        {iconLeft && <span className="flex-shrink-0">{iconLeft}</span>}
         {children}
-        {iconRight && <span className="ms-2">{iconRight}</span>}
+        {iconRight && <span className="flex-shrink-0">{iconRight}</span>}
       </Link>
     );
   }
@@ -83,9 +89,9 @@ export default function Button({
       onClick={disabled ? undefined : onClick}
       {...props}
     >
-      {iconLeft && <span className="me-2">{iconLeft}</span>}
+      {iconLeft && <span className="flex-shrink-0">{iconLeft}</span>}
       {children}
-      {iconRight && <span className="ms-2">{iconRight}</span>}
+      {iconRight && <span className="flex-shrink-0">{iconRight}</span>}
     </button>
   );
 }

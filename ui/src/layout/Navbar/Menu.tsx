@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import Button from "../../components/Button/Button";
 import { useSelection } from "../../pages/login/context/SelectionContext";
 import { getInsightsSummary } from "@/api/aiClient";
 
-const POLL_INTERVAL_MS = 60_000; // 60 segundos
+const POLL_INTERVAL_MS = 60_000;
 
 interface NavbarProps {
   username: string;
@@ -67,45 +66,50 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
 
     fetchSummary();
 
-    // Polling periódico
     const interval = setInterval(fetchSummary, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [projectId]);
 
   return (
-    <div className="relative flex items-center ms-3 gap-3">
-      {/* Badge de insights — clickeable, visible solo si hay insights */}
-      {insightsCount > 0 && (
-        <Link
-          to="/admin/ai-insights"
-          className="flex flex-col items-center justify-center cursor-pointer hover:opacity-80 transition-opacity"
-          title={`${insightsCount} insight${insightsCount !== 1 ? "s" : ""} nuevo${insightsCount !== 1 ? "s" : ""}`}
+    <div className="relative flex items-center gap-3">
+      <Link
+        to="/admin/ai-insights"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 hover:bg-slate-100"
+        title={`${insightsCount} insight${insightsCount !== 1 ? "s" : ""} nuevo${insightsCount !== 1 ? "s" : ""}`}
+      >
+        <span className="text-[11px] font-medium" style={{ color: "#64748B" }}>IA</span>
+        <span
+          className="text-[11px] font-semibold rounded-full px-2 py-0.5"
+          style={{
+            color: "#FFFFFF",
+            backgroundColor: highSeverityCount > 0 ? "#EF4444" : insightsCount > 0 ? "#547792" : "#94A3B8",
+            animation: highSeverityCount > 0 ? "pulse-subtle 2s infinite" : undefined,
+          }}
         >
-          <span className="text-[10px] text-slate-500">IA</span>
-          <span
-            className={`text-xs font-semibold text-white rounded-full px-2 py-0.5 ${
-              highSeverityCount > 0 ? "bg-red-500 animate-pulse" : "bg-blue-500"
-            }`}
-          >
-            {insightsCount}
-          </span>
-        </Link>
-      )}
-      <div className="h-8 border-l border-slate-300" />
+          {insightsCount}
+        </span>
+      </Link>
+
+      <div className="h-6" style={{ borderLeft: "1px solid #E2E8F0" }} />
+
       <div className="relative">
         <button
           ref={buttonRef}
           type="button"
-          className="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-600"
+          className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg hover:bg-slate-100 transition-colors duration-200"
           aria-expanded={isDropdownOpen ? "true" : "false"}
           onClick={toggleDropdown}
         >
-          <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center">
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: "#E2E8F0" }}
+          >
             <svg
-              className="w-8 h-8 text-blue-900"
+              className="w-5 h-5"
               fill="currentColor"
               viewBox="0 0 24 24"
               xmlns="http://www.w3.org/2000/svg"
+              style={{ color: "#3D5A6E" }}
             >
               <path
                 fillRule="evenodd"
@@ -116,38 +120,42 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
           </div>
         </button>
       </div>
+
       <div
         ref={dropdownRef}
-        className={`absolute right-0.5 top-full mt-2 z-[9999] ${
-          isDropdownOpen ? "" : "hidden"
-        } text-base list-none bg-white divide-y divide-gray-100 rounded shadow`}
+        className={`absolute right-0 top-full mt-2 z-[9999] ${
+          isDropdownOpen ? "animate-fade-in-down" : "hidden"
+        } w-52 bg-white rounded-xl border border-slate-200 overflow-hidden`}
+        style={{ boxShadow: "var(--shadow-lg)" }}
       >
-        <div className="px-4 py-3" role="none">
-          <p className="text-sm text-gray-900 dark:text-white" role="none">
-            <b>{username}</b>
-          </p>
+        <div className="px-4 py-3 border-b border-slate-100">
+          <p className="text-sm font-semibold" style={{ color: "#1E293B" }}>{username}</p>
         </div>
-        <ul className="py-1" role="none">
-          <li>
-            <Link
-              to="/admin/profile"
-              onClick={toggleDropdown}
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            >
-              Mi Perfil
-            </Link>
-          </li>
-          <li>
-            <Button
-              className="mx-2 mt-2 py-2 text-sm w-44"
-              variant="danger"
-              size="sm"
-              onClick={setIsLogoutModalOpen}
-            >
-              Salir
-            </Button>
-          </li>
-        </ul>
+        <div className="py-1">
+          <Link
+            to="/admin/profile"
+            onClick={toggleDropdown}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors duration-150"
+            style={{ color: "#475569" }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+            Mi Perfil
+          </Link>
+        </div>
+        <div className="p-2 border-t border-slate-100">
+          <button
+            onClick={setIsLogoutModalOpen}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors duration-150"
+            style={{ color: "#DC2626" }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15m-3 0-3-3m0 0 3-3m-3 3H15" />
+            </svg>
+            Cerrar sesión
+          </button>
+        </div>
       </div>
     </div>
   );

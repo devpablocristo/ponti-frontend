@@ -1,5 +1,4 @@
 import * as React from "react";
-import { LoaderCircle } from "lucide-react";
 
 type LoadingProps = {
   title?: string[];
@@ -20,15 +19,32 @@ export default function LoadingScreen({
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center">
-      <div className="w-full max-w-lg mx-auto px-4">
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="w-full max-w-lg mx-auto px-4 animate-fade-in">
         <div className="flex flex-col items-center text-center space-y-6">
           <div className="w-16 h-16 flex items-center justify-center">
-            <LoaderCircle className="w-12 h-12 text-[#3b5c3f] animate-spin" />
+            <svg
+              className="w-12 h-12 text-custom-btn animate-spinner"
+              viewBox="0 0 50 50"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle
+                cx="25"
+                cy="25"
+                r="20"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray="90 150"
+              />
+            </svg>
           </div>
           <div className="space-y-4">
-            <h1 className="text-3xl font-bold">{renderText(title)}</h1>
-            <p className="text-xl text-gray-500"> {renderText(description)}</p>
+            <h1 className="text-2xl font-bold text-slate-800 font-display tracking-tight">
+              {renderText(title)}
+            </h1>
+            <p className="text-base text-slate-500">{renderText(description)}</p>
           </div>
         </div>
       </div>

@@ -25,12 +25,13 @@ const SelectField: React.FC<SelectFieldProps> = ({
   fullWidth = false,
   disabled = false,
 }) => {
-  const sizeClasses = size === "sm" ? "text-[13px] py-2" : "text-base py-3";
+  const sizeClasses =
+    size === "sm" ? "text-sm py-2 px-3.5" : "text-sm py-2.5 px-3.5";
 
   return (
     <div className={`${fullWidth ? "w-full" : ""}`}>
       {label !== "" && (
-        <label className="block mb-1 text-xs font-medium text-gray-900 leading-[1.5]">
+        <label className="block mb-1.5 text-xs font-medium text-slate-600">
           {label}
         </label>
       )}
@@ -40,7 +41,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
           value={value}
           disabled={disabled}
           onChange={onChange}
-          className={`bg-gray-50 border border-gray-400 text-gray-900 rounded-lg focus:ring-custom-btn focus:border-custom-btn block px-4 w-full appearance-none ${sizeClasses} ${className}`}
+          className={`input-base appearance-none focus:ring-0 block px-3.5 ${sizeClasses} ${className}`}
         >
           <option value="" disabled>
             {placeholder ? placeholder : "Seleccionar..."}
@@ -53,7 +54,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
         </select>
         <ChevronDown
           size={16}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
         />
       </div>
     </div>

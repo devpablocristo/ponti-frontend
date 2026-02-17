@@ -47,7 +47,7 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-custom-bg">
       <Sidebar
         setTitle={setTitle}
         setIsSidebarOpen={() => setIsSidebarOpen(false)}
@@ -56,16 +56,18 @@ const MainLayout: React.FC = () => {
       <div className="flex flex-col flex-1 overflow-hidden">
         <Navbar
           title={title}
-          username={auth.user.Username || auth.user.email || auth.user.sub || "Usuario"}
+          username={auth.user.Username || auth.user.email || "Usuario"}
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
           setIsLogoutModalOpen={() => setIsLogoutModalOpen(true)}
         />
         <main
           id="main-scroll"
-          className="flex-1 overflow-y-auto py-1 p-4 bg-custom-bg"
+          className="flex-1 overflow-y-auto p-5 bg-custom-bg"
         >
-          <Outlet />
+          <div className="animate-fade-in">
+            <Outlet />
+          </div>
           <BaseModal
             isOpen={isLogoutModalOpen}
             onClose={() => setIsLogoutModalOpen(false)}
@@ -80,7 +82,6 @@ const MainLayout: React.FC = () => {
           />
         </main>
       </div>
-      {/* <Footer /> */}
     </div>
   );
 };

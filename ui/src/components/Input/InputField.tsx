@@ -45,18 +45,16 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
   ) => {
     const sizeClasses =
       size === "sm"
-        ? "text-sm py-2 px-4"
+        ? "text-sm py-2 px-3.5"
         : size === "lg"
-        ? "text-lg py-4 px-6"
-        : "text-base py-3 px-4";
+        ? "text-base py-3 px-4"
+        : "text-sm py-2.5 px-3.5";
 
     return (
       <div className={`${fullWidth ? "w-full" : ""} ${className}`}>
         {label !== "" && (
           <label
-            className={`"block mb-2 text-sm font-medium ${
-              disabled ? "text-gray-600" : "text-gray-900"
-            } leading-[1.5]"`}
+            className="block mb-1.5 text-xs font-medium text-slate-600"
           >
             {label}
           </label>
@@ -74,10 +72,10 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
           onPaste={onPaste}
           placeholder={placeholder}
           step={step}
-          className={`border rounded-lg block w-full ${
+          className={`input-base block ${
             disabled
-              ? "bg-gray-50 border-gray-300 text-gray-800 cursor-not-allowed"
-              : "bg-white border-gray-500 text-gray-900"
+              ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200"
+              : ""
           } ${sizeClasses} ${inputClassName}`}
           required={required}
           disabled={disabled}

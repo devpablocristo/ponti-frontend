@@ -14,7 +14,7 @@ const TextAreaField: React.FC<TextAreaFieldProps> = ({
   placeholder,
 }) => (
   <div className="sm:col-span-2">
-    <label className="block mb-2 text-base font-medium text-gray-900">
+    <label className="block mb-1.5 text-xs font-medium text-slate-600">
       {label}
     </label>
     <textarea
@@ -23,7 +23,7 @@ const TextAreaField: React.FC<TextAreaFieldProps> = ({
       onChange={onChange}
       placeholder={placeholder}
       rows={4}
-      className="block p-3 w-full text-base text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"
+      className="input-base p-3 text-sm"
     />
   </div>
 );

@@ -32,21 +32,22 @@ const Search: React.FC<SearchProps> = ({
   size = "md",
 }) => {
   const sizeClasses =
-    size === "sm" ? "text-[13px] py-2 px-4" : "text-base py-3 px-4";
-  const iconPositionClass = size === "sm" ? "top-2.5" : "top-4";
+    size === "sm" ? "text-sm py-2 px-3.5" : "text-sm py-2.5 px-3.5";
+  const iconPositionClass = size === "sm" ? "top-2.5" : "top-3";
   const iconSizeClass = size === "sm" ? "h-4 w-4" : "h-5 w-5";
 
   return (
     <div className={`relative ${fullWidth ? "w-full" : ""}`}>
       {label !== "" && (
-        <label className="block mb-2 text-xs font-medium text-gray-900 leading-tight">
+        <label className="block mb-1.5 text-xs font-medium text-slate-600">
           {label}
         </label>
       )}
       <div className="relative">
         <span
-          className={`absolute left-3 ${iconPositionClass} 
-  ${disabled ? "text-gray-300" : "text-gray-500"}`}
+          className={`absolute left-3 ${iconPositionClass} ${
+            disabled ? "text-slate-300" : "text-slate-400"
+          }`}
         >
           <svg
             width="18"
@@ -77,19 +78,18 @@ const Search: React.FC<SearchProps> = ({
           onKeyDown={onKeyDown}
           onFocus={onFocus}
           placeholder={placeholder}
-          className={`block w-full rounded-lg pl-9 pr-8 border text-gray-900 
-            ${
-              disabled
-                ? "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-                : "bg-white border-gray-500"
-            } 
-            ${sizeClasses} ${className}`}
+          className={`input-base block pl-9 pr-8 ${
+            disabled
+              ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200"
+              : ""
+          } ${sizeClasses} ${className}`}
           required={required}
         />
         <ChevronDown
           size={16}
-          className={`absolute right-2 ${iconPositionClass} 
-    ${disabled ? "text-gray-300" : "text-gray-500"}`}
+          className={`absolute right-2 ${iconPositionClass} ${
+            disabled ? "text-slate-300" : "text-slate-400"
+          }`}
         />
       </div>
     </div>

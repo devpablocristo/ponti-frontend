@@ -7,14 +7,14 @@ const FormButtons: React.FC<{
     <button
       type="button"
       onClick={onCancel}
-      className="bg-gray-200 text-gray-900 font-medium py-3 px-6 rounded-lg hover:bg-gray-300"
+      className="bg-white text-slate-700 border border-slate-200 font-medium py-2.5 px-6 rounded-lg hover:bg-slate-50 transition-all duration-200"
     >
       Volver
     </button>
     <button
       type="submit"
       disabled={isSubmitting}
-      className="bg-indigo-600 text-white font-medium py-3 px-6 rounded-lg hover:bg-indigo-700"
+      className="bg-custom-btn text-white font-medium py-2.5 px-6 rounded-lg hover:bg-custom-btn/85 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {isSubmitting ? "Guardando..." : submitLabel}
     </button>

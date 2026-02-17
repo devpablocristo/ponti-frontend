@@ -56,7 +56,7 @@ const ResponsiveButtonContainer: React.FC<ResponsiveButtonProps> = ({
   return (
     <div className="fixed bottom-6 right-6 z-50">
       {open && (
-        <div className="mb-2 flex flex-col items-end gap-2">
+        <div className="mb-3 flex flex-col items-end gap-2 animate-fade-in-up">
           {actions.map((action) => (
             <Button
               key={`floating-action-${action.label}`}
@@ -78,7 +78,7 @@ const ResponsiveButtonContainer: React.FC<ResponsiveButtonProps> = ({
       )}
       <button
         onClick={() => setOpen(!open)}
-        className="bg-custom-btn hover:bg-custom-btn/80 text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center"
+        className="bg-custom-btn hover:bg-custom-btn/85 text-white w-12 h-12 rounded-full shadow-lg transition-all duration-200 active:scale-95 flex items-center justify-center"
         aria-label="Acciones"
       >
         <span className="text-2xl">+</span>
@@ -257,9 +257,12 @@ const FilterBar: React.FC<FilterBarProps> = ({
                     />
                     {suggestionsVisible[filter.name] && filter.options && (
                       <div className="flex justify-between items-center">
-                        <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
+                        <ul
+                          className="absolute top-full mb-1 w-full bg-white border border-slate-200 rounded-xl z-10 max-h-[200px] overflow-y-auto"
+                          style={{ boxShadow: 'var(--shadow-lg)' }}
+                        >
                           <li
-                            className="p-2 cursor-pointer hover:bg-gray-100"
+                            className="px-3.5 py-2.5 cursor-pointer text-sm hover:bg-slate-50 font-medium text-slate-600 transition-colors duration-150"
                             onClick={() => {
                               filter.setData({
                                 id: 0,
@@ -283,10 +286,10 @@ const FilterBar: React.FC<FilterBarProps> = ({
                                     filter.setData
                                   )
                                 }
-                                className={`px-4 py-2 cursor-pointer ${
+                                className={`px-3.5 py-2.5 cursor-pointer text-sm transition-colors duration-150 ${
                                   highlightedIndex[filter.name] === index
-                                    ? "bg-gray-300 font-medium"
-                                    : "hover:bg-gray-300 hover:font-medium"
+                                    ? "bg-primary-50 text-primary-700 font-medium"
+                                    : "hover:bg-slate-50"
                                 }`}
                               >
                                 {option.name}
@@ -304,7 +307,7 @@ const FilterBar: React.FC<FilterBarProps> = ({
         </div>
         {actions && actions.length > 0 && (
           <>
-            <div className={`hidden sm:flex gap-2 items-center justify-end}`}>
+            <div className={`hidden sm:flex gap-2 items-center justify-end`}>
               {actions.map((action) => (
                 <Button
                   key={`action-${action.label}`}

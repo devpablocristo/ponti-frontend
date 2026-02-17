@@ -14,7 +14,7 @@ interface BaseModalProps {
   children?: React.ReactNode;
   /**
    * Tailwind class string para el color del botón principal.
-   * Ejemplo: "bg-blue-600 hover:bg-blue-800 focus:ring-blue-300 dark:focus:ring-blue-800"
+   * Ejemplo: "bg-blue-600 hover:bg-blue-800 focus:ring-blue-300"
    */
   primaryButtonColor?: string;
 }
@@ -31,11 +31,11 @@ export function BaseModal({
   onPrimaryAction,
   onSecondaryAction,
   children,
-  primaryButtonColor = "bg-red-600 hover:bg-red-800 focus:ring-red-300 dark:focus:ring-red-800",
+  primaryButtonColor = "bg-red-600 hover:bg-red-800 focus:ring-red-300",
 }: BaseModalProps) {
   const defaultIcon = (
     <svg
-      className="mx-auto mb-4 text-gray-800 w-12 h-12"
+      className="mx-auto mb-4 text-slate-800 w-12 h-12"
       aria-hidden="true"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
@@ -55,17 +55,20 @@ export function BaseModal({
     <div
       id="popup-modal"
       tabIndex={-1}
-      className={`fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-screen bg-black bg-opacity-50 ${
+      className={`animate-modal-backdrop fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-screen backdrop-blur-sm bg-slate-900/50 ${
         isOpen ? "flex" : "hidden"
       }`}
     >
       <div className="relative p-4 w-full max-w-md max-h-full">
-        <div className="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
+        <div
+          className="animate-modal-content relative bg-white rounded-2xl"
+          style={{ boxShadow: "var(--shadow-xl)" }}
+        >
           <button
             type="button"
             onClick={onClose}
             disabled={isSaving}
-            className="absolute top-3 end-2.5 text-gray-800 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
+            className="absolute top-3 end-2.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center"
           >
             <svg
               className="w-3 h-3"
@@ -88,14 +91,14 @@ export function BaseModal({
           {/* Contenido del modal */}
           <div className="p-4 md:p-5 text-center">
             {icon ? icon : title !== "" ? defaultIcon : null}
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+            <h3 className="mb-2 text-lg font-semibold text-slate-800 font-display">
               {title}
             </h3>
 
             {children ? (
               <div className="mb-5">{children}</div>
             ) : (
-              <p className="mb-5 text-sm text-gray-700">{message}</p>
+              <p className="mb-5 text-sm text-slate-600">{message}</p>
             )}
 
             {primaryButtonText && (
@@ -103,7 +106,7 @@ export function BaseModal({
                 disabled={isSaving}
                 onClick={onPrimaryAction}
                 type="button"
-                className={`text-white font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center focus:ring-4 focus:outline-none ${primaryButtonColor}`}
+                className={`text-white font-medium rounded-lg text-sm inline-flex items-center px-5 py-2.5 text-center focus:ring-4 focus:outline-none transition-all duration-200 active:scale-[0.97] ${primaryButtonColor}`}
               >
                 {primaryButtonText}
               </button>
@@ -112,7 +115,7 @@ export function BaseModal({
               disabled={isSaving}
               onClick={onSecondaryAction || onClose}
               type="button"
-              className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700"
+              className="py-2.5 px-5 ms-3 text-sm font-medium text-slate-700 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-all duration-200"
             >
               {secondaryButtonText}
             </button>

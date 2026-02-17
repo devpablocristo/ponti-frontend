@@ -17,11 +17,11 @@ export const SubTable = <T,>({
 }: SubTableProps<T>) => {
   return (
     <div className={`overflow-x-auto rounded-xl ${className ?? ""}`}>
-      <table className="w-full text-sm text-left text-gray-800 bg-white rounded-xl shadow border border-gray-400 overflow-hidden">
-        <thead className="bg-gray-300 text-gray-900">
+      <table className="w-full text-sm text-left text-slate-700 bg-white rounded-xl border border-slate-200 overflow-hidden" style={{ boxShadow: "var(--shadow-sm)" }}>
+        <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
           <tr>
             {columns.map((col) => (
-              <th key={String(col.key)} className="px-4 py-2">
+              <th key={String(col.key)} className="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider">
                 {col.header}
               </th>
             ))}
@@ -29,7 +29,7 @@ export const SubTable = <T,>({
         </thead>
         <tbody>
           {data.map((item, idx) => (
-            <tr key={idx} className="border-t border-gray-500 font-normal">
+            <tr key={idx} className="border-t border-slate-100 font-normal hover:bg-slate-50 transition-colors duration-150">
               {columns.map((col) => (
                 <td key={String(col.key)} className="px-4 py-2 font-normal">
                   {col.render

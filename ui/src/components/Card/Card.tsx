@@ -15,13 +15,13 @@ const Card: React.FC<CardProps> = ({
   linkText = "Read more",
 }) => {
   return (
-    <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm dark:bg-gray-800 dark:border-gray-700">
+    <div className="p-5 bg-white border border-slate-200/80 rounded-xl transition-all duration-200 hover:shadow-md" style={{ boxShadow: "var(--shadow-sm)" }}>
       <a href={link}>
-        <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h5 className="mb-2 text-xl font-bold tracking-tight text-slate-800 font-display">
           {title}
         </h5>
       </a>
-      <p className="mb-3 font-normal text-gray-700 dark:text-gray-400">
+      <p className="mb-4 text-sm text-slate-600 leading-relaxed">
         {description}
       </p>
       <Button
