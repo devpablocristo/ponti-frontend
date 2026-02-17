@@ -31,7 +31,8 @@ jobs:
             echo "TAG=stg" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" >> "$GITHUB_OUTPUT"
             echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}" >> "$GITHUB_OUTPUT"
-            echo "BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_STG }}" >> "$GITHUB_OUTPUT"
+            # Base URL is not secret, but fall back to existing secret to avoid breaking deployments.
+            echo "BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_STG || secrets.BASE_MANAGER_API }}" >> "$GITHUB_OUTPUT"
             echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_STG }}" >> "$GITHUB_OUTPUT"
             echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
             echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
@@ -40,7 +41,8 @@ jobs:
             echo "TAG=dev" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_DEV }}" >> "$GITHUB_OUTPUT"
             echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_DEV }}" >> "$GITHUB_OUTPUT"
-            echo "BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_DEV }}" >> "$GITHUB_OUTPUT"
+            # Base URL is not secret, but fall back to existing secret to avoid breaking deployments.
+            echo "BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_DEV || secrets.BASE_MANAGER_API }}" >> "$GITHUB_OUTPUT"
             echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
             echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
             echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
@@ -88,7 +90,7 @@ jobs:
             --service-account="${{ steps.env.outputs.CLOUD_RUN_SERVICE_ACCOUNT }}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.env.outputs.BASE_MANAGER_API }},X_API_KEY=${{ github.ref_name == 'main' && secrets.X_API_KEY_STG || secrets.X_API_KEY_DEV }},IDENTITY_PLATFORM_API_KEY=${{ github.ref_name == 'main' && secrets.IDENTITY_PLATFORM_API_KEY_STG || secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.env.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ github.ref_name == 'main' && secrets.IDENTITY_PLATFORM_API_KEY_STG || secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
 
       - name: Show deployment URL
         run: |

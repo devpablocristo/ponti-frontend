@@ -8,7 +8,9 @@ export default defineConfig(({ mode }: ConfigEnv) => {
   // In Docker: BFF is at http://ponti-bff:3000
   // Local dev: BFF is at http://localhost:3000
   // Prefer process.env so docker-compose env vars work without needing files.
-  const bffTarget = process.env.BFF_URL || env.BFF_URL || "http://localhost:3000";
+  // Note: keep this file compilable without Node typings in CI.
+  const runtimeEnv = (globalThis as any)?.process?.env ?? {};
+  const bffTarget = runtimeEnv.BFF_URL || env.BFF_URL || "http://localhost:3000";
 
   return {
     plugins: [react()],
