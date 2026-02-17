@@ -11,6 +11,7 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useDashboard from "../../../hooks/useDashboard";
 import { DashboardData } from "../../../hooks/useDashboard/types";
 import { formatNumberAr } from "../utils";
+import { clearLocalStorage } from "../../../pages/login/context/useLocalStorage";
 
 interface DashboardIndicatorsProps {
   dashboard: DashboardData | null;
@@ -98,6 +99,23 @@ export function Dashboard() {
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const { dashboard, processing, error, getDashboardInfo } = useDashboard();
+
+  // Ultra-robust fallback: if the dashboard endpoint returns "invalid token"
+  // (env switch / expired session), force a clean re-login.
+  useEffect(() => {
+    if (!error) return;
+    const msg = String(error).toLowerCase();
+    if (
+      msg.includes("invalid token") ||
+      msg.includes("sesión inválida") ||
+      msg.includes("sesion invalida") ||
+      msg.includes("jwt") ||
+      msg.includes("expired")
+    ) {
+      clearLocalStorage();
+      window.location.href = "/login";
+    }
+  }, [error]);
 
   const buildQueryParams = () => {
     const params: Record<string, string> = {};
