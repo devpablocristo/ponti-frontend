@@ -27,18 +27,29 @@ export const units = [
 const HEADER_ALIASES = {
   name: ["insumo", "nombre", "name"],
   unit: ["unidad", "unit"],
-  price: ["precio", "precio_usd", "usd", "u$s"],
+  // Support stock exports too (e.g. "PRECIO U.", "PRECIO U$")
+  price: ["precio", "precio_usd", "precio_u", "precio_u_usd", "usd", "u$s", "precio_unidad", "precio_unitario"],
   category: ["rubro", "categoria", "category"],
   type: ["tipo", "tipo_clase", "clase", "type"],
 } as const;
 
 function normalizeText(value: string) {
+  // Normalize headers from spreadsheets:
+  // - remove accents
+  // - turn common separators into underscores
+  // - normalize USD markers (U$, U$S)
+  // - drop remaining punctuation
   return value
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, "_");
+    .replace(/u\$\s*s?/g, "usd")
+    .replace(/\$/g, "usd")
+    .replace(/[\s./-]+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function parseCsvLine(line: string) {
@@ -401,14 +412,32 @@ export default function Items() {
       } else {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: "array" });
-        const firstSheetName = workbook.SheetNames[0];
-        const firstSheet = workbook.Sheets[firstSheetName];
-        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-          firstSheet,
-          {
-            defval: "",
+        // Prefer a meaningful sheet (stock exports often have an empty first sheet).
+        const sheetNames = workbook.SheetNames || [];
+        const preferred =
+          sheetNames.find((n) => normalizeText(n).includes("stock")) ??
+          sheetNames.find((n) => normalizeText(n).includes("insumo")) ??
+          sheetNames[0];
+
+        const trySheets = [
+          preferred,
+          ...sheetNames.filter((n) => n !== preferred),
+        ].filter(Boolean) as string[];
+
+        let jsonRows: Record<string, unknown>[] = [];
+        for (const sheetName of trySheets) {
+          const sheet = workbook.Sheets[sheetName];
+          if (!sheet) continue;
+          const candidate = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+            sheet,
+            { defval: "" }
+          );
+          if (candidate.length > 0) {
+            jsonRows = candidate;
+            break;
           }
-        );
+        }
+
         parsedRows = jsonRows.map(normalizeSpreadsheetRow);
       }
 
@@ -440,13 +469,27 @@ export default function Items() {
 
         if (!name && !unitRaw && !priceRaw && !categoryRaw && !typeRaw) return;
 
-        const unitNormalized = normalizeText(unitRaw);
+        const unitNormalized = normalizeText(unitRaw || name);
         const unitId =
-          unitNormalized === "1" || unitNormalized === "lts" || unitNormalized === "lt" || unitNormalized === "litros"
+          unitNormalized === "1" ||
+          unitNormalized.includes("lts") ||
+          unitNormalized.includes("lt") ||
+          unitNormalized.includes("litro") ||
+          unitNormalized.includes("litros")
             ? 1
-            : unitNormalized === "2" || unitNormalized === "kg" || unitNormalized === "kilo" || unitNormalized === "kilos"
+            : unitNormalized === "2" ||
+                unitNormalized.includes("kg") ||
+                unitNormalized.includes("kilo") ||
+                unitNormalized.includes("kilos") ||
+                unitNormalized.includes("gr") ||
+                unitNormalized.includes("g_") ||
+                unitNormalized.endsWith("_g")
               ? 2
-              : unitNormalized === "3" || unitNormalized === "bolsa" || unitNormalized === "bolsas" || unitNormalized === "bag" || unitNormalized === "bags"
+              : unitNormalized === "3" ||
+                  unitNormalized.includes("bolsa") ||
+                  unitNormalized.includes("bolsas") ||
+                  unitNormalized.includes("bag") ||
+                  unitNormalized.includes("bags")
                 ? 3
               : 0;
 
