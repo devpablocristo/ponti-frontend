@@ -29,19 +29,21 @@ jobs:
           if [[ "${{ github.ref_name }}" == "main" ]]; then
             echo "ENV=staging" >> "$GITHUB_OUTPUT"
             echo "TAG=stg" >> "$GITHUB_OUTPUT"
-            echo "SERVICE_NAME=ponti-frontend-staging" >> "$GITHUB_OUTPUT"
-            echo "PROJECT_ID=new-ponti-stg" >> "$GITHUB_OUTPUT"
-            echo "BASE_MANAGER_API=https://ponti-backend-65243764597.us-central1.run.app/api/v1" >> "$GITHUB_OUTPUT"
-            echo "WIF_PROVIDER=projects/65243764597/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider" >> "$GITHUB_OUTPUT"
-            echo "WIF_SERVICE_ACCOUNT=github-actions@new-ponti-stg.iam.gserviceaccount.com" >> "$GITHUB_OUTPUT"
+            echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" >> "$GITHUB_OUTPUT"
+            echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}" >> "$GITHUB_OUTPUT"
+            echo "BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_STG }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_STG }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
+            echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.ref_name }}" == "develop" ]]; then
             echo "ENV=dev" >> "$GITHUB_OUTPUT"
             echo "TAG=dev" >> "$GITHUB_OUTPUT"
-            echo "SERVICE_NAME=ponti-frontend-dev" >> "$GITHUB_OUTPUT"
-            echo "PROJECT_ID=new-ponti-dev" >> "$GITHUB_OUTPUT"
-            echo "BASE_MANAGER_API=https://ponti-backend-1087442197188.us-central1.run.app/api/v1" >> "$GITHUB_OUTPUT"
-            echo "WIF_PROVIDER=projects/1087442197188/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions-provider" >> "$GITHUB_OUTPUT"
-            echo "WIF_SERVICE_ACCOUNT=github-actions@new-ponti-dev.iam.gserviceaccount.com" >> "$GITHUB_OUTPUT"
+            echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
+            echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Authenticate to Google Cloud
@@ -83,10 +85,10 @@ jobs:
             --project="${{ steps.env.outputs.PROJECT_ID }}" \
             --region="${{ env.REGION }}" \
             --image="$IMAGE" \
-            --service-account="github-actions@${{ steps.env.outputs.PROJECT_ID }}.iam.gserviceaccount.com" \
+            --service-account="${{ steps.env.outputs.CLOUD_RUN_SERVICE_ACCOUNT }}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.env.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ github.ref_name == 'main' && secrets.IDENTITY_PLATFORM_API_KEY_STG || secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.env.outputs.BASE_MANAGER_API }},X_API_KEY=${{ github.ref_name == 'main' && secrets.X_API_KEY_STG || secrets.X_API_KEY_DEV }},IDENTITY_PLATFORM_API_KEY=${{ github.ref_name == 'main' && secrets.IDENTITY_PLATFORM_API_KEY_STG || secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
 
       - name: Show deployment URL
         run: |

@@ -3,6 +3,7 @@ import { ArrowUp, Hourglass, LoaderCircle, Wallet } from "lucide-react";
 
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
+import Button from "../../../components/Button/Button";
 import ManagementBalanceTable from "./ManagementBalanceTable";
 import { CostByCropTable } from "./CostByCropTable";
 import OperationalIndicators from "./OperationalIndicators";
@@ -122,26 +123,6 @@ export function Dashboard() {
     getDashboardInfo(buildQueryParams());
   }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
-  if (processing) {
-    return (
-      <div className="flex gap-4">
-        <div className="flex items-center justify-center h-20">
-          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex gap-4">
-        <div className="p-4 text-sm text-red-800 rounded-lg bg-red-50">
-          Error loading dashboard data: {error}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <FilterBar
@@ -161,6 +142,25 @@ export function Dashboard() {
           },
         ]}
       />
+
+      {processing && (
+        <div className="flex items-center justify-center h-20">
+          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-center justify-between gap-3 p-4 my-4 text-sm text-red-800 rounded-lg bg-red-50">
+          <div>Error loading dashboard data: {error}</div>
+          <Button
+            variant="outlineGray"
+            size="sm"
+            onClick={() => getDashboardInfo(buildQueryParams())}
+          >
+            Reintentar
+          </Button>
+        </div>
+      )}
 
       <div className="my-4">
         <DashboardIndicators dashboard={dashboard} />
