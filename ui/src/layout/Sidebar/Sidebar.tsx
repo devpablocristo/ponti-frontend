@@ -65,8 +65,8 @@ const menuDatabase = {
   ),
   children: [
     { name: "Clientes y sociedades", route: "/admin/database/customers" },
-    { name: "Clientes", route: "/admin/database/customers/archived" },
-    { name: "Proyectos", route: "/admin/database/projects/archived" },
+    { name: "Clientes archivados", route: "/admin/database/customers/archived" },
+    { name: "Proyectos archivados", route: "/admin/database/projects/archived" },
     { name: "Integridad de datos", route: "/admin/database/data-integrity" },
     { name: "Labores", route: "/admin/database/tasks" },
     { name: "Insumos", route: "/admin/database/items" },
