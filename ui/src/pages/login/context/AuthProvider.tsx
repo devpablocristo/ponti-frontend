@@ -61,6 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const decoded = jwtDecode<DecodedToken>(accessToken);
+
+      // Expired token: treat as logged out (prevents "invalid token" loops).
+      if (decoded?.exp && decoded.exp * 1000 <= Date.now()) {
+        forceLogout();
+        return;
+      }
+
       setUser(decoded);
       setIsAuthenticated(true);
     } catch {

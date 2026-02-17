@@ -76,8 +76,45 @@ class ApiClient {
 
   /* ---------- response interceptor (401 + refresh queue) ---------- */
 
+  private isInvalidTokenError(error: AxiosError): boolean {
+    const status = error.response?.status;
+    if (status !== 401 && status !== 403) return false;
+
+    // Best-effort: our backends aren't 100% consistent in error shape.
+    // Detect "invalid token" without coupling to a single schema.
+    const data = error.response?.data as unknown;
+    const haystack =
+      typeof data === "string"
+        ? data
+        : data && typeof data === "object"
+          ? JSON.stringify(data)
+          : "";
+
+    const msg = (haystack || "").toLowerCase();
+    return (
+      msg.includes("invalid token") ||
+      msg.includes("token inval") ||
+      msg.includes("token invál") ||
+      msg.includes("jwt") ||
+      msg.includes("signature") ||
+      msg.includes("expired")
+    );
+  }
+
+  private forceLogoutClientSide() {
+    clearLocalStorage();
+    window.dispatchEvent(new CustomEvent("auth:force-logout"));
+  }
+
   private handleError = async (error: AxiosError) => {
     const originalRequest = error.config;
+
+    // If the backend says the token is invalid/expired, don't keep the user stuck
+    // in the workspace selector with cryptic errors.
+    if (this.isInvalidTokenError(error) && error.response?.status === 403) {
+      this.forceLogoutClientSide();
+      return Promise.reject(error);
+    }
 
     // Bail out if:
     //  - no config (shouldn't happen)
@@ -124,8 +161,7 @@ class ApiClient {
       processQueue(refreshError, null);
 
       // Force logout
-      clearLocalStorage();
-      window.dispatchEvent(new CustomEvent("auth:force-logout"));
+      this.forceLogoutClientSide();
 
       return Promise.reject(refreshError);
     } finally {
