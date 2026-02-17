@@ -5,7 +5,8 @@ import * as actions from "./actions";
 import { DashboardData } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { clearLocalStorage } from "@/pages/login/context/useLocalStorage";
 
 const useDashboard = () => {
   const [{ dashboard }, dispatch] = useDashboardReducer();
@@ -39,7 +40,26 @@ const useDashboard = () => {
         type: actions.SET_DASHBOARD,
         payload: null,
       });
-      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+
+      // If the error is auth-related (token invalid/expired), force re-login
+      // instead of leaving the dashboard in a broken state.
+      const status = extractErrorStatus(error);
+      const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+      const msgLower = message.toLowerCase();
+      if (
+        (status === 401 || status === 403) &&
+        (msgLower.includes("invalid token") ||
+          msgLower.includes("sesión inválida") ||
+          msgLower.includes("sesion invalida") ||
+          msgLower.includes("jwt") ||
+          msgLower.includes("expired"))
+      ) {
+        clearLocalStorage();
+        window.dispatchEvent(new CustomEvent("auth:force-logout"));
+        return;
+      }
+
+      setError(message);
     } finally {
       setProcessing(false);
     }
