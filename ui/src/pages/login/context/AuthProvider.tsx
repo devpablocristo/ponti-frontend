@@ -14,6 +14,7 @@ import { DecodedToken, UserData } from "../types";
 import { AuthService } from "../authService";
 import {
   clearLocalStorage,
+  getAccessToken,
   getRefreshToken,
   setLocalStorage,
 } from "./useLocalStorage";
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /* ---- verify token on route change ---- */
 
   const verifyToken = useCallback(async () => {
-    const accessToken = localStorage.getItem("access_token");
+    const accessToken = getAccessToken();
     if (!accessToken) {
       setIsAuthenticated(false);
       setLoading(false);

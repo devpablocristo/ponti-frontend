@@ -4,6 +4,14 @@ import { Entity } from "../../../hooks/useDatabase/options/types";
 import { ProjectData } from "../../../hooks/useDatabase/projects/types";
 import { Data } from "../../../hooks/useFields/types";
 
+function prefix() {
+  return `ponti:${window.location.host}:`;
+}
+
+function key(name: string) {
+  return `${prefix()}${name}`;
+}
+
 type SelectionContextType = {
   customer: Entity;
   setCustomer: (c: Entity | undefined) => void;
@@ -31,71 +39,71 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
   ];
 
   const [customer, setCustomer] = useState(() => {
-    const stored = localStorage.getItem("customer");
+    const stored = localStorage.getItem(key("customer"));
     return stored ? JSON.parse(stored) : null;
   });
 
   const [project, setProject] = useState(() => {
-    const stored = localStorage.getItem("project");
+    const stored = localStorage.getItem(key("project"));
     return stored ? JSON.parse(stored) : null;
   });
 
   const [projectId, setProjectId] = useState(() => {
-    const stored = localStorage.getItem("project_id");
+    const stored = localStorage.getItem(key("project_id"));
     return stored ? JSON.parse(stored) : null;
   });
 
   const [campaign, setCampaign] = useState(() => {
-    const stored = localStorage.getItem("campaign");
+    const stored = localStorage.getItem(key("campaign"));
     return stored ? JSON.parse(stored) : null;
   });
 
   const [field, setField] = useState(() => {
-    const stored = localStorage.getItem("field");
+    const stored = localStorage.getItem(key("field"));
     return stored ? JSON.parse(stored) : null;
   });
 
   useEffect(() => {
     if (customer === undefined || customer === null) {
-      localStorage.removeItem("customer");
+      localStorage.removeItem(key("customer"));
     } else {
-      localStorage.setItem("customer", JSON.stringify(customer));
+      localStorage.setItem(key("customer"), JSON.stringify(customer));
     }
   }, [customer]);
 
   useEffect(() => {
     if (project === undefined || project === null) {
-      localStorage.removeItem("project");
+      localStorage.removeItem(key("project"));
     } else {
-      localStorage.setItem("project", JSON.stringify(project));
+      localStorage.setItem(key("project"), JSON.stringify(project));
     }
   }, [project]);
 
   useEffect(() => {
     if (projectId === undefined || projectId === null) {
-      localStorage.removeItem("project_id");
+      localStorage.removeItem(key("project_id"));
     } else {
-      localStorage.setItem("project_id", projectId);
+      localStorage.setItem(key("project_id"), JSON.stringify(projectId));
     }
   }, [projectId]);
 
   useEffect(() => {
     if (campaign === undefined || campaign === null) {
-      localStorage.removeItem("campaign");
+      localStorage.removeItem(key("campaign"));
     } else {
-      localStorage.setItem("campaign", JSON.stringify(campaign));
+      localStorage.setItem(key("campaign"), JSON.stringify(campaign));
       // Guardar el project_id del proyecto seleccionado
       if (project?.id) {
-        localStorage.setItem("project_id", JSON.stringify(project.id));
+        localStorage.setItem(key("project_id"), JSON.stringify(project.id));
       }
     }
   }, [campaign, project]);
 
   useEffect(() => {
     if (field === undefined || field === null) {
-      localStorage.removeItem("field");
+      localStorage.removeItem(key("field"));
     } else {
-      localStorage.setItem("field", JSON.stringify(field));
+      localStorage.setItem(key("field"), JSON.stringify(field));
     }
   }, [field]);
 
