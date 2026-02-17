@@ -116,6 +116,14 @@ class ApiClient {
       return Promise.reject(error);
     }
 
+    // If we already retried once (after refresh) and still get 401, the session
+    // is not recoverable (e.g. token from another environment). Force re-login
+    // instead of surfacing "invalid token" banners across the app.
+    if (originalRequest && error.response?.status === 401 && originalRequest._retry) {
+      this.forceLogoutClientSide();
+      return Promise.reject(error);
+    }
+
     // Bail out if:
     //  - no config (shouldn't happen)
     //  - not a 401
