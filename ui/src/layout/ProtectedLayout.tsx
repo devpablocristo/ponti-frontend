@@ -76,8 +76,9 @@ const MainLayout: React.FC = () => {
             primaryButtonText="Sí, cerrar sesión"
             secondaryButtonText="No, cancelar"
             onPrimaryAction={() => {
-              auth.logout();
-              setIsLogoutModalOpen(true);
+              // Close modal first so UI doesn't get stuck open.
+              setIsLogoutModalOpen(false);
+              void auth.logout();
             }}
           />
         </main>
