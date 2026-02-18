@@ -366,14 +366,24 @@ export default function UpdateOrder({
       const formattedDate = isoDate.split("T")[0]; // "2025-08-06"
       setDate(formattedDate);
 
-      const investorObj = investors.find(
-        (i) => i.id === selectedOrder.investor_id
-      );
-      setInvestor(investorObj || null);
-      setSplitByInvestor(false);
-      setInvestorSplits([
-        { investorId: selectedOrder.investor_id, percentage: "100" },
-      ]);
+      const apiSplits = selectedOrder.investor_splits ?? [];
+      if (apiSplits.length > 1) {
+        setSplitByInvestor(true);
+        setInvestorSplits(
+          apiSplits.map((s) => ({
+            investorId: s.investor_id,
+            percentage: String(s.percentage),
+          }))
+        );
+        // Dejar el dropdown simple sincronizado con el primer split.
+        const firstInvestor = investors.find((i) => i.id === apiSplits[0].investor_id);
+        setInvestor(firstInvestor || null);
+      } else {
+        const investorObj = investors.find((i) => i.id === selectedOrder.investor_id);
+        setInvestor(investorObj || null);
+        setSplitByInvestor(false);
+        setInvestorSplits([{ investorId: selectedOrder.investor_id, percentage: "100" }]);
+      }
 
       const laborObj = labors.find((l) => l.id === selectedOrder.labor_id);
       setLabor(laborObj || null);
@@ -535,46 +545,21 @@ export default function UpdateOrder({
       return;
     }
 
-    const round3 = (value: number) => Math.round(value * 1000) / 1000;
-
     (async () => {
       try {
         setProcessingSplit(true);
-
-        const firstSplit = splits[0];
-        const firstFactor = firstSplit.percentage / 100;
+        // Importante: NO duplicar órdenes. Persistimos 1 workorder y actualizamos
+        // la división como investor_splits.
         await apiClient.put(`/work-orders/${orderId}`, {
           ...baseOrder,
-          investor_id: firstSplit.investorId,
-          effective_area: round3(baseOrder.effective_area * firstFactor),
-          items: baseOrder.items.map((it) => ({
-            ...it,
-            total_used: round3(it.total_used * firstFactor),
+          investor_id: splits[0].investorId,
+          investor_splits: splits.map((s) => ({
+            investor_id: s.investorId,
+            percentage: s.percentage,
           })),
-          observations: baseOrder.observations
-            ? `${baseOrder.observations} | Split ${firstSplit.percentage}%`
-            : `Split ${firstSplit.percentage}%`,
         });
 
-        for (let idx = 1; idx < splits.length; idx++) {
-          const split = splits[idx];
-          const factor = split.percentage / 100;
-          await apiClient.post("/work-orders", {
-            ...baseOrder,
-            number: `${baseOrder.number}-${idx + 1}`,
-            investor_id: split.investorId,
-            effective_area: round3(baseOrder.effective_area * factor),
-            items: baseOrder.items.map((it) => ({
-              ...it,
-              total_used: round3(it.total_used * factor),
-            })),
-            observations: baseOrder.observations
-              ? `${baseOrder.observations} | Split ${split.percentage}%`
-              : `Split ${split.percentage}%`,
-          });
-        }
-
-        setSuccessMessage(`Orden dividida en ${splits.length} inversores.`);
+        setSuccessMessage("Orden actualizada con división por inversor.");
         onOrderUpdated();
       } catch (err) {
         setError(extractErrorMessage(err, "Error al dividir la orden por inversor."));

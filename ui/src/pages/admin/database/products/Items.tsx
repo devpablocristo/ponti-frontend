@@ -52,6 +52,50 @@ function normalizeText(value: string) {
     .replace(/^_+|_+$/g, "");
 }
 
+function inferUnitId(unitRaw: string, name: string): number {
+  // Be forgiving: spreadsheets can have "L" / "LT" / "LTS" and sometimes the unit is only in the name.
+  const normalized = normalizeText(`${unitRaw} ${name}`);
+  const hay = normalized.replace(/_/g, " ");
+
+  if (normalized === "1") return 1;
+  if (
+    normalized === "l" ||
+    normalized === "lt" ||
+    normalized === "lts" ||
+    hay.includes("lts") ||
+    hay.includes("lt") ||
+    hay.includes("litro") ||
+    hay.includes("litros") ||
+    hay.includes("ltrs")
+  ) {
+    return 1;
+  }
+
+  if (normalized === "2") return 2;
+  if (
+    hay.includes("kg") ||
+    hay.includes("kgs") ||
+    hay.includes("kgr") ||
+    hay.includes("kilo") ||
+    hay.includes("kilos") ||
+    /\b\d+\s*g\b/.test(hay)
+  ) {
+    return 2;
+  }
+
+  if (normalized === "3") return 3;
+  if (
+    hay.includes("bolsa") ||
+    hay.includes("bolsas") ||
+    hay.includes("bag") ||
+    hay.includes("bags")
+  ) {
+    return 3;
+  }
+
+  return 0;
+}
+
 function parseCsvLine(line: string) {
   const values: string[] = [];
   let current = "";
@@ -454,7 +498,7 @@ export default function Items() {
       const typeByName = new Map(types.map((t) => [normalizeText(t.name), t]));
 
       const importedRows: Row[] = [];
-      const importErrors: string[] = [];
+      const importWarnings: string[] = [];
 
       parsedRows.forEach((rawRow, idx) => {
         const rowNumber = idx + 2;
@@ -469,35 +513,14 @@ export default function Items() {
 
         if (!name && !unitRaw && !priceRaw && !categoryRaw && !typeRaw) return;
 
-        const unitNormalized = normalizeText(unitRaw || name);
-        const unitId =
-          unitNormalized === "1" ||
-          unitNormalized.includes("lts") ||
-          unitNormalized.includes("lt") ||
-          unitNormalized.includes("litro") ||
-          unitNormalized.includes("litros")
-            ? 1
-            : unitNormalized === "2" ||
-                unitNormalized.includes("kg") ||
-                unitNormalized.includes("kilo") ||
-                unitNormalized.includes("kilos") ||
-                unitNormalized.includes("gr") ||
-                unitNormalized.includes("g_") ||
-                unitNormalized.endsWith("_g")
-              ? 2
-              : unitNormalized === "3" ||
-                  unitNormalized.includes("bolsa") ||
-                  unitNormalized.includes("bolsas") ||
-                  unitNormalized.includes("bag") ||
-                  unitNormalized.includes("bags")
-                ? 3
-              : 0;
+        const unitId = inferUnitId(unitRaw, name);
 
+        // Accept formats like "U$S 15,5", "$ 15.5", "15,5"
         const normalizedPrice = priceRaw
-          .replace(/\$/g, "")
+          .replace(/[^0-9,.-]/g, "")
           .replace(/\s/g, "")
           .replace(",", ".");
-        const priceValue = Number(normalizedPrice);
+        const priceValue = normalizedPrice ? Number(normalizedPrice) : Number.NaN;
 
         const categoryByText = categoryByName.get(normalizeText(categoryRaw));
         const categoryId = categoryByText?.id ?? Number(categoryRaw);
@@ -505,45 +528,42 @@ export default function Items() {
         const typeByText = typeByName.get(normalizeText(typeRaw));
         const typeId = typeFromCategory ?? typeByText?.id ?? Number(typeRaw);
 
-        if (!name) importErrors.push(`Fila ${rowNumber}: falta "Insumo".`);
-        if (!unitId) importErrors.push(`Fila ${rowNumber}: "Unidad" inválida.`);
+        // Import best-effort: don't drop rows because a field is unknown.
+        // The user can fix missing fields in the UI before saving.
+        if (!name) return;
+
+        if (!unitId) {
+          importWarnings.push(
+            `Fila ${rowNumber} ("${name}"): "Unidad" inválida${unitRaw ? ` ("${unitRaw}")` : ""}.`
+          );
+        }
         if (!priceRaw || Number.isNaN(priceValue) || priceValue <= 0) {
-          importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
+          importWarnings.push(`Fila ${rowNumber} ("${name}"): "Precio" inválido.`);
         }
         if (!categoryId || Number.isNaN(categoryId)) {
-          importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
+          importWarnings.push(`Fila ${rowNumber} ("${name}"): "Rubro" inválido.`);
         }
         if (!typeId || Number.isNaN(typeId)) {
-          importErrors.push(
-            `Fila ${rowNumber}: "Tipo/Clase" inválido o no deducible por rubro.`
+          importWarnings.push(
+            `Fila ${rowNumber} ("${name}"): "Tipo/Clase" inválido o no deducible por rubro.`
           );
         }
 
-        if (
-          name &&
-          unitId &&
-          !Number.isNaN(priceValue) &&
-          priceValue > 0 &&
-          categoryId &&
-          !Number.isNaN(categoryId) &&
-          typeId &&
-          !Number.isNaN(typeId)
-        ) {
-          importedRows.push({
-            id: importedRows.length + 1,
-            name,
-            unit: String(unitId),
-            price: String(priceValue),
-            category: String(categoryId),
-            type: String(typeId),
-          });
-        }
+        importedRows.push({
+          id: importedRows.length + 1,
+          name,
+          unit: unitId ? String(unitId) : "",
+          price:
+            !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : "",
+          category: categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
+          type: typeId && !Number.isNaN(typeId) ? String(typeId) : "",
+        });
       });
 
       if (importedRows.length === 0) {
         setErrorMessage(
-          importErrors.length > 0
-            ? importErrors.slice(0, 8).join(" ")
+          importWarnings.length > 0
+            ? importWarnings.slice(0, 8).join(" ")
             : "No se encontraron filas importables en el archivo."
         );
         return;
@@ -563,13 +583,15 @@ export default function Items() {
 
       setRows(rowsWithMinimum);
       setHasUnsavedChanges(true);
-      if (importErrors.length > 0) {
+      if (importWarnings.length > 0) {
         setErrorMessage(
-          `Se importaron ${importedRows.length} insumos válidos. Se omitieron ${importErrors.length} filas con error: ${importErrors
+          `Se importaron ${importedRows.length} insumos. Hay ${importWarnings.length} advertencias (campos a revisar): ${importWarnings
             .slice(0, 6)
             .join(" ")}`
         );
-        setSuccessMessage(null);
+        setSuccessMessage(
+          `Se importaron ${importedRows.length} insumos. Revise y presione Guardar.`
+        );
       } else {
         setErrorMessage("");
         setSuccessMessage(

@@ -1,0 +1,108 @@
+name: Deploy Frontend PROD (promote STAGING artifact)
+
+on:
+  workflow_dispatch:
+    inputs:
+      staging_sha:
+        description: "SHA a promover desde STAGING (imagen tag = sha)"
+        required: true
+      reason:
+        description: "Motivo / ticket (texto libre)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-frontend-prod
+  cancel-in-progress: false
+
+env:
+  REGION: us-central1
+  REGISTRY: us-central1-docker.pkg.dev
+  REPOSITORY: ponti-frontend-registry
+
+jobs:
+  promote-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      # STAGING (source image)
+      GCP_PROJECT_ID_STG: ${{ vars.GCP_PROJECT_ID_STG }}
+      WIF_PROVIDER_STG: ${{ vars.WIF_PROVIDER_STG }}
+      WIF_SERVICE_ACCOUNT_STG: ${{ vars.WIF_SERVICE_ACCOUNT_STG }}
+      SERVICE_NAME_STG: ${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}
+
+      # PROD (target deploy)
+      GCP_PROJECT_ID_PROD: ${{ vars.GCP_PROJECT_ID_PROD }}
+      WIF_PROVIDER_PROD: ${{ vars.WIF_PROVIDER_PROD }}
+      WIF_SERVICE_ACCOUNT_PROD: ${{ vars.WIF_SERVICE_ACCOUNT_PROD }}
+      CLOUD_RUN_SERVICE_ACCOUNT_PROD: ${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_PROD }}
+      SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_FRONTEND_PROD }}
+
+      BASE_MANAGER_API_PROD: ${{ vars.BASE_MANAGER_API_PROD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Auth GCP (STAGING - pull Artifact)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER_STG }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT_STG }}
+
+      - name: Setup gcloud (STAGING)
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID_STG }}
+
+      - name: Configure Docker for Artifact Registry (STAGING)
+        run: gcloud auth configure-docker "${{ env.REGISTRY }}" --quiet
+
+      - name: Pull imagen de STAGING
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          src_image="${{ env.REGISTRY }}/${GCP_PROJECT_ID_STG}/${{ env.REPOSITORY }}/${SERVICE_NAME_STG}:${STAGING_SHA}"
+          echo "SRC_IMAGE=$src_image" >> "$GITHUB_ENV"
+          docker pull "$src_image"
+
+      - name: Auth GCP (PROD - push + deploy)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER_PROD }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT_PROD }}
+
+      - name: Setup gcloud (PROD)
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID_PROD }}
+
+      - name: Configure Docker for Artifact Registry (PROD)
+        run: gcloud auth configure-docker "${{ env.REGISTRY }}" --quiet
+
+      - name: Push imagen a PROD (retag)
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          dst_sha="${{ env.REGISTRY }}/${GCP_PROJECT_ID_PROD}/${{ env.REPOSITORY }}/${SERVICE_NAME_PROD}:${STAGING_SHA}"
+          dst_prod="${{ env.REGISTRY }}/${GCP_PROJECT_ID_PROD}/${{ env.REPOSITORY }}/${SERVICE_NAME_PROD}:prod"
+          docker tag "$SRC_IMAGE" "$dst_sha"
+          docker tag "$SRC_IMAGE" "$dst_prod"
+          docker push "$dst_sha"
+          docker push "$dst_prod"
+          echo "IMAGE=$dst_prod" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run (PROD)
+        run: |
+          gcloud run deploy "${SERVICE_NAME_PROD}" \
+            --project="${GCP_PROJECT_ID_PROD}" \
+            --region="${{ env.REGION }}" \
+            --image="${IMAGE}" \
+            --service-account="${CLOUD_RUN_SERVICE_ACCOUNT_PROD}" \
+            --allow-unauthenticated \
+            --port=3000 \
+            --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${BASE_MANAGER_API_PROD},X_API_KEY=${{ secrets.X_API_KEY_PROD }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
+

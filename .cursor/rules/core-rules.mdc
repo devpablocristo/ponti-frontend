@@ -1,0 +1,24 @@
+---
+description: Reglas base del proyecto Ponti Frontend
+alwaysApply: true
+---
+
+# Reglas base Ponti Frontend
+
+## Reglas críticas
+- Iterar en local hasta obtener resultados válidos: reproducir, correr UI/BFF local, revisar logs y reintentar; no alcanza con “escribir código” sin verificar.
+
+## Infra (GCP) - Contexto del proyecto
+- Ambientes: `dev` (proyecto `new-ponti-dev`) y `staging` (proyecto `new-ponti-stg`).
+- Cloud Run: services canónicos por ambiente: `ponti-frontend`, `ponti-backend`, `ponti-ai` (no crear servicios duplicados).
+- URLs Cloud Run: usar traffic tags para que quede claro el ambiente:
+  - `dev---...run.app`
+  - `stg---...run.app`
+- Frontend (Cloud Run) configura el backend target por env var:
+  - `BASE_MANAGER_API` debe apuntar a `dev---ponti-backend.../api/v1` en `dev`
+  - `BASE_MANAGER_API` debe apuntar a `stg---ponti-backend.../api/v1` en `staging`
+- Cloud SQL (contexto global): `dev` y `staging` comparten la MISMA instancia para ahorrar; la separación es por `DB_NAME`/`DB_DSN` en backend/AI.
+- Identity Platform:
+  - `IDENTITY_PLATFORM_PROJECT_ID=new-ponti-dev` en dev
+  - `IDENTITY_PLATFORM_PROJECT_ID=new-ponti-stg` en staging
+

@@ -147,11 +147,6 @@ export function InvestorContributionReport() {
     getInvestorContributionReportingData(buildQueryParams());
   }, []);
 
-  const surfaceTotalHa = reportingData?.general.surface_total_ha ?? 0;
-  const leaseTotalUsd = reportingData?.general.lease_fixed_usd ?? 0;
-  const leasePerHaUsd =
-    surfaceTotalHa > 0 ? leaseTotalUsd / surfaceTotalHa : 0;
-
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
   const { toPDF, targetRef } = usePDF({ filename: `informe-aporte-inversor-${ timestamp }.pdf` });
 
@@ -213,32 +208,6 @@ export function InvestorContributionReport() {
                     } }
                     disabled
                   />
-                  <div className="flex items-end gap-2">
-                    <InputField
-                      label="Arriendo / Ha"
-                      name="rental-per-ha"
-                      size="sm"
-                      value=""
-                      placeholder={ `u$ ${ formatNumberAr(leasePerHaUsd) }` }
-                      className="flex items-center w-[200px] gap-2 text-nowrap"
-                      inputClassName="h-12 -mt-2"
-                      onChange={ () => {
-                      } }
-                      disabled
-                    />
-                    <InputField
-                      label="Arriendo total"
-                      name="rental-total"
-                      size="sm"
-                      value=""
-                      placeholder={ `u$ ${ formatNumberAr(leaseTotalUsd) }` }
-                      className="flex items-center w-[170px] gap-2 text-nowrap"
-                      inputClassName="h-12 -mt-2"
-                      onChange={ () => {
-                      } }
-                      disabled
-                    />
-                  </div>
                   <InputField
                     label="Admin. proyecto / Ha"
                     name="admin-project-per-ha"

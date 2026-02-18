@@ -138,7 +138,11 @@ export default function CreateStockItem({
   const [showProviderSuggestions, setShowProviderSuggestions] =
     useState<boolean>(false);
 
-  const [type, setType] = useState<{ id: number; name: string } | null>(null);
+  // Default "Stock": evita que el primer render muestre "Seleccionar..." y campos extra.
+  const [type, setType] = useState<{ id: number; name: string } | null>(
+    typeOptions[0] || null
+  );
+  const isStockIngreso = type?.id === 1;
 
   const [items, setItems] = useState<
     { item: string; quantity: string }[]
@@ -160,6 +164,11 @@ export default function CreateStockItem({
     setSuccessMessage(null);
     setError(null);
     setErrorMessages([]);
+
+    // Al abrir el drawer, arrancamos en "Stock" para que no aparezcan proveedor/inversor.
+    if (drawerOpen) {
+      setType(typeOptions[0] || null);
+    }
   }, [drawerOpen]);
 
   useEffect(() => {
@@ -235,6 +244,23 @@ export default function CreateStockItem({
     );
   }, [selectedProject]);
 
+  // Para "Stock" no queremos pedir inversor/proveedor al usuario.
+  // Elegimos defaults para mantener el flujo actual del backend (FKs).
+  useEffect(() => {
+    if (!isStockIngreso) return;
+
+    // Default: proveedor "Stock" (se autocrea si no existe).
+    if (!queryProvider.trim()) {
+      setQueryProvider("Stock");
+      setProvider({ id: 0, name: "Stock" });
+    }
+
+    // Default: primer inversor del proyecto (si existe).
+    if (!investor && investors.length > 0) {
+      setInvestor(investors[0]);
+    }
+  }, [isStockIngreso, queryProvider, investor, investors]);
+
   const handleProviderSuggestionClick = (provider: Entity) => {
     setQueryProvider(provider.name);
     setProvider(provider);
@@ -306,19 +332,8 @@ export default function CreateStockItem({
     const errors: string[] = [];
     setErrorMessages(errors);
 
-    if (!provider) {
-      if (queryProvider === "") {
-        errors.push("Debe seleccionar un proveedor.");
-      } else {
-        setProvider({
-          id: 0,
-          name: queryProvider,
-        });
-      }
-    }
-
-    if (!investor) {
-      errors.push("Debe seleccionar un inversor.");
+    if (!type) {
+      errors.push("Debe seleccionar un tipo.");
     }
 
     if (!orderNumber) {
@@ -327,10 +342,6 @@ export default function CreateStockItem({
 
     if (!date) {
       errors.push("Debe seleccionar una fecha.");
-    }
-
-    if (!type) {
-      errors.push("Debe seleccionar un tipo.");
     }
 
     if (type && type.id === 2 && !selectedProjectDestination) {
@@ -360,18 +371,56 @@ export default function CreateStockItem({
       return;
     }
 
+    const movementDateStr = date;
+    const referenceNumber = orderNumber;
+
+    // Para stock elegimos defaults "transparentes" (no se piden en UI).
+    const effectiveProvider =
+      isStockIngreso && !provider
+        ? { id: 0, name: queryProvider.trim() || "Stock" }
+        : provider;
+    const effectiveProviderName =
+      effectiveProvider?.name || queryProvider.trim() || "Stock";
+    const effectiveInvestorId = isStockIngreso
+      ? investor?.id || investors[0]?.id || 0
+      : investor?.id || 0;
+
+    if (!isStockIngreso) {
+      if (!effectiveProvider) {
+        if (queryProvider === "") {
+          errors.push("Debe seleccionar un proveedor.");
+        } else {
+          setProvider({
+            id: 0,
+            name: queryProvider,
+          });
+        }
+      }
+      if (!investor) {
+        errors.push("Debe seleccionar un inversor.");
+      }
+      if (errors.length > 0) {
+        setErrorMessages(errors);
+        return;
+      }
+    } else if (effectiveInvestorId === 0) {
+      errors.push("No hay inversores disponibles para el proyecto.");
+      setErrorMessages(errors);
+      return;
+    }
+
     saveStockMovement(projectId, {
       items: itemsWithAnyValue.map((item) => ({
         supply_id: Number(item.item),
         quantity: Number(item.quantity),
         movement_type: type?.name || "",
-        movement_date: new Date(date),
-        reference_number: orderNumber,
+        movement_date: new Date(movementDateStr),
+        reference_number: referenceNumber,
         project_destination_id: selectedProjectDestination || 0,
-        investor_id: investor?.id || 0,
+        investor_id: effectiveInvestorId,
         provider: {
-          id: provider?.id || 0,
-          name: provider ? provider.name : queryProvider,
+          id: effectiveProvider?.id || 0,
+          name: effectiveProviderName,
         },
       })),
     });
@@ -445,60 +494,65 @@ export default function CreateStockItem({
                   disabled
                   size="sm"
                 />
-
-                <div ref={providerRef} className="relative">
-                  <Search
-                    label="Proveedor"
-                    placeholder="Ingrese nombre o fecha"
-                    name="provider"
-                    value={queryProvider}
-                    onClick={() => {
-                      if (!showProviderSuggestions) {
-                        setShowProviderSuggestions(true);
-                      }
-                    }}
-                    onChange={handleProviderChange}
-                    onFocus={() => setShowProviderSuggestions(true)}
-                    onKeyDown={handleProviderKeyDown}
-                    className={"w-full"}
-                    size="sm"
-                    fullWidth
-                  />
-                  {showProviderSuggestions && (
-                    <div className="flex justify-between items-center">
-                      <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
-                        {providerSuggestions.length > 0 &&
-                          providerSuggestions.map((p, index) => (
-                            <li
-                              key={index}
-                              onClick={() => handleProviderSuggestionClick(p)}
-                              className={`px-4 py-2 cursor-pointer ${
-                                index === highlightedProviderIndex
-                                  ? "bg-gray-300 font-medium"
-                                  : "hover:bg-gray-300 hover:font-medium"
-                              }`}
-                            >
-                              {p.name}
-                            </li>
-                          ))}
-                      </ul>
+                {!isStockIngreso && (
+                  <>
+                    <div ref={providerRef} className="relative">
+                      <Search
+                        label="Proveedor"
+                        placeholder="Ingrese nombre o fecha"
+                        name="provider"
+                        value={queryProvider}
+                        onClick={() => {
+                          if (!showProviderSuggestions) {
+                            setShowProviderSuggestions(true);
+                          }
+                        }}
+                        onChange={handleProviderChange}
+                        onFocus={() => setShowProviderSuggestions(true)}
+                        onKeyDown={handleProviderKeyDown}
+                        className={"w-full"}
+                        size="sm"
+                        fullWidth
+                      />
+                      {showProviderSuggestions && (
+                        <div className="flex justify-between items-center">
+                          <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
+                            {providerSuggestions.length > 0 &&
+                              providerSuggestions.map((p, index) => (
+                                <li
+                                  key={index}
+                                  onClick={() =>
+                                    handleProviderSuggestionClick(p)
+                                  }
+                                  className={`px-4 py-2 cursor-pointer ${
+                                    index === highlightedProviderIndex
+                                      ? "bg-gray-300 font-medium"
+                                      : "hover:bg-gray-300 hover:font-medium"
+                                  }`}
+                                >
+                                  {p.name}
+                                </li>
+                              ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-                <SelectField
-                  label="Inversor"
-                  placeholder="Selecciona el inversor"
-                  name="investor"
-                  options={investors}
-                  value={investor?.id?.toString() || ""}
-                  onChange={(e) => {
-                    const selectedInvestor = investors.find(
-                      (i) => i.id === Number(e.target.value)
-                    );
-                    if (selectedInvestor) setInvestor(selectedInvestor);
-                  }}
-                  size="sm"
-                />
+                    <SelectField
+                      label="Inversor"
+                      placeholder="Selecciona el inversor"
+                      name="investor"
+                      options={investors}
+                      value={investor?.id?.toString() || ""}
+                      onChange={(e) => {
+                        const selectedInvestor = investors.find(
+                          (i) => i.id === Number(e.target.value)
+                        );
+                        if (selectedInvestor) setInvestor(selectedInvestor);
+                      }}
+                      size="sm"
+                    />
+                  </>
+                )}
               </div>
 
               {type?.id === 2 && (

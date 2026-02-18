@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
 
 import DataTable from "../../../components/Table/DataTable";
@@ -19,10 +19,12 @@ const EditableCell = ({
   item,
   value,
   projectId,
+  onSaved,
 }: {
   item: any;
   value: string | number;
   projectId: number | null;
+  onSaved?: () => void;
 }) => {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value ?? "");
@@ -50,10 +52,10 @@ const EditableCell = ({
     }
     if (resultStock) {
       setEditing(false);
-      window.location.reload();
+      onSaved?.();
       return;
     }
-  }, [errorStock, resultStock]);
+  }, [errorStock, resultStock, onSaved]);
 
   if (editing) {
     return (
@@ -267,10 +269,18 @@ export function Stock() {
     periods,
   } = useStock();
 
+  const refreshStock = useCallback(() => {
+    if (!projectId) return;
+    getStock(
+      projectId,
+      period === "0" ? "" : stockPeriods[Number(period)]?.name || ""
+    );
+  }, [getStock, period, projectId, stockPeriods]);
+
   const handleStockCreated = () => {
     if (!projectId) return;
     setCurrentPage(1);
-    getStock(projectId, period === "0" ? "" : stockPeriods[Number(period)]?.name || "");
+    refreshStock();
   };
 
   const filteredStock = useMemo(() => {
@@ -449,7 +459,12 @@ export function Stock() {
         header: "Stock de campo",
         headerPadding: "xs",
         render: (value, item) => (
-          <EditableCell item={item} value={value} projectId={projectId} />
+          <EditableCell
+            item={item}
+            value={value}
+            projectId={projectId}
+            onSaved={refreshStock}
+          />
         ),
       },
       {
@@ -540,7 +555,7 @@ export function Stock() {
         },
       },
     ],
-    [projectId, stock, columnsFilters]
+    [projectId, stock, columnsFilters, refreshStock]
   );
 
   useEffect(() => {

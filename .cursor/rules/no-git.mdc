@@ -6,5 +6,6 @@ alwaysApply: true
 # No Git
 
 - NUNCA ejecutes comandos git (commit, push, pull, add, stash, etc.) a menos que el usuario lo pida explícitamente.
+- NUNCA cambies de rama (git switch/checkout) sin que el usuario lo pida explícitamente. Trabajá siempre desde la rama actual; si necesitás otra, pedí confirmación primero.
 - No hagas commits automáticos ni sugiereas hacer commits.
 - Si necesitás ver el estado del repo, preguntá antes.

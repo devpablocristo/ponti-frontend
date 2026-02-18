@@ -42,6 +42,7 @@ export interface WorkorderData {
   observations: string;
   date: string;
   investor_id: number;
+  investor_splits?: { investor_id: number; percentage: number }[];
   effective_area: number;
   items: WorkorderItem[];
 }
@@ -63,6 +64,7 @@ export type Workorder = {
   observations: string;
   date: string;
   investor_id: number;
+  investor_splits?: { investor_id: number; percentage: number }[];
   effective_area: number;
   items: WorkorderItem[];
 };
