@@ -104,5 +104,5 @@ jobs:
             --service-account="${CLOUD_RUN_SERVICE_ACCOUNT_PROD}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${BASE_MANAGER_API_PROD},X_API_KEY=${{ secrets.X_API_KEY_PROD }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
+            --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${BASE_MANAGER_API_PROD},X_API_KEY=${{ secrets.X_API_KEY_PROD || secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD || secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
 
