@@ -1,0 +1,76 @@
+name: Deploy Frontend STAGING (Cloud Run)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Rama o ref a desplegar (default: main)"
+        required: false
+        default: "main"
+
+env:
+  REGION: us-central1
+  REGISTRY: us-central1-docker.pkg.dev
+  REPOSITORY: ponti-frontend-registry
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref_name }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER_STG }}
+          service_account: ${{ vars.WIF_SERVICE_ACCOUNT_STG }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID_STG }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker "${{ env.REGISTRY }}" --quiet
+
+      - name: Build frontend
+        run: |
+          corepack enable
+          yarn --cwd ui install --frozen-lockfile
+          yarn --cwd ui build
+
+      - name: Build Docker image
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
+          docker build -t "$IMAGE" .
+          docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
+
+      - name: Push Docker image
+        run: |
+          docker push "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
+          docker push "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
+
+      - name: Deploy to Cloud Run (STAGING)
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
+          gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" \
+            --project="${{ vars.GCP_PROJECT_ID_STG }}" \
+            --region="${{ env.REGION }}" \
+            --image="$IMAGE" \
+            --service-account="${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}" \
+            --allow-unauthenticated \
+            --port=3000 \
+            --set-env-vars="NODE_ENV=staging,BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_STG || secrets.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}"
+
