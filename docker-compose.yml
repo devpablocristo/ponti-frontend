@@ -11,12 +11,9 @@ services:
       - yarn_cache:/yarn-cache
     # Vite lee `./ui/.env` (montado). Evitar hardcodear infra acá.
     environment:
-      # En Docker, "localhost" desde la UI apunta al contenedor. Usar el host para llegar al BFF
-      # que corre en network_mode: host.
-      - BFF_URL=http://host.docker.internal:3000
+      # Cross-platform: la UI habla con el BFF por red interna de Docker.
+      - BFF_URL=http://ponti-bff:3000
       - YARN_CACHE_FOLDER=/yarn-cache
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - ponti-bff
     networks:
@@ -27,7 +24,8 @@ services:
     image: node:20.17.0
     working_dir: /app
     command: sh -c "if [ ! -f node_modules/.yarn-integrity ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev"
-    network_mode: host
+    ports:
+      - "3000:3000"
     volumes:
       - ./api:/app
       - bff_node_modules:/app/node_modules
@@ -37,8 +35,15 @@ services:
     environment:
       - NODE_ENV=development
       - YARN_CACHE_FOLDER=/yarn-cache
+      # El backend (Go) corre en el host. Desde contenedor, usar host.docker.internal.
+      # Si tu backend está en otro host/puerto, ajustarlo acá o en ./api/.env.
+      - BASE_MANAGER_API=http://host.docker.internal:8080/api/v1
       # ENABLE_MOCKS=1 solo para testing sin backend. NUNCA activar en local con stack real.
       # - ENABLE_MOCKS=1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - fe-network
     restart: unless-stopped
 
 networks:
