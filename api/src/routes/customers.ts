@@ -28,15 +28,19 @@ router.get("", async (req: Request, res: Response) => {
 
     const { data: customers } = await apiClient.get<any>("/customers", headers);
 
+    // Backend actual devuelve `{ data: [...] }`. Legacy devolvia `{ items: [...] }`.
+    const customerItems = customers.items ?? customers.data ?? [];
+    const total = customers.page_info?.total ?? customers.total ?? customerItems.length;
+
     const data = {
       success: true,
       data: {
-        data: customers.items ?? [],
-        total: customers.page_info.total,
+        data: customerItems,
+        total,
       },
     };
 
-    if ((customers.items ?? []).length > 0) {
+    if (customerItems.length > 0) {
       cache.set("customers", data);
     }
 
@@ -75,11 +79,14 @@ router.get("/archived", async (req: Request, res: Response) => {
       headers
     );
 
+    const customerItems = customers.items ?? customers.data ?? [];
+    const total = customers.page_info?.total ?? customers.total ?? customerItems.length;
+
     const data = {
       success: true,
       data: {
-        data: customers.items ?? [],
-        total: customers.page_info.total,
+        data: customerItems,
+        total,
       },
     };
 

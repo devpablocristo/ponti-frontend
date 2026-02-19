@@ -58,7 +58,9 @@ router.get("", async (req: Request, res: Response) => {
       headers
     );
 
-    const adaptedProjects = (projects.items ?? []).map((project: any) => {
+    // Backend actual devuelve `{ data: [...] }`. Legacy devolvia `{ items: [...] }`.
+    const projectItems = projects.items ?? projects.data ?? [];
+    const adaptedProjects = projectItems.map((project: any) => {
       const client = project.customer?.name || "No client";
       const projectName = project.name;
 
@@ -127,19 +129,26 @@ router.get("/archived", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const { data: projects } = await apiClient.get<any>("/projects/archived", headers);
+    const { data: projects } = await apiClient.get<any>(
+      "/projects/archived",
+      headers
+    );
     const { data: archivedCustomers } = await apiClient.get<any>(
       "/customers/archived",
       headers
     );
 
     const archivedCustomerIds = new Set<number>(
-      (archivedCustomers?.items ?? []).map((customer: any) => Number(customer.id))
+      (archivedCustomers?.items ?? archivedCustomers?.data ?? []).map(
+        (customer: any) => Number(customer.id)
+      )
     );
-    const filteredProjects = (projects.items ?? []).filter((project: any) => {
+    const filteredProjects = (projects.items ?? projects.data ?? []).filter(
+      (project: any) => {
       const customerId = Number(project.customer?.id ?? 0);
       return !archivedCustomerIds.has(customerId);
-    });
+      }
+    );
 
     const adaptedProjects = filteredProjects.map((project: any) => {
       const client = project.customer?.name || "No client";
@@ -221,15 +230,16 @@ const handleProjectsByCustomer = async (req: Request, res: Response) => {
 
     const { data: projects } = await apiClient.get<any>(url, headers);
 
+    const projectItems = projects.items ?? projects.data ?? [];
     const data = {
       success: true,
       data: {
-        data: projects.items ?? [],
+        data: projectItems,
         page_info: projects.page_info,
       },
     };
 
-    if ((projects.items ?? []).length > 0) {
+    if (projectItems.length > 0) {
       cache.set(url, data);
     }
 
