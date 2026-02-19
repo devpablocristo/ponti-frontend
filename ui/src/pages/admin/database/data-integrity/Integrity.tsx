@@ -8,8 +8,8 @@ import DataTable from "../../../../components/Table/DataTable";
 import { apiClient } from "@/api/client";
 import { ErrorResponse } from "@/api/types";
 import {
-  hasRecalcBData,
   IntegrityCheck,
+  hasRecalcBData,
   sortIntegrityChecks,
 } from "./integrityUtils";
 
@@ -27,14 +27,18 @@ export default function Integrity() {
   const [error, setError] = useState<string | null>(null);
 
   const handleRun = async () => {
+    const resolvedProjectId = projectId ?? selectedProject?.id ?? null;
+    if (!resolvedProjectId) {
+      setError("Seleccioná un proyecto para ejecutar los controles.");
+      setChecks([]);
+      return;
+    }
+
     setProcessing(true);
     setError(null);
 
     try {
-      const resolvedProjectId = projectId ?? selectedProject?.id ?? null;
-      const params = resolvedProjectId
-        ? { project_id: resolvedProjectId }
-        : undefined;
+      const params = { project_id: resolvedProjectId };
       const response = await apiClient.get<IntegrityReportResponse>(
         "data-integrity/costs-check",
         params
@@ -66,6 +70,7 @@ export default function Integrity() {
     { key: "control_number", header: "#", sortable: true, width: "60px" },
     { key: "data_to_verify", header: "Dato", sortable: true },
     { key: "system_value", header: "Valor sistema", sortable: true },
+    { key: "recalc_a_value", header: "Recalc A", sortable: true },
     {
       key: "status",
       header: "Estado",
@@ -80,7 +85,7 @@ export default function Integrity() {
         </span>
       ),
     },
-    { key: "difference_a", header: "Diferencia", sortable: true },
+    { key: "difference_a", header: "Dif A", sortable: true },
     { key: "tolerance", header: "Tolerancia", sortable: true },
   ] as any;
 
@@ -96,7 +101,7 @@ export default function Integrity() {
           Se muestran {checks.length} controles.
         </span>
         <span className="text-sm text-gray-600">
-          Proyecto opcional: si no se selecciona, valida todos.
+          Requiere proyecto seleccionado.
         </span>
       </div>
       <DataTable
@@ -157,7 +162,9 @@ export default function Integrity() {
                   ) : null}
                 </div>
                 {item.system_meaning && (
-                  <div className="mt-2 text-slate-600 text-xs">{item.system_meaning}</div>
+                  <div className="mt-2 text-slate-600 text-xs">
+                    {item.system_meaning}
+                  </div>
                 )}
               </div>
 
@@ -173,7 +180,9 @@ export default function Integrity() {
                   ) : null}
                 </div>
                 {item.recalc_a_meaning && (
-                  <div className="mt-2 text-slate-600 text-xs">{item.recalc_a_meaning}</div>
+                  <div className="mt-2 text-slate-600 text-xs">
+                    {item.recalc_a_meaning}
+                  </div>
                 )}
               </div>
 

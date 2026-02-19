@@ -33,6 +33,21 @@ router.get("/ping", (req, res) => {
   res.status(200).json({ message: "UI says Pong!" });
 });
 
+router.get("/version", (_req, res) => {
+  res.status(200).json({
+    service: {
+      name: process.env.SERVICE_NAME || "ponti-bff",
+      version: process.env.SERVICE_VERSION || "",
+      git_sha: process.env.SERVICE_GIT_SHA || "",
+      build_time: process.env.SERVICE_BUILD_TIME || "",
+    },
+    api: {
+      version: "v1",
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 router.use("/auth", auth);
 
 router.use(verifyToken);
@@ -46,9 +61,7 @@ router.use("/crops", crops);
 router.use("/supplies", supplies);
 router.use("/categories", categories);
 router.use("/types", types);
-// Soporta /work-orders (backend) y /workorders (legacy)
 router.use("/work-orders", workorders);
-router.use("/workorders", workorders);
 router.use("/labors", labors);
 router.use("/providers", providers);
 router.use("/supply_movements", movements);

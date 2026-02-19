@@ -28,28 +28,28 @@ router.get("", async (req: Request, res: Response) => {
 
     const { data: customers } = await apiClient.get<any>("/customers", headers);
 
-    if (!Array.isArray(customers?.data)) {
+    if (!Array.isArray(customers?.items)) {
       res.status(502).json({
         success: false,
         message: "Respuesta inválida del backend (/customers)",
-        error: { status: 502, details: "Se esperaba customers.data como array" },
+        error: { status: 502, details: "Se esperaba customers.items como array" },
       });
       return;
     }
     const total =
       typeof customers?.page_info?.total === "number"
         ? customers.page_info.total
-        : customers.data.length;
+        : customers.items.length;
 
     const data = {
       success: true,
       data: {
-        data: customers.data,
+        data: customers.items,
         total,
       },
     };
 
-    if (customers.data.length > 0) {
+    if (customers.items.length > 0) {
       cache.set("customers", data);
     }
 
@@ -88,23 +88,23 @@ router.get("/archived", async (req: Request, res: Response) => {
       headers
     );
 
-    if (!Array.isArray(customers?.data)) {
+    if (!Array.isArray(customers?.items)) {
       res.status(502).json({
         success: false,
         message: "Respuesta inválida del backend (/customers/archived)",
-        error: { status: 502, details: "Se esperaba customers.data como array" },
+        error: { status: 502, details: "Se esperaba customers.items como array" },
       });
       return;
     }
     const total =
       typeof customers?.page_info?.total === "number"
         ? customers.page_info.total
-        : customers.data.length;
+        : customers.items.length;
 
     const data = {
       success: true,
       data: {
-        data: customers.data,
+        data: customers.items,
         total,
       },
     };

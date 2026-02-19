@@ -162,6 +162,7 @@ export function WorkOrders() {
     processingMetrics,
     errorMetrics,
     orders,
+    metrics,
     processing,
     error,
   } = useOrders();
@@ -621,98 +622,6 @@ export function WorkOrders() {
   }, [orders, columnsFilters]);
 
 
-  // Métricas derivadas en tiempo real según los filtros de la tabla
-  const derivedMetrics: Metrics = useMemo(() => {
-    const toNumber = (v: any) => {
-      const n = Number(v);
-      return isNaN(n) ? 0 : n;
-    };
-
-    let surface_ha = 0;
-    let totalLiters = 0;
-    let totalKilograms = 0;
-    let direct_cost = 0;
-
-    filteredOrders.forEach((order) => {
-      // Sumar superficie
-      surface_ha += toNumber(order.surface_ha);
-      
-      // Extraer valor numérico del consumo
-      const consumption = String(order.consumption || "").trim();
-      const numberMatch = consumption.match(/[\d.]+/);
-      const consumptionValue = numberMatch ? parseFloat(numberMatch[0]) || 0 : 0;
-      
-      // Detectar unidad según estructura real
-      const upperConsumption = consumption.toUpperCase();
-      const supplyNameUpper = String(order.supply_name || "").toUpperCase();
-      const categoryNameUpper = String(order.category_name || "").toUpperCase();
-      const typeNameUpper = String(order.type_name || "").toUpperCase();
-      
-      let isLiter = false;
-      let isKilo = false;
-      
-      // 1. Si el consumo tiene unidad explícita
-      if (upperConsumption.includes("L") || upperConsumption.includes("LT")) {
-        isLiter = true;
-      }
-      else if (upperConsumption.includes("KG") || upperConsumption.includes("K")) {
-        isKilo = true;
-      }
-      // 2. Por Tipo/Clase (Agroquímicos = Litros, Semilla = Kg)
-      else if (typeNameUpper.includes("AGROQUÍMICO") || typeNameUpper.includes("AGROQUIMICO")) {
-        isLiter = true;
-      }
-      else if (typeNameUpper.includes("SEMILLA")) {
-        isKilo = true;
-      }
-      // 3. Por Rubro
-      // LITROS: Herbicidas, Coadyuvantes, Curasemillas, Insecticidas, Fungicidas
-      else if (categoryNameUpper.includes("HERBICIDA") || 
-               categoryNameUpper.includes("COADYUVANTE") || 
-               categoryNameUpper.includes("CURASEMILLA") || 
-               categoryNameUpper.includes("INSECTICIDA") || 
-               categoryNameUpper.includes("FUNGICIDA")) {
-        isLiter = true;
-      }
-      // KILOS: Semilla, Fertilizantes
-      else if (categoryNameUpper.includes("SEMILLA") || categoryNameUpper.includes("FERTILIZANTE")) {
-        isKilo = true;
-      }
-      // 4. Por nombre del insumo
-      else if (supplyNameUpper.includes("HERBICIDA") || 
-               supplyNameUpper.includes("ACEITE") || 
-               supplyNameUpper.includes("INSECTICIDA") || 
-               supplyNameUpper.includes("FUNGICIDA") || 
-               supplyNameUpper.includes("LITRO")) {
-        isLiter = true;
-      }
-      else if (supplyNameUpper.includes("SEMILLA") || 
-               supplyNameUpper.includes("FERTILIZANTE") || 
-               supplyNameUpper.includes("KILO")) {
-        isKilo = true;
-      }
-      // Nota: "Otros Insumos" no se detecta (puede ser L o Kg)
-      // Labores (Siembra, Pulverización, Riego, Cosecha, Otras Labores) no tienen unidades
-      
-      // Sumar al total correspondiente
-      if (isLiter) {
-        totalLiters += consumptionValue;
-      } else if (isKilo) {
-        totalKilograms += consumptionValue;
-      }
-      
-      // Sumar todos los costos
-      direct_cost += toNumber(order.total_cost);
-    });
-
-    return {
-      surface_ha,
-      liters: totalLiters,
-      kilograms: totalKilograms,
-      direct_cost,
-    };
-  }, [filteredOrders, columnsFilters]);
-
   const handleExport = async () => {
     if (!projectId) return;
 
@@ -780,7 +689,7 @@ export function WorkOrders() {
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
           {/* Métricas dinámicas que reflejan filtros de la tabla */}
-          <OrdersIndicators metrics={derivedMetrics} processing={processingMetrics} />
+          <OrdersIndicators metrics={metrics} processing={processingMetrics} />
         </div>
       )}
       <div className="mt-4 relative">

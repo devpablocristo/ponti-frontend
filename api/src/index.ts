@@ -30,7 +30,7 @@ app.use((req, _res, next) => {
 // Este servicio siempre debe proxy-ear al backend real.
 console.log("Backend real (mocks desactivados).");
 
-app.use("/api", routes);
+app.use("/api/v1", routes);
 
 app.get("/*", (_, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
