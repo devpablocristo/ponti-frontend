@@ -125,7 +125,15 @@ router.get("/:project_id", async (req: Request, res: Response) => {
       headers
     );
 
-    const entries = movements.entries ?? [];
+    if (!Array.isArray(movements?.entries)) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (supply-movements)",
+        error: { status: 502, details: "Se esperaba movements.entries como array" },
+      });
+      return;
+    }
+    const entries = movements.entries;
     const data = {
       success: true,
       data: {

@@ -44,13 +44,20 @@ router.get("", async (req: Request, res: Response) => {
       headers
     );
 
-    const items = Array.isArray(backendResp?.data) ? backendResp.data : backendResp?.data ?? [];
-    const pageInfo = backendResp?.page_info ?? {
-      per_page: perPage,
-      page,
-      max_page: 1,
-      total: items.length,
-    };
+    if (!Array.isArray(backendResp?.data) || !backendResp?.page_info) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (/supplies)",
+        error: {
+          status: 502,
+          details: "Se esperaba backendResp.data (array) y backendResp.page_info",
+        },
+      });
+      return;
+    }
+
+    const items = backendResp.data;
+    const pageInfo = backendResp.page_info;
 
     const data = {
       success: true,
@@ -231,13 +238,20 @@ router.get("/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    const items = Array.isArray(backendResp?.data) ? backendResp.data : backendResp?.data ?? [];
-    const pageInfo = backendResp?.page_info ?? {
-      per_page: 1000,
-      page: 1,
-      max_page: 1,
-      total: items.length,
-    };
+    if (!Array.isArray(backendResp?.data) || !backendResp?.page_info) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (/supplies)",
+        error: {
+          status: 502,
+          details: "Se esperaba backendResp.data (array) y backendResp.page_info",
+        },
+      });
+      return;
+    }
+
+    const items = backendResp.data;
+    const pageInfo = backendResp.page_info;
 
     const data = {
       success: true,

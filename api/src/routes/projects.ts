@@ -58,9 +58,16 @@ router.get("", async (req: Request, res: Response) => {
       headers
     );
 
-    // Backend actual devuelve `{ data: [...] }`. Legacy devolvia `{ items: [...] }`.
-    const projectItems = projects.items ?? projects.data ?? [];
-    const adaptedProjects = projectItems.map((project: any) => {
+    if (!Array.isArray(projects?.data)) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (/projects)",
+        error: { status: 502, details: "Se esperaba projects.data como array" },
+      });
+      return;
+    }
+
+    const adaptedProjects = projects.data.map((project: any) => {
       const client = project.customer?.name || "No client";
       const projectName = project.name;
 
@@ -138,17 +145,22 @@ router.get("/archived", async (req: Request, res: Response) => {
       headers
     );
 
+    if (!Array.isArray(projects?.data) || !Array.isArray(archivedCustomers?.data)) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (/projects/archived o /customers/archived)",
+        error: { status: 502, details: "Se esperaba projects.data y archivedCustomers.data como arrays" },
+      });
+      return;
+    }
+
     const archivedCustomerIds = new Set<number>(
-      (archivedCustomers?.items ?? archivedCustomers?.data ?? []).map(
-        (customer: any) => Number(customer.id)
-      )
+      archivedCustomers.data.map((customer: any) => Number(customer.id))
     );
-    const filteredProjects = (projects.items ?? projects.data ?? []).filter(
-      (project: any) => {
-      const customerId = Number(project.customer?.id ?? 0);
+    const filteredProjects = projects.data.filter((project: any) => {
+      const customerId = Number((project.customer && project.customer.id) || 0);
       return !archivedCustomerIds.has(customerId);
-      }
-    );
+    });
 
     const adaptedProjects = filteredProjects.map((project: any) => {
       const client = project.customer?.name || "No client";
@@ -230,16 +242,24 @@ const handleProjectsByCustomer = async (req: Request, res: Response) => {
 
     const { data: projects } = await apiClient.get<any>(url, headers);
 
-    const projectItems = projects.items ?? projects.data ?? [];
+    if (!Array.isArray(projects?.data)) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (projects/customers/:id)",
+        error: { status: 502, details: "Se esperaba projects.data como array" },
+      });
+      return;
+    }
+
     const data = {
       success: true,
       data: {
-        data: projectItems,
+        data: projects.data,
         page_info: projects.page_info,
       },
     };
 
-    if (projectItems.length > 0) {
+    if (projects.data.length > 0) {
       cache.set(url, data);
     }
 

@@ -35,14 +35,39 @@ router.get("", async (req: Request, res: Response) => {
       headers
     );
 
+    if (!Array.isArray(customers?.data)) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (/customers)",
+        error: { status: 502, details: "Se esperaba customers.data como array" },
+      });
+      return;
+    }
+    if (!Array.isArray(investors?.data)) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (/investors)",
+        error: { status: 502, details: "Se esperaba investors.data como array" },
+      });
+      return;
+    }
+    if (!Array.isArray(crops?.data)) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (/crops)",
+        error: { status: 502, details: "Se esperaba crops.data como array" },
+      });
+      return;
+    }
+
     const data = {
       success: true,
       data: {
-        clients: customers.items ?? customers.data ?? [],
+        clients: customers.data,
         managers: managers,
-        investors: investors.data ?? [],
+        investors: investors.data,
         campaigns: campaigns,
-        crops: crops.data ?? [],
+        crops: crops.data,
         rentTypes: leaseTypes,
       },
     };
