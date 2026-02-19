@@ -13,7 +13,7 @@ import Button from "../../../components/Button/Button";
 import UpdateOrder from "./UpdateOrder";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { apiClient } from "@/api/client";
-import { formatNumberAr, normalizeDate } from "../utils";
+import { formatNumberAr, normalizeDate, formatISODate, normalizeFilterComparable } from "../utils";
 
 function OrdersHeader({
   ordersAmount,
@@ -162,13 +162,13 @@ export function WorkOrders() {
     processingMetrics,
     errorMetrics,
     orders,
-    metrics,
     processing,
     error,
   } = useOrders();
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+
   // Helper: filtra las órdenes según todos los filtros activos
   const filterOrders = (data: OrdersData[], filters: Record<string, any>) => {
     return data.filter((order) => {
@@ -183,12 +183,13 @@ export function WorkOrders() {
           return orderDate === normalizeDate(String(value));
         }
 
-        const orderVal = String(order[key as keyof OrdersData]).toLowerCase();
+        const orderVal = normalizeFilterComparable(order[key as keyof OrdersData]);
         if (Array.isArray(value)) {
-          const values = value.map((v) => String(v).toLowerCase());
-          return values.includes(orderVal);
+          return value.some(
+            (v) => normalizeFilterComparable(v) === orderVal
+          );
         }
-        return orderVal === String(value).toLowerCase();
+        return orderVal === normalizeFilterComparable(value);
       });
     });
   };
@@ -202,7 +203,19 @@ export function WorkOrders() {
     const filtersExceptCurrent = { ...columnsFilters };
     delete filtersExceptCurrent[key];
     const filtered = filterOrders(orders, filtersExceptCurrent);
-    let options = [...new Set(filtered.map((order) => order[key]))];
+    // Dedupe por valor normalizado, pero conservar el valor original para mostrar
+    // en el checkbox (evita que fechas se rompan con .split("T") y que textos se muestren en minúscula).
+    const seen = new Set<string>();
+    let options: string[] = [];
+    for (const order of filtered) {
+      const raw = String(order[key] ?? "").trim();
+      if (!raw) continue;
+      const norm = normalizeFilterComparable(raw);
+      if (!seen.has(norm)) {
+        seen.add(norm);
+        options.push(raw);
+      }
+    }
     if (customSort) {
       options.sort(customSort);
     } else {
@@ -259,24 +272,10 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("date")
-          .map((dateString) => {
-            if (!dateString) return "";
-            const datePart = String(dateString).split("T")[0];
-            const [year, month, day] = datePart.split("-").map(Number);
-            const dayStr = String(day).padStart(2, "0");
-            const monthStr = String(month).padStart(2, "0");
-            return `${dayStr}/${monthStr}/${year}`;
-          })
+          .map(formatISODate)
           .filter((v, i, a) => a.indexOf(v) === i)
           .sort(),
-        render: (dateString) => {
-          if (!dateString) return "";
-          const datePart = dateString.split("T")[0];
-          const [year, month, day] = datePart.split("-").map(Number);
-          const dayStr = String(day).padStart(2, "0");
-          const monthStr = String(month).padStart(2, "0");
-          return `${dayStr}/${monthStr}/${year}`;
-        },
+        render: (dateString) => formatISODate(dateString),
       },
       {
         key: "crop_name",
@@ -442,8 +441,10 @@ export function WorkOrders() {
   }, [error]);
 
   useEffect(() => {
-    setColumnsToShow(columns);
-  }, [columns]);
+    setColumnsToShow(
+      columns.filter((col) => visibleColumns.includes(String(col.key)))
+    );
+  }, [columns, visibleColumns]);
 
   const filterHierarchy = {
     project_name: ["field_name", "lot_name"],
@@ -589,38 +590,93 @@ export function WorkOrders() {
     }
   };
 
-  useEffect(() => {
-    setColumnsToShow(
-      allColumns.filter((col) => visibleColumns.includes(col.key))
-    );
-  }, [visibleColumns]);
+  // El effect anterior (columns + visibleColumns) ya maneja ambos casos
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      return Object.entries(columnsFilters).every(([key, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
-
-        if (key === "date") {
-          const orderDate = normalizeDate(String(order.date));
-          if (Array.isArray(value)) {
-            return value.some((v) => orderDate === normalizeDate(String(v)));
-          }
-          return orderDate === normalizeDate(String(value));
-        }
-        const orderValRaw = order[key as keyof OrdersData];
-        const orderVal = String(orderValRaw ?? "").toLowerCase();
-        if (Array.isArray(value)) {
-          return value.some((v) => orderVal === String(v).toLowerCase());
-        }
-        return orderVal === String(value).toLowerCase();
-      });
-    });
+    return filterOrders(orders, columnsFilters);
   }, [orders, columnsFilters]);
 
+  // Métricas derivadas en tiempo real según los filtros de la tabla
+  const derivedMetrics: Metrics = useMemo(() => {
+    const toNumber = (v: any) => {
+      const n = Number(v);
+      return isNaN(n) ? 0 : n;
+    };
+
+    let surface_ha = 0;
+    let totalLiters = 0;
+    let totalKilograms = 0;
+    let direct_cost = 0;
+
+    filteredOrders.forEach((order) => {
+      surface_ha += toNumber(order.surface_ha);
+
+      const consumption = String(order.consumption || "").trim();
+      const numberMatch = consumption.match(/[\d.]+/);
+      const consumptionValue = numberMatch ? parseFloat(numberMatch[0]) || 0 : 0;
+
+      const upperConsumption = consumption.toUpperCase();
+      const supplyNameUpper = String(order.supply_name || "").toUpperCase();
+      const categoryNameUpper = String(order.category_name || "").toUpperCase();
+      const typeNameUpper = String(order.type_name || "").toUpperCase();
+
+      let isLiter = false;
+      let isKilo = false;
+
+      if (upperConsumption.includes("L") || upperConsumption.includes("LT")) {
+        isLiter = true;
+      } else if (upperConsumption.includes("KG") || upperConsumption.includes("K")) {
+        isKilo = true;
+      } else if (typeNameUpper.includes("AGROQUÍMICO") || typeNameUpper.includes("AGROQUIMICO")) {
+        isLiter = true;
+      } else if (typeNameUpper.includes("SEMILLA")) {
+        isKilo = true;
+      } else if (
+        categoryNameUpper.includes("HERBICIDA") ||
+        categoryNameUpper.includes("COADYUVANTE") ||
+        categoryNameUpper.includes("CURASEMILLA") ||
+        categoryNameUpper.includes("INSECTICIDA") ||
+        categoryNameUpper.includes("FUNGICIDA")
+      ) {
+        isLiter = true;
+      } else if (categoryNameUpper.includes("SEMILLA") || categoryNameUpper.includes("FERTILIZANTE")) {
+        isKilo = true;
+      } else if (
+        supplyNameUpper.includes("HERBICIDA") ||
+        supplyNameUpper.includes("ACEITE") ||
+        supplyNameUpper.includes("INSECTICIDA") ||
+        supplyNameUpper.includes("FUNGICIDA") ||
+        supplyNameUpper.includes("LITRO")
+      ) {
+        isLiter = true;
+      } else if (
+        supplyNameUpper.includes("SEMILLA") ||
+        supplyNameUpper.includes("FERTILIZANTE") ||
+        supplyNameUpper.includes("KILO")
+      ) {
+        isKilo = true;
+      }
+
+      if (isLiter) {
+        totalLiters += consumptionValue;
+      } else if (isKilo) {
+        totalKilograms += consumptionValue;
+      }
+
+      direct_cost += toNumber(order.total_cost);
+    });
+
+    return {
+      surface_ha,
+      liters: totalLiters,
+      kilograms: totalKilograms,
+      direct_cost,
+    };
+  }, [filteredOrders]);
 
   const handleExport = async () => {
     if (!projectId) return;
@@ -689,7 +745,7 @@ export function WorkOrders() {
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
           {/* Métricas dinámicas que reflejan filtros de la tabla */}
-          <OrdersIndicators metrics={metrics} processing={processingMetrics} />
+          <OrdersIndicators metrics={derivedMetrics} processing={processingMetrics} />
         </div>
       )}
       <div className="mt-4 relative">
