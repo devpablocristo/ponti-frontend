@@ -10,7 +10,7 @@ import { Column } from "../../types";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
-import { units } from "./Items";
+import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
 

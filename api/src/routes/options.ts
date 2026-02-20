@@ -35,11 +35,11 @@ router.get("", async (req: Request, res: Response) => {
       headers
     );
 
-    if (!Array.isArray(customers?.data)) {
+    if (!Array.isArray(customers?.items)) {
       res.status(502).json({
         success: false,
         message: "Respuesta inválida del backend (/customers)",
-        error: { status: 502, details: "Se esperaba customers.data como array" },
+        error: { status: 502, details: "Se esperaba customers.items como array" },
       });
       return;
     }
@@ -63,7 +63,7 @@ router.get("", async (req: Request, res: Response) => {
     const data = {
       success: true,
       data: {
-        clients: customers.data,
+        clients: customers.items,
         managers: managers,
         investors: investors.data,
         campaigns: campaigns,

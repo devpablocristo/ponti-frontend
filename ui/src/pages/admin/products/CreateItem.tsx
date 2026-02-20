@@ -18,6 +18,7 @@ import {
   Project,
 } from "../../../hooks/useWorkspaceFilters";
 import useCampaigns from "../../../hooks/useCampaigns";
+import { getUnitName } from "../../../constants/units";
 
 const emptyItems = [
   {
@@ -261,7 +262,7 @@ export default function CreateItem({
 
   const availableSupplies = useMemo(() => {
     if (!stock || stock.length === 0)
-      return supplies.map((s) => ({ id: s.id, name: s.name, qty: 0, unit: s.unit_name || "" }));
+      return supplies.map((s) => ({ id: s.id, name: s.name, qty: 0, unit: getUnitName(s.unit_id) }));
     const stockBySupply = new Map<string, number>();
     for (const s of stock) {
       const current = stockBySupply.get(s.supply_name) || 0;
@@ -276,7 +277,7 @@ export default function CreateItem({
         id: s.id,
         name: s.name,
         qty: Number(stockBySupply.get(s.name)),
-        unit: s.unit_name || "",
+        unit: getUnitName(s.unit_id),
       }));
   }, [supplies, stock]);
 
@@ -683,7 +684,7 @@ export default function CreateItem({
                       <div className="sm:col-span-1">
                         <InputField
                           label=""
-                          placeholder="Lts/kg"
+                          placeholder="Lt/Kg/Bolsas"
                           name={`quantity${i}`}
                           type="text"
                           value={item.quantity}

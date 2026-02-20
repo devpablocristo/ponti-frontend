@@ -160,7 +160,7 @@ function OrdersIndicators({
           />
           <IndicatorCard
             title="Consumo en litros"
-            value={formatNumberAr(metrics.liters) + " Lts"}
+            value={formatNumberAr(metrics.liters) + " Lt"}
             color="gray"
           />
           <IndicatorCard

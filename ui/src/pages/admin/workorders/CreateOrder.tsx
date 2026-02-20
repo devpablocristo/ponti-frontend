@@ -12,6 +12,7 @@ import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useSupplies from "../../../hooks/useSupplies";
 import useCategories from "../../../hooks/useCategories";
+import { units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
@@ -226,10 +227,7 @@ export default function CreateOrder({
             name="unit"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
-            options={[
-              { id: 1, name: "Lts" },
-              { id: 2, name: "Kg" },
-            ]}
+            options={units}
             size="sm"
           />
 
@@ -947,7 +945,7 @@ export default function CreateOrder({
                       <div className="sm:col-span-1">
                         <InputField
                           label=""
-                          placeholder="lts/kg"
+                          placeholder="Lt/Kg/Bolsas"
                           name={`totalUsed${i}`}
                           type="text"
                           value={item.totalUsed}

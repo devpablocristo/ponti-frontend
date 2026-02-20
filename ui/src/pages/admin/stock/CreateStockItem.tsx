@@ -632,7 +632,7 @@ export default function CreateStockItem({
                       <div className="sm:col-span-1">
                         <InputField
                           label=""
-                          placeholder="Lts/kg"
+                          placeholder="Lt/Kg/Bolsas"
                           name={`quantity${i}`}
                           type="text"
                           value={item.quantity}

@@ -14,6 +14,7 @@ import SelectField from "../../../components/Input/SelectField";
 import { apiClient } from "@/api/client";
 import { formatNumberAr } from "../utils";
 import CreateStockItem from "./CreateStockItem";
+import { getUnitName } from "../../../constants/units";
 
 const EditableCell = ({
   item,
@@ -208,8 +209,8 @@ function ItemsIndicators({
           color="gray"
         />
         <IndicatorCard
-          title="Total invertido Lts"
-          value={formatNumberAr(summary.total_lt) + " Lts"}
+          title="Total invertido Lt"
+          value={formatNumberAr(summary.total_lt) + " Lt"}
           color="gray"
         />
         <IndicatorCard
@@ -316,9 +317,9 @@ export function Stock() {
       const usd = Number(item.total_usd) || 0;
 
       if (item.supply_unit_id === 1) {
-        totalKg += entry;
-      } else if (item.supply_unit_id === 2) {
         totalLt += entry;
+      } else if (item.supply_unit_id === 2) {
+        totalKg += entry;
       }
 
       totalUsd += usd;
@@ -415,7 +416,7 @@ export function Stock() {
         ),
         header: "Ingresados",
         render: (value, item) => {
-          const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
+          const unit = getUnitName(item.supply_unit_id);
           return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
       },
@@ -426,7 +427,7 @@ export function Stock() {
         padding: "xs",
         headerPadding: "xs",
         render: (value, item) => {
-          const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
+          const unit = getUnitName(item.supply_unit_id);
           return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
@@ -443,7 +444,7 @@ export function Stock() {
         headerPadding: "xs",
         padding: "xs",
         render: (value, item) => {
-          const unit = item.supply_unit_id === 1 ? "Kg" : "Lt";
+          const unit = getUnitName(item.supply_unit_id);
           return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
