@@ -11,23 +11,6 @@ const secureTokenBase = "https://securetoken.googleapis.com/v1";
 const identityConfigured = () =>
   Boolean(configService.identityApiKey && configService.identityProjectId);
 
-const localDevAuthEnabled = () => process.env.LOCAL_DEV_AUTH === "1";
-
-function base64url(input: string) {
-  return Buffer.from(input, "utf8")
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
-
-function makeFakeJWT(payload: Record<string, any>) {
-  const header = { alg: "none", typ: "JWT" };
-  return `${base64url(JSON.stringify(header))}.${base64url(
-    JSON.stringify(payload)
-  )}.x`;
-}
-
 const usernameToEmail = (value: string) => {
   const v = String(value || "").trim();
   if (!v) return "";
@@ -46,29 +29,6 @@ router.post("/login", async (req: Request, res: Response) => {
         success: false,
         message: "Credenciales inválidas",
         error: { status: 400, details: "email y password son requeridos" },
-      });
-      return;
-    }
-
-    // Local dev mode: emulate login without calling Identity Platform.
-    // This keeps `make run-ponti-local` working without any GCP setup.
-    if (localDevAuthEnabled()) {
-      const now = Math.floor(Date.now() / 1000);
-      const userID = process.env.LOCAL_DEV_USER_ID || "1";
-      const accessToken = makeFakeJWT({
-        sub: String(userID),
-        email,
-        exp: now + 60 * 60, // 1h
-      });
-      const refreshToken = makeFakeJWT({
-        sub: String(userID),
-        email,
-        exp: now + 7 * 24 * 60 * 60, // 7d
-      });
-      res.status(200).json({
-        success: true,
-        message: "Operación exitosa",
-        data: { access_token: accessToken, refresh_token: refreshToken },
       });
       return;
     }
@@ -129,32 +89,6 @@ router.post("/logout", async (req: Request, res: Response) => {
 });
 
 router.get("/access-token", async (req: Request, res: Response) => {
-  if (localDevAuthEnabled()) {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.split(" ")[1];
-    const now = Math.floor(Date.now() / 1000);
-    // Keep same sub if possible
-    let sub = process.env.LOCAL_DEV_USER_ID || "1";
-    try {
-      const payload = token?.split(".")?.[1];
-      if (payload) {
-        const decoded = JSON.parse(
-          Buffer.from(payload, "base64url").toString("utf8")
-        );
-        if (decoded?.sub) sub = String(decoded.sub);
-      }
-    } catch {
-      // ignore
-    }
-    const accessToken = makeFakeJWT({ sub, exp: now + 60 * 60 });
-    res.status(200).json({
-      success: true,
-      message: "Operación exitosa",
-      data: { access_token: accessToken, refresh_token: token || "" },
-    });
-    return;
-  }
-
   if (!identityConfigured()) {
     res.status(503).json({
       success: false,
@@ -214,38 +148,6 @@ router.get("/access-token", async (req: Request, res: Response) => {
 });
 
 router.get("/session", async (req: Request, res: Response) => {
-  if (localDevAuthEnabled()) {
-    const authHeader = req.headers.authorization;
-    const token = authHeader?.split(" ")[1];
-    if (!token) {
-      res.status(401).json({
-        success: false,
-        message: "No autorizado",
-        error: { status: 401, details: "token requerido" },
-      });
-      return;
-    }
-    try {
-      const payload = token.split(".")[1];
-      const decoded = JSON.parse(
-        Buffer.from(payload, "base64url").toString("utf8")
-      );
-      res.status(200).json({
-        success: true,
-        message: "Operación exitosa",
-        data: { users: [decoded] },
-      });
-      return;
-    } catch {
-      res.status(401).json({
-        success: false,
-        message: "Sesión inválida",
-        error: { status: 401, details: "Token inválido" },
-      });
-      return;
-    }
-  }
-
   if (!identityConfigured()) {
     res.status(503).json({
       success: false,
