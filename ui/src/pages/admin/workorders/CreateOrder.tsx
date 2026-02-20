@@ -708,7 +708,7 @@ export default function CreateOrder({
                 </div>
               </div>
 
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <SelectField
                     label="Labor"
@@ -754,28 +754,32 @@ export default function CreateOrder({
                   onChange={() => { }}
                   size="sm"
                 />
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Inversor del labor</span>
-                    <label className="inline-flex items-center gap-2 text-xs text-gray-600">
-                      <input
-                        type="checkbox"
-                        checked={splitByInvestor}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setSplitByInvestor(checked);
-                          if (!checked && investorSplits[0]?.investorId) {
-                            const selectedInvestor = investors.find(
-                              (i) => i.id === investorSplits[0].investorId
-                            );
-                            setInvestor(selectedInvestor || null);
-                          }
-                        }}
-                      />
-                      Dividir aporte
-                    </label>
-                  </div>
-                  {!splitByInvestor ? (
+              </div>
+
+              <div className="rounded-lg border border-gray-200 p-4 bg-gray-50/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-700">Inversor del labor</span>
+                  <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      checked={splitByInvestor}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSplitByInvestor(checked);
+                        if (!checked && investorSplits[0]?.investorId) {
+                          const selectedInvestor = investors.find(
+                            (i) => i.id === investorSplits[0].investorId
+                          );
+                          setInvestor(selectedInvestor || null);
+                        }
+                      }}
+                    />
+                    Dividir aporte
+                  </label>
+                </div>
+                {!splitByInvestor ? (
+                  <div className="max-w-sm">
                     <SelectField
                       label=""
                       placeholder="Selecciona el inversor"
@@ -792,81 +796,85 @@ export default function CreateOrder({
                       }}
                       size="sm"
                     />
-                  ) : (
-                    <div className="space-y-2 rounded-md border border-gray-200 p-2">
-                      {investorSplits.map((split, idx) => (
-                        <div key={idx} className="grid grid-cols-[1fr_100px_70px] gap-2 items-center">
-                          <SelectField
-                            label=""
-                            name={`split-investor-${idx}`}
-                            options={investors}
-                            value={split.investorId?.toString() || ""}
-                            onChange={(e) => {
-                              const value = e.target.value ? Number(e.target.value) : null;
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {investorSplits.map((split, idx) => (
+                      <div key={idx} className="grid grid-cols-[1fr_120px_auto] gap-3 items-center">
+                        <SelectField
+                          label=""
+                          name={`split-investor-${idx}`}
+                          options={investors}
+                          value={split.investorId?.toString() || ""}
+                          onChange={(e) => {
+                            const value = e.target.value ? Number(e.target.value) : null;
+                            setInvestorSplits((prev) =>
+                              prev.map((row, i) =>
+                                i === idx ? { ...row, investorId: value } : row
+                              )
+                            );
+                          }}
+                          size="sm"
+                        />
+                        <InputField
+                          label=""
+                          name={`split-pct-${idx}`}
+                          type="text"
+                          value={split.percentage}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(",", ".");
+                            if (/^\d*\.?\d{0,2}$/.test(value)) {
                               setInvestorSplits((prev) =>
                                 prev.map((row, i) =>
-                                  i === idx ? { ...row, investorId: value } : row
+                                  i === idx ? { ...row, percentage: value } : row
                                 )
                               );
-                            }}
-                            size="sm"
-                          />
-                          <InputField
-                            label=""
-                            name={`split-pct-${idx}`}
-                            type="text"
-                            value={split.percentage}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(",", ".");
-                              if (/^\d*\.?\d{0,2}$/.test(value)) {
-                                setInvestorSplits((prev) =>
-                                  prev.map((row, i) =>
-                                    i === idx ? { ...row, percentage: value } : row
-                                  )
-                                );
-                              }
-                            }}
-                            placeholder="%"
-                            size="sm"
-                          />
-                          <Button
-                            variant="outlineGray"
-                            size="xs"
-                            onClick={() => {
-                              setInvestorSplits((prev) =>
-                                prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)
-                              );
-                            }}
-                          >
-                            Quitar
-                          </Button>
-                        </div>
-                      ))}
-                      <div className="flex justify-between items-center pt-1">
+                            }
+                          }}
+                          placeholder="%"
+                          size="sm"
+                        />
                         <Button
-                          variant="outlinePonti"
+                          variant="outlineGray"
                           size="xs"
-                          onClick={() =>
-                            setInvestorSplits((prev) => [
-                              ...prev,
-                              { investorId: null, percentage: "" },
-                            ])
-                          }
+                          onClick={() => {
+                            setInvestorSplits((prev) =>
+                              prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)
+                            );
+                          }}
                         >
-                          + Inversor
+                          Quitar
                         </Button>
-                        <span className="text-xs text-gray-600">
-                          Total:{" "}
-                          {investorSplits.reduce(
-                            (acc, s) => acc + (Number(s.percentage) || 0),
-                            0
-                          )}
-                          %
-                        </span>
                       </div>
+                    ))}
+                    <div className="flex justify-between items-center pt-1">
+                      <Button
+                        variant="outlinePonti"
+                        size="xs"
+                        onClick={() =>
+                          setInvestorSplits((prev) => [
+                            ...prev,
+                            { investorId: null, percentage: "" },
+                          ])
+                        }
+                      >
+                        + Inversor
+                      </Button>
+                      {(() => {
+                        const total = investorSplits.reduce(
+                          (acc, s) => acc + (Number(s.percentage) || 0),
+                          0
+                        );
+                        return (
+                          <span className={`text-sm font-medium ${total === 100 ? "text-green-600" : "text-red-600"}`}>
+                            Total: {total}%
+                            {total !== 100 && <span className="ml-1 text-xs">(debe ser 100%)</span>}
+                          </span>
+                        );
+                      })()}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Tabla de insumos */}
@@ -1111,7 +1119,7 @@ export default function CreateOrder({
                   onClick={handleSaveOrder}
                   variant="success"
                   className="text-base font-medium"
-                  disabled={processing || processingCreation}
+                  disabled={processing || processingCreation || (splitByInvestor && investorSplits.reduce((acc, s) => acc + (Number(s.percentage) || 0), 0) !== 100)}
                 >
                   Guardar
                 </Button>
