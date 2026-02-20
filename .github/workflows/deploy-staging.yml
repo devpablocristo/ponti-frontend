@@ -74,3 +74,19 @@ jobs:
             --port=3000 \
             --set-env-vars="NODE_ENV=staging,BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_STG || secrets.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}"
 
+      - name: Resolve service URL (STAGING)
+        run: |
+          service_url="$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" \
+            --project="${{ vars.GCP_PROJECT_ID_STG }}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.url)')"
+          if [[ -z "$service_url" ]]; then
+            echo "ERROR: no se pudo resolver status.url del servicio frontend STAGING."
+            exit 1
+          fi
+          echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: Smoke release checks (STAGING)
+        run: |
+          bash ./scripts/smoke_release.sh "$SERVICE_URL"
+

@@ -7,6 +7,7 @@ DOCKER_COMPOSE_YML := $(ROOT_DIR)/docker-compose.yml
 .PHONY: dev dev-ui dev-bff install install-ui install-bff \
         build build-ui build-bff start \
         lint lint-ui lint-bff lint-fix format typecheck test \
+        smoke-release \
         up down logs reset rebuild clean \
         docker-build docker-run help
 
@@ -86,6 +87,9 @@ typecheck: ## Type-check de la UI (tsc --noEmit)
 test: ## Corre tests de la UI (vitest)
 	@echo "Running tests..."
 	@cd ui && yarn test
+
+smoke-release: ## Smoke release FE/BFF (BASE_URL=http://...)
+	@bash ./scripts/smoke_release.sh $(BASE_URL)
 
 # --------------------------------------------------
 # Docker Compose (desarrollo)
