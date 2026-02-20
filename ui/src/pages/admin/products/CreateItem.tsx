@@ -18,7 +18,8 @@ import {
   Project,
 } from "../../../hooks/useWorkspaceFilters";
 import useCampaigns from "../../../hooks/useCampaigns";
-import { getUnitName } from "../../../constants/units";
+import { getUnitName, units } from "../../../constants/units";
+import useCategories from "../../../hooks/useCategories";
 
 const emptyItems = [
   {
@@ -164,6 +165,11 @@ export default function CreateItem({
   const [lastSubmittedRowIndexes, setLastSubmittedRowIndexes] = useState<number[]>(
     []
   );
+  const [openCreateSupply, setOpenCreateSupply] = useState(false);
+  const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
+  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
+    null
+  );
 
   const clearForm = () => {
     setError(null);
@@ -177,6 +183,158 @@ export default function CreateItem({
     setOrderNumber("");
     setDate("");
   };
+
+  function CreateSupplyInline({
+    projectId,
+    onCreated,
+    onCancel,
+  }: {
+    projectId: number | null;
+    onCreated: (createdName: string) => void;
+    onCancel: () => void;
+  }) {
+    const { saveSupplies, result, error } = useSupplies();
+    const { categories, types, getCategories, getTypes } = useCategories();
+    const [saving, setSaving] = useState(false);
+    const [success, setSuccess] = useState<string | null>(null);
+
+    const [name, setName] = useState("");
+    const [unit, setUnit] = useState("");
+    const [price, setPrice] = useState("");
+    const [category, setCategory] = useState("");
+    const [type, setType] = useState("");
+
+    const normalizedName = name.trim().replace(/\s+/g, " ").toUpperCase();
+
+    useEffect(() => {
+      getCategories("");
+      getTypes();
+    }, []);
+
+    useEffect(() => {
+      if (!result) return;
+      setSaving(false);
+      setSuccess("Insumo creado correctamente");
+    }, [result]);
+
+    useEffect(() => {
+      if (error) setSaving(false);
+    }, [error]);
+
+    return (
+      <div className="space-y-4">
+        {success && (
+          <div className="p-3 rounded bg-green-50 text-green-700 text-sm flex items-center justify-between">
+            <span>{success}</span>
+            <Button
+              size="xs"
+              variant="success"
+              onClick={() => {
+                setSuccess(null);
+                onCreated(normalizedName);
+              }}
+            >
+              OK
+            </Button>
+          </div>
+        )}
+
+        {!success && (
+          <>
+            {error && (
+              <div className="p-3 rounded bg-red-50 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
+            <InputField
+              label="Nombre del insumo"
+              name="suplyName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              size="sm"
+            />
+
+            <SelectField
+              label="Unidad"
+              name="unit"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              options={units}
+              size="sm"
+            />
+
+            <InputField
+              label="Precio"
+              name="supplyPrice"
+              value={price}
+              onChange={(e) => {
+                const value = e.target.value.replace(/,/g, ".");
+                if (/^\d*\.?\d{0,2}$/.test(value)) setPrice(value);
+              }}
+              size="sm"
+            />
+
+            <SelectField
+              label="Rubro"
+              name="category"
+              value={category}
+              onChange={(e) => {
+                const selectedCategory = categories.find(
+                  (c: { id: number; type_id?: number }) =>
+                    c.id === Number(e.target.value)
+                );
+                setCategory(e.target.value);
+                setType(selectedCategory?.type_id?.toString() || "");
+              }}
+              options={categories}
+              size="sm"
+            />
+
+            <SelectField
+              label="Tipo / Clase"
+              name="type"
+              value={type}
+              options={types}
+              disabled
+              onChange={() => {}}
+              size="sm"
+            />
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outlineGray" onClick={onCancel} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button
+                variant="success"
+                disabled={saving}
+                onClick={() => {
+                  if (!projectId || !name || !unit || !price || !category || !type) {
+                    return;
+                  }
+                  setSaving(true);
+                  saveSupplies(
+                    [
+                      {
+                        name: normalizedName,
+                        unit: Number(unit),
+                        price: Number(price),
+                        category: Number(category),
+                        type: Number(type),
+                      },
+                    ],
+                    projectId
+                  );
+                }}
+              >
+                {saving ? "Guardando..." : "Guardar insumo"}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   useEffect(() => {
     setSuccessMessage(null);
@@ -215,6 +373,8 @@ export default function CreateItem({
   }, [errorCreation]);
 
   useEffect(() => {
+    if (lastSubmittedRowIndexes.length === 0) return;
+
     if (resultCreation.supply_movements.length > 0) {
       const errors: string[] = [];
       const nextItemErrors: Record<number, string> = {};
@@ -245,7 +405,7 @@ export default function CreateItem({
       clearForm();
       if (projectId) getStock(projectId, "");
     }
-  }, [resultCreation, lastSubmittedRowIndexes, items, supplies]);
+  }, [resultCreation, lastSubmittedRowIndexes]);
 
   useEffect(() => {
     if (projectId) {
@@ -255,23 +415,31 @@ export default function CreateItem({
     }
   }, [projectId]);
 
+  useEffect(() => {
+    if (!pendingCreatedSupplyName || itemIndexToUpdate === null) return;
+    const createdSupply = supplies.find(
+      (s) => s.name.trim().toUpperCase() === pendingCreatedSupplyName
+    );
+    if (!createdSupply) return;
+
+    handleItemChange(itemIndexToUpdate, "item", String(createdSupply.id));
+    setPendingCreatedSupplyName(null);
+    setItemIndexToUpdate(null);
+  }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
+
   const availableSupplies = useMemo(() => {
-    if (!stock || stock.length === 0)
-      return supplies.map((s) => ({ id: s.id, name: s.name, qty: 0, unit: getUnitName(s.unit_id) }));
+    if (!stock || stock.length === 0) return [];
     const stockBySupply = new Map<string, number>();
     for (const s of stock) {
       const current = stockBySupply.get(s.supply_name) || 0;
       stockBySupply.set(s.supply_name, current + Number(s.stock_units));
     }
     return supplies
-      .filter((s) => {
-        const qty = stockBySupply.get(s.name);
-        return qty !== undefined && qty > 0;
-      })
+      .filter((s) => Number(stockBySupply.get(s.name) || 0) > 0)
       .map((s) => ({
         id: s.id,
         name: s.name,
-        qty: Number(stockBySupply.get(s.name)),
+        qty: Number(stockBySupply.get(s.name) || 0),
         unit: getUnitName(s.unit_id),
       }));
   }, [supplies, stock]);
@@ -598,6 +766,20 @@ export default function CreateItem({
                 </div>
               )}
               <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div></div>
+                  <Button
+                    variant="outlinePonti"
+                    size="xs"
+                    onClick={() => {
+                      setItemIndexToUpdate(null);
+                      setOpenCreateSupply(true);
+                    }}
+                    className="max-w-fit"
+                  >
+                    + Crear nuevo insumo
+                  </Button>
+                </div>
                 <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
                   <span className="font-sm text-gray-900">Insumo</span>
                   <span className="font-sm text-gray-900">Cantidad</span>
@@ -645,6 +827,17 @@ export default function CreateItem({
                               autoFocus
                             />
                             <ul className="max-h-[200px] overflow-y-auto">
+                              <li
+                                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
+                                onClick={() => {
+                                  setItemIndexToUpdate(i);
+                                  setOpenCreateSupply(true);
+                                  setOpenSupplyDropdown(null);
+                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                }}
+                              >
+                                + Crear nuevo insumo
+                              </li>
                               {availableSupplies
                                 .filter((s) =>
                                   !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
@@ -803,6 +996,23 @@ export default function CreateItem({
           </>
         )}
       </div>
+      <Drawer open={openCreateSupply} onClose={() => setOpenCreateSupply(false)}>
+        <div className="flex flex-col h-full">
+          <h2 className="text-lg font-semibold mb-4">Crear nuevo insumo</h2>
+          <CreateSupplyInline
+            projectId={projectId}
+            onCreated={async (createdName) => {
+              setPendingCreatedSupplyName(createdName);
+              setOpenCreateSupply(false);
+              if (projectId) {
+                await getSupplies(projectId);
+                await getStock(projectId, "");
+              }
+            }}
+            onCancel={() => setOpenCreateSupply(false)}
+          />
+        </div>
+      </Drawer>
     </Drawer>
   );
 }

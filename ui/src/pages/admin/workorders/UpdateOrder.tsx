@@ -5,7 +5,7 @@ import SelectField from "../../../components/Input/SelectField";
 import useLabors from "../../../hooks/useLabors";
 import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import { LoaderCircle } from "lucide-react";
+import { ChevronDown, LoaderCircle } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
@@ -135,6 +135,11 @@ export default function UpdateOrder({
   const [date, setDate] = useState("");
   const [openCreateSupply, setOpenCreateSupply] = useState(false);
   const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
+  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
+    null
+  );
+  const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
+  const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
     null
   );
@@ -161,7 +166,7 @@ export default function UpdateOrder({
     onCancel,
   }: {
     projectId: number | null;
-    onCreated: () => void;
+    onCreated: (createdName: string) => void;
     onCancel: () => void;
   }) {
     const { saveSupplies, result, error } = useSupplies();
@@ -203,7 +208,7 @@ export default function UpdateOrder({
               variant="success"
               onClick={() => {
                 setSuccess(null);
-                onCreated();
+                onCreated(normalizedName);
               }}
             >
               OK
@@ -330,6 +335,22 @@ export default function UpdateOrder({
       getLabors(selectedOrder.project_id);
     }
   }, [selectedOrder]);
+
+  useEffect(() => {
+    if (!pendingCreatedSupplyName) return;
+    if (itemIndexToUpdate === null) {
+      setPendingCreatedSupplyName(null);
+      return;
+    }
+    const createdSupply = supplies.find(
+      (s) => s.name.trim().toUpperCase() === pendingCreatedSupplyName
+    );
+    if (!createdSupply) return;
+
+    handleItemChange(itemIndexToUpdate, "item", String(createdSupply.id));
+    setPendingCreatedSupplyName(null);
+    setItemIndexToUpdate(null);
+  }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
 
   useEffect(() => {
     if (!selectedProject || !selectedOrder) return;
@@ -863,38 +884,86 @@ export default function UpdateOrder({
                       key={i}
                       className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                     >
-                      <div className="sm:col-span-1">
-                        <SelectField
-                          label=""
-                          name={`item-${i}`}
-                          options={[
-                            { id: -1, name: "+ Crear Nuevo Insumo" },
-                            ...supplies,
-                          ]}
-                          value={item.item}
-                          onChange={(e) => {
-                            if (e.target.value === "") {
-                              handleItemChange(i, "item", "");
-                              return;
-                            }
-
-                            const value = Number(e.target.value);
-                            if (value === -1) {
-                              handleItemChange(i, "item", "");
-                              setItemIndexToUpdate(i);
-                              setOpenCreateSupply(true);
-                              return;
-                            }
-
-                            const selectedSupply = supplies.find((s) => s.id === value);
-                            if (selectedSupply) {
-                              handleItemChange(i, "item", String(value));
-                              handleItemChange(i, "dose", "");
-                              handleItemChange(i, "totalUsed", "");
-                            }
-                          }}
-                          size="sm"
-                        />
+                      <div className="sm:col-span-1 relative">
+                        <div
+                          className="input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between"
+                          onClick={() =>
+                            setOpenSupplyDropdown(openSupplyDropdown === i ? null : i)
+                          }
+                        >
+                          {item.item ? (
+                            <span className="truncate font-semibold text-gray-900">
+                              {supplies.find((s) => s.id === Number(item.item))?.name ||
+                                "Seleccionar..."}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">Seleccionar...</span>
+                          )}
+                          <ChevronDown size={16} className="text-slate-400 shrink-0" />
+                        </div>
+                        {openSupplyDropdown === i && (
+                          <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
+                            <input
+                              type="text"
+                              placeholder="Buscar insumo..."
+                              className="w-full px-3 py-2 text-sm border-b outline-none"
+                              value={supplySearch[i] || ""}
+                              onChange={(e) =>
+                                setSupplySearch((prev) => ({
+                                  ...prev,
+                                  [i]: e.target.value,
+                                }))
+                              }
+                              autoFocus
+                            />
+                            <ul className="max-h-[200px] overflow-y-auto">
+                              <li
+                                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
+                                onClick={() => {
+                                  handleItemChange(i, "item", "");
+                                  setItemIndexToUpdate(i);
+                                  setOpenCreateSupply(true);
+                                  setOpenSupplyDropdown(null);
+                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                }}
+                              >
+                                + Crear nuevo insumo
+                              </li>
+                              {supplies
+                                .filter(
+                                  (s) =>
+                                    !supplySearch[i] ||
+                                    s.name
+                                      .toLowerCase()
+                                      .includes(supplySearch[i].toLowerCase())
+                                )
+                                .map((s) => (
+                                  <li
+                                    key={s.id}
+                                    className="px-3 py-2 cursor-pointer hover:bg-gray-100 font-semibold text-gray-900"
+                                    onClick={() => {
+                                      handleItemChange(i, "item", String(s.id));
+                                      handleItemChange(i, "dose", "");
+                                      handleItemChange(i, "totalUsed", "");
+                                      setOpenSupplyDropdown(null);
+                                      setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                    }}
+                                  >
+                                    {s.name}
+                                  </li>
+                                ))}
+                              {supplies.filter(
+                                (s) =>
+                                  !supplySearch[i] ||
+                                  s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
+                              ).length === 0 && (
+                                <li className="px-3 py-2 text-sm text-gray-400">
+                                  Sin resultados
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                       <div className="sm:col-span-1">
                         <InputField
@@ -1095,25 +1164,24 @@ export default function UpdateOrder({
         onClose={() => {
           setOpenCreateSupply(false);
           setItemIndexToUpdate(null);
+          setPendingCreatedSupplyName(null);
         }}
       >
         <div className="flex flex-col h-full">
           <h2 className="text-lg font-semibold mb-4">Crear Nuevo Insumo</h2>
           <CreateSupplyInline
             projectId={selectedOrder?.project_id || null}
-            onCreated={async () => {
+            onCreated={async (createdName) => {
+              setPendingCreatedSupplyName(createdName);
               if (selectedOrder?.project_id) {
                 await getSupplies(selectedOrder.project_id);
               }
-              if (itemIndexToUpdate !== null) {
-                handleItemChange(itemIndexToUpdate, "item", "");
-              }
               setOpenCreateSupply(false);
-              setItemIndexToUpdate(null);
             }}
             onCancel={() => {
               setOpenCreateSupply(false);
               setItemIndexToUpdate(null);
+              setPendingCreatedSupplyName(null);
             }}
           />
         </div>
