@@ -13,7 +13,7 @@ import Button from "../../../components/Button/Button";
 import UpdateOrder from "./UpdateOrder";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { apiClient } from "@/api/client";
-import { formatNumberAr, normalizeDate, formatISODate, normalizeFilterComparable } from "../utils";
+import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 
 function OrdersHeader({
   ordersAmount,
@@ -183,39 +183,25 @@ export function WorkOrders() {
           return orderDate === normalizeDate(String(value));
         }
 
-        const orderVal = normalizeFilterComparable(order[key as keyof OrdersData]);
+        const orderValRaw = order[key as keyof OrdersData];
+        const orderVal = String(orderValRaw ?? "").toLowerCase();
         if (Array.isArray(value)) {
-          return value.some(
-            (v) => normalizeFilterComparable(v) === orderVal
-          );
+          return value.some((v) => orderVal === String(v).toLowerCase());
         }
-        return orderVal === normalizeFilterComparable(value);
+        return orderVal === String(value).toLowerCase();
       });
     });
   };
 
-  // Helper: obtiene las opciones válidas para una columna, considerando todos los filtros excepto el de esa columna
+  // Helper: obtiene las opciones válidas para una columna
   const getFilterOptionsForColumn = (
     key: keyof OrdersData,
     customSort?: (a: any, b: any) => number
   ) => {
-    // Aplica todos los filtros excepto el de la columna actual
     const filtersExceptCurrent = { ...columnsFilters };
     delete filtersExceptCurrent[key];
     const filtered = filterOrders(orders, filtersExceptCurrent);
-    // Dedupe por valor normalizado, pero conservar el valor original para mostrar
-    // en el checkbox (evita que fechas se rompan con .split("T") y que textos se muestren en minúscula).
-    const seen = new Set<string>();
-    let options: string[] = [];
-    for (const order of filtered) {
-      const raw = String(order[key] ?? "").trim();
-      if (!raw) continue;
-      const norm = normalizeFilterComparable(raw);
-      if (!seen.has(norm)) {
-        seen.add(norm);
-        options.push(raw);
-      }
-    }
+    let options = [...new Set(filtered.map((order) => order[key]))];
     if (customSort) {
       options.sort(customSort);
     } else {
@@ -392,13 +378,14 @@ export function WorkOrders() {
     // IMPORTANTE: Ahora dependemos de 'orders' Y de 'columnsFilters'
   }, [orders, columnsFilters]);
 
-  const allColumns = useMemo(() => {
-    const map = new Map();
-    [...columns].forEach((col) => {
-      map.set(col.key, col);
-    });
-    return Array.from(map.values());
-  }, [columns]);
+  // EXACTO como main - allColumns inline, NO useMemo
+  const allColumnsMap = new Map();
+  [...columns].forEach((col) => {
+    allColumnsMap.set(col.key, col);
+  });
+  const allColumns = Array.from(allColumnsMap.values());
+
+  // EXACTO como main - columnsToShow ANTES de selectedColumns
   const [columnsToShow, setColumnsToShow] = useState(columns);
   const [selectedColumns, setSelectedColumns] = useState(
     allColumns.map((col) => col.key)
@@ -440,11 +427,10 @@ export function WorkOrders() {
     setErrorMessage(error);
   }, [error]);
 
+  // EXACTO como main - effect para columns
   useEffect(() => {
-    setColumnsToShow(
-      columns.filter((col) => visibleColumns.includes(String(col.key)))
-    );
-  }, [columns, visibleColumns]);
+    setColumnsToShow(columns);
+  }, [columns]);
 
   const filterHierarchy = {
     project_name: ["field_name", "lot_name"],
@@ -459,12 +445,10 @@ export function WorkOrders() {
       const validData = orders.filter((o) => {
         const orderValue = String(o[parent as keyof OrdersData]).toLowerCase();
         if (Array.isArray(parentFilter)) {
-          // Si el filtro padre es un array, verificar si el valor está incluido
           return parentFilter.some(
             (val) => String(val).toLowerCase() === orderValue
           );
         } else {
-          // Si es un valor único
           return orderValue === String(parentFilter).toLowerCase();
         }
       });
@@ -477,7 +461,6 @@ export function WorkOrders() {
         const childFilter = columnsFilters[child];
         if (childFilter) {
           if (Array.isArray(childFilter)) {
-            // Si el filtro hijo es un array, verificar si algún valor es inválido
             const validChildValues = childFilter.filter((val) =>
               validValues.has(val)
             );
@@ -493,7 +476,6 @@ export function WorkOrders() {
               });
             }
           } else {
-            // Si es un valor único
             if (!validValues.has(childFilter)) {
               setColumnsFilters((prev) => {
                 const updated = { ...prev };
@@ -590,14 +572,38 @@ export function WorkOrders() {
     }
   };
 
-  // El effect anterior (columns + visibleColumns) ya maneja ambos casos
+  // EXACTO como main - effect para visibleColumns
+  useEffect(() => {
+    setColumnsToShow(
+      allColumns.filter((col) => visibleColumns.includes(col.key))
+    );
+  }, [visibleColumns]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
 
+  // EXACTO como main - filtrado inline
   const filteredOrders = useMemo(() => {
-    return filterOrders(orders, columnsFilters);
+    return orders.filter((order) => {
+      return Object.entries(columnsFilters).every(([key, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+        if (key === "date") {
+          const orderDate = normalizeDate(String(order.date));
+          if (Array.isArray(value)) {
+            return value.some((v) => orderDate === normalizeDate(String(v)));
+          }
+          return orderDate === normalizeDate(String(value));
+        }
+        const orderValRaw = order[key as keyof OrdersData];
+        const orderVal = String(orderValRaw ?? "").toLowerCase();
+        if (Array.isArray(value)) {
+          return value.some((v) => orderVal === String(v).toLowerCase());
+        }
+        return orderVal === String(value).toLowerCase();
+      });
+    });
   }, [orders, columnsFilters]);
 
   // Métricas derivadas en tiempo real según los filtros de la tabla
@@ -702,7 +708,7 @@ export function WorkOrders() {
     }
   };
 
-  // Handler para cambio de filtros (simple, sin lógica compleja)
+  // EXACTO como main - handler para cambio de filtros
   const handleFilterChange = (filters: Record<string, any>) => {
     setColumnsFilters(filters);
     setCurrentPage(1);
@@ -744,7 +750,6 @@ export function WorkOrders() {
       )}
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
-          {/* Métricas dinámicas que reflejan filtros de la tabla */}
           <OrdersIndicators metrics={derivedMetrics} processing={processingMetrics} />
         </div>
       )}
