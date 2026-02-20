@@ -192,18 +192,13 @@ const DataTable = <T,>({
   };
 
   const handleFilterChange = (key: string, value: any) => {
-    onFilterChange?.((prev: Record<string, any>) => ({
-      ...prev,
-      [key]: value,
-    }));
+    onFilterChange?.({ ...(filters || {}), [key]: value });
   };
 
   const clearFilter = (key: string) => {
-    onFilterChange?.((prev: Record<string, any>) => {
-      const newFilters = { ...prev };
-      delete newFilters[key];
-      return newFilters;
-    });
+    const newFilters = { ...(filters || {}) };
+    delete newFilters[key];
+    onFilterChange?.(newFilters);
   };
 
   return (
@@ -416,7 +411,6 @@ const DataTable = <T,>({
               paginatedData.map((item, index) => (
                 <React.Fragment key={index}>
                   <tr
-                    key={index}
                     className={`border-t border-slate-100 text-slate-700 hover:bg-slate-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"
                       }`}
                   >
