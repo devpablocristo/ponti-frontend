@@ -191,6 +191,7 @@ export function WorkOrders() {
     getOrders,
     deleteOrder,
     getMetrics,
+    metrics,
     processingMetrics,
     errorMetrics,
     orders,
@@ -407,7 +408,6 @@ export function WorkOrders() {
         },
       },
     ];
-    // IMPORTANTE: Ahora dependemos de 'orders' Y de 'columnsFilters'
   }, [orders, columnsFilters]);
 
   const allColumnsMap = new Map();
@@ -713,7 +713,10 @@ export function WorkOrders() {
       )}
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
-          <OrdersIndicators metrics={derivedMetrics} processing={processingMetrics} />
+          <OrdersIndicators
+            metrics={Object.keys(columnsFilters).length > 0 ? derivedMetrics : metrics}
+            processing={processingMetrics}
+          />
         </div>
       )}
       <div className="mt-4 relative">
