@@ -19,7 +19,7 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 
   const message =
     typeof data === "object" && data
-      ? data.message || data.error_message || data.details || data.error?.details
+      ? data.error?.details || data.details || data.message || data.error_message
       : undefined;
 
   if (typeof message === "string" && message.trim() !== "") return message;

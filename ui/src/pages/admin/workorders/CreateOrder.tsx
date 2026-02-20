@@ -694,7 +694,7 @@ export default function CreateOrder({
 
                 <div>
                   <InputField
-                    label="Cultivo actual"
+                    label="Cultivo Actual"
                     placeholder="Selecciona el lote"
                     name="crop"
                     type="text"
@@ -890,7 +890,7 @@ export default function CreateOrder({
                     }}
                     className="max-w-fit"
                   >
-                    + Crear nuevo insumo
+                    + Crear Nuevo Insumo
                   </Button>
                 </div>
                 <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4 mb-2">
@@ -911,7 +911,7 @@ export default function CreateOrder({
                           label=""
                           name={`item-${i}`}
                           options={[
-                            { id: -1, name: "+ Crear nuevo insumo" },
+                            { id: -1, name: "+ Crear Nuevo Insumo" },
                             ...supplies,
                           ]}
                           value={item.itemId?.toString() || ""}
@@ -1139,7 +1139,7 @@ export default function CreateOrder({
       >
         <div className="flex flex-col h-full">
           <h2 className="text-lg font-semibold mb-4">
-            Crear nuevo insumo
+            Crear Nuevo Insumo
           </h2>
           {/* FORMULARIO SIMPLE DE INSUMO */}
           <CreateSupplyInline

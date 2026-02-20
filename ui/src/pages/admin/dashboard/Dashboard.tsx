@@ -22,7 +22,7 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
     return (
       <div className="flex gap-4">
         <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
-          No dashboard data available
+          No hay datos de dashboard disponibles
         </div>
       </div>
     );
@@ -138,8 +138,19 @@ export function Dashboard() {
   };
 
   useEffect(() => {
+    const hasCustomer = Boolean(selectedCustomer && selectedCustomer.id !== 0);
+    const hasProject = Boolean(projectId && projectId > 0);
+    if (!hasCustomer || !hasProject) {
+      return;
+    }
     getDashboardInfo(buildQueryParams());
-  }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
+  }, [
+    selectedCustomer,
+    projectId,
+    selectedCampaignId,
+    selectedField,
+    getDashboardInfo,
+  ]);
 
   return (
     <div>
@@ -169,7 +180,7 @@ export function Dashboard() {
 
       {error && (
         <div className="flex items-center justify-between gap-3 p-4 my-4 text-sm text-red-800 rounded-lg bg-red-50">
-          <div>Error loading dashboard data: {error}</div>
+          <div>Error al cargar datos del dashboard: {error}</div>
           <Button
             variant="outlineGray"
             size="sm"

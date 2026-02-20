@@ -193,7 +193,7 @@ export function InvestorContributionReport() {
               <div className="border-b mb-5" style={ { borderColor: "#D1D5DB" } }/>
               <div className="flex justify-between items-center gap-8 mb-4">
                 <h2 className="text-2xl font-semibold text-gray-900 w-4/12">
-                  Aporte por inversor
+                  Aporte por Inversor
                 </h2>
                 <div className="flex gap-8">
                   <InputField
@@ -226,7 +226,7 @@ export function InvestorContributionReport() {
                 className="border-b mt-2 mb-6"
                 style={ { borderColor: "#D1D5DB" } }
               />
-              <h2 className="font-semibold text-xl mb-4">Aportes pre cosecha</h2>
+              <h2 className="font-semibold text-xl mb-4">Aportes Pre Cosecha</h2>
               { processing ? (
                 <div className="flex items-center justify-center h-48">
                   <LoaderCircle className="w-8 h-8 text-blue-500 animate-spin"/>

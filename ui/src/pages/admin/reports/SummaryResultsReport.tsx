@@ -168,7 +168,7 @@ export function SummaryResultsReport() {
             />
             <div className="flex mb-3 items-center">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Resumen de resultados
+                Resumen de Resultados
               </h2>
               <div className="mb-4 ml-8 w-[200px]">
                 <SelectField

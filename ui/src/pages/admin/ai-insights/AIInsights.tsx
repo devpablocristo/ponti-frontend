@@ -12,7 +12,7 @@ import {
   InsightItem,
 } from "@/api/aiClient";
 
-const AIInsights: React.FC = () => {
+const AIInsights = () => {
   const { filters, projectId } = useWorkspaceFilters([
     "customer",
     "project",
@@ -160,7 +160,7 @@ const AIInsights: React.FC = () => {
           </div>
         </div>
         <div className="border rounded-md p-4">
-          <div className="text-sm text-slate-500">Top insights</div>
+          <div className="text-sm text-slate-500">Top Insights</div>
           <div className="text-2xl font-semibold">
             {summary?.top_insights?.length ?? "-"}
           </div>
@@ -168,7 +168,7 @@ const AIInsights: React.FC = () => {
       </div>
 
       <div className="border rounded-md p-4">
-        <h3 className="font-semibold mb-2">Top insights</h3>
+        <h3 className="font-semibold mb-2">Top Insights</h3>
         {summary?.top_insights?.length ? (
           <div className="grid grid-cols-1 gap-3">
             {summary.top_insights.map((item) => (
@@ -221,7 +221,7 @@ const AIInsights: React.FC = () => {
       </div>
 
       <div className="border rounded-md p-4">
-        <h3 className="font-semibold mb-2">Listado de insights</h3>
+        <h3 className="font-semibold mb-2">Listado de Insights</h3>
         {insights.length === 0 ? (
           <div className="text-sm text-slate-500">Sin resultados.</div>
         ) : (

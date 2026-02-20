@@ -416,7 +416,7 @@ export default function CreateItem({
   return (
     <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">Ingreso de insumo</h2>
+        <h2 className="text-lg font-semibold mb-2">Ingreso de Insumo</h2>
         {processing || processingCreation ? (
           <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />

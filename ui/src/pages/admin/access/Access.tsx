@@ -122,7 +122,7 @@ export default function Access() {
 
       <div className="grid grid-cols-1 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Crear tenant</h2>
+          <h2 className="text-lg font-semibold mb-4">Crear Tenant</h2>
           <form onSubmit={createTenant} className="flex flex-col gap-3">
             <input
               className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg block w-full p-3"
@@ -154,7 +154,7 @@ export default function Access() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Crear usuario</h2>
+          <h2 className="text-lg font-semibold mb-4">Crear Usuario</h2>
           <form onSubmit={createUser} className="flex flex-col gap-3">
             <input
               className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg block w-full p-3"
@@ -226,7 +226,7 @@ export default function Access() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-semibold mb-4">Usuarios (tenant actual)</h2>
+          <h2 className="text-lg font-semibold mb-4">Usuarios (Tenant Actual)</h2>
           {users.length === 0 ? (
             <div className="text-sm text-slate-700">Sin usuarios para mostrar.</div>
           ) : (
