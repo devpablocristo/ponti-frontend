@@ -229,6 +229,7 @@ export default function CreateOrder({
             options={[
               { id: 1, name: "Lts" },
               { id: 2, name: "Kg" },
+              { id: 3, name: "Bolsas" },
             ]}
             size="sm"
           />
