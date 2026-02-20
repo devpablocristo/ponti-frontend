@@ -24,10 +24,10 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       mode === "development"
         ? {
             proxy: {
-              "/api": {
-                target: `${bffTarget}/api`,
+              "/api/v1": {
+                // Proxy 1:1 hacia el BFF. No reescribir el path.
+                target: bffTarget,
                 changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api/, ""),
               },
             },
           }

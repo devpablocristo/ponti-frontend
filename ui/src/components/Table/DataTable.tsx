@@ -192,24 +192,18 @@ const DataTable = <T,>({
   };
 
   const handleFilterChange = (key: string, value: any) => {
-    onFilterChange?.((prev: Record<string, any>) => ({
-      ...prev,
-      [key]: value,
-    }));
+    onFilterChange?.({ ...(filters || {}), [key]: value });
   };
 
   const clearFilter = (key: string) => {
-    onFilterChange?.((prev: Record<string, any>) => {
-      const newFilters = { ...prev };
-      delete newFilters[key];
-      return newFilters;
-    });
+    const newFilters = { ...(filters || {}) };
+    delete newFilters[key];
+    onFilterChange?.(newFilters);
   };
 
   return (
     <div
-      className={`relative overflow-x-auto rounded-xl border border-slate-200/80 overflow-hidden ${className}`}
-      style={{ boxShadow: 'var(--shadow-sm)' }}
+      className={`relative overflow-x-auto shadow-sm rounded-xl border border-slate-200/80 overflow-hidden ${className}`}
     >
       {headerComponent && <div>{headerComponent}</div>}
       <div className="overflow-auto flex-1 w-full min-h-[250px] bg-white">
@@ -240,11 +234,6 @@ const DataTable = <T,>({
                         : "" // 👈 CLAVE: si no se define, queda p-4
                       } ${column.headerWrap ? "whitespace-normal break-words" : ""
                       }`}
-                    style={{
-                      width: column.width,
-                      minWidth: column.minWidth,
-                      maxWidth: column.maxWidth,
-                    }}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
@@ -314,8 +303,7 @@ const DataTable = <T,>({
                               className={`absolute z-[9999] ${columns.indexOf(column) === 0
                                 ? "left-0"
                                 : "right-0"
-                                } mt-2 w-48 bg-white rounded-xl p-3 border border-slate-200`}
-                              style={{ boxShadow: 'var(--shadow-lg)' }}
+                                } mt-2 w-48 bg-white rounded-xl shadow-lg p-3 border border-slate-200`}
                             >
                               <div className="p-2">
                                 <label className="block text-slate-600 text-xs mb-1">
@@ -352,7 +340,7 @@ const DataTable = <T,>({
                                 ) : column.filterType === "date" ? (
                                   <input
                                     type="date"
-                                    className="input-base px-2.5 py-1.5 w-full text-xs text-slate-600"
+                                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
                                     value={filters?.[String(column.key)] || ""}
                                     onChange={(e) =>
                                       handleFilterChange(
@@ -364,7 +352,7 @@ const DataTable = <T,>({
                                 ) : column.filterType === "number" ? (
                                   <input
                                     type="number"
-                                    className="input-base px-2.5 py-1.5 w-full text-xs text-slate-600"
+                                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
                                     value={filters?.[String(column.key)] || ""}
                                     onChange={(e) =>
                                       handleFilterChange(
@@ -376,7 +364,7 @@ const DataTable = <T,>({
                                 ) : (
                                   <input
                                     type="text"
-                                    className="input-base px-2.5 py-1.5 w-full text-xs text-slate-600"
+                                    className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
                                     placeholder="Search..."
                                     value={filters?.[String(column.key)] || ""}
                                     onChange={(e) =>
@@ -390,7 +378,7 @@ const DataTable = <T,>({
 
                                 <div className="flex justify-between mt-2">
                                   <button
-                                    className="bg-slate-100 text-xs rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-200 transition-colors duration-150"
+                                    className="bg-slate-100 text-xs rounded-lg px-3 py-1.5 text-slate-600 hover:bg-slate-200 transition-colors"
                                     onClick={() =>
                                       clearFilter(String(column.key))
                                     }
@@ -398,7 +386,7 @@ const DataTable = <T,>({
                                     Clear
                                   </button>
                                   <button
-                                    className="bg-primary-600 text-xs rounded-lg px-3 py-1.5 text-white hover:bg-primary-700 transition-colors duration-150"
+                                    className="bg-primary-600 text-xs rounded-lg px-3 py-1.5 text-white hover:bg-primary-700 transition-colors"
                                     onClick={() => setActiveFilter(null)}
                                   >
                                     Apply
@@ -421,9 +409,9 @@ const DataTable = <T,>({
           <tbody>
             {paginatedData.length > 0 ? (
               paginatedData.map((item, index) => (
-                <React.Fragment key={String((item as Record<string, unknown>).id ?? index)}>
+                <React.Fragment key={index}>
                   <tr
-                    className={`border-t border-slate-100 text-slate-700 font-normal hover:bg-slate-50 transition-colors duration-150 ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+                    className={`border-t border-slate-100 text-slate-700 hover:bg-slate-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"
                       }`}
                   >
                     {expandableRowRender && (
@@ -454,7 +442,7 @@ const DataTable = <T,>({
                     {columns.map((column) => (
                       <td
                         key={String(column.key)}
-                        className={`truncate font-normal ${column.wrap ? "whitespace-normal break-words" : "whitespace-nowrap"
+                        className={`truncate ${column.wrap ? "whitespace-normal break-words" : "whitespace-nowrap"
                           } ${column.align === "center"
                             ? "text-center"
                             : column.align === "right"
@@ -560,7 +548,7 @@ const DataTable = <T,>({
                 <button
                   onClick={() => pagination.onPageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  className="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-slate-400 bg-white rounded-l-lg border border-slate-200 hover:bg-slate-50 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center h-full py-1.5 px-3 ml-0 text-slate-400 bg-white rounded-l-lg border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg
                     className="w-5 h-5"
@@ -607,7 +595,7 @@ const DataTable = <T,>({
                     pagination.page ===
                     Math.ceil(pagination.total / pagination.perPage)
                   }
-                  className="flex items-center justify-center h-full py-1.5 px-3 text-slate-400 bg-white rounded-r-lg border border-slate-200 hover:bg-slate-50 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center h-full py-1.5 px-3 text-slate-400 bg-white rounded-r-lg border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg
                     className="w-5 h-5"

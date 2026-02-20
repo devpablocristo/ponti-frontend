@@ -28,8 +28,8 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
           color="gray"
         />
         <IndicatorCard
-          title="Total invertido Lts"
-          value={formatNumberAr(safeSummary.total_lt) + " Lts"}
+          title="Total invertido Lt"
+          value={formatNumberAr(safeSummary.total_lt) + " Lt"}
           color="gray"
         />
         <IndicatorCard

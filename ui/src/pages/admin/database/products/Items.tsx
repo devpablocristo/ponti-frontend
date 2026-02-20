@@ -8,6 +8,7 @@ import { SupplyCreatePayload } from "../../../../hooks/useSupplies/types";
 import useSupplies from "../../../../hooks/useSupplies";
 import useCategories from "../../../../hooks/useCategories";
 import * as XLSX from "xlsx";
+import { units } from "../../../../constants/units";
 
 interface Row {
   id: number;
@@ -17,12 +18,6 @@ interface Row {
   type: string;
   category: string;
 }
-
-export const units = [
-  { id: 1, name: "Lts" },
-  { id: 2, name: "Kg" },
-  { id: 3, name: "Bolsas" },
-];
 
 const HEADER_ALIASES = {
   name: ["insumo", "nombre", "name"],

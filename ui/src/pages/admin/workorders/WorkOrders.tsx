@@ -12,8 +12,40 @@ import { BaseModal } from "../../../components/Modal/BaseModal";
 import Button from "../../../components/Button/Button";
 import UpdateOrder from "./UpdateOrder";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
+import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
-import { formatNumberAr, normalizeDate } from "../utils";
+import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
+
+const FILTER_HIERARCHY: Record<string, string[]> = {
+  project_name: ["field_name", "lot_name"],
+  field_name: ["lot_name"],
+};
+
+/** Clasifica la unidad de consumo de una orden (litros, kilos, o null si no se puede determinar). */
+function classifyConsumptionUnit(order: OrdersData): "liter" | "kilo" | null {
+  const consumption = String(order.consumption || "").trim().toUpperCase();
+  const typeName = String(order.type_name || "").toUpperCase();
+  const categoryName = String(order.category_name || "").toUpperCase();
+  const supplyName = String(order.supply_name || "").toUpperCase();
+
+  if (consumption.includes("L") || consumption.includes("LT")) return "liter";
+  if (consumption.includes("KG") || consumption.includes("K")) return "kilo";
+
+  if (typeName.includes("AGROQUÍMICO") || typeName.includes("AGROQUIMICO")) return "liter";
+  if (typeName.includes("SEMILLA")) return "kilo";
+
+  const LITER_CATEGORIES = ["HERBICIDA", "COADYUVANTE", "CURASEMILLA", "INSECTICIDA", "FUNGICIDA"];
+  const KILO_CATEGORIES = ["SEMILLA", "FERTILIZANTE"];
+  if (LITER_CATEGORIES.some((k) => categoryName.includes(k))) return "liter";
+  if (KILO_CATEGORIES.some((k) => categoryName.includes(k))) return "kilo";
+
+  const LITER_SUPPLIES = ["HERBICIDA", "ACEITE", "INSECTICIDA", "FUNGICIDA", "LITRO"];
+  const KILO_SUPPLIES = ["SEMILLA", "FERTILIZANTE", "KILO"];
+  if (LITER_SUPPLIES.some((k) => supplyName.includes(k))) return "liter";
+  if (KILO_SUPPLIES.some((k) => supplyName.includes(k))) return "kilo";
+
+  return null;
+}
 
 function OrdersHeader({
   ordersAmount,
@@ -128,7 +160,7 @@ function OrdersIndicators({
           />
           <IndicatorCard
             title="Consumo en litros"
-            value={formatNumberAr(metrics.liters) + " Lts"}
+            value={formatNumberAr(metrics.liters) + " Lt"}
             color="gray"
           />
           <IndicatorCard
@@ -159,6 +191,7 @@ export function WorkOrders() {
     getOrders,
     deleteOrder,
     getMetrics,
+    metrics,
     processingMetrics,
     errorMetrics,
     orders,
@@ -168,6 +201,7 @@ export function WorkOrders() {
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+
   // Helper: filtra las órdenes según todos los filtros activos
   const filterOrders = (data: OrdersData[], filters: Record<string, any>) => {
     return data.filter((order) => {
@@ -182,22 +216,21 @@ export function WorkOrders() {
           return orderDate === normalizeDate(String(value));
         }
 
-        const orderVal = String(order[key as keyof OrdersData]).toLowerCase();
+        const orderValRaw = order[key as keyof OrdersData];
+        const orderVal = String(orderValRaw ?? "").toLowerCase();
         if (Array.isArray(value)) {
-          const values = value.map((v) => String(v).toLowerCase());
-          return values.includes(orderVal);
+          return value.some((v) => orderVal === String(v).toLowerCase());
         }
         return orderVal === String(value).toLowerCase();
       });
     });
   };
 
-  // Helper: obtiene las opciones válidas para una columna, considerando todos los filtros excepto el de esa columna
+  // Helper: obtiene las opciones válidas para una columna
   const getFilterOptionsForColumn = (
     key: keyof OrdersData,
     customSort?: (a: any, b: any) => number
   ) => {
-    // Aplica todos los filtros excepto el de la columna actual
     const filtersExceptCurrent = { ...columnsFilters };
     delete filtersExceptCurrent[key];
     const filtered = filterOrders(orders, filtersExceptCurrent);
@@ -258,24 +291,10 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("date")
-          .map((dateString) => {
-            if (!dateString) return "";
-            const datePart = String(dateString).split("T")[0];
-            const [year, month, day] = datePart.split("-").map(Number);
-            const dayStr = String(day).padStart(2, "0");
-            const monthStr = String(month).padStart(2, "0");
-            return `${dayStr}/${monthStr}/${year}`;
-          })
+          .map(formatISODate)
           .filter((v, i, a) => a.indexOf(v) === i)
           .sort(),
-        render: (dateString) => {
-          if (!dateString) return "";
-          const datePart = dateString.split("T")[0];
-          const [year, month, day] = datePart.split("-").map(Number);
-          const dayStr = String(day).padStart(2, "0");
-          const monthStr = String(month).padStart(2, "0");
-          return `${dayStr}/${monthStr}/${year}`;
-        },
+        render: (dateString) => formatISODate(dateString),
       },
       {
         key: "crop_name",
@@ -389,16 +408,14 @@ export function WorkOrders() {
         },
       },
     ];
-    // IMPORTANTE: Ahora dependemos de 'orders' Y de 'columnsFilters'
   }, [orders, columnsFilters]);
 
-  const allColumns = useMemo(() => {
-    const map = new Map();
-    [...columns].forEach((col) => {
-      map.set(col.key, col);
-    });
-    return Array.from(map.values());
-  }, [columns]);
+  const allColumnsMap = new Map();
+  [...columns].forEach((col) => {
+    allColumnsMap.set(col.key, col);
+  });
+  const allColumns = Array.from(allColumnsMap.values());
+
   const [columnsToShow, setColumnsToShow] = useState(columns);
   const [selectedColumns, setSelectedColumns] = useState(
     allColumns.map((col) => col.key)
@@ -444,25 +461,18 @@ export function WorkOrders() {
     setColumnsToShow(columns);
   }, [columns]);
 
-  const filterHierarchy = {
-    project_name: ["field_name", "lot_name"],
-    field_name: ["lot_name"],
-  };
-
   useEffect(() => {
-    Object.entries(filterHierarchy).forEach(([parent, children]) => {
+    Object.entries(FILTER_HIERARCHY).forEach(([parent, children]) => {
       if (!columnsFilters[parent]) return;
 
       const parentFilter = columnsFilters[parent];
       const validData = orders.filter((o) => {
         const orderValue = String(o[parent as keyof OrdersData]).toLowerCase();
         if (Array.isArray(parentFilter)) {
-          // Si el filtro padre es un array, verificar si el valor está incluido
           return parentFilter.some(
             (val) => String(val).toLowerCase() === orderValue
           );
         } else {
-          // Si es un valor único
           return orderValue === String(parentFilter).toLowerCase();
         }
       });
@@ -475,7 +485,6 @@ export function WorkOrders() {
         const childFilter = columnsFilters[child];
         if (childFilter) {
           if (Array.isArray(childFilter)) {
-            // Si el filtro hijo es un array, verificar si algún valor es inválido
             const validChildValues = childFilter.filter((val) =>
               validValues.has(val)
             );
@@ -491,7 +500,6 @@ export function WorkOrders() {
               });
             }
           } else {
-            // Si es un valor único
             if (!validValues.has(childFilter)) {
               setColumnsFilters((prev) => {
                 const updated = { ...prev };
@@ -620,98 +628,25 @@ export function WorkOrders() {
     });
   }, [orders, columnsFilters]);
 
-
-  // Métricas derivadas en tiempo real según los filtros de la tabla
   const derivedMetrics: Metrics = useMemo(() => {
-    const toNumber = (v: any) => {
-      const n = Number(v);
-      return isNaN(n) ? 0 : n;
-    };
-
-    let surface_ha = 0;
-    let totalLiters = 0;
-    let totalKilograms = 0;
-    let direct_cost = 0;
+    const toNum = (v: any) => Number(v) || 0;
+    let surface_ha = 0, liters = 0, kilograms = 0, direct_cost = 0;
 
     filteredOrders.forEach((order) => {
-      // Sumar superficie
-      surface_ha += toNumber(order.surface_ha);
-      
-      // Extraer valor numérico del consumo
+      surface_ha += toNum(order.surface_ha);
+
       const consumption = String(order.consumption || "").trim();
-      const numberMatch = consumption.match(/[\d.]+/);
-      const consumptionValue = numberMatch ? parseFloat(numberMatch[0]) || 0 : 0;
-      
-      // Detectar unidad según estructura real
-      const upperConsumption = consumption.toUpperCase();
-      const supplyNameUpper = String(order.supply_name || "").toUpperCase();
-      const categoryNameUpper = String(order.category_name || "").toUpperCase();
-      const typeNameUpper = String(order.type_name || "").toUpperCase();
-      
-      let isLiter = false;
-      let isKilo = false;
-      
-      // 1. Si el consumo tiene unidad explícita
-      if (upperConsumption.includes("L") || upperConsumption.includes("LT")) {
-        isLiter = true;
-      }
-      else if (upperConsumption.includes("KG") || upperConsumption.includes("K")) {
-        isKilo = true;
-      }
-      // 2. Por Tipo/Clase (Agroquímicos = Litros, Semilla = Kg)
-      else if (typeNameUpper.includes("AGROQUÍMICO") || typeNameUpper.includes("AGROQUIMICO")) {
-        isLiter = true;
-      }
-      else if (typeNameUpper.includes("SEMILLA")) {
-        isKilo = true;
-      }
-      // 3. Por Rubro
-      // LITROS: Herbicidas, Coadyuvantes, Curasemillas, Insecticidas, Fungicidas
-      else if (categoryNameUpper.includes("HERBICIDA") || 
-               categoryNameUpper.includes("COADYUVANTE") || 
-               categoryNameUpper.includes("CURASEMILLA") || 
-               categoryNameUpper.includes("INSECTICIDA") || 
-               categoryNameUpper.includes("FUNGICIDA")) {
-        isLiter = true;
-      }
-      // KILOS: Semilla, Fertilizantes
-      else if (categoryNameUpper.includes("SEMILLA") || categoryNameUpper.includes("FERTILIZANTE")) {
-        isKilo = true;
-      }
-      // 4. Por nombre del insumo
-      else if (supplyNameUpper.includes("HERBICIDA") || 
-               supplyNameUpper.includes("ACEITE") || 
-               supplyNameUpper.includes("INSECTICIDA") || 
-               supplyNameUpper.includes("FUNGICIDA") || 
-               supplyNameUpper.includes("LITRO")) {
-        isLiter = true;
-      }
-      else if (supplyNameUpper.includes("SEMILLA") || 
-               supplyNameUpper.includes("FERTILIZANTE") || 
-               supplyNameUpper.includes("KILO")) {
-        isKilo = true;
-      }
-      // Nota: "Otros Insumos" no se detecta (puede ser L o Kg)
-      // Labores (Siembra, Pulverización, Riego, Cosecha, Otras Labores) no tienen unidades
-      
-      // Sumar al total correspondiente
-      if (isLiter) {
-        totalLiters += consumptionValue;
-      } else if (isKilo) {
-        totalKilograms += consumptionValue;
-      }
-      
-      // Sumar todos los costos
-      direct_cost += toNumber(order.total_cost);
+      const match = consumption.match(/[\d.]+/);
+      const amount = match ? parseFloat(match[0]) || 0 : 0;
+      const unit = classifyConsumptionUnit(order);
+      if (unit === "liter") liters += amount;
+      else if (unit === "kilo") kilograms += amount;
+
+      direct_cost += toNum(order.total_cost);
     });
 
-    return {
-      surface_ha,
-      liters: totalLiters,
-      kilograms: totalKilograms,
-      direct_cost,
-    };
-  }, [filteredOrders, columnsFilters]);
+    return { surface_ha, liters, kilograms, direct_cost };
+  }, [filteredOrders]);
 
   const handleExport = async () => {
     if (!projectId) return;
@@ -737,7 +672,6 @@ export function WorkOrders() {
     }
   };
 
-  // Handler para cambio de filtros (simple, sin lógica compleja)
   const handleFilterChange = (filters: Record<string, any>) => {
     setColumnsFilters(filters);
     setCurrentPage(1);
@@ -779,8 +713,10 @@ export function WorkOrders() {
       )}
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
-          {/* Métricas dinámicas que reflejan filtros de la tabla */}
-          <OrdersIndicators metrics={derivedMetrics} processing={processingMetrics} />
+          <OrdersIndicators
+            metrics={Object.keys(columnsFilters).length > 0 ? derivedMetrics : metrics}
+            processing={processingMetrics}
+          />
         </div>
       )}
       <div className="mt-4 relative">
@@ -855,12 +791,3 @@ export function WorkOrders() {
     </div>
   );
 }
-
-type Column<T> = {
-  key: keyof T;
-  header: string;
-  render?: (value: any, item: T) => React.ReactNode;
-  filterable?: boolean;
-  filterType?: "text" | "number" | "select" | "date";
-  filterOptions?: string[];
-};

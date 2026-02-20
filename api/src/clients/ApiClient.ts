@@ -55,7 +55,8 @@ export class ApiClient {
       success: false,
       message: data?.message || "Error en la solicitud",
       error: {
-        status: error.response?.status ?? 500,
+        status:
+          typeof error.response?.status === "number" ? error.response.status : 500,
         type: data?.type,
         code: data?.code,
         message: data?.message,

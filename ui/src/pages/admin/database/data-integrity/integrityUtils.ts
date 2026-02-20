@@ -3,18 +3,26 @@ export type IntegrityCheck = {
   data_to_verify: string;
   description: string;
   control_rule: string;
+
+  // SYSTEM VALUE (lo que el usuario ve en pantalla)
   system_calculation: string;
   system_value: string;
-  system_source: string;
-  system_meaning: string;
+  system_source?: string;
+  system_meaning?: string;
+
+  // RECALC A (primer recálculo independiente)
   recalc_a_calculation: string;
   recalc_a_value: string;
-  recalc_a_source: string;
-  recalc_a_meaning: string;
+  recalc_a_source?: string;
+  recalc_a_meaning?: string;
+
+  // RECALC B (segundo recálculo independiente, opcional)
   recalc_b_calculation?: string;
   recalc_b_value?: string;
   recalc_b_source?: string;
   recalc_b_meaning?: string;
+
+  // RESULTADO
   difference_a: string;
   difference_b?: string;
   status: string;

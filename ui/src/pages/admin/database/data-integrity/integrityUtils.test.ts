@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  hasRecalcBData,
   sortIntegrityChecks,
+  hasRecalcBData,
   type IntegrityCheck,
 } from "./integrityUtils";
 
@@ -11,20 +11,20 @@ const makeCheck = (controlNumber: number, withRecalcB = false): IntegrityCheck =
   data_to_verify: `Dato ${controlNumber}`,
   description: "desc",
   control_rule: "rule",
-  system_calculation: "A",
+  system_calculation: "S",
   system_value: "1",
-  system_source: "source",
-  system_meaning: "meaning",
-  recalc_a_calculation: "B",
+  system_source: "system",
+  system_meaning: "meaning-system",
+  recalc_a_calculation: "A",
   recalc_a_value: "1",
-  recalc_a_source: "source",
-  recalc_a_meaning: "meaning",
-  recalc_b_calculation: withRecalcB ? "C" : undefined,
+  recalc_a_source: "recalc-a",
+  recalc_a_meaning: "meaning-a",
+  recalc_b_calculation: withRecalcB ? "B" : undefined,
   recalc_b_value: withRecalcB ? "2" : undefined,
-  recalc_b_source: withRecalcB ? "source-b" : undefined,
+  recalc_b_source: withRecalcB ? "recalc-b" : undefined,
   recalc_b_meaning: withRecalcB ? "meaning-b" : undefined,
   difference_a: "0",
-  difference_b: withRecalcB ? "0" : undefined,
+  difference_b: withRecalcB ? "-1" : undefined,
   status: "OK",
   tolerance: "0",
 });
