@@ -373,6 +373,8 @@ export default function CreateItem({
   }, [errorCreation]);
 
   useEffect(() => {
+    if (lastSubmittedRowIndexes.length === 0) return;
+
     if (resultCreation.supply_movements.length > 0) {
       const errors: string[] = [];
       const nextItemErrors: Record<number, string> = {};
@@ -403,7 +405,7 @@ export default function CreateItem({
       clearForm();
       if (projectId) getStock(projectId, "");
     }
-  }, [resultCreation, lastSubmittedRowIndexes, items, supplies]);
+  }, [resultCreation, lastSubmittedRowIndexes]);
 
   useEffect(() => {
     if (projectId) {
@@ -426,14 +428,14 @@ export default function CreateItem({
   }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
 
   const availableSupplies = useMemo(() => {
-    if (!stock || stock.length === 0)
-      return supplies.map((s) => ({ id: s.id, name: s.name, qty: 0, unit: getUnitName(s.unit_id) }));
+    if (!stock || stock.length === 0) return [];
     const stockBySupply = new Map<string, number>();
     for (const s of stock) {
       const current = stockBySupply.get(s.supply_name) || 0;
       stockBySupply.set(s.supply_name, current + Number(s.stock_units));
     }
     return supplies
+      .filter((s) => Number(stockBySupply.get(s.name) || 0) > 0)
       .map((s) => ({
         id: s.id,
         name: s.name,
