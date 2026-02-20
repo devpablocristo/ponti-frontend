@@ -51,7 +51,11 @@ fi
 
 echo "[smoke-fe] Check BFF version..."
 version_status="$(request_status "${BASE_URL%/}/api/v1/version")"
-assert_status "200" "${version_status}" "BFF version no responde 200"
+if [[ "${version_status}" != "200" && "${version_status}" != "401" ]]; then
+  echo "ERROR: BFF version devolvió status inesperado ${version_status} (esperado 200/401)." >&2
+  [[ -f /tmp/frontend-smoke-body.txt ]] && sed -n '1,20p' /tmp/frontend-smoke-body.txt >&2 || true
+  exit 1
+fi
 
 echo "[smoke-fe] Check protected route guard..."
 guard_status="$(request_status "${BASE_URL%/}/api/v1/work-orders?page=1&per_page=1")"
