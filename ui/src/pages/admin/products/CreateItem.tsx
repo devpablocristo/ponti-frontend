@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import useSupplies from "../../../hooks/useSupplies";
-import { LoaderCircle, Trash } from "lucide-react";
+import useStock from "../../../hooks/useStock";
+import { ChevronDown, LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
 import Search from "../../../components/Input/Search";
@@ -130,6 +131,7 @@ export default function CreateItem({
   >(null);
 
   const { getSupplies, supplies } = useSupplies();
+  const { getStock, stock } = useStock();
   const { projectsDropdown, getProjectsDropdown } = useProjects();
   const { campaigns, getCampaigns } = useCampaigns();
 
@@ -157,6 +159,8 @@ export default function CreateItem({
     }[]
   >(emptyItems);
   const [itemErrors, setItemErrors] = useState<Record<number, string>>({});
+  const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
+  const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
   const [lastSubmittedRowIndexes, setLastSubmittedRowIndexes] = useState<number[]>(
     []
   );
@@ -243,6 +247,7 @@ export default function CreateItem({
       setSuccessMessage("Movimiento guardado correctamente");
       onProductCreated();
       clearForm();
+      if (projectId) getStock(projectId, "");
     }
   }, [resultCreation, lastSubmittedRowIndexes, items, supplies]);
 
@@ -250,8 +255,30 @@ export default function CreateItem({
     if (projectId) {
       getSupplies(projectId);
       getProject(projectId);
+      getStock(projectId, "");
     }
   }, [projectId]);
+
+  const availableSupplies = useMemo(() => {
+    if (!stock || stock.length === 0)
+      return supplies.map((s) => ({ id: s.id, name: s.name, qty: 0, unit: s.unit_name || "" }));
+    const stockBySupply = new Map<string, number>();
+    for (const s of stock) {
+      const current = stockBySupply.get(s.supply_name) || 0;
+      stockBySupply.set(s.supply_name, current + Number(s.stock_units));
+    }
+    return supplies
+      .filter((s) => {
+        const qty = stockBySupply.get(s.name);
+        return qty !== undefined && qty > 0;
+      })
+      .map((s) => ({
+        id: s.id,
+        name: s.name,
+        qty: Number(stockBySupply.get(s.name)),
+        unit: s.unit_name || "",
+      }));
+  }, [supplies, stock]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -587,22 +614,71 @@ export default function CreateItem({
                       key={i}
                       className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                     >
-                      <div className="sm:col-span-1">
-                        <SelectField
-                          label=""
-                          name={`item-${i}`}
-                          options={supplies}
-                          value={item.item}
-                          className={
-                            itemErrors[i]
-                              ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                              : ""
-                          }
-                          onChange={(e) =>
-                            handleItemChange(i, "item", e.target.value)
-                          }
-                          size="sm"
-                        />
+                      <div className="sm:col-span-1 relative">
+                        <div
+                          className={`input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between ${
+                            itemErrors[i] ? "border-red-500" : ""
+                          }`}
+                          onClick={() => setOpenSupplyDropdown(openSupplyDropdown === i ? null : i)}
+                        >
+                          {item.item ? (
+                            (() => {
+                              const sel = availableSupplies.find((s) => s.id === Number(item.item));
+                              return sel ? (
+                                <span className="truncate">
+                                  <span className="font-semibold text-gray-900">{sel.name}</span>
+                                  {sel.qty > 0 && (
+                                    <span className="text-blue-500 font-semibold ml-1">{sel.qty.toFixed(2)} {sel.unit}</span>
+                                  )}
+                                </span>
+                              ) : <span className="text-gray-400">Seleccionar...</span>;
+                            })()
+                          ) : (
+                            <span className="text-gray-400">Seleccionar...</span>
+                          )}
+                          <ChevronDown size={16} className="text-slate-400 shrink-0" />
+                        </div>
+                        {openSupplyDropdown === i && (
+                          <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
+                            <input
+                              type="text"
+                              placeholder="Buscar insumo..."
+                              className="w-full px-3 py-2 text-sm border-b outline-none"
+                              value={supplySearch[i] || ""}
+                              onChange={(e) => setSupplySearch((prev) => ({ ...prev, [i]: e.target.value }))}
+                              autoFocus
+                            />
+                            <ul className="max-h-[200px] overflow-y-auto">
+                              {availableSupplies
+                                .filter((s) =>
+                                  !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
+                                )
+                                .map((s) => (
+                                  <li
+                                    key={s.id}
+                                    className="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between"
+                                    onClick={() => {
+                                      handleItemChange(i, "item", String(s.id));
+                                      setOpenSupplyDropdown(null);
+                                      setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                    }}
+                                  >
+                                    <span className="font-semibold text-gray-900">{s.name}</span>
+                                    {s.qty > 0 && (
+                                      <span className="text-blue-500 font-semibold text-sm ml-2 whitespace-nowrap">
+                                        {s.qty.toFixed(2)} {s.unit}
+                                      </span>
+                                    )}
+                                  </li>
+                                ))}
+                              {availableSupplies.filter((s) =>
+                                !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
+                              ).length === 0 && (
+                                <li className="px-3 py-2 text-sm text-gray-400">Sin resultados</li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                       <div className="sm:col-span-1">
                         <InputField
@@ -656,90 +732,6 @@ export default function CreateItem({
                   </Button>
                 </div>
               </div>
-              {errorMessages.length > 0 && (
-                <div
-                  id="alert-2"
-                  className="relative p-4 pr-12 mb-4 text-red-800 rounded-lg bg-red-50"
-                  role="alert"
-                >
-                  <div className="flex-1 min-w-0">
-                    <ul className="mt-1.5 list-disc list-inside">
-                      {errorMessages.map((msg, index) => (
-                        <li key={index}>{msg}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <button
-                    type="button"
-                    className="absolute top-2 right-2 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-2 hover:bg-red-200 inline-flex items-center justify-center h-10 w-10 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                    data-dismiss-target="#alert-2"
-                    aria-label="Close"
-                    onClick={() => setErrorMessages([])}
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg
-                      className="w-4 h-4"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-              {error && error !== "" && (
-                <div
-                  className="relative p-4 pr-12 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-                  role="alert"
-                >
-                  <span className="font-medium">Error!</span>
-                  <button
-                    type="button"
-                    className="absolute top-2 right-2 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-2 hover:bg-red-200 inline-flex items-center justify-center h-10 w-10 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                    aria-label="Close"
-                    onClick={() => setError("")}
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg
-                      className="w-4 h-4"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
-                  {String(error).includes("\n") ? (
-                    <ul className="mt-1.5 list-disc list-inside">
-                      {String(error)
-                        .split("\n")
-                        .map((msg) => msg.trim())
-                        .filter(Boolean)
-                        .map((msg, idx) => (
-                          <li key={idx}>{msg}</li>
-                        ))}
-                    </ul>
-                  ) : (
-                    <span className="ml-1">{error}</span>
-                  )}
-                  
-                </div>
-              )}
               {successMessage && successMessage !== "" && (
                 <div
                   className="relative flex items-center p-4 pr-12 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"

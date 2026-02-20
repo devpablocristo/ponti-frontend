@@ -25,6 +25,7 @@ export type Supply = {
   name: string;
   price: string;
   unit_id?: number;
+  unit_name?: string;
   type_name: string;
   category_name: string;
   category_id?: number;
