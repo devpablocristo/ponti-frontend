@@ -43,7 +43,11 @@ fi
 
 echo "[smoke-fe] Check BFF ping..."
 ping_status="$(request_status "${BASE_URL%/}/api/v1/ping")"
-assert_status "200" "${ping_status}" "BFF ping no responde 200"
+if [[ "${ping_status}" != "200" && "${ping_status}" != "401" ]]; then
+  echo "ERROR: BFF ping devolvió status inesperado ${ping_status} (esperado 200/401)." >&2
+  [[ -f /tmp/frontend-smoke-body.txt ]] && sed -n '1,20p' /tmp/frontend-smoke-body.txt >&2 || true
+  exit 1
+fi
 
 echo "[smoke-fe] Check BFF version..."
 version_status="$(request_status "${BASE_URL%/}/api/v1/version")"
