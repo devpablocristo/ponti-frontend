@@ -18,6 +18,10 @@ export const setAccessToken = (token: string) => {
   localStorage.setItem(key("access_token"), token);
 };
 
+export const setRefreshToken = (token: string) => {
+  localStorage.setItem(key("refresh_token"), token);
+};
+
 export const getRefreshToken = (): string | null => {
   return localStorage.getItem(key("refresh_token"));
 };

@@ -4,6 +4,7 @@ import {
   getRefreshToken,
   clearLocalStorage,
   setAccessToken,
+  setRefreshToken,
 } from "@/pages/login/context/useLocalStorage";
 
 declare module "axios" {
@@ -182,8 +183,10 @@ class ApiClient {
   private async refreshToken(): Promise<string> {
     const { data } = await this.client.get("/auth/access-token");
     const token = data.data?.access_token ?? data.access_token;
+    const refreshToken = data.data?.refresh_token ?? data.refresh_token;
     if (!token) throw new Error("No access_token in refresh response");
     setAccessToken(token);
+    if (refreshToken) setRefreshToken(refreshToken);
     return token;
   }
 
