@@ -120,7 +120,6 @@ export default function CreateItem({
   const { getProviders, providers } = useProviders();
 
   const [error, setError] = useState<string | null>(null);
-  const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -168,7 +167,6 @@ export default function CreateItem({
 
   const clearForm = () => {
     setError(null);
-    setErrorMessages([]);
     setItemErrors({});
     setLastSubmittedRowIndexes([]);
     setProvider(undefined);
@@ -183,7 +181,6 @@ export default function CreateItem({
   useEffect(() => {
     setSuccessMessage(null);
     setError(null);
-    setErrorMessages([]);
     setItemErrors({});
   }, [drawerOpen]);
 
@@ -237,14 +234,12 @@ export default function CreateItem({
 
       if (errors.length > 0) {
         setError(errors.join("\n"));
-        setErrorMessages(errors);
         setItemErrors(nextItemErrors);
         setSuccessMessage(null);
         return;
       }
 
       setItemErrors({});
-      setErrorMessages([]);
       setSuccessMessage("Movimiento guardado correctamente");
       onProductCreated();
       clearForm();
@@ -343,7 +338,7 @@ export default function CreateItem({
 
   const handlePreSave = () => {
     const errors: string[] = [];
-    setErrorMessages(errors);
+    setError(null);
 
     if (!provider) {
       if (queryProvider === "") {
@@ -395,7 +390,7 @@ export default function CreateItem({
     }
 
     if (errors.length > 0) {
-      setErrorMessages(errors);
+      setError(errors.join("\n"));
       return;
     }
 
@@ -733,6 +728,14 @@ export default function CreateItem({
                   </Button>
                 </div>
               </div>
+              {error && (
+                <div
+                  className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50"
+                  role="alert"
+                >
+                  <span className="font-medium">Error:</span> {error}
+                </div>
+              )}
               {successMessage && successMessage !== "" && (
                 <div
                   className="relative flex items-center p-4 pr-12 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
