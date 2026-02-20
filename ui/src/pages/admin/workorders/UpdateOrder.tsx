@@ -135,6 +135,9 @@ export default function UpdateOrder({
   const [date, setDate] = useState("");
   const [openCreateSupply, setOpenCreateSupply] = useState(false);
   const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
+  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
+    null
+  );
   const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
   const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
@@ -163,7 +166,7 @@ export default function UpdateOrder({
     onCancel,
   }: {
     projectId: number | null;
-    onCreated: () => void;
+    onCreated: (createdName: string) => void;
     onCancel: () => void;
   }) {
     const { saveSupplies, result, error } = useSupplies();
@@ -205,7 +208,7 @@ export default function UpdateOrder({
               variant="success"
               onClick={() => {
                 setSuccess(null);
-                onCreated();
+                onCreated(normalizedName);
               }}
             >
               OK
@@ -332,6 +335,22 @@ export default function UpdateOrder({
       getLabors(selectedOrder.project_id);
     }
   }, [selectedOrder]);
+
+  useEffect(() => {
+    if (!pendingCreatedSupplyName) return;
+    if (itemIndexToUpdate === null) {
+      setPendingCreatedSupplyName(null);
+      return;
+    }
+    const createdSupply = supplies.find(
+      (s) => s.name.trim().toUpperCase() === pendingCreatedSupplyName
+    );
+    if (!createdSupply) return;
+
+    handleItemChange(itemIndexToUpdate, "item", String(createdSupply.id));
+    setPendingCreatedSupplyName(null);
+    setItemIndexToUpdate(null);
+  }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
 
   useEffect(() => {
     if (!selectedProject || !selectedOrder) return;
@@ -1145,25 +1164,24 @@ export default function UpdateOrder({
         onClose={() => {
           setOpenCreateSupply(false);
           setItemIndexToUpdate(null);
+          setPendingCreatedSupplyName(null);
         }}
       >
         <div className="flex flex-col h-full">
           <h2 className="text-lg font-semibold mb-4">Crear Nuevo Insumo</h2>
           <CreateSupplyInline
             projectId={selectedOrder?.project_id || null}
-            onCreated={async () => {
+            onCreated={async (createdName) => {
+              setPendingCreatedSupplyName(createdName);
               if (selectedOrder?.project_id) {
                 await getSupplies(selectedOrder.project_id);
               }
-              if (itemIndexToUpdate !== null) {
-                handleItemChange(itemIndexToUpdate, "item", "");
-              }
               setOpenCreateSupply(false);
-              setItemIndexToUpdate(null);
             }}
             onCancel={() => {
               setOpenCreateSupply(false);
               setItemIndexToUpdate(null);
+              setPendingCreatedSupplyName(null);
             }}
           />
         </div>

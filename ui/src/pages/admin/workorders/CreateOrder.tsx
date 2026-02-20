@@ -138,6 +138,9 @@ export default function CreateOrder({
   const [date, setDate] = useState("");
   const [openCreateSupply, setOpenCreateSupply] = useState(false);
   const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
+  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
+    null
+  );
   const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
   const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
@@ -164,7 +167,7 @@ export default function CreateOrder({
     onCancel,
   }: {
     projectId: number | null;
-    onCreated: () => void;
+    onCreated: (createdName: string) => void;
     onCancel: () => void;
   }) {
     const { saveSupplies, result, error } = useSupplies();
@@ -205,7 +208,7 @@ export default function CreateOrder({
             <span>{success}</span>
             <Button size="xs" variant="success" onClick={() => {
               setSuccess(null);
-              onCreated();
+              onCreated(normalizedName);
             }}>OK</Button>
           </div>
         )}
@@ -310,6 +313,9 @@ export default function CreateOrder({
     setItems(emptyItems.map((item) => ({ ...item })));
     setOpenSupplyDropdown(null);
     setSupplySearch({});
+    setOpenCreateSupply(false);
+    setItemIndexToUpdate(null);
+    setPendingCreatedSupplyName(null);
     setField(null);
     setLot(null);
     setOrderNumber("");
@@ -346,6 +352,22 @@ export default function CreateOrder({
       getProject(projectId);
     }
   }, [projectId]);
+
+  useEffect(() => {
+    if (!pendingCreatedSupplyName) return;
+    if (itemIndexToUpdate === null) {
+      setPendingCreatedSupplyName(null);
+      return;
+    }
+    const createdSupply = supplies.find(
+      (s) => s.name.trim().toUpperCase() === pendingCreatedSupplyName
+    );
+    if (!createdSupply) return;
+
+    handleItemChange(itemIndexToUpdate, "itemId", createdSupply.id);
+    setPendingCreatedSupplyName(null);
+    setItemIndexToUpdate(null);
+  }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -1184,6 +1206,7 @@ export default function CreateOrder({
         onClose={() => {
           setOpenCreateSupply(false);
           setItemIndexToUpdate(null);
+          setPendingCreatedSupplyName(null);
         }}
       >
         <div className="flex flex-col h-full">
@@ -1193,25 +1216,18 @@ export default function CreateOrder({
           {/* FORMULARIO SIMPLE DE INSUMO */}
           <CreateSupplyInline
             projectId={projectId}
-            onCreated={async () => {
+            onCreated={async (createdName) => {
+              setPendingCreatedSupplyName(createdName);
               if (projectId) {
-                await getSupplies(projectId); // 🔥 CLAVE
-              }
-
-              if (itemIndexToUpdate !== null) {
-                handleItemChange(
-                  itemIndexToUpdate,
-                  "itemId",
-                  null
-                );
+                await getSupplies(projectId);
               }
 
               setOpenCreateSupply(false);
-              setItemIndexToUpdate(null);
             }}
             onCancel={() => {
               setOpenCreateSupply(false);
               setItemIndexToUpdate(null);
+              setPendingCreatedSupplyName(null);
             }}
           />
         </div>
