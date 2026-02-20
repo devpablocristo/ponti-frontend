@@ -91,7 +91,7 @@ export default function Integrity() {
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Integridad de datos</h2>
+      <h2 className="text-xl font-semibold mb-4">Integridad de Datos</h2>
       <FilterBar filters={filters} />
       <div className="flex items-center gap-3 mb-4">
         <Button onClick={handleRun} variant="success" disabled={processing}>

@@ -1125,7 +1125,7 @@ const filteredLots = useMemo(() => {
                     </div>
                     <div>
                       <SelectField
-                        label="Cultivo anterior"
+                        label="Cultivo Anterior"
                         placeholder="Seleccione cultivo"
                         name="previousCrop"
                         options={crops}
@@ -1142,7 +1142,7 @@ const filteredLots = useMemo(() => {
                     </div>
                     <div>
                       <SelectField
-                        label="Cultivo actual"
+                        label="Cultivo Actual"
                         placeholder="Seleccione cultivo"
                         name="currentCrop"
                         options={crops}

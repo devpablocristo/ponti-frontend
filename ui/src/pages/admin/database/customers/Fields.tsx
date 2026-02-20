@@ -477,7 +477,7 @@ export default function Fields({
                   size="sm"
                 />
                 <SelectField
-                  label="Cultivo anterior"
+                  label="Cultivo Anterior"
                   placeholder="Seleccione cultivo"
                   name="previousCrop"
                   options={getCropOptionsForPlot(plot.previousCrop)}
@@ -498,7 +498,7 @@ export default function Fields({
                   size="sm"
                 />
                 <SelectField
-                  label="Cultivo actual"
+                  label="Cultivo Actual"
                   placeholder="Seleccione cultivo"
                   name="currentCrop"
                   options={getCropOptionsForPlot(plot.currentCrop)}

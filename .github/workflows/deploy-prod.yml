@@ -23,6 +23,7 @@ env:
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev
   REPOSITORY: ponti-frontend-registry
+  REQUIRE_AUTH_SMOKE: "0"
 
 jobs:
   promote-and-deploy:
@@ -105,4 +106,35 @@ jobs:
             --allow-unauthenticated \
             --port=3000 \
             --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${BASE_MANAGER_API_PROD},X_API_KEY=${{ secrets.X_API_KEY_PROD || secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD || secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
+
+      - name: Resolve service URL (PROD)
+        run: |
+          service_url="$(gcloud run services describe "${SERVICE_NAME_PROD}" \
+            --project="${GCP_PROJECT_ID_PROD}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.url)')"
+          if [[ -z "$service_url" ]]; then
+            echo "ERROR: no se pudo resolver status.url del servicio frontend PROD."
+            exit 1
+          fi
+          echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: Resolve auth token for functional smoke (PROD)
+        run: |
+          token="${SMOKE_AUTH_BEARER_TOKEN:-}"
+          if [[ -z "$token" ]]; then
+            echo "WARN: SMOKE_AUTH_BEARER_TOKEN no configurado; se ejecutará smoke no autenticado."
+          else
+            echo "::add-mask::$token"
+            echo "AUTH_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
+          fi
+        env:
+          SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_PROD || secrets.SMOKE_AUTH_BEARER_TOKEN }}
+
+      - name: Smoke release checks (PROD)
+        run: |
+          bash ./scripts/smoke_release.sh "$SERVICE_URL"
+        env:
+          AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
+          REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
 

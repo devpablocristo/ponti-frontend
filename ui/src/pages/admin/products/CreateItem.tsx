@@ -121,7 +121,6 @@ export default function CreateItem({
   const { getProviders, providers } = useProviders();
 
   const [error, setError] = useState<string | null>(null);
-  const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [customer, setCustomer] = useState<Customer | null>(null);
@@ -174,7 +173,6 @@ export default function CreateItem({
 
   const clearForm = () => {
     setError(null);
-    setErrorMessages([]);
     setItemErrors({});
     setLastSubmittedRowIndexes([]);
     setProvider(undefined);
@@ -341,7 +339,6 @@ export default function CreateItem({
   useEffect(() => {
     setSuccessMessage(null);
     setError(null);
-    setErrorMessages([]);
     setItemErrors({});
   }, [drawerOpen]);
 
@@ -395,14 +392,12 @@ export default function CreateItem({
 
       if (errors.length > 0) {
         setError(errors.join("\n"));
-        setErrorMessages(errors);
         setItemErrors(nextItemErrors);
         setSuccessMessage(null);
         return;
       }
 
       setItemErrors({});
-      setErrorMessages([]);
       setSuccessMessage("Movimiento guardado correctamente");
       onProductCreated();
       clearForm();
@@ -509,7 +504,7 @@ export default function CreateItem({
 
   const handlePreSave = () => {
     const errors: string[] = [];
-    setErrorMessages(errors);
+    setError(null);
 
     if (!provider) {
       if (queryProvider === "") {
@@ -561,7 +556,7 @@ export default function CreateItem({
     }
 
     if (errors.length > 0) {
-      setErrorMessages(errors);
+      setError(errors.join("\n"));
       return;
     }
 
@@ -587,7 +582,7 @@ export default function CreateItem({
   return (
     <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">Ingreso de insumo</h2>
+        <h2 className="text-lg font-semibold mb-2">Ingreso de Insumo</h2>
         {processing || processingCreation ? (
           <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
@@ -924,14 +919,12 @@ export default function CreateItem({
                   </Button>
                 </div>
               </div>
-              {errorMessages.length > 0 && (
-                <div className="p-3 rounded bg-red-50 text-red-700 text-sm whitespace-pre-line">
-                  {errorMessages.join("\n")}
-                </div>
-              )}
-              {error && errorMessages.length === 0 && (
-                <div className="p-3 rounded bg-red-50 text-red-700 text-sm whitespace-pre-line">
-                  {error}
+              {error && (
+                <div
+                  className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50"
+                  role="alert"
+                >
+                  <span className="font-medium">Error:</span> {error}
                 </div>
               )}
               {successMessage && successMessage !== "" && (

@@ -10,10 +10,10 @@ export default function ManagementBalanceTable({dashboard}: ManagementBalanceTab
     return (
       <div className="bg-white rounded-xl border p-4 w-full">
         <h3 className="font-medium text-[#020617] font-sans mb-4 text-xl">
-          Balance de gestión
+          Balance de Gestión
         </h3>
         <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
-          No data available
+          No hay datos disponibles
         </div>
       </div>
     );
@@ -39,7 +39,7 @@ const directCostItems = items.filter(item =>
   return (
     <div className="bg-white rounded-xl border p-4 w-full">
       <h3 className="font-medium text-[#020617] font-sans mb-4 text-xl">
-        Balance de gestión
+        Balance de Gestión
       </h3>
 
       <div className="grid grid-cols-4 text-sm font-semibold mb-1">

@@ -685,7 +685,7 @@ export function Stock() {
             onClick: () => handleExport(),
           },
           {
-            label: "+ Ingreso de stock",
+            label: "+ Ingreso de Stock",
             variant: "success",
             isPrimary: true,
             disabled: !projectId || disabledCloseStock,

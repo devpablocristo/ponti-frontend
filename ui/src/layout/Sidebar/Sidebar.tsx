@@ -33,9 +33,9 @@ const menuReports = {
     </svg>
   ),
   children: [
-    { name: "Aportes por inversor", route: "/admin/informes/aportes" },
-    { name: "Por campo o cultivo", route: "/admin/informes/campo" },
-    { name: "Resumen de resultados", route: "/admin/informes/resumen" },
+    { name: "Aportes por Inversor", route: "/admin/informes/aportes" },
+    { name: "Por Campo o Cultivo", route: "/admin/informes/campo" },
+    { name: "Resumen de Resultados", route: "/admin/informes/resumen" },
   ],
 };
 
@@ -64,13 +64,13 @@ const menuDatabase = {
     </svg>
   ),
   children: [
-    { name: "Clientes y sociedades", route: "/admin/database/customers" },
-    { name: "Clientes archivados", route: "/admin/database/customers/archived" },
-    { name: "Proyectos archivados", route: "/admin/database/projects/archived" },
-    { name: "Integridad de datos", route: "/admin/database/data-integrity" },
+    { name: "Clientes y Sociedades", route: "/admin/database/customers" },
+    { name: "Clientes Archivados", route: "/admin/database/customers/archived" },
+    { name: "Proyectos Archivados", route: "/admin/database/projects/archived" },
+    { name: "Integridad de Datos", route: "/admin/database/data-integrity" },
     { name: "Labores", route: "/admin/database/tasks" },
     { name: "Insumos", route: "/admin/database/items" },
-    { name: "Dólar promedio", route: "/admin/database/dollar" },
+    { name: "Dólar Promedio", route: "/admin/database/dollar" },
     { name: "Comercialización", route: "/admin/database/commerce" },
   ],
 };
@@ -117,7 +117,7 @@ const menuItems: MenuItem[] = [
     route: "/admin/dashboard",
   },
   {
-    name: "Clientes y sociedades",
+    name: "Clientes y Sociedades",
     icon: (color: string) => (
       <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M9.66667 10.6666H12.3333C12.5101 10.6666 12.6797 10.5963 12.8047 10.4713C12.9298 10.3463 13 10.1767 13 9.99992V9.33325C13 8.80282 12.7893 8.29411 12.4142 7.91904C12.0391 7.54397 11.5304 7.33325 11 7.33325H9.66667M8.176 4.66659C8.44603 4.96849 8.80137 5.18129 9.19499 5.27683C9.58862 5.37236 10.002 5.34613 10.3804 5.2016C10.7587 5.05707 11.0843 4.80105 11.314 4.46743C11.5437 4.13381 11.6667 3.7383 11.6667 3.33325C11.6667 2.9282 11.5437 2.5327 11.314 2.19908C11.0843 1.86545 10.7587 1.60944 10.3804 1.46491C10.002 1.32038 9.58862 1.29414 9.19499 1.38968C8.80137 1.48521 8.44603 1.69801 8.176 1.99992M1 9.99992V9.33325C1 8.80282 1.21071 8.29411 1.58579 7.91904C1.96086 7.54397 2.46957 7.33325 3 7.33325H5.66667C6.1971 7.33325 6.70581 7.54397 7.08088 7.91904C7.45595 8.29411 7.66667 8.80282 7.66667 9.33325V9.99992C7.66667 10.1767 7.59643 10.3463 7.4714 10.4713C7.34638 10.5963 7.17681 10.6666 7 10.6666H1.66667C1.48986 10.6666 1.32029 10.5963 1.19526 10.4713C1.07024 10.3463 1 10.1767 1 9.99992ZM6.33333 3.33325C6.33333 3.86369 6.12262 4.37239 5.74755 4.74747C5.37247 5.12254 4.86377 5.33325 4.33333 5.33325C3.8029 5.33325 3.29419 5.12254 2.91912 4.74747C2.54405 4.37239 2.33333 3.86369 2.33333 3.33325C2.33333 2.80282 2.54405 2.29411 2.91912 1.91904C3.29419 1.54397 3.8029 1.33325 4.33333 1.33325C4.86377 1.33325 5.37247 1.54397 5.74755 1.91904C6.12262 2.29411 6.33333 2.80282 6.33333 3.33325Z" stroke={color} strokeLinecap="round" />
@@ -145,7 +145,7 @@ const menuItems: MenuItem[] = [
     route: "/admin/lots",
   },
   {
-    name: "Órdenes de trabajo",
+    name: "Órdenes de Trabajo",
     icon: (color: string) => (
       <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M6.66671 2V4.66667C6.66671 4.84348 6.59647 5.01305 6.47144 5.13807C6.34642 5.2631 6.17685 5.33333 6.00004 5.33333H3.33337M8.66671 4H10.6667M8.66671 6H10.6667M8.00004 8V12M10.6667 10H5.33337M12.6667 2.66667V13.3333C12.6667 13.5101 12.5965 13.6797 12.4714 13.8047C12.3464 13.9298 12.1769 14 12 14H4.00004C3.82323 14 3.65366 13.9298 3.52864 13.8047C3.40361 13.6797 3.33337 13.5101 3.33337 13.3333V5.276C3.33341 5.0992 3.40367 4.92966 3.52871 4.80467L6.13804 2.19533C6.26304 2.0703 6.43258 2.00004 6.60937 2H12C12.1769 2 12.3464 2.07024 12.4714 2.19526C12.5965 2.32029 12.6667 2.48986 12.6667 2.66667ZM5.33337 8V12H10.6667V8H5.33337Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />

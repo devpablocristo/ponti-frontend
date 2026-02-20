@@ -144,14 +144,14 @@ const AICopilot: React.FC = () => {
             </pre>
           </div>
           <div className="border rounded-md p-4">
-            <h3 className="font-semibold">Warnings</h3>
+            <h3 className="font-semibold">Advertencias</h3>
             <pre className="text-xs text-slate-700 whitespace-pre-wrap">
               {JSON.stringify(response.warnings, null, 2)}
             </pre>
           </div>
           <div className="border rounded-md p-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Insights relacionados</h3>
+              <h3 className="font-semibold">Insights Relacionados</h3>
               <Link
                 className="text-sm text-blue-600 hover:underline"
                 to="/admin/ai-insights"

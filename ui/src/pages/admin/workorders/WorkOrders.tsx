@@ -714,7 +714,7 @@ export function WorkOrders() {
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
           <OrdersIndicators
-            metrics={Object.keys(columnsFilters).length > 0 ? derivedMetrics : metrics}
+            metrics={Object.values(columnsFilters).some((v) => Array.isArray(v) ? v.length > 0 : !!v) ? derivedMetrics : metrics}
             processing={processingMetrics}
           />
         </div>

@@ -653,7 +653,7 @@ export default function UpdateOrder({
 
                 <div>
                   <InputField
-                    label="Cultivo actual"
+                    label="Cultivo Actual"
                     placeholder="Selecciona el lote"
                     name="crop"
                     type="text"
@@ -849,7 +849,7 @@ export default function UpdateOrder({
                     }}
                     className="max-w-fit"
                   >
-                    + Crear nuevo insumo
+                    + Crear Nuevo Insumo
                   </Button>
                 </div>
                 <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4 mb-2">
@@ -1148,7 +1148,7 @@ export default function UpdateOrder({
         }}
       >
         <div className="flex flex-col h-full">
-          <h2 className="text-lg font-semibold mb-4">Crear nuevo insumo</h2>
+          <h2 className="text-lg font-semibold mb-4">Crear Nuevo Insumo</h2>
           <CreateSupplyInline
             projectId={selectedOrder?.project_id || null}
             onCreated={async () => {

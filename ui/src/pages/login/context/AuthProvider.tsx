@@ -53,27 +53,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /* ---- verify token on route change ---- */
 
   const verifyToken = useCallback(async () => {
+    const applyDecodedUser = (token: string) => {
+      const decoded = jwtDecode<DecodedToken>(token);
+      if (decoded?.exp && decoded.exp * 1000 <= Date.now()) {
+        throw new Error("Token expirado");
+      }
+      setUser(decoded);
+      setIsAuthenticated(true);
+    };
+
+    const tryRefreshSession = async () => {
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) return false;
+
+      try {
+        const nextToken = await AuthService.refreshToken();
+        setLocalStorage(nextToken);
+        applyDecodedUser(nextToken.access_token);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
     const accessToken = getAccessToken();
     if (!accessToken) {
-      setIsAuthenticated(false);
+      const refreshed = await tryRefreshSession();
+      if (!refreshed) {
+        setIsAuthenticated(false);
+      }
       setLoading(false);
       return;
     }
 
     try {
-      const decoded = jwtDecode<DecodedToken>(accessToken);
-
-      // Expired token: treat as logged out (prevents "invalid token" loops).
-      if (decoded?.exp && decoded.exp * 1000 <= Date.now()) {
+      applyDecodedUser(accessToken);
+    } catch {
+      const refreshed = await tryRefreshSession();
+      if (!refreshed) {
         forceLogout();
         return;
       }
-
-      setUser(decoded);
-      setIsAuthenticated(true);
-    } catch {
-      // Token malformed — clear and redirect
-      forceLogout();
     }
 
     setLoading(false);

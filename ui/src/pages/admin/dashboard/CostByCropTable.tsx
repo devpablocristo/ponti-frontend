@@ -10,10 +10,10 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
     return (
       <div className="bg-white rounded-xl border p-4 w-full">
         <h3 className="font-semibold text-[#020617] font-sans mb-4">
-          Incidencia de costos por cultivo
+          Incidencia de Costos por Cultivo
         </h3>
         <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
-          No crop data available
+          No hay datos de cultivos disponibles
         </div>
       </div>
     );
@@ -31,7 +31,7 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
   return (
     <div className="bg-white rounded-xl border p-4 w-full">
       <h3 className="font-medium text-[#020617] font-sans mb-4 text-xl">
-        Incidencia de costos por cultivo
+        Incidencia de Costos por Cultivo
       </h3>
 
       <div className="grid grid-cols-4 text-sm font-semibold mb-2">

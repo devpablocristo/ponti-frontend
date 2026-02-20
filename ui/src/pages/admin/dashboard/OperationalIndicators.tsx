@@ -9,9 +9,9 @@ export default function OperationalIndicators({dashboard}: OperationalIndicators
   if (!dashboard || !dashboard.operational_indicators || !dashboard.operational_indicators.items) {
     return (
       <div className="p-4 border rounded-xl bg-white">
-        <h2 className="font-semibold text-lg mb-4">Indicadores operativos</h2>
+        <h2 className="font-semibold text-lg mb-4">Indicadores Operativos</h2>
         <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
-          No operational data available
+          No hay datos operativos disponibles
         </div>
       </div>
     );
@@ -49,7 +49,7 @@ export default function OperationalIndicators({dashboard}: OperationalIndicators
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-center">
-      <h2 className="font-medium text-[#020617] font-sans text-lg">Indicadores operativos</h2>
+      <h2 className="font-medium text-[#020617] font-sans text-lg">Indicadores Operativos</h2>
       {operational_indicators.items.map((item, index) => (
         <div
           key={index}

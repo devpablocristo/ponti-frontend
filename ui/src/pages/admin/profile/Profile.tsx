@@ -26,7 +26,7 @@ export function Profile() {
 
   return (
     <div>
-      <Header title="Mi perfil" />
+      <Header title="Mi Perfil" />
       <div className="max-w-3xl mx-auto mt-4 bg-white rounded-lg shadow-md p-8">
         <form onSubmit={onSubmit}>
           <div className="grid gap-6 sm:grid-cols-2 sm:gap-8">

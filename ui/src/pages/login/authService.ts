@@ -65,17 +65,17 @@ export class AuthService {
     }
   }
 
-  static async refreshToken(): Promise<string> {
+  static async refreshToken(): Promise<TokenResponse> {
     try {
       const response = await apiClient.get<SuccessResponse<TokenResponse>>(
         "/auth/access-token"
       );
 
-      if (!response.data.access_token) {
+      if (!response.data.access_token || !response.data.refresh_token) {
         throw new Error("No se recibió un nuevo access token.");
       }
 
-      return response.data.access_token;
+      return response.data;
     } catch (error) {
       const axiosError = error as AxiosError;
 

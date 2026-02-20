@@ -923,7 +923,7 @@ export default function Customers() {
 
           <AutocompleteSelect<Entity>
             name="manager"
-            label="Resp. del proyecto"
+            label="Resp. del Proyecto"
             placeholder="Ingrese nombre"
             options={options?.managers}
             selectedItems={projectManagers}
@@ -936,7 +936,7 @@ export default function Customers() {
           />
 
           <InputField
-            label="Costo planificado"
+            label="Costo Planificado"
             placeholder="$"
             name="planned_cost"
             type="text"
@@ -951,7 +951,7 @@ export default function Customers() {
           />
 
           <InputField
-            label="Costo administrativo"
+            label="Costo Administrativo"
             placeholder="$"
             name="costs"
             type="text"
@@ -967,7 +967,7 @@ export default function Customers() {
 
           <AutocompleteSelect<Investor>
             name="adminCostInvestor"
-            label="Inversor y % en costo administrativo"
+            label="Inversor y % en Costo Administrativo"
             placeholder="Ingrese nombre"
             options={options?.investors}
             selectedItems={adminCostInvestors}
@@ -982,7 +982,7 @@ export default function Customers() {
 
           <AutocompleteSelect<Investor>
             name="investor"
-            label="Inversor y % de participacion"
+            label="Inversor y % de Participación"
             placeholder="Ingrese nombre"
             options={options?.investors}
             selectedItems={investors}
