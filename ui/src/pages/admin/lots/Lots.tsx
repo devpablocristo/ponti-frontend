@@ -519,11 +519,11 @@ export function Lots() {
         render: (value) => <b>{value}</b>,
       },
       { 
-        key: "sowed_area", 
+        key: "hectares", 
         header: "Sup. total", 
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("sowed_area"),
+        filterOptions: getFilterOptionsForColumn("hectares"),
         render: (value) => (
           <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
         ),
@@ -546,11 +546,11 @@ export function Lots() {
         },
       },
       {
-        key: "cost_per_hectare",
+        key: "cost_usd_per_ha",
         header: "Costo U$ /HA",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("cost_per_hectare"),
+        filterOptions: getFilterOptionsForColumn("cost_usd_per_ha"),
         render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>,
       },
     ];
@@ -812,19 +812,20 @@ const filteredLots = useMemo(() => {
   // Calcular KPIs basados en los lotes filtrados
   const calculatedKpis = useMemo(() => {
     const totalSeededArea = filteredLots.reduce((sum, lot) => sum + (Number(lot.sowed_area) || 0), 0);
+    const totalSurfaceArea = filteredLots.reduce((sum, lot) => sum + (Number(lot.hectares) || 0), 0);
     const totalHarvestedArea = filteredLots.reduce((sum, lot) => sum + (Number(lot.harvested_area) || 0), 0);
     const totalTons = filteredLots.reduce((sum, lot) => sum + (Number(lot.tons) || 0), 0);
-    const weightedCost = filteredLots.reduce((sum, lot) => sum + ((Number(lot.cost_per_hectare) || 0) * (Number(lot.sowed_area) || 0)), 0);
+    const weightedCost = filteredLots.reduce((sum, lot) => sum + ((Number(lot.cost_usd_per_ha) || 0) * (Number(lot.hectares) || 0)), 0);
 
     const avgYield = totalHarvestedArea > 0 ? totalTons / totalHarvestedArea : 0;
-    const avgCostPerHa = totalSeededArea > 0 ? weightedCost / totalSeededArea : 0;
+    const avgCostPerHa = totalSurfaceArea > 0 ? weightedCost / totalSurfaceArea : 0;
 
     return {
       seeded_area: totalSeededArea,
       harvested_area: totalHarvestedArea,
       yield_tn_per_ha: avgYield,
       cost_per_hectare: avgCostPerHa,
-      superficie_total: totalSeededArea,
+      superficie_total: totalSurfaceArea,
     };
   }, [filteredLots]);
 
