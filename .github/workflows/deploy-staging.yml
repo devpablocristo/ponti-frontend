@@ -96,10 +96,17 @@ jobs:
 
       - name: "Guardrail: verify BASE_MANAGER_API detagged (STAGING)"
         run: |
-          deployed_base_manager_api="$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" \
+          service_json="$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" \
             --project="${{ vars.GCP_PROJECT_ID_STG }}" \
             --region="${{ env.REGION }}" \
-            --format='value(spec.template.spec.containers[0].env[?name=BASE_MANAGER_API].value)')"
+            --format='json(spec.template.spec.containers[0].env)')"
+          deployed_base_manager_api="$(SERVICE_JSON="$service_json" python3 - <<'PY'
+          import json, os
+          data = json.loads(os.environ["SERVICE_JSON"])
+          envs = data.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [{}])[0].get("env", [])
+          print(next((e.get("value", "") for e in envs if e.get("name") == "BASE_MANAGER_API"), ""))
+          PY
+          )"
           if [[ -z "$deployed_base_manager_api" ]]; then
             echo "ERROR: BASE_MANAGER_API vacío en revisión STAGING desplegada."
             exit 1

@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - develop
-      - main
+  workflow_dispatch:
 
 env:
   REGION: us-central1
@@ -24,28 +24,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set environment based on branch
+      - name: Set DEV environment
         id: env
         run: |
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
-            echo "ENV=staging" >> "$GITHUB_OUTPUT"
-            echo "TAG=stg" >> "$GITHUB_OUTPUT"
-            echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" >> "$GITHUB_OUTPUT"
-            echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}" >> "$GITHUB_OUTPUT"
-            echo "BACKEND_SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_BACKEND_STG || 'ponti-backend' }}" >> "$GITHUB_OUTPUT"
-            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_STG }}" >> "$GITHUB_OUTPUT"
-            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
-            echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
-            echo "ENV=dev" >> "$GITHUB_OUTPUT"
-            echo "TAG=dev" >> "$GITHUB_OUTPUT"
-            echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_DEV }}" >> "$GITHUB_OUTPUT"
-            echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_DEV }}" >> "$GITHUB_OUTPUT"
-            echo "BACKEND_SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_BACKEND_DEV || 'ponti-backend' }}" >> "$GITHUB_OUTPUT"
-            echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
-            echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
-            echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
-          fi
+          echo "ENV=dev" >> "$GITHUB_OUTPUT"
+          echo "TAG=dev" >> "$GITHUB_OUTPUT"
+          echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "BACKEND_SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_BACKEND_DEV || 'ponti-backend' }}" >> "$GITHUB_OUTPUT"
+          echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
+          echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -107,14 +96,21 @@ jobs:
             --service-account="${{ steps.env.outputs.CLOUD_RUN_SERVICE_ACCOUNT }}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ github.ref_name == 'main' && secrets.IDENTITY_PLATFORM_API_KEY_STG || secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
 
       - name: "Guardrail: verify BASE_MANAGER_API detagged in deployed revision"
         run: |
-          deployed_base_manager_api="$(gcloud run services describe "${{ steps.env.outputs.SERVICE_NAME }}" \
+          service_json="$(gcloud run services describe "${{ steps.env.outputs.SERVICE_NAME }}" \
             --project="${{ steps.env.outputs.PROJECT_ID }}" \
             --region="${{ env.REGION }}" \
-            --format='value(spec.template.spec.containers[0].env[?name=BASE_MANAGER_API].value)')"
+            --format='json(spec.template.spec.containers[0].env)')"
+          deployed_base_manager_api="$(SERVICE_JSON="$service_json" python3 - <<'PY'
+          import json, os
+          data = json.loads(os.environ["SERVICE_JSON"])
+          envs = data.get("spec", {}).get("template", {}).get("spec", {}).get("containers", [{}])[0].get("env", [])
+          print(next((e.get("value", "") for e in envs if e.get("name") == "BASE_MANAGER_API"), ""))
+          PY
+          )"
           if [[ -z "$deployed_base_manager_api" ]]; then
             echo "ERROR: BASE_MANAGER_API vacío en revisión desplegada."
             exit 1
