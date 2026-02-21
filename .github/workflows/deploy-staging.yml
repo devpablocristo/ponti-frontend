@@ -58,6 +58,25 @@ jobs:
           docker build -t "$IMAGE" .
           docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
 
+      - name: Resolve canonical backend API URL (STAGING)
+        id: backend
+        run: |
+          backend_service_name="${{ vars.CLOUD_RUN_SERVICE_BACKEND_STG || 'ponti-backend' }}"
+          backend_url="$(gcloud run services describe "$backend_service_name" \
+            --project="${{ vars.GCP_PROJECT_ID_STG }}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.url)')"
+          if [[ -z "$backend_url" ]]; then
+            echo "ERROR: no se pudo resolver status.url del backend STAGING '$backend_service_name'."
+            exit 1
+          fi
+          base_manager_api="${backend_url%/}/api/v1"
+          if [[ "$base_manager_api" == *"---"* ]]; then
+            echo "ERROR: BASE_MANAGER_API STAGING no puede apuntar a URL taggeada: $base_manager_api"
+            exit 1
+          fi
+          echo "BASE_MANAGER_API=$base_manager_api" >> "$GITHUB_OUTPUT"
+
       - name: Push Docker image
         run: |
           docker push "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
@@ -73,7 +92,28 @@ jobs:
             --service-account="${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=staging,BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_STG || secrets.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}"
+            --set-env-vars="NODE_ENV=staging,BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}"
+
+      - name: "Guardrail: verify BASE_MANAGER_API detagged (STAGING)"
+        run: |
+          deployed_base_manager_api="$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" \
+            --project="${{ vars.GCP_PROJECT_ID_STG }}" \
+            --region="${{ env.REGION }}" \
+            --format='value(spec.template.spec.containers[0].env[?name=BASE_MANAGER_API].value)')"
+          if [[ -z "$deployed_base_manager_api" ]]; then
+            echo "ERROR: BASE_MANAGER_API vacío en revisión STAGING desplegada."
+            exit 1
+          fi
+          if [[ "$deployed_base_manager_api" == *"---"* ]]; then
+            echo "ERROR: BASE_MANAGER_API STAGING quedó taggeada en deploy: $deployed_base_manager_api"
+            exit 1
+          fi
+          if [[ "$deployed_base_manager_api" != "${{ steps.backend.outputs.BASE_MANAGER_API }}" ]]; then
+            echo "ERROR: BASE_MANAGER_API STAGING desplegada no coincide con la URL canónica resuelta."
+            echo "Esperada: ${{ steps.backend.outputs.BASE_MANAGER_API }}"
+            echo "Actual:   $deployed_base_manager_api"
+            exit 1
+          fi
 
       - name: Resolve service URL (STAGING)
         run: |

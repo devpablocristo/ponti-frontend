@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGION: us-central1
+  REGION: ${{ vars.GCP_REGION_PROD || vars.GCP_REGION || 'europe-west1' }}
   REGISTRY: us-central1-docker.pkg.dev
   REPOSITORY: ponti-frontend-registry
   REQUIRE_AUTH_SMOKE: "0"
@@ -42,7 +42,7 @@ jobs:
       CLOUD_RUN_SERVICE_ACCOUNT_PROD: ${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_PROD }}
       SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_FRONTEND_PROD }}
 
-      BASE_MANAGER_API_PROD: ${{ vars.BASE_MANAGER_API_PROD }}
+      BACKEND_SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_BACKEND_PROD }}
 
     steps:
       - name: Checkout
@@ -96,6 +96,25 @@ jobs:
           docker push "$dst_prod"
           echo "IMAGE=$dst_prod" >> "$GITHUB_ENV"
 
+      - name: Resolve canonical backend API URL (PROD)
+        id: backend
+        run: |
+          backend_service_name="${BACKEND_SERVICE_NAME_PROD:-ponti-backend}"
+          backend_url="$(gcloud run services describe "$backend_service_name" \
+            --project="${GCP_PROJECT_ID_PROD}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.url)')"
+          if [[ -z "$backend_url" ]]; then
+            echo "ERROR: no se pudo resolver status.url del backend PROD '$backend_service_name'."
+            exit 1
+          fi
+          base_manager_api="${backend_url%/}/api/v1"
+          if [[ "$base_manager_api" == *"---"* ]]; then
+            echo "ERROR: BASE_MANAGER_API PROD no puede apuntar a URL taggeada: $base_manager_api"
+            exit 1
+          fi
+          echo "BASE_MANAGER_API=$base_manager_api" >> "$GITHUB_OUTPUT"
+
       - name: Deploy to Cloud Run (PROD)
         run: |
           gcloud run deploy "${SERVICE_NAME_PROD}" \
@@ -105,7 +124,28 @@ jobs:
             --service-account="${CLOUD_RUN_SERVICE_ACCOUNT_PROD}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${BASE_MANAGER_API_PROD},X_API_KEY=${{ secrets.X_API_KEY_PROD || secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD || secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
+            --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY_PROD || secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD || secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
+
+      - name: "Guardrail: verify BASE_MANAGER_API detagged (PROD)"
+        run: |
+          deployed_base_manager_api="$(gcloud run services describe "${SERVICE_NAME_PROD}" \
+            --project="${GCP_PROJECT_ID_PROD}" \
+            --region="${{ env.REGION }}" \
+            --format='value(spec.template.spec.containers[0].env[?name=BASE_MANAGER_API].value)')"
+          if [[ -z "$deployed_base_manager_api" ]]; then
+            echo "ERROR: BASE_MANAGER_API vacío en revisión PROD desplegada."
+            exit 1
+          fi
+          if [[ "$deployed_base_manager_api" == *"---"* ]]; then
+            echo "ERROR: BASE_MANAGER_API PROD quedó taggeada en deploy: $deployed_base_manager_api"
+            exit 1
+          fi
+          if [[ "$deployed_base_manager_api" != "${{ steps.backend.outputs.BASE_MANAGER_API }}" ]]; then
+            echo "ERROR: BASE_MANAGER_API PROD desplegada no coincide con la URL canónica resuelta."
+            echo "Esperada: ${{ steps.backend.outputs.BASE_MANAGER_API }}"
+            echo "Actual:   $deployed_base_manager_api"
+            exit 1
+          fi
 
       - name: Resolve service URL (PROD)
         run: |

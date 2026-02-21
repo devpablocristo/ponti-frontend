@@ -32,8 +32,7 @@ jobs:
             echo "TAG=stg" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" >> "$GITHUB_OUTPUT"
             echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}" >> "$GITHUB_OUTPUT"
-            # Base URL is not secret, but fall back to existing secret to avoid breaking deployments.
-            echo "BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_STG || secrets.BASE_MANAGER_API }}" >> "$GITHUB_OUTPUT"
+            echo "BACKEND_SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_BACKEND_STG || 'ponti-backend' }}" >> "$GITHUB_OUTPUT"
             echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_STG }}" >> "$GITHUB_OUTPUT"
             echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
             echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}" >> "$GITHUB_OUTPUT"
@@ -42,8 +41,7 @@ jobs:
             echo "TAG=dev" >> "$GITHUB_OUTPUT"
             echo "SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_DEV }}" >> "$GITHUB_OUTPUT"
             echo "PROJECT_ID=${{ vars.GCP_PROJECT_ID_DEV }}" >> "$GITHUB_OUTPUT"
-            # Base URL is not secret, but fall back to existing secret to avoid breaking deployments.
-            echo "BASE_MANAGER_API=${{ vars.BASE_MANAGER_API_DEV || secrets.BASE_MANAGER_API }}" >> "$GITHUB_OUTPUT"
+            echo "BACKEND_SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_BACKEND_DEV || 'ponti-backend' }}" >> "$GITHUB_OUTPUT"
             echo "WIF_PROVIDER=${{ vars.WIF_PROVIDER_DEV }}" >> "$GITHUB_OUTPUT"
             echo "WIF_SERVICE_ACCOUNT=${{ vars.WIF_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
             echo "CLOUD_RUN_SERVICE_ACCOUNT=${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_DEV }}" >> "$GITHUB_OUTPUT"
@@ -76,6 +74,24 @@ jobs:
           docker build -t "$IMAGE" .
           docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
 
+      - name: Resolve canonical backend API URL
+        id: backend
+        run: |
+          backend_url="$(gcloud run services describe "${{ steps.env.outputs.BACKEND_SERVICE_NAME }}" \
+            --project="${{ steps.env.outputs.PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.url)')"
+          if [[ -z "$backend_url" ]]; then
+            echo "ERROR: no se pudo resolver status.url del backend '${{ steps.env.outputs.BACKEND_SERVICE_NAME }}'."
+            exit 1
+          fi
+          base_manager_api="${backend_url%/}/api/v1"
+          if [[ "$base_manager_api" == *"---"* ]]; then
+            echo "ERROR: BASE_MANAGER_API no puede apuntar a URL taggeada: $base_manager_api"
+            exit 1
+          fi
+          echo "BASE_MANAGER_API=$base_manager_api" >> "$GITHUB_OUTPUT"
+
       - name: Push Docker image
         run: |
           docker push "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
@@ -91,7 +107,28 @@ jobs:
             --service-account="${{ steps.env.outputs.CLOUD_RUN_SERVICE_ACCOUNT }}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.env.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ github.ref_name == 'main' && secrets.IDENTITY_PLATFORM_API_KEY_STG || secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ github.ref_name == 'main' && secrets.IDENTITY_PLATFORM_API_KEY_STG || secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
+
+      - name: "Guardrail: verify BASE_MANAGER_API detagged in deployed revision"
+        run: |
+          deployed_base_manager_api="$(gcloud run services describe "${{ steps.env.outputs.SERVICE_NAME }}" \
+            --project="${{ steps.env.outputs.PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --format='value(spec.template.spec.containers[0].env[?name=BASE_MANAGER_API].value)')"
+          if [[ -z "$deployed_base_manager_api" ]]; then
+            echo "ERROR: BASE_MANAGER_API vacío en revisión desplegada."
+            exit 1
+          fi
+          if [[ "$deployed_base_manager_api" == *"---"* ]]; then
+            echo "ERROR: BASE_MANAGER_API quedó taggeada en deploy: $deployed_base_manager_api"
+            exit 1
+          fi
+          if [[ "$deployed_base_manager_api" != "${{ steps.backend.outputs.BASE_MANAGER_API }}" ]]; then
+            echo "ERROR: BASE_MANAGER_API desplegada no coincide con la URL canónica resuelta."
+            echo "Esperada: ${{ steps.backend.outputs.BASE_MANAGER_API }}"
+            echo "Actual:   $deployed_base_manager_api"
+            exit 1
+          fi
 
       - name: Resolve service URL
         run: |
