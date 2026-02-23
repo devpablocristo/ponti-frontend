@@ -5,8 +5,10 @@ import SelectField from "../../../../components/Input/SelectField";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import useCategories from "../../../../hooks/useCategories";
-import { LaborToSave } from "../../../../hooks/useLabors/types";
+import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";
+import { BaseModal } from "../../../../components/Modal/BaseModal";
+import { apiClient } from "../../../../api/client";
 import { LoaderCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -16,6 +18,12 @@ interface Labor {
   category: string;
   price: string;
   contractor: string;
+}
+
+interface PendingLaborImport {
+  newRows: Labor[];
+  duplicates: { existing: LaborInfo; updated: LaborInfo }[];
+  warnings: string[];
 }
 
 const LABOR_HEADER_ALIASES = {
@@ -104,11 +112,14 @@ function getValueByAliases(
 }
 
 export default function TasksForm() {
-  const { saveLabors, result, error, processing } = useLabors();
+  const { saveLabors, result, error, processing, labors, getLabors } = useLabors();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<PendingLaborImport | null>(null);
+  const [overwriting, setOverwriting] = useState(false);
   const { categories, getCategories } = useCategories();
 
   const { filters, projectId } = useWorkspaceFilters([
@@ -130,6 +141,12 @@ export default function TasksForm() {
   useEffect(() => {
     getCategories("type_id=4");
   }, []);
+
+  useEffect(() => {
+    if (projectId) {
+      getLabors(projectId);
+    }
+  }, [projectId]);
 
   function cleanForm() {
     setLabors(
@@ -220,6 +237,101 @@ export default function TasksForm() {
     saveLabors(laborsToSave, projectId);
   };
 
+  function loadNewLaborRows(newRows: Labor[], warnings: string[]) {
+    const rowsWithMinimum = [...newRows];
+    while (rowsWithMinimum.length < 5) {
+      rowsWithMinimum.push({
+        id: rowsWithMinimum.length,
+        name: "",
+        category: "",
+        price: "",
+        contractor: "",
+      });
+    }
+
+    if (newRows.length > 0) {
+      setLabors(rowsWithMinimum);
+    }
+
+    if (warnings.length > 0) {
+      setErrorMessage(warnings.join(" "));
+    } else {
+      setErrorMessage("");
+    }
+
+    if (newRows.length > 0) {
+      setSuccessMessage(
+        `Se importaron ${newRows.length} labores nuevas. Revise y presione Guardar.`
+      );
+    }
+  }
+
+  const handleSkipDuplicates = () => {
+    if (!pendingImport) return;
+    setImportModalOpen(false);
+
+    const { newRows, duplicates, warnings } = pendingImport;
+
+    if (newRows.length === 0) {
+      const namesList = duplicates
+        .slice(0, 8)
+        .map((d) => `  - ${d.existing.name}`)
+        .join("\n");
+      const extra = duplicates.length > 8 ? `\n  y ${duplicates.length - 8} más...` : "";
+      setErrorMessage("");
+      setSuccessMessage(
+        `Se omitieron ${duplicates.length} labores que ya existen:\n${namesList}${extra}`
+      );
+    } else {
+      loadNewLaborRows(newRows, warnings);
+      const namesList = duplicates
+        .slice(0, 8)
+        .map((d) => `  - ${d.existing.name}`)
+        .join("\n");
+      const extra = duplicates.length > 8 ? `\n  y ${duplicates.length - 8} más...` : "";
+      setSuccessMessage(
+        `Se importaron ${newRows.length} labores nuevas.\nSe omitieron ${duplicates.length} que ya existen:\n${namesList}${extra}\nRevise y presione Guardar.`
+      );
+    }
+
+    setPendingImport(null);
+  };
+
+  const handleOverwrite = async () => {
+    if (!pendingImport || !projectId) return;
+    setOverwriting(true);
+
+    const { newRows, duplicates, warnings } = pendingImport;
+    const results = await Promise.allSettled(
+      duplicates.map((d) =>
+        apiClient.put(`/labors/projects/${projectId}/${d.updated.id}`, d.updated)
+      )
+    );
+
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+
+    setImportModalOpen(false);
+    setOverwriting(false);
+    setPendingImport(null);
+
+    loadNewLaborRows(newRows, warnings);
+
+    // Refresh labors list to reflect updates
+    getLabors(projectId);
+
+    const parts: string[] = [];
+    if (succeeded > 0) parts.push(`Se actualizaron ${succeeded} labores existentes.`);
+    if (failed > 0) parts.push(`Fallaron ${failed} actualizaciones.`);
+    if (newRows.length > 0) parts.push(`Se cargaron ${newRows.length} nuevas en el formulario.`);
+    if (newRows.length > 0) parts.push("Revise y presione Guardar.");
+    setSuccessMessage(parts.join(" "));
+
+    if (failed > 0) {
+      setErrorMessage(`${failed} labores no se pudieron actualizar.`);
+    }
+  };
+
   const handleImportLaborsFromFile = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -251,12 +363,29 @@ export default function TasksForm() {
       } else {
         const buffer = await file.arrayBuffer();
         const workbook = XLSX.read(buffer, { type: "array" });
-        const firstSheetName = workbook.SheetNames[0];
-        const firstSheet = workbook.Sheets[firstSheetName];
-        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-          firstSheet,
-          { defval: "" }
-        );
+        const sheetNames = workbook.SheetNames || [];
+        const preferred =
+          sheetNames.find((n) => normalizeText(n).includes("labor")) ??
+          sheetNames[0];
+
+        const trySheets = [
+          preferred,
+          ...sheetNames.filter((n) => n !== preferred),
+        ].filter(Boolean) as string[];
+
+        let jsonRows: Record<string, unknown>[] = [];
+        for (const sheetName of trySheets) {
+          const sheet = workbook.Sheets[sheetName];
+          if (!sheet) continue;
+          const candidate = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+            sheet,
+            { defval: "" }
+          );
+          if (candidate.length > 0) {
+            jsonRows = candidate;
+            break;
+          }
+        }
         parsedRows = jsonRows.map(normalizeSpreadsheetRow);
       }
 
@@ -273,6 +402,11 @@ export default function TasksForm() {
 
       const importedRows: Labor[] = [];
       const importErrors: string[] = [];
+      const duplicates: { existing: LaborInfo; updated: LaborInfo }[] = [];
+
+      const laborByName = new Map(
+        (labors || []).map((l) => [l.name.trim().toLowerCase(), l])
+      );
 
       parsedRows.forEach((rawRow, idx) => {
         const rowNumber = idx + 2;
@@ -293,7 +427,26 @@ export default function TasksForm() {
         const categoryId = categoryByText?.id ?? Number(categoryRaw);
         const priceValue = Number(priceRaw.replace(/\$/g, "").replace(",", "."));
 
-        if (!name) importErrors.push(`Fila ${rowNumber}: falta "Labor".`);
+        if (!name) return;
+
+        // Check if labor already exists
+        const existing = laborByName.get(name.trim().toLowerCase());
+        if (existing) {
+          const catName = categoryByText?.name ?? existing.category_name;
+          duplicates.push({
+            existing,
+            updated: {
+              ...existing,
+              name,
+              price: !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : existing.price,
+              category_id: (categoryId && !Number.isNaN(categoryId)) ? categoryId : existing.category_id,
+              category_name: catName,
+              contractor_name: contractor || existing.contractor_name,
+            },
+          });
+          return;
+        }
+
         if (!categoryId || Number.isNaN(categoryId)) {
           importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
         }
@@ -322,39 +475,18 @@ export default function TasksForm() {
         }
       });
 
-      if (importedRows.length === 0) {
-        setErrorMessage(
-          importErrors.length > 0
-            ? importErrors.slice(0, 8).join(" ")
-            : "No se encontraron filas importables en el archivo."
-        );
+      // If there are duplicates, show modal to let user choose
+      if (duplicates.length > 0) {
+        setPendingImport({ newRows: importedRows, duplicates, warnings: importErrors });
+        setImportModalOpen(true);
         return;
       }
 
-      const rowsWithMinimum = [...importedRows];
-      while (rowsWithMinimum.length < 5) {
-        rowsWithMinimum.push({
-          id: rowsWithMinimum.length,
-          name: "",
-          category: "",
-          price: "",
-          contractor: "",
-        });
-      }
+      // No duplicates — load directly into form
+      loadNewLaborRows(importedRows, importErrors);
 
-      setLabors(rowsWithMinimum);
-      if (importErrors.length > 0) {
-        setErrorMessage(
-          `Se importaron ${importedRows.length} labores válidas. Se omitieron ${importErrors.length} filas con error: ${importErrors
-            .slice(0, 6)
-            .join(" ")}`
-        );
-        setSuccessMessage(null);
-      } else {
-        setErrorMessage("");
-        setSuccessMessage(
-          `Se importaron ${importedRows.length} labores. Revise y presione Guardar.`
-        );
+      if (importedRows.length === 0 && importErrors.length === 0) {
+        setErrorMessage("No se encontraron filas importables en el archivo.");
       }
     } catch {
       setErrorMessage("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
@@ -422,7 +554,7 @@ export default function TasksForm() {
               <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z" />
             </svg>
             <span className="sr-only">Info</span>
-            <div>
+            <div className="whitespace-pre-line">
               <span className="font-medium">{successMessage}</span>
             </div>
             <button
@@ -596,6 +728,26 @@ export default function TasksForm() {
           </Button>
         </div>
       </div>
+
+      <BaseModal
+        isOpen={importModalOpen}
+        onClose={() => {
+          setImportModalOpen(false);
+          setPendingImport(null);
+        }}
+        title="Se encontraron labores existentes"
+        message={
+          pendingImport
+            ? `El archivo contiene ${pendingImport.duplicates.length} labor${pendingImport.duplicates.length > 1 ? "es" : ""} que ya existe${pendingImport.duplicates.length > 1 ? "n" : ""} en el catálogo:\n${pendingImport.duplicates.slice(0, 8).map((d) => `  - ${d.existing.name}`).join("\n")}${pendingImport.duplicates.length > 8 ? `\n  y ${pendingImport.duplicates.length - 8} más...` : ""}${pendingImport.newRows.length > 0 ? `\n\nAdemás hay ${pendingImport.newRows.length} labor${pendingImport.newRows.length > 1 ? "es" : ""} nueva${pendingImport.newRows.length > 1 ? "s" : ""}.` : ""}`
+            : ""
+        }
+        primaryButtonText={overwriting ? "Actualizando..." : "Sobreescribir existentes"}
+        primaryButtonColor="bg-blue-600 hover:bg-blue-700 focus:ring-blue-300"
+        onPrimaryAction={handleOverwrite}
+        secondaryButtonText="Solo nuevos"
+        onSecondaryAction={handleSkipDuplicates}
+        isSaving={overwriting}
+      />
     </div>
   );
 }

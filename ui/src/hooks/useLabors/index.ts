@@ -277,6 +277,23 @@ const useLabors = () => {
     }
   }, []);
 
+  const getWorkOrdersCount = React.useCallback(
+    async (projectId: number, laborId: number): Promise<number> => {
+      try {
+        const response = await apiClient.get<SuccessResponse<any>>(
+          `/labors/workorders-count/${projectId}/${laborId}`
+        );
+        if (response.success) {
+          return response.data?.count ?? 0;
+        }
+        return 0;
+      } catch {
+        return 0;
+      }
+    },
+    []
+  );
+
   const updateLabor = React.useCallback(
     async (projectId: number, labor: LaborInfo) => {
       setProcessing(true);
@@ -319,6 +336,7 @@ const useLabors = () => {
     getLabors,
     deleteLabor,
     updateLabor,
+    getWorkOrdersCount,
     saveLabors,
     updateInvoice,
     createInvoice,

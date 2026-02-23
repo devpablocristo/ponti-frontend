@@ -1,4 +1,4 @@
-import { JSX, useEffect, useState, useMemo } from "react";
+import { JSX, useEffect, useState, useMemo, useRef } from "react";
 import {
   LoaderCircle,
   ClockIcon,
@@ -6,10 +6,12 @@ import {
   FileTextIcon,
   FileXIcon,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 import useLabors from "../../../hooks/useLabors";
+import useCategories from "../../../hooks/useCategories";
 import DataTable from "../../../components/Table/DataTable";
-import { InvoiceData, Metrics, LaborGroupData } from "../../../hooks/useLabors/types";
+import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -21,6 +23,89 @@ import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
+
+const LABOR_HEADER_ALIASES = {
+  name: ["labor", "nombre", "name"],
+  category: ["rubro", "categoria", "category"],
+  price: ["precio", "precio_usd", "usd", "u$s"],
+  contractor: ["contratista", "contractor", "proveedor"],
+} as const;
+
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+function parseCsvLine(line: string) {
+  const values: string[] = [];
+  let current = "";
+  let insideQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (insideQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+      continue;
+    }
+    if (char === "," && !insideQuotes) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  values.push(current.trim());
+  return values;
+}
+
+function parseCsv(content: string) {
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length < 2) return [];
+
+  const headers = parseCsvLine(lines[0]).map((h) => normalizeText(h));
+  return lines.slice(1).map((line) => {
+    const values = parseCsvLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((header, idx) => {
+      row[header] = values[idx] ?? "";
+    });
+    return row;
+  });
+}
+
+function normalizeSpreadsheetRow(row: Record<string, unknown>) {
+  const normalized: Record<string, string> = {};
+  Object.entries(row).forEach(([key, value]) => {
+    normalized[normalizeText(key)] = String(value ?? "").trim();
+  });
+  return normalized;
+}
+
+function getValueByAliases(
+  row: Record<string, string>,
+  aliases: readonly string[]
+) {
+  for (const alias of aliases) {
+    const normalizedAlias = normalizeText(alias);
+    if (row[normalizedAlias] !== undefined) {
+      return row[normalizedAlias];
+    }
+  }
+  return "";
+}
 
 const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
   Pendiente: {
@@ -186,7 +271,13 @@ export function Tasks() {
     processingInvoice,
     errorInvoice,
     resultInvoice,
+    saveLabors,
   } = useLabors();
+
+  const { categories, getCategories } = useCategories();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [taskFilters, setTaskFilters] = useState<Record<string, any>>({});
@@ -228,6 +319,7 @@ export function Tasks() {
     setCurrentPage(1);
     getLaborGroups(projectId, query);
     getMetrics(projectId, query);
+    getCategories("");
   }, [projectId, selectedField]);
 
   useEffect(() => {
@@ -605,6 +697,127 @@ export function Tasks() {
     return date instanceof Date && !isNaN(date.getTime());
   };
 
+  const handleImportLaborsFromFile = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!projectId) {
+      setImportError("Por favor, seleccione un proyecto antes de importar.");
+      return;
+    }
+
+    const lowerName = file.name.toLowerCase();
+    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
+    const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+
+    if (!isCsv && !isExcel) {
+      setImportError("Formato no soportado. Use .xlsx, .xls o .csv.");
+      return;
+    }
+
+    try {
+      setImportError(null);
+      setImportMessage(null);
+
+      let parsedRows: Record<string, string>[] = [];
+      if (isCsv) {
+        const text = await file.text();
+        parsedRows = parseCsv(text);
+      } else {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const firstSheet = workbook.Sheets[firstSheetName];
+        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+          firstSheet,
+          { defval: "" }
+        );
+        parsedRows = jsonRows.map(normalizeSpreadsheetRow);
+      }
+
+      if (parsedRows.length === 0) {
+        setImportError("El archivo no tiene datos válidos. Verifique encabezados y filas.");
+        return;
+      }
+
+      const categoryByName = new Map(
+        categories.map((c) => [normalizeText(c.name), c])
+      );
+
+      const laborsToSave: LaborToSave[] = [];
+      const importErrors: string[] = [];
+
+      parsedRows.forEach((rawRow, idx) => {
+        const rowNumber = idx + 2;
+        const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
+        const categoryRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.category).trim();
+        const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
+        const contractor = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.contractor).trim();
+
+        if (!name && !categoryRaw && !priceRaw && !contractor) return;
+
+        const categoryByText = categoryByName.get(normalizeText(categoryRaw));
+        const categoryId = categoryByText?.id ?? Number(categoryRaw);
+        const priceValue = Number(priceRaw.replace(/\$/g, "").replace(",", "."));
+
+        if (!name) importErrors.push(`Fila ${rowNumber}: falta "Labor".`);
+        if (!categoryId || Number.isNaN(categoryId))
+          importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
+        if (!priceRaw || Number.isNaN(priceValue) || priceValue <= 0)
+          importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
+        if (!contractor)
+          importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
+
+        if (
+          name &&
+          categoryId &&
+          !Number.isNaN(categoryId) &&
+          !Number.isNaN(priceValue) &&
+          priceValue > 0 &&
+          contractor
+        ) {
+          laborsToSave.push({
+            name,
+            category_id: categoryId,
+            price: String(priceValue),
+            contractor_name: contractor,
+          });
+        }
+      });
+
+      if (laborsToSave.length === 0) {
+        setImportError(
+          importErrors.length > 0
+            ? importErrors.slice(0, 8).join(" ")
+            : "No se encontraron filas importables en el archivo."
+        );
+        return;
+      }
+
+      await saveLabors(laborsToSave, projectId);
+
+      let query = "";
+      if (selectedField) {
+        query += `?field_id=${selectedField.id}`;
+      }
+      getLaborGroups(projectId, query);
+      getMetrics(projectId, query);
+
+      if (importErrors.length > 0) {
+        setImportMessage(
+          `Se importaron ${laborsToSave.length} labores. Se omitieron ${importErrors.length} filas con error.`
+        );
+      } else {
+        setImportMessage(`Se importaron ${laborsToSave.length} labores con éxito.`);
+      }
+    } catch {
+      setImportError("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
+    }
+  };
+
   const handleExport = async () => {
     if (!projectId) return;
 
@@ -638,9 +851,27 @@ export function Tasks() {
 
   return (
     <div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+        onChange={handleImportLaborsFromFile}
+        className="hidden"
+      />
       <FilterBar
         filters={filters}
         actions={[
+          {
+            label: "Importar labores",
+            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 1.1665V7.83317M7 7.83317L4.33333 5.1665M7 7.83317L9.66667 5.1665M1.66675 9.1665V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H11.0001C11.3537 11.8332 11.6928 11.6927 11.9429 11.4426C12.1929 11.1926 12.3334 10.8535 12.3334 10.4998V9.1665" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            ,
+            variant: "outlinePonti",
+            isPrimary: false,
+            disabled: !projectId,
+            onClick: () => fileInputRef.current?.click(),
+          },
           {
             label: "Exportar labores",
             icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -838,10 +1069,16 @@ export function Tasks() {
             </div>
           )}
         </BaseModal>
-        {(error || exportErrorMessage) && (
+        {importMessage && (
+          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200" role="alert">
+            <svg className="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
+            <div><span className="font-semibold">{importMessage}</span></div>
+          </div>
+        )}
+        {(error || exportErrorMessage || importError) && (
           <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
             <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-            <div><span className="font-semibold">Error:</span> {exportErrorMessage || error}</div>
+            <div><span className="font-semibold">Error:</span> {importError || exportErrorMessage || error}</div>
           </div>
         )}
       </div>

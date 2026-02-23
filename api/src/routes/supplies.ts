@@ -208,6 +208,44 @@ router.put("/:id", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/workorders-count/:supply_id", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const supply_id = parseInt(req.params.supply_id as string) || 0;
+    if (supply_id === 0) {
+      res.status(400).json({ message: "Insumo obligatorio" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data } = await apiClient.get<any>(
+      `/supplies/${supply_id}/workorders-count`,
+      headers
+    );
+
+    res.status(200).json({ success: true, data });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: { status: 500, details: "Error al obtener conteo" },
+    });
+  }
+});
+
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;

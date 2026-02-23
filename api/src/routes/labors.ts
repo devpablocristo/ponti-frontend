@@ -312,6 +312,46 @@ router.get("/database-export/:id", async (req, res) => {
   }
 });
 
+router.get("/workorders-count/:project_id/:labor_id", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const project_id = parseInt(req.params.project_id as string) || 0;
+    const labor_id = parseInt(req.params.labor_id as string) || 0;
+
+    if (project_id === 0 || labor_id === 0) {
+      res.status(400).json({ message: "Proyecto y labor obligatorios" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data } = await apiClient.get<any>(
+      `/projects/${project_id}/labors/${labor_id}/workorders-count`,
+      headers
+    );
+
+    res.status(200).json({ success: true, data });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      error: { status: 500, details: "Error al obtener conteo" },
+    });
+  }
+});
+
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;

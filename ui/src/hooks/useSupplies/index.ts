@@ -125,6 +125,23 @@ const useSupplies = () => {
     }
   }, []);
 
+  const getWorkOrdersCount = React.useCallback(
+    async (supplyId: number): Promise<number> => {
+      try {
+        const response = await apiClient.get<SuccessResponse<any>>(
+          `/supplies/workorders-count/${supplyId}`
+        );
+        if (response.success) {
+          return response.data?.count ?? 0;
+        }
+        return 0;
+      } catch {
+        return 0;
+      }
+    },
+    []
+  );
+
   const updateSupply = React.useCallback(
     async (projectId: number, supply: Supply) => {
       setProcessing(true);
@@ -165,6 +182,7 @@ const useSupplies = () => {
     saveSupplies,
     updateSupply,
     deleteSupply,
+    getWorkOrdersCount,
     processing,
     error,
     result,

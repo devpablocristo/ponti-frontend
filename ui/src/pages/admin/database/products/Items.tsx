@@ -4,9 +4,11 @@ import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { SupplyCreatePayload } from "../../../../hooks/useSupplies/types";
+import { SupplyCreatePayload, Supply } from "../../../../hooks/useSupplies/types";
 import useSupplies from "../../../../hooks/useSupplies";
 import useCategories from "../../../../hooks/useCategories";
+import { BaseModal } from "../../../../components/Modal/BaseModal";
+import { apiClient } from "../../../../api/client";
 import * as XLSX from "xlsx";
 import { units } from "../../../../constants/units";
 
@@ -17,6 +19,12 @@ interface Row {
   price: string;
   type: string;
   category: string;
+}
+
+interface PendingImport {
+  newRows: Row[];
+  duplicates: { existing: Supply; updated: Supply }[];
+  warnings: string[];
 }
 
 const HEADER_ALIASES = {
@@ -171,6 +179,9 @@ export default function Items() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [initialRows, setInitialRows] = useState<string>("");
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
+  const [overwriting, setOverwriting] = useState(false);
   const { categories, types, getCategories, getTypes } = useCategories();
   const {
     filters,
@@ -419,6 +430,105 @@ export default function Items() {
     });
   };
 
+  function loadNewRows(newRows: Row[], warnings: string[]) {
+    const rowsWithMinimum = [...newRows];
+    while (rowsWithMinimum.length < 5) {
+      rowsWithMinimum.push({
+        id: rowsWithMinimum.length + 1,
+        name: "",
+        unit: "",
+        price: "",
+        type: "",
+        category: "",
+      });
+    }
+
+    if (newRows.length > 0) {
+      setRows(rowsWithMinimum);
+      setHasUnsavedChanges(true);
+    }
+
+    if (warnings.length > 0) {
+      setErrorMessage(
+        `Hay ${warnings.length} advertencias: ${warnings.slice(0, 6).join(" ")}`
+      );
+    } else {
+      setErrorMessage("");
+    }
+
+    if (newRows.length > 0) {
+      setSuccessMessage(
+        `Se importaron ${newRows.length} insumos nuevos. Revise y presione Guardar.`
+      );
+    }
+  }
+
+  const handleSkipDuplicates = () => {
+    if (!pendingImport) return;
+    setImportModalOpen(false);
+
+    const { newRows, duplicates, warnings } = pendingImport;
+
+    if (newRows.length === 0) {
+      const namesList = duplicates
+        .slice(0, 8)
+        .map((d) => `  - ${d.existing.name}`)
+        .join("\n");
+      const extra = duplicates.length > 8 ? `\n  y ${duplicates.length - 8} más...` : "";
+      setErrorMessage("");
+      setSuccessMessage(
+        `Se omitieron ${duplicates.length} insumos que ya existen:\n${namesList}${extra}`
+      );
+    } else {
+      loadNewRows(newRows, warnings);
+      const namesList = duplicates
+        .slice(0, 8)
+        .map((d) => `  - ${d.existing.name}`)
+        .join("\n");
+      const extra = duplicates.length > 8 ? `\n  y ${duplicates.length - 8} más...` : "";
+      setSuccessMessage(
+        `Se importaron ${newRows.length} insumos nuevos.\nSe omitieron ${duplicates.length} que ya existen:\n${namesList}${extra}\nRevise y presione Guardar.`
+      );
+    }
+
+    setPendingImport(null);
+  };
+
+  const handleOverwrite = async () => {
+    if (!pendingImport || !projectId) return;
+    setOverwriting(true);
+
+    const { newRows, duplicates, warnings } = pendingImport;
+    const results = await Promise.allSettled(
+      duplicates.map((d) =>
+        apiClient.put(`/supplies/projects/${projectId}/${d.updated.id}`, d.updated)
+      )
+    );
+
+    const succeeded = results.filter((r) => r.status === "fulfilled").length;
+    const failed = results.filter((r) => r.status === "rejected").length;
+
+    setImportModalOpen(false);
+    setOverwriting(false);
+    setPendingImport(null);
+
+    loadNewRows(newRows, warnings);
+
+    // Refresh supplies list to reflect updates
+    getSupplies(projectId);
+
+    const parts: string[] = [];
+    if (succeeded > 0) parts.push(`Se actualizaron ${succeeded} insumos existentes.`);
+    if (failed > 0) parts.push(`Fallaron ${failed} actualizaciones.`);
+    if (newRows.length > 0) parts.push(`Se cargaron ${newRows.length} nuevos en el formulario.`);
+    if (newRows.length > 0) parts.push("Revise y presione Guardar.");
+    setSuccessMessage(parts.join(" "));
+
+    if (failed > 0) {
+      setErrorMessage(`${failed} insumos no se pudieron actualizar.`);
+    }
+  };
+
   const handleImportFromFile = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -494,6 +604,11 @@ export default function Items() {
 
       const importedRows: Row[] = [];
       const importWarnings: string[] = [];
+      const duplicates: { existing: Supply; updated: Supply }[] = [];
+
+      const supplyByName = new Map(
+        (supplies || []).map((s) => [s.name.trim().toLowerCase(), s])
+      );
 
       parsedRows.forEach((rawRow, idx) => {
         const rowNumber = idx + 2;
@@ -523,9 +638,30 @@ export default function Items() {
         const typeByText = typeByName.get(normalizeText(typeRaw));
         const typeId = typeFromCategory ?? typeByText?.id ?? Number(typeRaw);
 
-        // Import best-effort: don't drop rows because a field is unknown.
-        // The user can fix missing fields in the UI before saving.
         if (!name) return;
+
+        // Check if item already exists in the database
+        const existing = supplyByName.get(name.trim().toLowerCase());
+        if (existing) {
+          const unitName = units.find((u) => u.id === (unitId || existing.unit_id))?.name ?? existing.unit_name ?? "";
+          const catName = categoryByText?.name ?? existing.category_name;
+          const typName = typeByText?.name ?? existing.type_name;
+          duplicates.push({
+            existing,
+            updated: {
+              ...existing,
+              name,
+              price: !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : existing.price,
+              unit_id: unitId || existing.unit_id,
+              unit_name: unitName,
+              category_id: (categoryId && !Number.isNaN(categoryId)) ? categoryId : existing.category_id,
+              category_name: catName,
+              type_id: (typeId && !Number.isNaN(typeId)) ? typeId : existing.type_id,
+              type_name: typName,
+            },
+          });
+          return;
+        }
 
         if (!unitId) {
           importWarnings.push(
@@ -555,44 +691,15 @@ export default function Items() {
         });
       });
 
-      if (importedRows.length === 0) {
-        setErrorMessage(
-          importWarnings.length > 0
-            ? importWarnings.slice(0, 8).join(" ")
-            : "No se encontraron filas importables en el archivo."
-        );
+      // If there are duplicates, show modal to let user choose
+      if (duplicates.length > 0) {
+        setPendingImport({ newRows: importedRows, duplicates, warnings: importWarnings });
+        setImportModalOpen(true);
         return;
       }
 
-      const rowsWithMinimum = [...importedRows];
-      while (rowsWithMinimum.length < 5) {
-        rowsWithMinimum.push({
-          id: rowsWithMinimum.length + 1,
-          name: "",
-          unit: "",
-          price: "",
-          type: "",
-          category: "",
-        });
-      }
-
-      setRows(rowsWithMinimum);
-      setHasUnsavedChanges(true);
-      if (importWarnings.length > 0) {
-        setErrorMessage(
-          `Se importaron ${importedRows.length} insumos. Hay ${importWarnings.length} advertencias (campos a revisar): ${importWarnings
-            .slice(0, 6)
-            .join(" ")}`
-        );
-        setSuccessMessage(
-          `Se importaron ${importedRows.length} insumos. Revise y presione Guardar.`
-        );
-      } else {
-        setErrorMessage("");
-        setSuccessMessage(
-          `Se importaron ${importedRows.length} insumos. Revise y presione Guardar.`
-        );
-      }
+      // No duplicates — load directly into form
+      loadNewRows(importedRows, importWarnings);
     } catch {
       setErrorMessage("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
     }
@@ -659,7 +766,7 @@ export default function Items() {
               <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z" />
             </svg>
             <span className="sr-only">Info</span>
-            <div>
+            <div className="whitespace-pre-line">
               <span className="font-medium">{successMessage}</span>
             </div>
             <button
@@ -876,6 +983,26 @@ export default function Items() {
           Guardar
         </Button>
       </div>
+
+      <BaseModal
+        isOpen={importModalOpen}
+        onClose={() => {
+          setImportModalOpen(false);
+          setPendingImport(null);
+        }}
+        title="Se encontraron insumos existentes"
+        message={
+          pendingImport
+            ? `El archivo contiene ${pendingImport.duplicates.length} insumo${pendingImport.duplicates.length > 1 ? "s" : ""} que ya existe${pendingImport.duplicates.length > 1 ? "n" : ""} en el catálogo:\n${pendingImport.duplicates.slice(0, 8).map((d) => `  - ${d.existing.name}`).join("\n")}${pendingImport.duplicates.length > 8 ? `\n  y ${pendingImport.duplicates.length - 8} más...` : ""}${pendingImport.newRows.length > 0 ? `\n\nAdemás hay ${pendingImport.newRows.length} insumo${pendingImport.newRows.length > 1 ? "s" : ""} nuevo${pendingImport.newRows.length > 1 ? "s" : ""}.` : ""}`
+            : ""
+        }
+        primaryButtonText={overwriting ? "Actualizando..." : "Sobreescribir existentes"}
+        primaryButtonColor="bg-blue-600 hover:bg-blue-700 focus:ring-blue-300"
+        onPrimaryAction={handleOverwrite}
+        secondaryButtonText="Solo nuevos"
+        onSecondaryAction={handleSkipDuplicates}
+        isSaving={overwriting}
+      />
     </div>
   );
 }

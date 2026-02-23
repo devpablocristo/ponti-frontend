@@ -15,11 +15,15 @@ import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
 
 const columns: Column<Supply>[] = [
-  { key: "id", header: "ID" },
   {
     key: "name",
     header: "Nombre",
     render: (value) => <strong className="text-blue-700">{value}</strong>,
+  },
+  {
+    key: "unit_name",
+    header: "Unidad",
+    render: (value) => value || "-",
   },
   {
     key: "price",
@@ -33,7 +37,7 @@ const columns: Column<Supply>[] = [
   },
   {
     key: "type_name",
-    header: "Tipo",
+    header: "Tipo/Clase",
     render: (value) => value,
   },
 ];
@@ -45,6 +49,7 @@ export default function ListItems() {
     supplies,
     updateSupply,
     deleteSupply,
+    getWorkOrdersCount,
     result,
     processing,
     errorUpdate,
@@ -56,6 +61,8 @@ export default function ListItems() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -104,23 +111,30 @@ export default function ListItems() {
     }
   }, [errorUpdate]);
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("¿Está seguro que desea eliminar el insumo?")) {
-      setErrorMessage("");
-      setSuccessMessage(null);
-      deleteSupply(id);
+  const handleDelete = async (supplyItem: Supply) => {
+    const count = await getWorkOrdersCount(supplyItem.id);
+    setDeleteTarget({ id: supplyItem.id, name: supplyItem.name, count });
+    setDeleteModalOpen(true);
+  };
 
-      setTimeout(() => {
-        const totalAfterDelete = supplies.length - 1;
-        const lastPage = Math.max(
-          1,
-          Math.ceil(totalAfterDelete / itemsPerPage)
-        );
-        if (currentPage > lastPage) {
-          setCurrentPage(lastPage);
-        }
-      }, 200);
-    }
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    setErrorMessage("");
+    setSuccessMessage(null);
+    deleteSupply(deleteTarget.id);
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
+
+    setTimeout(() => {
+      const totalAfterDelete = supplies.length - 1;
+      const lastPage = Math.max(
+        1,
+        Math.ceil(totalAfterDelete / itemsPerPage)
+      );
+      if (currentPage > lastPage) {
+        setCurrentPage(lastPage);
+      }
+    }, 200);
   };
 
   const handleEdit = (item: Supply) => {
@@ -371,10 +385,26 @@ export default function ListItems() {
               />
             </div>
           </BaseModal>
+          <BaseModal
+            isOpen={deleteModalOpen}
+            onClose={() => {
+              setDeleteModalOpen(false);
+              setDeleteTarget(null);
+            }}
+            title="Archivar insumo"
+            message={
+              deleteTarget && deleteTarget.count > 0
+                ? `El insumo "${deleteTarget.name}" está en ${deleteTarget.count} orden${deleteTarget.count > 1 ? "es" : ""} de trabajo activa${deleteTarget.count > 1 ? "s" : ""}. Se archivará del catálogo pero las órdenes no se verán afectadas. ¿Continuar?`
+                : `¿Está seguro que desea archivar el insumo "${deleteTarget?.name}"?`
+            }
+            primaryButtonText="Archivar"
+            primaryButtonColor="bg-red-600 hover:bg-red-800 focus:ring-red-300"
+            onPrimaryAction={confirmDelete}
+          />
           <DataTable
             data={supplies}
             columns={columns}
-            onDelete={(item) => handleDelete(item.id)}
+            onDelete={(item) => handleDelete(item)}
             onEdit={(item) => handleEdit(item)}
             message="No hay insumos cargados en el proyecto"
             pagination={{

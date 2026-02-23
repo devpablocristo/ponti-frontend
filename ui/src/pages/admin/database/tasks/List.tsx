@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+import * as XLSX from "xlsx";
 
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import DataTable from "../../../../components/Table/DataTable";
-import { LaborInfo } from "../../../../hooks/useLabors/types";
+import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
 import useLabors from "../../../../hooks/useLabors";
@@ -11,22 +12,102 @@ import { BaseModal } from "../../../../components/Modal/BaseModal";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import useCategories from "../../../../hooks/useCategories";
+import { apiClient } from "../../../../api/client";
+
+const LABOR_HEADER_ALIASES = {
+  name: ["labor", "nombre", "name"],
+  category: ["rubro", "categoria", "category"],
+  price: ["precio", "precio_usd", "usd", "u$s"],
+  contractor: ["contratista", "contractor", "proveedor"],
+} as const;
+
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+}
+
+function parseCsvLine(line: string) {
+  const values: string[] = [];
+  let current = "";
+  let insideQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (insideQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        insideQuotes = !insideQuotes;
+      }
+      continue;
+    }
+    if (char === "," && !insideQuotes) {
+      values.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  values.push(current.trim());
+  return values;
+}
+
+function parseCsv(content: string) {
+  const lines = content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  if (lines.length < 2) return [];
+  const headers = parseCsvLine(lines[0]).map((h) => normalizeText(h));
+  return lines.slice(1).map((line) => {
+    const values = parseCsvLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((header, idx) => {
+      row[header] = values[idx] ?? "";
+    });
+    return row;
+  });
+}
+
+function normalizeSpreadsheetRow(row: Record<string, unknown>) {
+  const normalized: Record<string, string> = {};
+  Object.entries(row).forEach(([key, value]) => {
+    normalized[normalizeText(key)] = String(value ?? "").trim();
+  });
+  return normalized;
+}
+
+function getValueByAliases(
+  row: Record<string, string>,
+  aliases: readonly string[]
+) {
+  for (const alias of aliases) {
+    const normalizedAlias = normalizeText(alias);
+    if (row[normalizedAlias] !== undefined) {
+      return row[normalizedAlias];
+    }
+  }
+  return "";
+}
 
 const columns: Column<LaborInfo>[] = [
-  { key: "id", header: "ID" },
   {
     key: "name",
     header: "Nombre",
     render: (value) => <strong className="text-blue-700">{value}</strong>,
   },
   {
-    key: "price",
-    header: "Precio",
-    render: (value) => <strong>{value}</strong>,
-  },
-  {
     key: "category_name",
     header: "Categoría",
+    render: (value) => value,
+  },
+  {
+    key: "price",
+    header: "Precio",
     render: (value) => <strong>{value}</strong>,
   },
   {
@@ -43,15 +124,20 @@ export default function ListTasks() {
     labors,
     deleteLabor,
     updateLabor,
+    saveLabors,
+    getWorkOrdersCount,
     result,
     resultUpdate,
     processing,
     errorUpdate,
   } = useLabors();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { categories, getCategories } = useCategories();
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -99,23 +185,31 @@ export default function ListTasks() {
     }
   }, [errorUpdate]);
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("¿Está seguro que desea eliminar la labor?")) {
-      setErrorMessage("");
-      setSuccessMessage(null);
-      deleteLabor(id);
+  const handleDelete = async (item: LaborInfo) => {
+    if (!projectId) return;
+    const count = await getWorkOrdersCount(projectId, item.id);
+    setDeleteTarget({ id: item.id, name: item.name, count });
+    setDeleteModalOpen(true);
+  };
 
-      setTimeout(() => {
-        const totalAfterDelete = labors.length - 1;
-        const lastPage = Math.max(
-          1,
-          Math.ceil(totalAfterDelete / itemsPerPage)
-        );
-        if (currentPage > lastPage) {
-          setCurrentPage(lastPage);
-        }
-      }, 200);
-    }
+  const confirmDelete = () => {
+    if (!deleteTarget) return;
+    setErrorMessage("");
+    setSuccessMessage(null);
+    deleteLabor(deleteTarget.id);
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
+
+    setTimeout(() => {
+      const totalAfterDelete = labors.length - 1;
+      const lastPage = Math.max(
+        1,
+        Math.ceil(totalAfterDelete / itemsPerPage)
+      );
+      if (currentPage > lastPage) {
+        setCurrentPage(lastPage);
+      }
+    }, 200);
   };
 
   const handleEdit = (item: LaborInfo) => {
@@ -131,6 +225,162 @@ export default function ListTasks() {
     }
   };
 
+  const handleExport = async () => {
+    if (!projectId) return;
+
+    try {
+      setErrorMessage("");
+      const response = await apiClient.get<Blob>(
+        `/labors/database-export/${projectId}`,
+        undefined,
+        { responseType: "blob" }
+      );
+
+      const url = window.URL.createObjectURL(response);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `labores_${projectId}_${new Date().toISOString()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      setErrorMessage("No se pudo exportar el listado de labores.");
+    }
+  };
+
+  const handleImportLaborsFromFile = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!projectId) {
+      setErrorMessage("Por favor, seleccione un proyecto antes de importar.");
+      return;
+    }
+
+    const lowerName = file.name.toLowerCase();
+    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
+    const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+
+    if (!isCsv && !isExcel) {
+      setErrorMessage("Formato no soportado. Use .xlsx, .xls o .csv.");
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+      setSuccessMessage(null);
+
+      let parsedRows: Record<string, string>[] = [];
+      if (isCsv) {
+        const text = await file.text();
+        parsedRows = parseCsv(text);
+      } else {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const sheetNames = workbook.SheetNames || [];
+        const preferred =
+          sheetNames.find((n) => normalizeText(n).includes("labor")) ??
+          sheetNames[0];
+
+        const trySheets = [
+          preferred,
+          ...sheetNames.filter((n) => n !== preferred),
+        ].filter(Boolean) as string[];
+
+        let jsonRows: Record<string, unknown>[] = [];
+        for (const sheetName of trySheets) {
+          const sheet = workbook.Sheets[sheetName];
+          if (!sheet) continue;
+          const candidate = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+            sheet,
+            { defval: "" }
+          );
+          if (candidate.length > 0) {
+            jsonRows = candidate;
+            break;
+          }
+        }
+        parsedRows = jsonRows.map(normalizeSpreadsheetRow);
+      }
+
+      if (parsedRows.length === 0) {
+        setErrorMessage("El archivo no tiene datos válidos. Verifique encabezados y filas.");
+        return;
+      }
+
+      const categoryByName = new Map(
+        categories.map((c) => [normalizeText(c.name), c])
+      );
+
+      const laborsToSave: LaborToSave[] = [];
+      const importErrors: string[] = [];
+
+      parsedRows.forEach((rawRow, idx) => {
+        const rowNumber = idx + 2;
+        const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
+        const categoryRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.category).trim();
+        const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
+        const contractor = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.contractor).trim();
+
+        if (!name && !categoryRaw && !priceRaw && !contractor) return;
+
+        const categoryByText = categoryByName.get(normalizeText(categoryRaw));
+        const categoryId = categoryByText?.id ?? Number(categoryRaw);
+        const priceValue = Number(priceRaw.replace(/\$/g, "").replace(",", "."));
+
+        if (!name) importErrors.push(`Fila ${rowNumber}: falta "Labor".`);
+        if (!categoryId || Number.isNaN(categoryId))
+          importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
+        if (!priceRaw || Number.isNaN(priceValue) || priceValue <= 0)
+          importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
+        if (!contractor)
+          importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
+
+        if (
+          name &&
+          categoryId &&
+          !Number.isNaN(categoryId) &&
+          !Number.isNaN(priceValue) &&
+          priceValue > 0 &&
+          contractor
+        ) {
+          laborsToSave.push({
+            name,
+            category_id: categoryId,
+            price: String(priceValue),
+            contractor_name: contractor,
+          });
+        }
+      });
+
+      if (laborsToSave.length === 0) {
+        setErrorMessage(
+          importErrors.length > 0
+            ? importErrors.slice(0, 8).join(" ")
+            : "No se encontraron filas importables en el archivo."
+        );
+        return;
+      }
+
+      await saveLabors(laborsToSave, projectId);
+      getLabors(projectId);
+
+      if (importErrors.length > 0) {
+        setSuccessMessage(
+          `Se importaron ${laborsToSave.length} labores. Se omitieron ${importErrors.length} filas con error.`
+        );
+      } else {
+        setSuccessMessage(`Se importaron ${laborsToSave.length} labores con éxito.`);
+      }
+    } catch {
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
+    }
+  };
+
   const paginatedLabors = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return labors.slice(startIndex, startIndex + itemsPerPage);
@@ -138,7 +388,29 @@ export default function ListTasks() {
 
   return (
     <div className="w-full mx-auto">
-      <FilterBar filters={filters} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+        onChange={handleImportLaborsFromFile}
+        className="hidden"
+      />
+      <FilterBar
+        filters={filters}
+        actions={[
+          {
+            label: "Exportar labores",
+            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            ,
+            variant: "outlinePonti",
+            isPrimary: true,
+            disabled: !projectId,
+            onClick: () => handleExport(),
+          },
+        ]}
+      />
       <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
         {errorMessage && (
           <div
@@ -313,10 +585,26 @@ export default function ListTasks() {
               />
             </div>
           </BaseModal>
+          <BaseModal
+            isOpen={deleteModalOpen}
+            onClose={() => {
+              setDeleteModalOpen(false);
+              setDeleteTarget(null);
+            }}
+            title="Archivar labor"
+            message={
+              deleteTarget && deleteTarget.count > 0
+                ? `La labor "${deleteTarget.name}" está en ${deleteTarget.count} orden${deleteTarget.count > 1 ? "es" : ""} de trabajo activa${deleteTarget.count > 1 ? "s" : ""}. Se archivará del catálogo pero las órdenes no se verán afectadas. ¿Continuar?`
+                : `¿Está seguro que desea archivar la labor "${deleteTarget?.name}"?`
+            }
+            primaryButtonText="Archivar"
+            primaryButtonColor="bg-red-600 hover:bg-red-800 focus:ring-red-300"
+            onPrimaryAction={confirmDelete}
+          />
           <DataTable
             data={paginatedLabors}
             columns={columns}
-            onDelete={(item) => handleDelete(item.id)}
+            onDelete={(item) => handleDelete(item)}
             onEdit={(item) => handleEdit(item)}
             message="No hay labores cargadas en el proyecto"
             pagination={{
