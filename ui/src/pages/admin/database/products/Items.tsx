@@ -993,7 +993,7 @@ export default function Items() {
         title="Se encontraron insumos existentes"
         message={
           pendingImport
-            ? `El archivo contiene ${pendingImport.duplicates.length} insumo${pendingImport.duplicates.length > 1 ? "s" : ""} que ya existe${pendingImport.duplicates.length > 1 ? "n" : ""} en el catálogo:\n${pendingImport.duplicates.slice(0, 8).map((d) => `  - ${d.existing.name}`).join("\n")}${pendingImport.duplicates.length > 8 ? `\n  y ${pendingImport.duplicates.length - 8} más...` : ""}${pendingImport.newRows.length > 0 ? `\n\nAdemás hay ${pendingImport.newRows.length} insumo${pendingImport.newRows.length > 1 ? "s" : ""} nuevo${pendingImport.newRows.length > 1 ? "s" : ""}.` : ""}`
+            ? `El archivo contiene ${pendingImport.duplicates.length} insumo${pendingImport.duplicates.length > 1 ? "s" : ""} que ya existe${pendingImport.duplicates.length > 1 ? "n" : ""} en la lista.${pendingImport.newRows.length > 0 ? `\n\nAdemás hay ${pendingImport.newRows.length} insumo${pendingImport.newRows.length > 1 ? "s" : ""} nuevo${pendingImport.newRows.length > 1 ? "s" : ""}.` : ""}`
             : ""
         }
         primaryButtonText={overwriting ? "Actualizando..." : "Sobreescribir existentes"}

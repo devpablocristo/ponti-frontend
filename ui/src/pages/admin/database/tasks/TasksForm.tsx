@@ -738,7 +738,7 @@ export default function TasksForm() {
         title="Se encontraron labores existentes"
         message={
           pendingImport
-            ? `El archivo contiene ${pendingImport.duplicates.length} labor${pendingImport.duplicates.length > 1 ? "es" : ""} que ya existe${pendingImport.duplicates.length > 1 ? "n" : ""} en el catálogo:\n${pendingImport.duplicates.slice(0, 8).map((d) => `  - ${d.existing.name}`).join("\n")}${pendingImport.duplicates.length > 8 ? `\n  y ${pendingImport.duplicates.length - 8} más...` : ""}${pendingImport.newRows.length > 0 ? `\n\nAdemás hay ${pendingImport.newRows.length} labor${pendingImport.newRows.length > 1 ? "es" : ""} nueva${pendingImport.newRows.length > 1 ? "s" : ""}.` : ""}`
+            ? `El archivo contiene ${pendingImport.duplicates.length} labor${pendingImport.duplicates.length > 1 ? "es" : ""} que ya existe${pendingImport.duplicates.length > 1 ? "n" : ""} en la lista.${pendingImport.newRows.length > 0 ? `\n\nAdemás hay ${pendingImport.newRows.length} labor${pendingImport.newRows.length > 1 ? "es" : ""} nueva${pendingImport.newRows.length > 1 ? "s" : ""}.` : ""}`
             : ""
         }
         primaryButtonText={overwriting ? "Actualizando..." : "Sobreescribir existentes"}

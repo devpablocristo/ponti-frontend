@@ -428,21 +428,25 @@ export default function CreateItem({
   }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
 
   const availableSupplies = useMemo(() => {
-    if (!stock || stock.length === 0) return [];
     const stockBySupply = new Map<string, number>();
-    for (const s of stock) {
+    for (const s of stock || []) {
       const current = stockBySupply.get(s.supply_name) || 0;
       stockBySupply.set(s.supply_name, current + Number(s.stock_units));
     }
+
+    // Movimiento interno: solo insumos con stock > 0
+    // Remito oficial / Stock: todos los insumos del catálogo
+    const isInternalTransfer = type?.id === 2;
+
     return supplies
-      .filter((s) => Number(stockBySupply.get(s.name) || 0) > 0)
+      .filter((s) => !isInternalTransfer || Number(stockBySupply.get(s.name) || 0) > 0)
       .map((s) => ({
         id: s.id,
         name: s.name,
         qty: Number(stockBySupply.get(s.name) || 0),
         unit: getUnitName(s.unit_id),
       }));
-  }, [supplies, stock]);
+  }, [supplies, stock, type]);
 
   useEffect(() => {
     if (!selectedProject) return;
