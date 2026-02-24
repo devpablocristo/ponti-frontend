@@ -245,13 +245,13 @@ export function Customers() {
         filters={filters}
         actions={[
           {
-            label: "+ Nuevo cliente",
+            label: "+ Nuevo Cliente",
             variant: "success",
             isPrimary: true,
             href: "/admin/database/customers",
           },
           {
-            label: "Archivar cliente",
+            label: "Archivar Cliente",
             variant: "danger",
             onClick: handlePreArchiveCustomer,
             disabled:

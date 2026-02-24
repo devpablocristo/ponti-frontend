@@ -158,7 +158,7 @@ export function Dashboard() {
         filters={filters}
         actions={[
           {
-            label: "Generar informe",
+            label: "Generar Informe",
             variant: "outlineGreen",
             onClick: () => getDashboardInfo(buildQueryParams()),
           },

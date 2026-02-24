@@ -275,13 +275,13 @@ export function ByFieldOrCropReport() {
         filters={ filters }
         actions={ [
           {
-            label: "Generar informe",
+            label: "Generar Informe",
             variant: "success",
             disabled: processing,
             onClick: () => getFieldCropReportingData(buildQueryParams()),
           },
           {
-            label: "Exportar informe",
+            label: "Exportar Informe",
             variant: "outlineGreen",
             icon: <SquareArrowOutUpRight className="h-3.5 w-3.5 stroke-[3px]"/>,
             disabled: processing,
