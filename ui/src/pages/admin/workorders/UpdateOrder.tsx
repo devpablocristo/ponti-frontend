@@ -307,6 +307,7 @@ export default function UpdateOrder({
                         price: Number(price),
                         category: Number(category),
                         type: Number(type),
+                        is_partial_price: false,
                       },
                     ],
                     projectId

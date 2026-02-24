@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
+import { parsePartialPriceFlag } from "../utils/partialPrice";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -109,13 +110,6 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
     // CategoryID int64 `json:"category_id"`
     // TypeID     int64 `json:"type_id"`
     // IsPartialPrice bool `json:"is_partial_price"`
-
-    // Qué había antes:
-    // - El BFF no reenviaba `is_partial_price` en edición.
-    // Qué agregamos:
-    // - Passthrough del checkbox parcial/final al backend.
-    // Por qué:
-    // - Si no, el cambio de estado no se persistía desde el modal de edición.
     const requestData = {
       id: req.body.id,
       project_id: Number(req.params.project_id),
@@ -124,7 +118,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       price: req.body.price,
       unit_id: req.body.unit_id,
       type_id: req.body.type_id,
-      is_partial_price: Boolean(req.body.is_partial_price),
+      is_partial_price: parsePartialPriceFlag(req.body.is_partial_price),
     };
 
     const { data: workorder } = await apiClient.put<any>(
@@ -177,12 +171,6 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     let supplies = req.body;
     if (Array.isArray(supplies)) {
-      // Qué había antes:
-      // - En alta masiva solo viajaban nombre/unidad/precio/rubro/tipo.
-      // Qué agregamos:
-      // - `is_partial_price` para crear insumos con estado parcial/final.
-      // Por qué:
-      // - El checkbox de alta necesita persistirse desde el primer guardado.
       supplies = supplies.map((item: any) => ({
         name: item.name,
         price: Number(item.price),
@@ -190,7 +178,7 @@ router.put("/:id", async (req: Request, res: Response) => {
         category_id: Number(item.category),
         type_id: Number(item.type),
         project_id: projectId,
-        is_partial_price: Boolean(item.is_partial_price),
+        is_partial_price: parsePartialPriceFlag(item.is_partial_price),
       }));
     } else {
       res.status(400).json({ message: "Insumo obligatorio" });
