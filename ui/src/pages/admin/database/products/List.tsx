@@ -14,6 +14,17 @@ import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
 
+const renderPriceCell = (value: unknown, row: Supply) => (
+  <div className="flex items-center gap-2">
+    <strong>{String(value)}</strong>
+    {row.is_partial_price ? (
+      <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
+        Parcial
+      </span>
+    ) : null}
+  </div>
+);
+
 const columns: Column<Supply>[] = [
   {
     key: "name",
@@ -28,7 +39,7 @@ const columns: Column<Supply>[] = [
   {
     key: "price",
     header: "Precio",
-    render: (value) => <strong>{value}</strong>,
+    render: (value, row) => renderPriceCell(value, row),
   },
   {
     key: "category_name",
@@ -355,6 +366,27 @@ export default function ListItems() {
                   />
                 </div>
               </div>
+
+              {/*
+                Qué había antes:
+                - En edición no se podía cambiar el estado parcial/final.
+                Qué agregamos:
+                - Checkbox para marcar/desmarcar precio parcial.
+                Por qué:
+                - Permite pasar de parcial a final aunque el valor del precio no cambie.
+              */}
+              <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                  checked={Boolean(item?.is_partial_price)}
+                  onChange={(e) => {
+                    if (!item) return;
+                    setItem({ ...item, is_partial_price: e.target.checked });
+                  }}
+                />
+                Precio parcial (tentativo)
+              </label>
               <SelectField
                 label="Rubro"
                 name={`category-${item?.name || ""}`}

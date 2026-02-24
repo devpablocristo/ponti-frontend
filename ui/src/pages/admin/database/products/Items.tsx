@@ -19,6 +19,7 @@ interface Row {
   price: string;
   type: string;
   category: string;
+  is_partial_price: boolean;
 }
 
 interface PendingImport {
@@ -32,6 +33,18 @@ const HEADER_ALIASES = {
   unit: ["unidad", "unit"],
   // Support stock exports too (e.g. "PRECIO U.", "PRECIO U$")
   price: ["precio", "precio_usd", "precio_u", "precio_u_usd", "usd", "u$s", "precio_unidad", "precio_unitario"],
+  // Nuevo:
+  // - Alias para importar estado de precio desde archivos Excel/CSV.
+  // - Soporta el encabezado exportado por backend: "ESTADO PRECIO".
+  priceStatus: [
+    "estado_precio",
+    "precio_parcial",
+    "is_partial_price",
+    "parcial",
+    "final_parcial",
+    "estado_del_precio",
+    "precio_tentativo",
+  ],
   category: ["rubro", "categoria", "category"],
   type: ["tipo", "tipo_clase", "clase", "type"],
 } as const;
@@ -171,6 +184,36 @@ function getValueByAliases(
   return "";
 }
 
+function parsePartialPrice(rawValue: string) {
+  const raw = (rawValue ?? "").trim();
+  if (!raw) {
+    return { provided: false, valid: true, value: false };
+  }
+
+  const normalized = normalizeText(raw).replace(/_/g, "");
+
+  const partialValues = new Set([
+    "parcial",
+    "tentativo",
+    "si",
+    "true",
+    "1",
+    "x",
+    "check",
+    "checked",
+  ]);
+  const finalValues = new Set(["final", "no", "false", "0"]);
+
+  if (partialValues.has(normalized)) {
+    return { provided: true, valid: true, value: true };
+  }
+  if (finalValues.has(normalized)) {
+    return { provided: true, valid: true, value: false };
+  }
+
+  return { provided: true, valid: false, value: false };
+}
+
 export default function Items() {
   const { saveSupplies, result, error, supplies, getSupplies } = useSupplies();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -198,6 +241,7 @@ export default function Items() {
       price: "",
       type: "",
       category: "",
+      is_partial_price: false,
     }))
   );
 
@@ -215,6 +259,7 @@ export default function Items() {
           price: "",
           type: "",
           category: "",
+      is_partial_price: false,
         }))
       )
     );
@@ -279,6 +324,7 @@ export default function Items() {
       price: "",
       type: "",
       category: "",
+      is_partial_price: false,
     }));
 
     setRows(emptyRows);
@@ -307,7 +353,15 @@ export default function Items() {
     }
   }, [error]);
 
-  const handleChange = (id: number, field: keyof Row, value: string) => {
+  // Qué había antes:
+  // - `handleChange` solo aceptaba string.
+  // Qué cambiamos:
+  // - Ahora acepta string o boolean para soportar checkbox de precio parcial.
+  const handleChange = (
+    id: number,
+    field: keyof Row,
+    value: string | boolean
+  ) => {
     setRows((prev) => {
       const newRows = prev.map((row) =>
         row.id === id ? { ...row, [field]: value } : row
@@ -393,6 +447,8 @@ export default function Items() {
         price: Number(row.price),
         type: Number(row.type),
         category: Number(row.category),
+        // Nuevo: enviamos el estado parcial/final al backend.
+        is_partial_price: Boolean(row.is_partial_price),
       }));
 
     if (suppliesToSave.length === 0) {
@@ -423,6 +479,7 @@ export default function Items() {
           price: "",
           type: "",
           category: "",
+      is_partial_price: false,
         },
       ];
       setHasUnsavedChanges(true);
@@ -440,6 +497,7 @@ export default function Items() {
         price: "",
         type: "",
         category: "",
+      is_partial_price: false,
       });
     }
 
@@ -615,11 +673,16 @@ export default function Items() {
         const name = getValueByAliases(rawRow, HEADER_ALIASES.name).trim();
         const unitRaw = getValueByAliases(rawRow, HEADER_ALIASES.unit).trim();
         const priceRaw = getValueByAliases(rawRow, HEADER_ALIASES.price).trim();
+        const priceStatusRaw = getValueByAliases(
+          rawRow,
+          HEADER_ALIASES.priceStatus
+        ).trim();
         const categoryRaw = getValueByAliases(
           rawRow,
           HEADER_ALIASES.category
         ).trim();
         const typeRaw = getValueByAliases(rawRow, HEADER_ALIASES.type).trim();
+        const parsedPartial = parsePartialPrice(priceStatusRaw);
 
         if (!name && !unitRaw && !priceRaw && !categoryRaw && !typeRaw) return;
 
@@ -658,6 +721,14 @@ export default function Items() {
               category_name: catName,
               type_id: (typeId && !Number.isNaN(typeId)) ? typeId : existing.type_id,
               type_name: typName,
+              // Qué había antes:
+              // - Siempre conservábamos el estado existente y no permitíamos cambiarlo desde importación.
+              // Qué cambiamos:
+              // - Si la columna de estado viene en el archivo y es válida, la aplicamos.
+              // - Si no viene, conservamos el estado actual.
+              is_partial_price: parsedPartial.provided && parsedPartial.valid
+                ? parsedPartial.value
+                : Boolean(existing.is_partial_price),
             },
           });
           return;
@@ -679,6 +750,11 @@ export default function Items() {
             `Fila ${rowNumber} ("${name}"): "Tipo/Clase" inválido o no deducible por rubro.`
           );
         }
+        if (parsedPartial.provided && !parsedPartial.valid) {
+          importWarnings.push(
+            `Fila ${rowNumber} ("${name}"): "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
+          );
+        }
 
         importedRows.push({
           id: importedRows.length + 1,
@@ -688,6 +764,10 @@ export default function Items() {
             !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : "",
           category: categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
           type: typeId && !Number.isNaN(typeId) ? String(typeId) : "",
+          // En importación:
+          // - Si la columna viene y es válida, respetamos el valor.
+          // - Si no viene, por defecto queda en Final (false).
+          is_partial_price: parsedPartial.valid ? parsedPartial.value : false,
         });
       });
 
@@ -840,15 +920,16 @@ export default function Items() {
           </div>
         </div>
         <div className="mt-4">
-          <div className="hidden sm:grid grid-cols-[1fr_0.5fr_0.5fr_1fr_1fr] gap-4 mb-2">
+          <div className="hidden sm:grid grid-cols-[1fr_0.5fr_0.5fr_0.6fr_1fr_1fr] gap-4 mb-2">
             <span className="font-medium">Insumo</span>
             <span className="font-medium">Unidad</span>
             <span className="font-medium">Precio</span>
+            <span className="font-medium">¿Parcial?</span>
             <span className="font-medium">Rubro</span>
             <span className="font-medium">Tipo/Clase</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_0.5fr_0.5fr_1fr_1fr] gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_0.5fr_0.5fr_0.6fr_1fr_1fr] gap-4">
             {rows.map((row, index) => {
               return (
                 <div
@@ -901,6 +982,26 @@ export default function Items() {
                       }}
                       placeholder="u$s"
                     />
+                  </div>
+                  <div className="sm:col-span-1 flex items-center sm:items-end">
+                    {/*
+                      Qué había antes:
+                      - En alta no existía control para precio parcial.
+                      Qué agregamos:
+                      - Checkbox por fila para marcar precio tentativo.
+                      Por qué:
+                      - Permite decidir el estado al crear cada insumo.
+                    */}
+                    <label className="inline-flex items-center gap-2 text-sm text-gray-700 mt-6 sm:mt-0">
+                      <input
+                        type="checkbox"
+                        name={`is_partial_price-${index}`}
+                        className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                        checked={Boolean(row.is_partial_price)}
+                        onChange={(e) => handleChange(row.id, "is_partial_price", e.target.checked)}
+                      />
+                      <span className="sm:hidden">Precio parcial</span>
+                    </label>
                   </div>
                   <div className="sm:col-span-1">
                     <label className="sm:hidden text-sm text-gray-600">
