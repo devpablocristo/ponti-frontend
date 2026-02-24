@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
@@ -25,34 +25,6 @@ const renderPriceCell = (value: unknown, row: Supply) => (
   </div>
 );
 
-const columns: Column<Supply>[] = [
-  {
-    key: "name",
-    header: "Nombre",
-    render: (value) => <strong className="text-blue-700">{value}</strong>,
-  },
-  {
-    key: "unit_name",
-    header: "Unidad",
-    render: (value) => value || "-",
-  },
-  {
-    key: "price",
-    header: "Precio",
-    render: (value, row) => renderPriceCell(value, row),
-  },
-  {
-    key: "category_name",
-    header: "Rubro",
-    render: (value) => value,
-  },
-  {
-    key: "type_name",
-    header: "Tipo/Clase",
-    render: (value) => value,
-  },
-];
-
 export default function ListItems() {
   const {
     getSupplies,
@@ -76,6 +48,7 @@ export default function ListItems() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
   const itemsPerPage = 10;
 
   const { filters, projectId } = useWorkspaceFilters([
@@ -121,6 +94,128 @@ export default function ListItems() {
       setSuccessMessage(null);
     }
   }, [errorUpdate]);
+
+  const applyColumnFilters = (
+    data: Supply[],
+    activeFilters: Record<string, any>,
+    excludeKey?: string
+  ) => {
+    return data.filter((supply) =>
+      Object.entries(activeFilters).every(([key, value]) => {
+        if (key === excludeKey) return true;
+        if (value === undefined || value === null || value === "") return true;
+        if (key === "price") {
+          const status = supply.is_partial_price ? "Parcial" : "Final";
+          if (Array.isArray(value)) {
+            if (value.length === 0) return true;
+            return value.includes(status);
+          }
+          return status.toLowerCase().includes(String(value).toLowerCase());
+        }
+
+        const currentValue = String((supply as any)[key] ?? "");
+        if (Array.isArray(value)) {
+          if (value.length === 0) return true;
+          return value.includes(currentValue);
+        }
+        return currentValue.toLowerCase().includes(String(value).toLowerCase());
+      })
+    );
+  };
+
+  const filteredSupplies = useMemo(() => {
+    return applyColumnFilters(supplies || [], columnsFilters);
+  }, [supplies, columnsFilters]);
+
+  const columns = useMemo<Column<Supply>[]>(() => {
+    const nameOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "name")
+          .map((s) => s.name)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+
+    const unitOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "unit_name")
+          .map((s) => s.unit_name)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+
+    const categoryOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "category_name")
+          .map((s) => s.category_name)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+
+    const typeOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "type_name")
+          .map((s) => s.type_name)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+
+    const priceStatusOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "price").map((s) =>
+          s.is_partial_price ? "Parcial" : "Final"
+        )
+      ),
+    ] as string[];
+
+    return [
+      {
+        key: "name",
+        header: "Nombre",
+        render: (value) => <strong className="text-blue-700">{value}</strong>,
+        filterType: "select",
+        filterOptions: nameOptions,
+      },
+      {
+        key: "unit_name",
+        header: "Unidad",
+        render: (value) => value || "-",
+        filterType: "select",
+        filterOptions: unitOptions,
+      },
+      {
+        key: "price",
+        header: "Precio",
+        render: (value, row) => renderPriceCell(value, row),
+        filterType: "select",
+        filterOptions: priceStatusOptions,
+      },
+      {
+        key: "category_name",
+        header: "Rubro",
+        render: (value) => value,
+        filterType: "select",
+        filterOptions: categoryOptions,
+      },
+      {
+        key: "type_name",
+        header: "Tipo/Clase",
+        render: (value) => value,
+        filterType: "select",
+        filterOptions: typeOptions,
+      },
+    ];
+  }, [supplies, columnsFilters]);
+
+  const handleFilterChange = (filters: Record<string, any>) => {
+    const nextFilters = { ...filters };
+    if (Array.isArray(nextFilters.price) && nextFilters.price.length > 1) {
+      nextFilters.price = [nextFilters.price[nextFilters.price.length - 1]];
+    }
+
+    setColumnsFilters(nextFilters);
+    setCurrentPage(1);
+  };
 
   const handleDelete = async (supplyItem: Supply) => {
     const count = await getWorkOrdersCount(supplyItem.id);
@@ -366,15 +461,6 @@ export default function ListItems() {
                   />
                 </div>
               </div>
-
-              {/*
-                Qué había antes:
-                - En edición no se podía cambiar el estado parcial/final.
-                Qué agregamos:
-                - Checkbox para marcar/desmarcar precio parcial.
-                Por qué:
-                - Permite pasar de parcial a final aunque el valor del precio no cambie.
-              */}
               <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
@@ -434,15 +520,18 @@ export default function ListItems() {
             onPrimaryAction={confirmDelete}
           />
           <DataTable
-            data={supplies}
+            data={filteredSupplies}
             columns={columns}
+            filters={columnsFilters}
+            onFilterChange={handleFilterChange}
+            enableFilters={true}
             onDelete={(item) => handleDelete(item)}
             onEdit={(item) => handleEdit(item)}
             message="No hay insumos cargados en el proyecto"
             pagination={{
               page: currentPage,
               perPage: itemsPerPage,
-              total: supplies.length,
+              total: filteredSupplies.length,
               onPageChange: (newPage: number) => setCurrentPage(newPage),
             }}
           />
