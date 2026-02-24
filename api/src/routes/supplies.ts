@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
+import { parsePartialPriceFlag } from "../utils/partialPrice";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -108,7 +109,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
     // UnitID     int64 `json:"unit_id"`
     // CategoryID int64 `json:"category_id"`
     // TypeID     int64 `json:"type_id"`
-
+    // IsPartialPrice bool `json:"is_partial_price"`
     const requestData = {
       id: req.body.id,
       project_id: Number(req.params.project_id),
@@ -117,6 +118,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       price: req.body.price,
       unit_id: req.body.unit_id,
       type_id: req.body.type_id,
+      is_partial_price: parsePartialPriceFlag(req.body.is_partial_price),
     };
 
     const { data: workorder } = await apiClient.put<any>(
@@ -176,6 +178,7 @@ router.put("/:id", async (req: Request, res: Response) => {
         category_id: Number(item.category),
         type_id: Number(item.type),
         project_id: projectId,
+        is_partial_price: parsePartialPriceFlag(item.is_partial_price),
       }));
     } else {
       res.status(400).json({ message: "Insumo obligatorio" });

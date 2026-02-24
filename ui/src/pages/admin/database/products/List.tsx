@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
@@ -14,33 +14,16 @@ import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
 
-const columns: Column<Supply>[] = [
-  {
-    key: "name",
-    header: "Nombre",
-    render: (value) => <strong className="text-blue-700">{value}</strong>,
-  },
-  {
-    key: "unit_name",
-    header: "Unidad",
-    render: (value) => value || "-",
-  },
-  {
-    key: "price",
-    header: "Precio",
-    render: (value) => <strong>{value}</strong>,
-  },
-  {
-    key: "category_name",
-    header: "Rubro",
-    render: (value) => value,
-  },
-  {
-    key: "type_name",
-    header: "Tipo/Clase",
-    render: (value) => value,
-  },
-];
+const renderPriceCell = (value: unknown, row: Supply) => (
+  <div className="flex items-center gap-2">
+    <strong>{String(value)}</strong>
+    {row.is_partial_price ? (
+      <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
+        Parcial
+      </span>
+    ) : null}
+  </div>
+);
 
 export default function ListItems() {
   const {
@@ -65,6 +48,7 @@ export default function ListItems() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
   const itemsPerPage = 10;
 
   const { filters, projectId } = useWorkspaceFilters([
@@ -110,6 +94,128 @@ export default function ListItems() {
       setSuccessMessage(null);
     }
   }, [errorUpdate]);
+
+  const applyColumnFilters = (
+    data: Supply[],
+    activeFilters: Record<string, any>,
+    excludeKey?: string
+  ) => {
+    return data.filter((supply) =>
+      Object.entries(activeFilters).every(([key, value]) => {
+        if (key === excludeKey) return true;
+        if (value === undefined || value === null || value === "") return true;
+        if (key === "price") {
+          const status = supply.is_partial_price ? "Parcial" : "Final";
+          if (Array.isArray(value)) {
+            if (value.length === 0) return true;
+            return value.includes(status);
+          }
+          return status.toLowerCase().includes(String(value).toLowerCase());
+        }
+
+        const currentValue = String((supply as any)[key] ?? "");
+        if (Array.isArray(value)) {
+          if (value.length === 0) return true;
+          return value.includes(currentValue);
+        }
+        return currentValue.toLowerCase().includes(String(value).toLowerCase());
+      })
+    );
+  };
+
+  const filteredSupplies = useMemo(() => {
+    return applyColumnFilters(supplies || [], columnsFilters);
+  }, [supplies, columnsFilters]);
+
+  const columns = useMemo<Column<Supply>[]>(() => {
+    const nameOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "name")
+          .map((s) => s.name)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+
+    const unitOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "unit_name")
+          .map((s) => s.unit_name)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+
+    const categoryOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "category_name")
+          .map((s) => s.category_name)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+
+    const typeOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "type_name")
+          .map((s) => s.type_name)
+          .filter(Boolean)
+      ),
+    ].sort() as string[];
+
+    const priceStatusOptions = [
+      ...new Set(
+        applyColumnFilters(supplies || [], columnsFilters, "price").map((s) =>
+          s.is_partial_price ? "Parcial" : "Final"
+        )
+      ),
+    ] as string[];
+
+    return [
+      {
+        key: "name",
+        header: "Nombre",
+        render: (value) => <strong className="text-blue-700">{value}</strong>,
+        filterType: "select",
+        filterOptions: nameOptions,
+      },
+      {
+        key: "unit_name",
+        header: "Unidad",
+        render: (value) => value || "-",
+        filterType: "select",
+        filterOptions: unitOptions,
+      },
+      {
+        key: "price",
+        header: "Precio",
+        render: (value, row) => renderPriceCell(value, row),
+        filterType: "select",
+        filterOptions: priceStatusOptions,
+      },
+      {
+        key: "category_name",
+        header: "Rubro",
+        render: (value) => value,
+        filterType: "select",
+        filterOptions: categoryOptions,
+      },
+      {
+        key: "type_name",
+        header: "Tipo/Clase",
+        render: (value) => value,
+        filterType: "select",
+        filterOptions: typeOptions,
+      },
+    ];
+  }, [supplies, columnsFilters]);
+
+  const handleFilterChange = (filters: Record<string, any>) => {
+    const nextFilters = { ...filters };
+    if (Array.isArray(nextFilters.price) && nextFilters.price.length > 1) {
+      nextFilters.price = [nextFilters.price[nextFilters.price.length - 1]];
+    }
+
+    setColumnsFilters(nextFilters);
+    setCurrentPage(1);
+  };
 
   const handleDelete = async (supplyItem: Supply) => {
     const count = await getWorkOrdersCount(supplyItem.id);
@@ -355,6 +461,18 @@ export default function ListItems() {
                   />
                 </div>
               </div>
+              <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                  checked={Boolean(item?.is_partial_price)}
+                  onChange={(e) => {
+                    if (!item) return;
+                    setItem({ ...item, is_partial_price: e.target.checked });
+                  }}
+                />
+                Precio parcial (tentativo)
+              </label>
               <SelectField
                 label="Rubro"
                 name={`category-${item?.name || ""}`}
@@ -402,15 +520,18 @@ export default function ListItems() {
             onPrimaryAction={confirmDelete}
           />
           <DataTable
-            data={supplies}
+            data={filteredSupplies}
             columns={columns}
+            filters={columnsFilters}
+            onFilterChange={handleFilterChange}
+            enableFilters={true}
             onDelete={(item) => handleDelete(item)}
             onEdit={(item) => handleEdit(item)}
             message="No hay insumos cargados en el proyecto"
             pagination={{
               page: currentPage,
               perPage: itemsPerPage,
-              total: supplies.length,
+              total: filteredSupplies.length,
               onPageChange: (newPage: number) => setCurrentPage(newPage),
             }}
           />

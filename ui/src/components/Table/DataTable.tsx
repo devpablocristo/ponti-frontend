@@ -235,7 +235,14 @@ const DataTable = <T,>({
                       } ${column.headerWrap ? "whitespace-normal break-words" : ""
                       }`}
                   >
-                    <div className="flex items-center justify-between">
+                    {/* 
+                      Qué había antes:
+                      - Nombre/íconos a la izquierda y filtro en el extremo derecho.
+                      Qué cambiamos:
+                      - Agrupamos header + orden + filtro en el mismo bloque para que el ícono de filtro
+                        quede pegado al nombre de la columna.
+                    */}
+                    <div className="inline-flex items-center gap-1">
                       <div className="flex items-center gap-1">
                         {/* Ícono de ordenamiento */}
                         {column.sortable !== false && (

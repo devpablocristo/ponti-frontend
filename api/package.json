@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
+    "test": "npm run build && node --test test",
     "dev": "NODE_ENV=development nodemon --ext ts --exec ts-node src/index.ts",
     "local": "NODE_ENV=local nodemon --ext ts --exec ts-node src/index.ts",
     "start": "node dist/index.js",

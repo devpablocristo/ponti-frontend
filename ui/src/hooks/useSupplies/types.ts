@@ -18,12 +18,14 @@ export type SupplyCreatePayload = {
   price: number;
   type: number;
   category: number;
+  is_partial_price: boolean;
 };
 
 export type Supply = {
   id: number;
   name: string;
   price: string;
+  is_partial_price?: boolean;
   unit_id?: number;
   unit_name?: string;
   type_name: string;
