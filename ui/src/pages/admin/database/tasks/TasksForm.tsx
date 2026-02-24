@@ -596,7 +596,7 @@ export default function TasksForm() {
               className="hidden"
             />
             <Button
-              variant="outlinePonti"
+              variant="primary"
               size="sm"
               className="text-sm font-medium"
               onClick={() => fileInputRef.current?.click()}
@@ -715,12 +715,12 @@ export default function TasksForm() {
       <div className="flex justify-between flex-wrap gap-4 my-4">
         <div />
         <div className="flex gap-4 my-2 justify-end">
-          <Button variant="outlineGray" className="text-base font-medium">
+          <Button variant="primary" className="text-base font-medium">
             Cancelar
           </Button>
           <Button
             onClick={handleCreateLabors}
-            variant="success"
+            variant="primary"
             className="text-base font-medium"
             disabled={processing}
           >

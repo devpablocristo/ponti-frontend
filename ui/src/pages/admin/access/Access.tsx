@@ -136,7 +136,7 @@ export default function Access() {
                 Crear
               </Button>
               <Button
-                variant="secondary"
+                variant="primary"
                 type="button"
                 disabled={loading}
                 onClick={refresh}
@@ -208,7 +208,7 @@ export default function Access() {
                 Crear / asignar
               </Button>
               <Button
-                variant="secondary"
+                variant="primary"
                 type="button"
                 disabled={loading}
                 onClick={refresh}

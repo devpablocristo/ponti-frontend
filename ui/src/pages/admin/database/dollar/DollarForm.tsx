@@ -316,11 +316,11 @@ export default function DollarForm() {
         </div>
       </div>
       <div className="flex gap-4 my-4 justify-end">
-        <Button variant="outlineGray" className="text-base font-medium">
+        <Button variant="primary" className="text-base font-medium">
           Cancelar
         </Button>
         <Button
-          variant="success"
+          variant="primary"
           disabled={processing}
           onClick={handleSaveDollarValues}
           className="text-base font-medium"

@@ -133,7 +133,7 @@ const AIInsights = () => {
         </Button>
         <Button
           size="sm"
-          variant="outlineGreen"
+          variant="primary"
           className="px-6"
           disabled={loading}
           onClick={handleCompute}

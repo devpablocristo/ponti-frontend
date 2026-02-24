@@ -248,7 +248,7 @@ function LotsHeader({
       </div>
 
       <Button
-        variant="light"
+        variant="primary"
         size="sm"
         iconLeft={
           <svg
@@ -917,17 +917,17 @@ const filteredLots = useMemo(() => {
           {
             label: "Exportar Lotes",
             icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="#547792" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
             ,
-            variant: "outlinePonti",
+            variant: "primary",
             isPrimary: true,
             disabled: !projectId,
             onClick: () => handleExport(),
           },
           {
             label: "+ Nuevo Lote",
-            variant: "success",
+            variant: "primary",
             isPrimary: true,
             disabled:
               !projectId ||
@@ -1205,14 +1205,14 @@ const filteredLots = useMemo(() => {
                 </form>
                 <div className="flex justify-end gap-2 mt-auto pt-6 bg-white">
                   <Button
-                    variant="outlineGray"
+                    variant="primary"
                     className="text-base font-medium"
                     onClick={() => setDrawerOpen(false)}
                   >
                     Cancelar
                   </Button>
                   <Button
-                    variant="success"
+                    variant="primary"
                     className="text-base font-medium"
                     onClick={handleSave}
                   >

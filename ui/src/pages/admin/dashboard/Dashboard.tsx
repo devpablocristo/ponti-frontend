@@ -159,12 +159,12 @@ export function Dashboard() {
         actions={[
           {
             label: "Generar Informe",
-            variant: "outlineGreen",
+            variant: "primary",
             onClick: () => getDashboardInfo(buildQueryParams()),
           },
           {
             label: "Exportar PDF",
-            variant: "success",
+            variant: "primary",
             isPrimary: true,
             disabled: true,
             onClick: () => {},
@@ -182,7 +182,7 @@ export function Dashboard() {
         <div className="flex items-center justify-between gap-3 p-4 my-4 text-sm text-red-800 rounded-lg bg-red-50">
           <div>Error al cargar datos del dashboard: {error}</div>
           <Button
-            variant="outlineGray"
+            variant="primary"
             size="sm"
             onClick={() => getDashboardInfo(buildQueryParams())}
           >

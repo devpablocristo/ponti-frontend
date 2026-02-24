@@ -333,7 +333,7 @@ export default function Fields({
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">Campos</h3>
         <Button
-          variant="outlineGreen"
+          variant="primary"
           size="sm"
           onClick={addField}
           className="gap-2"
@@ -443,7 +443,7 @@ export default function Fields({
                 {field.plots.length > 1 && (
                   <Button
                     type="button"
-                    variant="danger"
+                    variant="primary"
                     size="xs"
                     onClick={() => removePlotFromField(key, plotkey)}
                     className="absolute top-2 right-2"
@@ -537,7 +537,7 @@ export default function Fields({
               {fields.length > 1 && (
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="primary"
                   size="md"
                   onClick={() => removeField(key)}
                 >
@@ -547,7 +547,7 @@ export default function Fields({
             </div>
             <div className="flex gap-4">
               <Button
-                variant="outlineGreen"
+                variant="primary"
                 size="xs"
                 onClick={() => addPlotToField(key)}
                 className="gap-2"
@@ -556,7 +556,7 @@ export default function Fields({
                 Agregar lote
               </Button>
               <Button
-                variant="outlineGreen"
+                variant="primary"
                 size="xs"
                 onClick={() => duplicateLastPlotToField(key)}
                 className="gap-2"

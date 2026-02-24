@@ -276,13 +276,13 @@ export function ByFieldOrCropReport() {
         actions={ [
           {
             label: "Generar Informe",
-            variant: "success",
+            variant: "primary",
             disabled: processing,
             onClick: () => getFieldCropReportingData(buildQueryParams()),
           },
           {
             label: "Exportar Informe",
-            variant: "outlineGreen",
+            variant: "primary",
             icon: <SquareArrowOutUpRight className="h-3.5 w-3.5 stroke-[3px]"/>,
             disabled: processing,
             onClick: toPDF,

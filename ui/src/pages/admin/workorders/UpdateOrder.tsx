@@ -205,7 +205,7 @@ export default function UpdateOrder({
             <span>{success}</span>
             <Button
               size="xs"
-              variant="success"
+              variant="primary"
               onClick={() => {
                 setSuccess(null);
                 onCreated(normalizedName);
@@ -280,11 +280,11 @@ export default function UpdateOrder({
             />
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outlineGray" onClick={onCancel} disabled={saving}>
+              <Button variant="primary" onClick={onCancel} disabled={saving}>
                 Cancelar
               </Button>
               <Button
-                variant="success"
+                variant="primary"
                 disabled={saving}
                 onClick={() => {
                   if (
@@ -811,7 +811,7 @@ export default function UpdateOrder({
                           size="sm"
                         />
                         <Button
-                          variant="outlineGray"
+                          variant="primary"
                           size="xs"
                           onClick={() => {
                             setInvestorSplits((prev) =>
@@ -825,7 +825,7 @@ export default function UpdateOrder({
                     ))}
                     <div className="flex justify-between items-center pt-1">
                       <Button
-                        variant="outlinePonti"
+                        variant="primary"
                         size="xs"
                         onClick={() =>
                           setInvestorSplits((prev) => [
@@ -860,7 +860,7 @@ export default function UpdateOrder({
                     Carga de insumos
                   </span>
                   <Button
-                    variant="outlinePonti"
+                    variant="primary"
                     size="xs"
                     onClick={() => {
                       setItemIndexToUpdate(null);
@@ -1010,7 +1010,7 @@ export default function UpdateOrder({
                       </div>
                       <div>
                         <Button
-                          variant="outlineGray"
+                          variant="primary"
                           size="xs"
                           onClick={() => {
                             const newItems = [...items];
@@ -1131,7 +1131,7 @@ export default function UpdateOrder({
               {selectedOrder && (
                 <Button
                   onClick={() => onOrderDuplicated(selectedOrder)}
-                  variant="outlineGray"
+                  variant="primary"
                   className="text-base font-medium"
                 >
                   Duplicar orden
@@ -1139,7 +1139,7 @@ export default function UpdateOrder({
               )}
               <div className="flex gap-2">
                 <Button
-                  variant="outlineGray"
+                  variant="primary"
                   className="text-base font-medium"
                   onClick={() => setDrawerOpen(false)}
                 >
@@ -1147,7 +1147,7 @@ export default function UpdateOrder({
                 </Button>
                 <Button
                   onClick={handleSaveOrder}
-                  variant="success"
+                  variant="primary"
                   className="text-base font-medium"
                   disabled={processing || processingCreation || (splitByInvestor && investorSplits.reduce((acc, s) => acc + (Number(s.percentage) || 0), 0) !== 100)}
                 >

@@ -375,13 +375,13 @@ export default function CommerceForm() {
         )}
       </div>
       <div className="flex gap-4 my-4 justify-end">
-        <Button variant="outlineGray" className="text-base font-medium">
+        <Button variant="primary" className="text-base font-medium">
           Cancelar
         </Button>
         <Button
           onClick={handleSaveCommerceValues}
           disabled={processing || processingProjects || !selectedProject}
-          variant="success"
+          variant="primary"
           className="text-base font-medium"
         >
           Guardar

@@ -808,7 +808,7 @@ export default function Items() {
               className="hidden"
             />
             <Button
-              variant="outlinePonti"
+              variant="primary"
               size="sm"
               className="text-sm font-medium"
               onClick={() => fileInputRef.current?.click()}
@@ -955,7 +955,7 @@ export default function Items() {
       </div>
       <div className="flex gap-4 my-4 justify-end">
         <Button
-          variant="outlineGray"
+          variant="primary"
           className="text-base font-medium"
           onClick={() => {
             if (hasUnsavedChanges) {
@@ -973,7 +973,7 @@ export default function Items() {
           Cancelar
         </Button>
         <Button
-          variant="success"
+          variant="primary"
           disabled={
             !selectedProject || !selectedCustomer || !selectedCampaignId
           }

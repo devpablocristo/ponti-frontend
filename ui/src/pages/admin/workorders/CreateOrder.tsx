@@ -206,7 +206,7 @@ export default function CreateOrder({
         {success && (
           <div className="p-3 rounded bg-green-50 text-green-700 text-sm flex items-center justify-between">
             <span>{success}</span>
-            <Button size="xs" variant="success" onClick={() => {
+            <Button size="xs" variant="primary" onClick={() => {
               setSuccess(null);
               onCreated(normalizedName);
             }}>OK</Button>
@@ -275,11 +275,11 @@ export default function CreateOrder({
           />
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outlineGray" onClick={onCancel} disabled={saving}>
+            <Button variant="primary" onClick={onCancel} disabled={saving}>
               Cancelar
             </Button>
             <Button
-              variant="success"
+              variant="primary"
               disabled={saving}
               onClick={() => {
                 if (!projectId || !name || !unit || !price || !category || !type) {
@@ -859,7 +859,7 @@ export default function CreateOrder({
                           size="sm"
                         />
                         <Button
-                          variant="outlineGray"
+                          variant="primary"
                           size="xs"
                           onClick={() => {
                             setInvestorSplits((prev) =>
@@ -873,7 +873,7 @@ export default function CreateOrder({
                     ))}
                     <div className="flex justify-between items-center pt-1">
                       <Button
-                        variant="outlinePonti"
+                        variant="primary"
                         size="xs"
                         onClick={() =>
                           setInvestorSplits((prev) => [
@@ -908,7 +908,7 @@ export default function CreateOrder({
                     Carga de insumos
                   </span>
                   <Button
-                    variant="outlinePonti"
+                    variant="primary"
                     size="xs"
                     onClick={() => {
                       setItemIndexToUpdate(null);
@@ -1058,7 +1058,7 @@ export default function CreateOrder({
                       </div>
                       <div>
                         <Button
-                          variant="outlineGray"
+                          variant="primary"
                           size="xs"
                           onClick={() => {
                             const newItems = [...items];
@@ -1178,7 +1178,7 @@ export default function CreateOrder({
             <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
               <div className="flex gap-2">
                 <Button
-                  variant="outlineGray"
+                  variant="primary"
                   className="text-base font-medium"
                   onClick={() => setDrawerOpen(false)}
                 >
@@ -1186,7 +1186,7 @@ export default function CreateOrder({
                 </Button>
                 <Button
                   onClick={handleSaveOrder}
-                  variant="success"
+                  variant="primary"
                   className="text-base font-medium"
                   disabled={processing || processingCreation || (splitByInvestor && investorSplits.reduce((acc, s) => acc + (Number(s.percentage) || 0), 0) !== 100)}
                 >

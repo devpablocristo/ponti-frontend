@@ -246,13 +246,13 @@ export function Customers() {
         actions={[
           {
             label: "+ Nuevo Cliente",
-            variant: "success",
+            variant: "primary",
             isPrimary: true,
             href: "/admin/database/customers",
           },
           {
             label: "Archivar Cliente",
-            variant: "danger",
+            variant: "primary",
             onClick: handlePreArchiveCustomer,
             disabled:
               !selectedCustomer || selectedCustomer.id === 0 || isProcessing,

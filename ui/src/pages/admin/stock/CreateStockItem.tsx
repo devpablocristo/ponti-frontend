@@ -647,7 +647,7 @@ export default function CreateStockItem({
                       </div>
                       <div>
                         <Button
-                          variant="danger"
+                          variant="primary"
                           size="xs"
                           onClick={() => {
                             const newItems = [...items];
@@ -662,7 +662,7 @@ export default function CreateStockItem({
                     </div>
                   ))}
                   <Button
-                    variant="outlinePonti"
+                    variant="primary"
                     size="sm"
                     onClick={() => {
                       setItems([...items, { item: "", quantity: "" }]);
@@ -791,14 +791,14 @@ export default function CreateStockItem({
             <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
               <div className="flex gap-2">
                 <Button
-                  variant="outlineGray"
+                  variant="primary"
                   className="text-base font-medium"
                   onClick={() => setDrawerOpen(false)}
                 >
                   Cancelar
                 </Button>
                 <Button
-                  variant="success"
+                  variant="primary"
                   className="text-base font-medium"
                   onClick={handlePreSave}
                   disabled={processing || processingCreation}

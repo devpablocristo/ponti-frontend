@@ -94,7 +94,7 @@ export default function Integrity() {
       <h2 className="text-xl font-semibold mb-4">Integridad de Datos</h2>
       <FilterBar filters={filters} />
       <div className="flex items-center gap-3 mb-4">
-        <Button onClick={handleRun} variant="success" disabled={processing}>
+        <Button onClick={handleRun} variant="primary" disabled={processing}>
           {processing ? "Ejecutando..." : "Ejecutar controles"}
         </Button>
         <span className="text-sm text-gray-600">

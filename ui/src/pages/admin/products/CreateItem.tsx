@@ -228,7 +228,7 @@ export default function CreateItem({
             <span>{success}</span>
             <Button
               size="xs"
-              variant="success"
+              variant="primary"
               onClick={() => {
                 setSuccess(null);
                 onCreated(normalizedName);
@@ -302,11 +302,11 @@ export default function CreateItem({
             />
 
             <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outlineGray" onClick={onCancel} disabled={saving}>
+              <Button variant="primary" onClick={onCancel} disabled={saving}>
                 Cancelar
               </Button>
               <Button
-                variant="success"
+                variant="primary"
                 disabled={saving}
                 onClick={() => {
                   if (!projectId || !name || !unit || !price || !category || !type) {
@@ -773,7 +773,7 @@ export default function CreateItem({
                 <div className="flex items-center justify-between mb-2">
                   <div></div>
                   <Button
-                    variant="outlinePonti"
+                    variant="primary"
                     size="xs"
                     onClick={() => {
                       setItemIndexToUpdate(null);
@@ -899,7 +899,7 @@ export default function CreateItem({
                       </div>
                       <div>
                         <Button
-                          variant="danger"
+                          variant="primary"
                           size="xs"
                           onClick={() => {
                             const newItems = [...items];
@@ -914,7 +914,7 @@ export default function CreateItem({
                     </div>
                   ))}
                   <Button
-                    variant="outlinePonti"
+                    variant="primary"
                     size="sm"
                     onClick={() => {
                       setItems([...items, { item: "", quantity: "" }]);
@@ -981,14 +981,14 @@ export default function CreateItem({
             <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
               <div className="flex gap-2">
                 <Button
-                  variant="outlineGray"
+                  variant="primary"
                   className="text-base font-medium"
                   onClick={() => setDrawerOpen(false)}
                 >
                   Cancelar
                 </Button>
                 <Button
-                  variant="success"
+                  variant="primary"
                   className="text-base font-medium"
                   onClick={handlePreSave}
                   disabled={processing || processingCreation}

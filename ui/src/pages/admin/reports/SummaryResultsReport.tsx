@@ -136,13 +136,13 @@ export function SummaryResultsReport() {
         actions={ [
           {
             label: "Generar Informe",
-            variant: "success",
+            variant: "primary",
             disabled: processing,
             onClick: () => getSummaryResultsReportingData(buildQueryParams()),
           },
           {
             label: "Exportar Informe",
-            variant: "outlineGreen",
+            variant: "primary",
             icon: <SquareArrowOutUpRight className="h-3.5 w-3.5 stroke-[3px]"/>,
             disabled: processing,
             onClick: toPDF,
@@ -199,7 +199,7 @@ export function SummaryResultsReport() {
           </div>
           <div className="flex justify-end mr-2 mb-6">
             <Button
-              variant="outlineGreen"
+              variant="primary"
               className="gap-2"
               onClick={ toPDF }
               disabled={ processing }

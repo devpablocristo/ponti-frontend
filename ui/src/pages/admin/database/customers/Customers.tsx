@@ -1011,7 +1011,7 @@ export default function Customers() {
         <div>
           {id && (
             <Button
-              variant="danger"
+              variant="primary"
               className="text-base font-medium"
               onClick={handlePreFinish}
               size="sm"
@@ -1022,14 +1022,14 @@ export default function Customers() {
         </div>
         <div className="flex gap-4">
           <Button
-            variant="outlineGray"
+            variant="primary"
             className="text-base font-medium"
             onClick={handlePreCancel}
           >
             Cancelar
           </Button>
           <Button
-            variant="success"
+            variant="primary"
             onClick={handlePreSave}
             className="text-base font-medium"
           >
