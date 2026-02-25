@@ -148,7 +148,7 @@ jobs:
             echo "AUTH_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
           fi
         env:
-          SMOKE_AUTH_BEARER_TOKEN: ${{ github.ref_name == 'main' && (secrets.SMOKE_AUTH_BEARER_TOKEN_STG || secrets.SMOKE_AUTH_BEARER_TOKEN) || (secrets.SMOKE_AUTH_BEARER_TOKEN_DEV || secrets.SMOKE_AUTH_BEARER_TOKEN) }}
+          SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_DEV }}
 
       - name: Smoke release checks
         run: |

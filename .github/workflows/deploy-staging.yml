@@ -144,7 +144,7 @@ jobs:
             echo "AUTH_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
           fi
         env:
-          SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_STG || secrets.SMOKE_AUTH_BEARER_TOKEN }}
+          SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_STG }}
 
       - name: Smoke release checks (STAGING)
         run: |
@@ -152,4 +152,3 @@ jobs:
         env:
           AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
-

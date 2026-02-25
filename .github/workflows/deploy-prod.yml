@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  REGION: ${{ vars.GCP_REGION_PROD || vars.GCP_REGION || 'europe-west1' }}
+  REGION: ${{ vars.GCP_REGION_PROD }}
   REGISTRY: us-central1-docker.pkg.dev
   REPOSITORY: ponti-frontend-registry
   REQUIRE_AUTH_SMOKE: "0"
@@ -124,7 +124,7 @@ jobs:
             --service-account="${CLOUD_RUN_SERVICE_ACCOUNT_PROD}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY_PROD || secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD || secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
+            --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
 
       - name: "Guardrail: verify BASE_MANAGER_API detagged (PROD)"
         run: |
@@ -176,7 +176,7 @@ jobs:
             echo "AUTH_BEARER_TOKEN=$token" >> "$GITHUB_ENV"
           fi
         env:
-          SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_PROD || secrets.SMOKE_AUTH_BEARER_TOKEN }}
+          SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_PROD }}
 
       - name: Smoke release checks (PROD)
         run: |
@@ -184,4 +184,3 @@ jobs:
         env:
           AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
-
