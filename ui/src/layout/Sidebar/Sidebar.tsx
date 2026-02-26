@@ -33,6 +33,7 @@ const menuReports = {
     </svg>
   ),
   children: [
+    { name: "Integridad de Datos", route: "/admin/database/data-integrity" },
     { name: "Aportes por Inversor", route: "/admin/informes/aportes" },
     { name: "Por Campo o Cultivo", route: "/admin/informes/campo" },
     { name: "Resumen de Resultados", route: "/admin/informes/resumen" },
@@ -64,46 +65,71 @@ const menuDatabase = {
     </svg>
   ),
   children: [
-    { name: "Clientes y Sociedades", route: "/admin/database/customers" },
-    { name: "Clientes Archivados", route: "/admin/database/customers/archived" },
-    { name: "Proyectos Archivados", route: "/admin/database/projects/archived" },
-    { name: "Integridad de Datos", route: "/admin/database/data-integrity" },
-    { name: "Labores", route: "/admin/database/tasks" },
-    { name: "Insumos", route: "/admin/database/items" },
-    { name: "Dólar Promedio", route: "/admin/database/dollar" },
-    { name: "Comercialización", route: "/admin/database/commerce" },
+    { name: "Crear Clientes y Sociedades", route: "/admin/database/customers" },
+    { name: "Crear Labores", route: "/admin/database/tasks" },
+    { name: "Crear Insumos", route: "/admin/database/items" },
+    { name: "Cargar Dólar Promedio", route: "/admin/database/dollar" },
+    { name: "Cargar Comercialización", route: "/admin/database/commerce" },
   ],
 };
 
-const menuAI = {
-  name: "AI",
-  icon: (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M8 2.6665V4.6665M8 11.3332V13.3332M4.66667 8H2.66667M13.3333 8H11.3333M5.33333 5.33317L4 3.99984M12 12.0002L10.6667 10.6668M10.6667 5.33317L12 3.99984M4 12.0002L5.33333 10.6668"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M10 8C10 9.10457 9.10457 10 8 10C6.89543 10 6 9.10457 6 8C6 6.89543 6.89543 6 8 6C9.10457 6 10 6.89543 10 8Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  children: [
-    { name: "Copilot", route: "/admin/ai-copilot" },
-    { name: "Insights", route: "/admin/ai-insights" },
-  ],
-};
+const menuAIItems: MenuItem[] = [
+  {
+    name: "Copilot",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 2V5.33333M8 10.6667V14M2 8H5.33333M10.6667 8H14M4 4L5.66667 5.66667M10.3333 10.3333L12 12M10.3333 5.66667L12 4M4 12L5.66667 10.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    route: "/admin/ai-copilot",
+  },
+  {
+    name: "Insights",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 2.66675C6.15905 2.66675 4.66667 4.15913 4.66667 6.00008C4.66667 7.01753 5.11813 7.92952 5.83333 8.54095V10.0001C5.83333 10.3683 6.13181 10.6667 6.5 10.6667H9.5C9.86819 10.6667 10.1667 10.3683 10.1667 10.0001V8.54095C10.8819 7.92952 11.3333 7.01753 11.3333 6.00008C11.3333 4.15913 9.84095 2.66675 8 2.66675Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M6.66667 12.0001H9.33333" stroke={color} strokeLinecap="round" />
+      </svg>
+    ),
+    route: "/admin/ai-insights",
+  },
+];
+
+const menuArchiveItems: MenuItem[] = [
+  {
+    name: "Clientes Archivados",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    route: "/admin/database/customers/archived",
+  },
+  {
+    name: "Proyectos Archivados",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    route: "/admin/database/projects/archived",
+  },
+];
+
+const menuAdminItems: MenuItem[] = [
+  {
+    name: "Accesos",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 1.33325L13 3.99992V7.33325C13 10.3999 10.8667 12.9999 8 14.6666C5.13333 12.9999 3 10.3999 3 7.33325V3.99992L8 1.33325Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M6.33337 8.00008L7.33337 9.00008L9.66671 6.66675" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    route: "/admin/access",
+  },
+];
 
 const menuItems: MenuItem[] = [
   {
@@ -124,16 +150,6 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     route: "/admin/customers",
-  },
-  {
-    name: "Accesos",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 1.33325L13 3.99992V7.33325C13 10.3999 10.8667 12.9999 8 14.6666C5.13333 12.9999 3 10.3999 3 7.33325V3.99992L8 1.33325Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M6.33337 8.00008L7.33337 9.00008L9.66671 6.66675" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/access",
   },
   {
     name: "Lotes",
@@ -365,9 +381,13 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="flex items-center gap-2.5"
             style={{ color: "#F1F5F9" }}
           >
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-custom-btn to-emerald-500 flex items-center justify-center">
-              <span style={{ color: "#FFFFFF" }} className="font-bold text-xs font-display">P</span>
-            </div>
+           
+              <img
+                src="/ponti.svg"
+                alt="Ponti"
+                className="w-6 h-6 object-contain"
+              />
+            
             <h1 className="text-base font-bold tracking-tight font-display" style={{ color: "#F1F5F9" }}>
               Ponti Soft
             </h1>
@@ -386,7 +406,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="px-3 mb-2">
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#475569" }}>
-            Navegación
+            Operación
           </span>
         </div>
 
@@ -402,11 +422,11 @@ const Sidebar: React.FC<SidebarProps> = ({
           ))}
         </ul>
 
-        <div className="my-3 mx-2 border-t border-slate-800" />
+        <div className="h-3" />
 
         <div className="px-3 mb-2">
           <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#475569" }}>
-            Herramientas
+            Análisis
           </span>
         </div>
 
@@ -415,16 +435,65 @@ const Sidebar: React.FC<SidebarProps> = ({
           item={menuReports}
           setIsSidebarOpen={setIsSidebarOpen}
         />
+
+        <div className="px-3 mb-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#475569" }}>
+            Configuración
+          </span>
+        </div>
         <SidebarSubmenu
           setTitle={setTitle}
           item={menuDatabase}
           setIsSidebarOpen={setIsSidebarOpen}
         />
-        <SidebarSubmenu
-          setTitle={() => setTitle("AI")}
-          item={menuAI}
-          setIsSidebarOpen={setIsSidebarOpen}
-        />
+
+        <div className="h-3" />
+
+        <div className="px-3 mb-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#475569" }}>
+            AI
+          </span>
+        </div>
+        <ul className="flex flex-col gap-0.5 font-medium">
+          {menuAIItems.map((item) => (
+            <li key={item.name}>
+              <SidebarItem
+                setTitle={setTitle}
+                item={item}
+                setIsSidebarOpen={setIsSidebarOpen}
+              />
+            </li>
+          ))}
+        </ul>
+        <div className="h-3" />
+
+        <div className="px-3 mb-2">
+          <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: "#475569" }}>
+            Admin
+          </span>
+        </div>
+        <ul className="flex flex-col gap-0.5 font-medium">
+          {menuAdminItems.map((item) => (
+            <li key={item.name}>
+              <SidebarItem
+                setTitle={setTitle}
+                item={item}
+                setIsSidebarOpen={setIsSidebarOpen}
+              />
+            </li>
+          ))}
+        </ul>
+         <ul className="flex flex-col gap-0.5 font-medium">
+          {menuArchiveItems.map((item) => (
+            <li key={item.name}>
+              <SidebarItem
+                setTitle={setTitle}
+                item={item}
+                setIsSidebarOpen={setIsSidebarOpen}
+              />
+            </li>
+          ))}
+        </ul>
       </div>
     </aside>
   );

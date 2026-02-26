@@ -44,6 +44,17 @@ const Navbar: React.FC<NavbarProps> = ({
               </svg>
             </button>
           )}
+          <div className="flex items-center gap-2">
+            <img
+              src="/ponti.svg"
+              alt="Ponti"
+              className="w-6 h-6 object-contain"
+            />
+            <span className="text-xl font-semibold tracking-tight font-display" style={{ color: "#1E293B" }}>
+              Ponti
+            </span>
+          </div>
+          <div className="h-6" style={{ borderLeft: "1px solid #E2E8F0" }} />
           <h1 className="text-xl font-semibold tracking-tight font-display" style={{ color: "#1E293B" }}>
             {title}
           </h1>
