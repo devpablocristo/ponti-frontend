@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { ArrowUp, Hourglass, LoaderCircle, Wallet } from "lucide-react";
+import { usePDF } from "react-to-pdf";
 
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -99,6 +100,10 @@ export function Dashboard() {
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const { dashboard, processing, error, getDashboardInfo } = useDashboard();
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
+  const { toPDF, targetRef } = usePDF({
+    filename: `dashboard-${timestamp}.pdf`,
+  });
 
   // Ultra-robust fallback: if the dashboard endpoint returns "invalid token"
   // (env switch / expired session), force a clean re-login.
@@ -166,8 +171,8 @@ export function Dashboard() {
             label: "Exportar PDF",
             variant: "primary",
             isPrimary: true,
-            disabled: true,
-            onClick: () => {},
+            disabled: processing || !dashboard,
+            onClick: toPDF,
           },
         ]}
       />
@@ -191,22 +196,24 @@ export function Dashboard() {
         </div>
       )}
 
-      <div className="my-4">
-        <DashboardIndicators dashboard={dashboard} />
-      </div>
+      <div ref={targetRef}>
+        <div className="my-4">
+          <DashboardIndicators dashboard={dashboard} />
+        </div>
 
-      <div className="w-full p-4">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="w-full md:w-1/2">
-            <ManagementBalanceTable dashboard={dashboard} />
-          </div>
-          <div className="w-full md:w-1/2">
-            <CostByCropTable dashboard={dashboard} />
+        <div className="w-full p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="w-full md:w-1/2">
+              <ManagementBalanceTable dashboard={dashboard} />
+            </div>
+            <div className="w-full md:w-1/2">
+              <CostByCropTable dashboard={dashboard} />
+            </div>
           </div>
         </div>
-      </div>
 
-      <OperationalIndicators dashboard={dashboard} />
+        <OperationalIndicators dashboard={dashboard} />
+      </div>
     </div>
   );
 }

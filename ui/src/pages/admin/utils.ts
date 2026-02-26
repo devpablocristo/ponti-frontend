@@ -20,6 +20,38 @@ export const formatISODate = (dateString: string): string => {
 };
 
 /**
+ * Parse a localized numeric value (es-AR format with dots as thousand
+ * separators and commas as decimal separators) into a plain number.
+ * Returns NaN when the input cannot be interpreted as a number.
+ */
+export const normalizeNumber = (val: unknown): number => {
+  if (typeof val === "number") {
+    return Number.isFinite(val) ? val : NaN;
+  }
+
+  const rawText = String(val ?? "").trim();
+  if (!rawText) return NaN;
+
+  const cleaned = rawText
+    .replace(/\s/g, "")
+    .replace(/[^\d,.-]/g, "");
+
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  let normalized = cleaned;
+
+  if (hasComma && hasDot) {
+    normalized = cleaned.replace(/\./g, "").replace(",", ".");
+  } else if (hasComma) {
+    normalized = cleaned.replace(/,/g, ".");
+  }
+
+  const parsed = Number(normalized);
+  return Number.isNaN(parsed) ? NaN : parsed;
+};
+
+/**
  * Normalize a value for filter comparison:
  * - trim/lowercase for strings
  * - canonical numeric form for numbers (e.g. "017" → "17", "17,0" → "17")

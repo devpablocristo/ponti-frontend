@@ -1,8 +1,7 @@
 import { useEffect } from "react";
-import { LoaderCircle, ExternalLink, SquareArrowOutUpRight } from "lucide-react";
+import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
-import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField.tsx";
 import useReporting from "../../../hooks/useReporting";
 import { InvestorContributionTable } from "./InvestorContributionTable.tsx";
@@ -39,6 +38,17 @@ const contributionRowsToRender: RowToRender[] = [
     },
   },
   {
+    label: "Total insumos",
+    key: "total_inputs",
+    valueFormat: {
+      totalInvested: (value) => `u$${ formatNumberAr(value) }`,
+      totalPerHa: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      investor: (value, percentage) => `u$${ formatNumberAr(value) } - ${ percentage }%`,
+    },
+    classNameRows: "text-[#111827] bg-[#D1D5DB] font-semibold",
+    classNameHeader: "text-[#111827] bg-[#D1D5DB] font-semibold",
+  },
+  {
     label: "Labores grales",
     key: "general_labors",
     valueFormat: {
@@ -66,6 +76,17 @@ const contributionRowsToRender: RowToRender[] = [
     },
   },
   {
+    label: "Total labores",
+    key: "total_labors",
+    valueFormat: {
+      totalInvested: (value) => `u$${ formatNumberAr(value) }`,
+      totalPerHa: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      investor: (value, percentage) => `u$${ formatNumberAr(value) } - ${ percentage }%`,
+    },
+    classNameRows: "text-[#111827] bg-[#D1D5DB] font-semibold",
+    classNameHeader: "text-[#111827] bg-[#D1D5DB] font-semibold",
+  },
+  {
     label: "Arriendo",
     key: "capitalizable_lease",
     valueFormat: {
@@ -84,6 +105,17 @@ const contributionRowsToRender: RowToRender[] = [
     },
   },
   {
+    label: "Costos indirectos",
+    key: "indirect_costs",
+    valueFormat: {
+      totalInvested: (value) => `u$${ formatNumberAr(value) }`,
+      totalPerHa: (value) => `${ formatNumberAr(value) } u$/Ha`,
+      investor: (value, percentage) => `u$${ formatNumberAr(value) } - ${ percentage }%`,
+    },
+    classNameRows: "text-[#111827] bg-[#D1D5DB] font-semibold",
+    classNameHeader: "text-[#111827] bg-[#D1D5DB] font-semibold",
+  },
+  {
     label: "Totales",
     key: "total",
     valueFormat: {
@@ -91,8 +123,8 @@ const contributionRowsToRender: RowToRender[] = [
       totalPerHa: (value) => `${ formatNumberAr(value) } u$/Ha`,
       investor: (value) => `u$${ formatNumberAr(value) }`,
     },
-    classNameRows: "text-black bg-[#E5E7EB] font-bold",
-    classNameHeader: "text-black bg-[#E5E7EB] font-bold",
+    classNameRows: "text-[#111827] bg-[#FBD5D5] font-bold",
+    classNameHeader: "text-[#111827] bg-[#FBD5D5] font-bold",
   },
 ];
 
@@ -114,8 +146,8 @@ const harvestRowsToRender: RowToRender[] = [
       totalPerHa: (value) => `${ formatNumberAr(value) } u$/Ha`,
       investor: (value) => `u$${ formatNumberAr(value) }`,
     },
-    classNameRows: "text-black bg-[#E5E7EB] font-bold",
-    classNameHeader: "text-black bg-[#E5E7EB] font-bold",
+    classNameRows: "text-[#111827] bg-[#FBD5D5] font-bold",
+    classNameHeader: "text-[#111827] bg-[#FBD5D5] font-bold",
   },
 ];
 
@@ -256,17 +288,6 @@ export function InvestorContributionReport() {
                 />
               ) }
             </div>
-          </div>
-          <div className="flex justify-end mr-2 mb-6">
-            <Button
-              variant="primary"
-              className="gap-2"
-              onClick={ toPDF }
-              disabled={ processing }
-            >
-              <ExternalLink/>
-              Exportar informe
-            </Button>
           </div>
         </>
       ) }

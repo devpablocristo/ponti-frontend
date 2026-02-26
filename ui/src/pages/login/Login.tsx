@@ -11,6 +11,7 @@ function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(false);
   const [error, setError] = useState("");
 
@@ -96,13 +97,33 @@ function Login() {
                   </svg>
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Ingresá tu contraseña"
-                  className="input-base h-12 pl-11 pr-4 text-sm"
+                  className="input-base h-12 pl-11 pr-11 text-sm"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required={true}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M3 3L21 21" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                      <path d="M10.58 10.58C10.21 10.95 10 11.46 10 12C10 13.1 10.9 14 12 14C12.54 14 13.05 13.79 13.42 13.42" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M9.88 5.09C10.56 4.86 11.27 4.75 12 4.75C16.25 4.75 19.73 8.19 20.58 12C20.33 13.1 19.83 14.12 19.14 14.98" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M6.12 6.12C4.74 7.2 3.7 8.82 3.42 12C4.27 15.81 7.75 19.25 12 19.25C13.61 19.25 15.11 18.76 16.36 17.92" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1.5 12C2.73 7.94 6.74 4.75 12 4.75C17.26 4.75 21.27 7.94 22.5 12C21.27 16.06 17.26 19.25 12 19.25C6.74 19.25 2.73 16.06 1.5 12Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
               </div>
             </div>
 
