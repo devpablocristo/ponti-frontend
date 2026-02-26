@@ -506,6 +506,7 @@ export function Products() {
         )}
         <DataTable
           data={filteredMovements}
+          rowStyle="softZebra"
           columns={columns}
           filters={columnsFilters}
           onFilterChange={handleFilterChange}

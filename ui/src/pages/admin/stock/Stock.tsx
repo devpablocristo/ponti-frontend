@@ -481,32 +481,73 @@ export function Stock() {
         ),
         header: "Diferencia",
         render: (diff, item) => {
-          const value = Number(diff);
-          const systemStock = Number(item.stock_units) || 0;
-          const isNegativeSystemStock = systemStock < 0;
-          if (value === 0) {
+          const normalizeNumber = (val: unknown) => {
+            const rawText = String(val ?? "").trim();
+            if (!rawText) return Number.NaN;
+
+            const cleaned = rawText
+              .replace(/\s/g, "")
+              .replace(/[^\d,.-]/g, "");
+
+            const hasComma = cleaned.includes(",");
+            const hasDot = cleaned.includes(".");
+
+            let normalized = cleaned;
+
+            if (hasComma && hasDot) {
+              normalized = cleaned.replace(/\./g, "").replace(",", ".");
+            } else if (hasComma) {
+              normalized = cleaned.replace(/,/g, ".");
+            }
+
+            const parsed = Number(normalized);
+            return Number.isNaN(parsed) ? Number.NaN : parsed;
+          };
+
+          const parsedDiff = normalizeNumber(diff);
+          const systemStock = normalizeNumber(item.stock_units);
+          const fieldStock = normalizeNumber(item.real_stock_units);
+
+          const calculatedDiff =
+            !Number.isNaN(fieldStock) && !Number.isNaN(systemStock)
+              ? fieldStock - systemStock
+              : Number.NaN;
+
+          const value = !Number.isNaN(parsedDiff)
+            ? parsedDiff
+            : !Number.isNaN(calculatedDiff)
+              ? calculatedDiff
+              : Number.NaN;
+
+          const isPositive = value > 0;
+          const isNegative = value < 0;
+
+          if (Number.isNaN(value)) {
+            return <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">-</span>;
+          }
+
+          if (!isPositive && !isNegative) {
             return <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">0</span>;
           }
-          if (value > 0) {
+          if (isPositive) {
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-300"
+                style={{
+                  color: "var(--color-success)",
+                  backgroundColor: "var(--color-success-light)",
+                  borderColor: "rgba(16, 185, 129, 0.35)",
+                }}
+              >
                 <Check className="w-3.5 h-3.5" />
-                +{value}
-              </span>
-            );
-          }
-          if (isNegativeSystemStock) {
-            return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-red-50 text-red-700 border border-red-300">
-                <AlertCircle className="w-3.5 h-3.5" />
-                {value}
+                +{formatNumberAr(Math.abs(value))}
               </span>
             );
           }
           return (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-red-50 text-red-700 border border-red-200">
               <AlertCircle className="w-3.5 h-3.5" />
-              {value}
+              {formatNumberAr(value)}
             </span>
           );
         },

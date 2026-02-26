@@ -905,6 +905,7 @@ export function Tasks() {
         <DataTable
           key={laborGroups.length}
           data={filteredTasks}
+          rowStyle="softZebra"
           columns={columnsToShow}
           filters={taskFilters}
           onFilterChange={handleFilterChange}

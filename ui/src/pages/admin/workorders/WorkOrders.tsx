@@ -747,6 +747,7 @@ export function WorkOrders() {
         <DataTable
           key={`${projectId}-${selectedField?.id || 0}-${orders.length}`}
           data={filteredOrders}
+          rowStyle="softZebra"
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           columns={columnsToShow}

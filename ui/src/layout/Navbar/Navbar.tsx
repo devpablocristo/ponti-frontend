@@ -17,6 +17,18 @@ const Navbar: React.FC<NavbarProps> = ({
   toggleSidebar,
   setIsLogoutModalOpen,
 }) => {
+  const titlesWithPontiBrand = new Set([
+    "Dashboard",
+    "Lotes",
+    "Órdenes de Trabajo",
+    "Ordenes de Trabajo",
+    "Labores",
+    "Insumos",
+    "Stock",
+  ]);
+
+  const showPontiBrand = titlesWithPontiBrand.has(title);
+
   return (
     <nav className="w-full bg-white border-b border-slate-200/80">
       <div className="mx-auto px-5 py-3 flex items-center justify-between">
@@ -47,6 +59,19 @@ const Navbar: React.FC<NavbarProps> = ({
           <h1 className="text-xl font-semibold tracking-tight font-display" style={{ color: "#1E293B" }}>
             {title}
           </h1>
+          {showPontiBrand && (
+            <div className="flex items-center gap-2">
+              <div className="h-6" style={{ borderLeft: "1px solid #E2E8F0" }} />
+              <img
+                src="/ponti.svg"
+                alt="Ponti"
+                className="w-6 h-6 object-contain"
+              />
+              <span className="text-xl font-semibold tracking-tight font-display ">
+                Ponti
+              </span>
+            </div>
+          )}
         </div>
         <Menu
           setIsLogoutModalOpen={setIsLogoutModalOpen}

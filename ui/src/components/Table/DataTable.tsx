@@ -53,6 +53,7 @@ type DataTableProps<T> = {
   };
   message?: string;
   enableFilters?: boolean;
+  rowStyle?: "default" | "softZebra";
 };
 
 function getPaginationRange(
@@ -102,6 +103,7 @@ const DataTable = <T,>({
   pagination,
   message = "No hay proyectos disponibles",
   enableFilters = false,
+  rowStyle = "default",
 }: DataTableProps<T>) => {
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(
@@ -413,17 +415,33 @@ const DataTable = <T,>({
               )}
             </tr>
           </thead>
-          <tbody>
-            {paginatedData.length > 0 ? (
-              paginatedData.map((item, index) => (
+	          <tbody>
+	            {paginatedData.length > 0 ? (
+              paginatedData.map((item, index) => {
+                const isSoftZebra = rowStyle === "softZebra";
+                const rowBgColor = isSoftZebra
+                  ? index % 2 === 0
+                    ? "#FFFFFF"
+                    : "#f9f9f9b8"
+                  : undefined;
+
+                return (
                 <React.Fragment key={index}>
                   <tr
-                    className={`border-t border-slate-100 text-slate-700 hover:bg-slate-50 transition-colors ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"
+                    className={`border-t border-slate-100 text-slate-700 transition-colors ${
+                        isSoftZebra
+                          ? index % 2 === 0
+                            ? "hover:bg-slate-50 shadow-[inset_0_-1px_0_rgba(15,23,42,0.05)]"
+                            : "hover:bg-slate-200 shadow-[inset_0_-1px_0_rgba(15,23,42,0.08)]"
+                          : index % 2 === 0
+                            ? "bg-white hover:bg-slate-50"
+                            : "bg-slate-50/50 hover:bg-slate-50"
                       }`}
                   >
                     {expandableRowRender && (
                       <td
                         className="px-4 py-3 cursor-pointer"
+                        style={isSoftZebra ? { backgroundColor: rowBgColor } : undefined}
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleRow(index);
@@ -462,6 +480,7 @@ const DataTable = <T,>({
                               : "px-4 py-3"
                           }`}
                         style={{
+                          backgroundColor: isSoftZebra ? rowBgColor : undefined,
                           width: column.width,
                           minWidth: column.minWidth ?? "100px",
                           maxWidth: column.maxWidth ?? "180px",
@@ -474,7 +493,10 @@ const DataTable = <T,>({
                       </td>
                     ))}
                     {(onEdit || onDelete || onCopy) && (
-                      <td className="px-6 py-4 text-center">
+                      <td
+                        className="px-6 py-4 text-center"
+                        style={isSoftZebra ? { backgroundColor: rowBgColor } : undefined}
+                      >
                         <div className="flex justify-center space-x-2">
                           {onEdit && (
                             <button
@@ -519,7 +541,7 @@ const DataTable = <T,>({
                     </tr>
                   )}
                 </React.Fragment>
-              ))
+              )})
             ) : (
               <tr>
                 <td colSpan={columns.length + 1 + (onEdit || onDelete ? 1 : 0)}>

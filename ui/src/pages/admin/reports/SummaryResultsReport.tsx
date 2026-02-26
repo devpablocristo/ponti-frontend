@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
+import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import SelectField from "../../../components/Input/SelectField";
-import Button from "../../../components/Button/Button";
 import useReporting from "../../../hooks/useReporting";
 import { SummaryResultsTable } from "./SummaryResultsTable.tsx";
 import { RowToRender } from "../../../hooks/useReporting/types.ts";
@@ -17,7 +16,8 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `${ formatNumberAr(value) } Has`,
     },
-    classNameHeader: "text-black font-semibold h-14",
+    classNameRows: "text-center",
+    
   },
   {
     label: "Ingreso Neto",
@@ -25,8 +25,6 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `u$ ${ formatNumberAr(value) }`,
     },
-    classNameRows: "text-white font-semibold bg-[#9CA3AF]",
-    classNameHeader: "text-white font-semibold bg-[#9CA3AF] h-14",
   },
   {
     label: "Costos Directos",
@@ -34,7 +32,7 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `u$ ${ formatNumberAr(value) }`,
     },
-    classNameHeader: "text-black font-semibold h-14",
+ 
   },
   {
     label: "Arriendo",
@@ -42,7 +40,7 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `u$ ${ formatNumberAr(value) }`,
     },
-    classNameHeader: "text-black font-semibold h-14",
+
   },
   {
     label: "Estructura",
@@ -50,7 +48,6 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `u$ ${ formatNumberAr(value) }`,
     },
-    classNameHeader: "text-black font-semibold h-14",
   },
   {
     label: "Total Activo",
@@ -58,8 +55,8 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `u$ ${ formatNumberAr(value) }`,
     },
-    classNameRows: "text-black font-bold bg-[#FBD5D5]",
-    classNameHeader: "text-black font-semibold bg-[#FBD5D5] h-14",
+      classNameRows: "text-black bg-[#FBD5D5] font-bold",
+    classNameHeader: "text-black bg-[#FBD5D5] font-bold",
   },
   {
     label: "Resultado operativo",
@@ -67,8 +64,9 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `u$ ${ formatNumberAr(value) }`,
     },
-    classNameRows: "text-white font-bold bg-black",
-    classNameHeader: "text-white font-semibold bg-black h-14",
+
+    classNameRows: "text-white bg-black font-bold",
+    classNameHeader: "text-white bg-black font-bold",
     showIndicator: true,
   },
   {
@@ -77,8 +75,7 @@ const rowsToRender: RowToRender[] = [
     valueFormat: {
       crop: (value) => `${ value }%`,
     },
-    classNameRows: "text-black font-bold",
-    classNameHeader: "text-black font-semibold h-14",
+    classNameHeader: "text-center",
     showIndicator: true,
   },
 ];
@@ -161,16 +158,13 @@ export function SummaryResultsReport() {
 
       { !error && (
         <>
-          <div className="border py-6 px-2" ref={ targetRef }>
-            <div
-              className="border-b mb-5"
-              style={ { borderColor: "#D1D5DB" } }
-            />
-            <div className="flex mb-3 items-center">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="rounded-xl border py-6 px-2" ref={ targetRef }>
+            <div className="border-b mb-4" style={ { borderColor: "#D1D5DB" } }/>
+            <div className="flex items-center gap-8 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">
                 Resumen de Resultados
               </h2>
-              <div className="mb-4 ml-8 w-[200px]">
+              <div className="w-48">
                 <SelectField
                   label="Cultivo"
                   name="summaryView"
@@ -188,25 +182,18 @@ export function SummaryResultsReport() {
                 />
               </div>
             </div>
-            <div
-              className="border-b mb-5"
-              style={ { borderColor: "#D1D5DB" } }
-            />
-            <SummaryResultsTable
-              data={ filteredData }
-              rows={ rowsToRender }
-            />
-          </div>
-          <div className="flex justify-end mr-2 mb-6">
-            <Button
-              variant="primary"
-              className="gap-2"
-              onClick={ toPDF }
-              disabled={ processing }
-            >
-              <ExternalLink></ExternalLink>
-              Exportar informe
-            </Button>
+            <div className="border-b mt-2 mb-6" style={ { borderColor: "#D1D5DB" } }/>
+
+            { processing ? (
+              <div className="flex items-center justify-center h-48">
+                <LoaderCircle className="w-8 h-8 text-blue-500 animate-spin"/>
+              </div>
+            ) : (
+              <SummaryResultsTable
+                data={ filteredData }
+                rows={ rowsToRender }
+              />
+            ) }
           </div>
         </>
       ) }
