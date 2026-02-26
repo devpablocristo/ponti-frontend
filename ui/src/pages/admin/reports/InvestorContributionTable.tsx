@@ -1,5 +1,5 @@
 import { InvestorContributionReportData, RowToRender } from "../../../hooks/useReporting/types.ts";
-import { formatNumberAr } from "../utils.ts";
+import { formatNumberAr, normalizeNumber } from "../utils.ts";
 
 const HeaderShareBadge = ({ value }: { value: number }) => (
   <span className="ml-2 rounded-md border border-[#6B7280] bg-[#374151] px-2 py-1 text-xs font-normal text-[#D1D5DB]">
@@ -62,17 +62,8 @@ export const InvestorContributionTable = ({
   const totalOnlyKeys = new Set(["total_inputs", "total_labors", "indirect_costs"]);
 
   const toAmountNumber = (value: unknown) => {
-    if (typeof value === "number") {
-      return Number.isFinite(value) ? value : 0;
-    }
-
-    if (typeof value === "string") {
-      const normalized = value.trim().replace(/\./g, "").replace(",", ".");
-      const parsed = Number(normalized);
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
-
-    return 0;
+    const n = normalizeNumber(value);
+    return Number.isFinite(n) ? n : 0;
   };
 
   const getAggregatedContributionRow = (keys: string[]) => {

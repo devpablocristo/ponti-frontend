@@ -12,7 +12,7 @@ import { BaseModal } from "../../../components/Modal/BaseModal";
 import { Column } from "../types";
 import SelectField from "../../../components/Input/SelectField";
 import { apiClient } from "@/api/client";
-import { formatNumberAr } from "../utils";
+import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
 
@@ -481,29 +481,6 @@ export function Stock() {
         ),
         header: "Diferencia",
         render: (diff, item) => {
-          const normalizeNumber = (val: unknown) => {
-            const rawText = String(val ?? "").trim();
-            if (!rawText) return Number.NaN;
-
-            const cleaned = rawText
-              .replace(/\s/g, "")
-              .replace(/[^\d,.-]/g, "");
-
-            const hasComma = cleaned.includes(",");
-            const hasDot = cleaned.includes(".");
-
-            let normalized = cleaned;
-
-            if (hasComma && hasDot) {
-              normalized = cleaned.replace(/\./g, "").replace(",", ".");
-            } else if (hasComma) {
-              normalized = cleaned.replace(/,/g, ".");
-            }
-
-            const parsed = Number(normalized);
-            return Number.isNaN(parsed) ? Number.NaN : parsed;
-          };
-
           const parsedDiff = normalizeNumber(diff);
           const systemStock = normalizeNumber(item.stock_units);
           const fieldStock = normalizeNumber(item.real_stock_units);
@@ -532,7 +509,7 @@ export function Stock() {
           if (isPositive) {
             return (
               <span
-                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-300"
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full border"
                 style={{
                   color: "var(--color-success)",
                   backgroundColor: "var(--color-success-light)",
