@@ -21,24 +21,10 @@ import useCampaigns from "../../../hooks/useCampaigns";
 import { getUnitName, units } from "../../../constants/units";
 import useCategories from "../../../hooks/useCategories";
 
-const emptyItems = [
-  {
-    item: "",
-    quantity: "",
-  },
-  {
-    item: "",
-    quantity: "",
-  },
-  {
-    item: "",
-    quantity: "",
-  },
-  {
-    item: "",
-    quantity: "",
-  },
-];
+const emptyItems = Array.from({ length: 7 }, () => ({
+  item: "",
+  quantity: "",
+}));
 
 const typeOptions = [
   { id: 1, name: "Stock" },
@@ -162,6 +148,9 @@ export default function CreateItem({
   const [itemErrors, setItemErrors] = useState<Record<number, string>>({});
   const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
   const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
+  const [highlightedSupplyIndex, setHighlightedSupplyIndex] = useState<
+    Record<number, number>
+  >({});
   const [lastSubmittedRowIndexes, setLastSubmittedRowIndexes] = useState<number[]>(
     []
   );
@@ -170,6 +159,7 @@ export default function CreateItem({
   const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
     null
   );
+  const supplyListRefs = useRef<Record<number, HTMLUListElement | null>>({});
 
   const clearForm = () => {
     setError(null);
@@ -428,6 +418,24 @@ export default function CreateItem({
     setItemIndexToUpdate(null);
   }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
 
+  useEffect(() => {
+    if (openSupplyDropdown === null) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const row = document.querySelector(
+        `[data-supply-row="${openSupplyDropdown}"]`
+      );
+      const target = event.target as Node;
+
+      if (row && !row.contains(target)) {
+        setOpenSupplyDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [openSupplyDropdown]);
+
   const availableSupplies = useMemo(() => {
     const stockBySupply = new Map<string, number>();
     for (const s of stock || []) {
@@ -476,7 +484,21 @@ export default function CreateItem({
   });
 
   const providerRef = useRef<HTMLDivElement>(null);
+  const providerListRef = useRef<HTMLUListElement | null>(null);
   useClickOutside(providerRef, () => setShowProviderSuggestions(false));
+
+  useEffect(() => {
+    if (!showProviderSuggestions || providerSuggestions.length === 0) return;
+
+    requestAnimationFrame(() => {
+      const list = providerListRef.current;
+      if (!list) return;
+      const option = list.querySelector<HTMLLIElement>(
+        `[data-provider-option-index="${highlightedProviderIndex}"]`
+      );
+      option?.scrollIntoView({ block: "nearest" });
+    });
+  }, [highlightedProviderIndex, showProviderSuggestions, providerSuggestions.length]);
 
   const handleProviderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -507,6 +529,17 @@ export default function CreateItem({
     setItems((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
     );
+  };
+
+  const scrollHighlightedSupplyIntoView = (rowIndex: number, optionIndex: number) => {
+    requestAnimationFrame(() => {
+      const list = supplyListRefs.current[rowIndex];
+      if (!list) return;
+      const option = list.querySelector<HTMLLIElement>(
+        `[data-supply-option-index="${optionIndex}"]`
+      );
+      option?.scrollIntoView({ block: "nearest" });
+    });
   };
 
   const handlePreSave = () => {
@@ -671,18 +704,27 @@ export default function CreateItem({
                     }}
                     onChange={handleProviderChange}
                     onFocus={() => setShowProviderSuggestions(true)}
-                    onKeyDown={handleProviderKeyDown}
+                    onKeyDown={(e) => {
+                      handleProviderKeyDown(e);
+                      if (e.key === "Tab") {
+                        setShowProviderSuggestions(false);
+                      }
+                    }}
                     className={"w-full"}
                     size="sm"
                     fullWidth
                   />
                   {showProviderSuggestions && (
                     <div className="flex justify-between items-center">
-                      <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
+                      <ul
+                        ref={providerListRef}
+                        className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto"
+                      >
                         {providerSuggestions.length > 0 &&
                           providerSuggestions.map((provider, index) => (
                             <li
                               key={index}
+                              data-provider-option-index={index}
                               onClick={() =>
                                 handleProviderSuggestionClick(provider)
                               }
@@ -792,17 +834,57 @@ export default function CreateItem({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
-                  {items.map((item, i) => (
-                    <div
-                      key={i}
-                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                    >
-                      <div className="sm:col-span-1 relative">
+                  {items.map((item, i) => {
+                    const filteredSupplies = availableSupplies.filter(
+                      (s) =>
+                        !supplySearch[i] ||
+                        s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
+                    );
+                    const highlightedIndex = highlightedSupplyIndex[i] ?? 0;
+
+                    return (
+                      <div
+                        key={i}
+                        className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                      >
+                        <div className="sm:col-span-1 relative" data-supply-row={i}>
                         <div
+                          role="button"
+                          tabIndex={0}
+                          aria-haspopup="listbox"
+                          aria-expanded={openSupplyDropdown === i}
                           className={`input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between ${
                             itemErrors[i] ? "border-red-500" : ""
                           }`}
-                          onClick={() => setOpenSupplyDropdown(openSupplyDropdown === i ? null : i)}
+                          onClick={() => {
+                            const nextOpen = openSupplyDropdown === i ? null : i;
+                            setOpenSupplyDropdown(nextOpen);
+                            if (nextOpen !== null) {
+                              setHighlightedSupplyIndex((prev) => ({
+                                ...prev,
+                                [i]: 0,
+                              }));
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              const nextOpen = openSupplyDropdown === i ? null : i;
+                              setOpenSupplyDropdown(nextOpen);
+                              if (nextOpen !== null) {
+                                setHighlightedSupplyIndex((prev) => ({
+                                  ...prev,
+                                  [i]: 0,
+                                }));
+                              }
+                              return;
+                            }
+
+                            if (e.key === "Escape" && openSupplyDropdown === i) {
+                              e.preventDefault();
+                              setOpenSupplyDropdown(null);
+                            }
+                          }}
                         >
                           {item.item ? (
                             (() => {
@@ -828,10 +910,75 @@ export default function CreateItem({
                               placeholder="Buscar insumo..."
                               className="w-full px-3 py-2 text-sm border-b outline-none"
                               value={supplySearch[i] || ""}
-                              onChange={(e) => setSupplySearch((prev) => ({ ...prev, [i]: e.target.value }))}
+                              onChange={(e) => {
+                                setSupplySearch((prev) => ({
+                                  ...prev,
+                                  [i]: e.target.value,
+                                }));
+                                setHighlightedSupplyIndex((prev) => ({
+                                  ...prev,
+                                  [i]: 0,
+                                }));
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "ArrowDown") {
+                                  e.preventDefault();
+                                  if (filteredSupplies.length === 0) return;
+                                  const nextIndex =
+                                    highlightedIndex < filteredSupplies.length - 1
+                                      ? highlightedIndex + 1
+                                      : 0;
+                                  setHighlightedSupplyIndex((prev) => ({
+                                    ...prev,
+                                    [i]: nextIndex,
+                                  }));
+                                  scrollHighlightedSupplyIntoView(i, nextIndex);
+                                  return;
+                                }
+
+                                if (e.key === "ArrowUp") {
+                                  e.preventDefault();
+                                  if (filteredSupplies.length === 0) return;
+                                  const nextIndex =
+                                    highlightedIndex > 0
+                                      ? highlightedIndex - 1
+                                      : filteredSupplies.length - 1;
+                                  setHighlightedSupplyIndex((prev) => ({
+                                    ...prev,
+                                    [i]: nextIndex,
+                                  }));
+                                  scrollHighlightedSupplyIntoView(i, nextIndex);
+                                  return;
+                                }
+
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const selected = filteredSupplies[highlightedIndex];
+                                  if (!selected) return;
+                                  handleItemChange(i, "item", String(selected.id));
+                                  setOpenSupplyDropdown(null);
+                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                  return;
+                                }
+
+                                if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  setOpenSupplyDropdown(null);
+                                  return;
+                                }
+
+                                if (e.key === "Tab") {
+                                  setOpenSupplyDropdown(null);
+                                }
+                              }}
                               autoFocus
                             />
-                            <ul className="max-h-[200px] overflow-y-auto">
+                            <ul
+                              className="max-h-[200px] overflow-y-auto"
+                              ref={(el) => {
+                                supplyListRefs.current[i] = el;
+                              }}
+                            >
                               <li
                                 className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
                                 onClick={() => {
@@ -843,14 +990,21 @@ export default function CreateItem({
                               >
                                 + Crear nuevo insumo
                               </li>
-                              {availableSupplies
-                                .filter((s) =>
-                                  !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
-                                )
-                                .map((s) => (
+                              {filteredSupplies.map((s, supplyIdx) => (
                                   <li
                                     key={s.id}
-                                    className="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between"
+                                    data-supply-option-index={supplyIdx}
+                                    className={`px-3 py-2 cursor-pointer flex items-center justify-between ${
+                                      highlightedIndex === supplyIdx
+                                        ? "bg-gray-100"
+                                        : "hover:bg-gray-100"
+                                    }`}
+                                    onMouseEnter={() =>
+                                      setHighlightedSupplyIndex((prev) => ({
+                                        ...prev,
+                                        [i]: supplyIdx,
+                                      }))
+                                    }
                                     onClick={() => {
                                       handleItemChange(i, "item", String(s.id));
                                       setOpenSupplyDropdown(null);
@@ -865,9 +1019,7 @@ export default function CreateItem({
                                     )}
                                   </li>
                                 ))}
-                              {availableSupplies.filter((s) =>
-                                !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
-                              ).length === 0 && (
+                              {filteredSupplies.length === 0 && (
                                 <li className="px-3 py-2 text-sm text-gray-400">Sin resultados</li>
                               )}
                             </ul>
@@ -913,7 +1065,8 @@ export default function CreateItem({
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                   <Button
                     variant="primary"
                     size="sm"

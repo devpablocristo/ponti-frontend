@@ -5,7 +5,7 @@ interface ManagementBalanceTableProps {
   dashboard: DashboardData | null;
 }
 
-export default function ManagementBalanceTable({dashboard}: ManagementBalanceTableProps) {
+export default function ManagementBalanceTable({ dashboard }: ManagementBalanceTableProps) {
   if (!dashboard || !dashboard.management_balance) {
     return (
       <div className="bg-white rounded-xl border p-4 w-full">
@@ -23,9 +23,9 @@ export default function ManagementBalanceTable({dashboard}: ManagementBalanceTab
   const { items } = management_balance;
 
   // Filter items by category - direct costs first
-const directCostItems = items.filter(item =>
-  ['SEED', 'SUPPLIES', 'FERTILIZERS', 'LABORS'].includes(item.category)
-);
+  const directCostItems = items.filter(item =>
+    ['SEED', 'SUPPLIES', 'FERTILIZERS', 'LABORS'].includes(item.category)
+  );
 
   const otherItems = items.filter(item =>
     ['LEASE', 'ADMIN'].includes(item.category)
@@ -56,29 +56,12 @@ const directCostItems = items.filter(item =>
         </div>
         <div className="ml-[16px]">
           <span className="bg-[#E5E7EB] text-gray-900 py-2 px-2 rounded text-sm h-[43px] w-[111px] text-center flex justify-center items-center">
-          Diferencias
+            Diferencias
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 text-sm px-2 bg-gray-100 font-semibold text-gray-900 h-[45px] rounded-lg">
-        <div className="flex items-center">Costos directos</div>
-        <div className="text-black bg-[#F98080] rounded text-center flex items-center justify-center w-[111px] ml-[12px]">
-          {formatCurrency(
-            directCostItems.reduce((sum, item) => sum + parseFloat(item.executed_usd || "0"), 0).toString()
-          )}
-        </div>
-        <div className="text-[#F05252] text-center flex items-center justify-center w-[111px] bg-[#FBD5D5] rounded ml-[17px]">
-          {formatCurrency(
-            directCostItems.reduce((sum, item) => sum + parseFloat(item.invested_usd || "0"), 0).toString()
-          )}
-        </div>
-        <div className="text-center flex items-center justify-center w-[112px] bg-[#E5E7EB] rounded ml-[20px]">
-          {formatCurrency(
-            directCostItems.reduce((sum, item) => sum + parseFloat(item.stock_usd || "0"), 0).toString()
-          )}
-        </div>
-      </div>
+
 
       {directCostItems
         .sort((a, b) => a.order - b.order)
@@ -100,6 +83,25 @@ const directCostItems = items.filter(item =>
           </div>
         ))}
 
+      <div className="grid grid-cols-4 text-sm px-2 bg-gray-100 font-semibold text-gray-900 h-[45px] rounded-lg mb-0.5 mt-2">
+        <div className="flex items-center">Costos directos</div>
+        <div className="text-black bg-[#F98080] rounded text-center flex items-center justify-center w-[111px] ml-[12px]">
+          {formatCurrency(
+            directCostItems.reduce((sum, item) => sum + parseFloat(item.executed_usd || "0"), 0).toString()
+          )}
+        </div>
+        <div className="text-[#F05252] text-center flex items-center justify-center w-[111px] bg-[#FBD5D5] rounded ml-[17px]">
+          {formatCurrency(
+            directCostItems.reduce((sum, item) => sum + parseFloat(item.invested_usd || "0"), 0).toString()
+          )}
+        </div>
+        <div className="text-center flex items-center justify-center w-[112px] bg-[#E5E7EB] rounded ml-[20px]">
+          {formatCurrency(
+            directCostItems.reduce((sum, item) => sum + parseFloat(item.stock_usd || "0"), 0).toString()
+          )}
+        </div>
+      </div>
+
       {otherItems
         .sort((a, b) => a.order - b.order)
         .map((item, idx) => (
@@ -119,6 +121,7 @@ const directCostItems = items.filter(item =>
             </div>
           </div>
         ))}
+
 
       {/* Totals Row */}
       {/*<div className="grid grid-cols-4 text-sm py-2 px-2 bg-gray-200 font-bold text-gray-900 border-t-2 border-gray-300 h-[45px]">*/}
