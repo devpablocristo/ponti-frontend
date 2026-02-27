@@ -4,7 +4,7 @@ import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import useSupplies from "../../../hooks/useSupplies";
 import useStock from "../../../hooks/useStock";
-import { ChevronDown, LoaderCircle, Trash } from "lucide-react";
+import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
 import Search from "../../../components/Input/Search";
@@ -12,6 +12,8 @@ import { useClickOutside } from "../../login/useClickOutside";
 import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
+import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
+import { DEFAULT_ITEM_ROW_COUNT } from "../utils";
 import {
   Campaign,
   Customer,
@@ -21,24 +23,10 @@ import useCampaigns from "../../../hooks/useCampaigns";
 import { getUnitName, units } from "../../../constants/units";
 import useCategories from "../../../hooks/useCategories";
 
-const emptyItems = [
-  {
-    item: "",
-    quantity: "",
-  },
-  {
-    item: "",
-    quantity: "",
-  },
-  {
-    item: "",
-    quantity: "",
-  },
-  {
-    item: "",
-    quantity: "",
-  },
-];
+const emptyItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
+  item: "",
+  quantity: "",
+}));
 
 const typeOptions = [
   { id: 1, name: "Stock" },
@@ -160,8 +148,6 @@ export default function CreateItem({
     }[]
   >(emptyItems);
   const [itemErrors, setItemErrors] = useState<Record<number, string>>({});
-  const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
-  const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
   const [lastSubmittedRowIndexes, setLastSubmittedRowIndexes] = useState<number[]>(
     []
   );
@@ -476,7 +462,21 @@ export default function CreateItem({
   });
 
   const providerRef = useRef<HTMLDivElement>(null);
+  const providerListRef = useRef<HTMLUListElement | null>(null);
   useClickOutside(providerRef, () => setShowProviderSuggestions(false));
+
+  useEffect(() => {
+    if (!showProviderSuggestions || providerSuggestions.length === 0) return;
+
+    requestAnimationFrame(() => {
+      const list = providerListRef.current;
+      if (!list) return;
+      const option = list.querySelector<HTMLLIElement>(
+        `[data-provider-option-index="${highlightedProviderIndex}"]`
+      );
+      option?.scrollIntoView({ block: "nearest" });
+    });
+  }, [highlightedProviderIndex, showProviderSuggestions, providerSuggestions.length]);
 
   const handleProviderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -671,18 +671,27 @@ export default function CreateItem({
                     }}
                     onChange={handleProviderChange}
                     onFocus={() => setShowProviderSuggestions(true)}
-                    onKeyDown={handleProviderKeyDown}
+                    onKeyDown={(e) => {
+                      handleProviderKeyDown(e);
+                      if (e.key === "Tab") {
+                        setShowProviderSuggestions(false);
+                      }
+                    }}
                     className={"w-full"}
                     size="sm"
                     fullWidth
                   />
                   {showProviderSuggestions && (
                     <div className="flex justify-between items-center">
-                      <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
+                      <ul
+                        ref={providerListRef}
+                        className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto"
+                      >
                         {providerSuggestions.length > 0 &&
                           providerSuggestions.map((provider, index) => (
                             <li
                               key={index}
+                              data-provider-option-index={index}
                               onClick={() =>
                                 handleProviderSuggestionClick(provider)
                               }
@@ -793,87 +802,26 @@ export default function CreateItem({
 
                 <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
                   {items.map((item, i) => (
-                    <div
-                      key={i}
-                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                    >
-                      <div className="sm:col-span-1 relative">
-                        <div
-                          className={`input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between ${
-                            itemErrors[i] ? "border-red-500" : ""
-                          }`}
-                          onClick={() => setOpenSupplyDropdown(openSupplyDropdown === i ? null : i)}
-                        >
-                          {item.item ? (
-                            (() => {
-                              const sel = availableSupplies.find((s) => s.id === Number(item.item));
-                              return sel ? (
-                                <span className="truncate">
-                                  <span className="font-semibold text-gray-900">{sel.name}</span>
-                                  {sel.qty > 0 && (
-                                    <span className="text-blue-500 font-semibold ml-1">{sel.qty.toFixed(2)} {sel.unit}</span>
-                                  )}
-                                </span>
-                              ) : <span className="text-gray-400">Seleccionar...</span>;
-                            })()
-                          ) : (
-                            <span className="text-gray-400">Seleccionar...</span>
-                          )}
-                          <ChevronDown size={16} className="text-slate-400 shrink-0" />
+                      <div
+                        key={i}
+                        className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                      >
+                        <div className="sm:col-span-1">
+                          <SupplyDropdown
+                            options={availableSupplies.map((s) => ({
+                              id: s.id,
+                              name: s.name,
+                              badge: s.qty > 0 ? <>{s.qty.toFixed(2)} {s.unit}</> : undefined,
+                            }))}
+                            value={item.item ? Number(item.item) : null}
+                            onSelect={(option) => handleItemChange(i, "item", String(option.id))}
+                            onCreateNew={() => {
+                              setItemIndexToUpdate(i);
+                              setOpenCreateSupply(true);
+                            }}
+                            hasError={!!itemErrors[i]}
+                          />
                         </div>
-                        {openSupplyDropdown === i && (
-                          <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
-                            <input
-                              type="text"
-                              placeholder="Buscar insumo..."
-                              className="w-full px-3 py-2 text-sm border-b outline-none"
-                              value={supplySearch[i] || ""}
-                              onChange={(e) => setSupplySearch((prev) => ({ ...prev, [i]: e.target.value }))}
-                              autoFocus
-                            />
-                            <ul className="max-h-[200px] overflow-y-auto">
-                              <li
-                                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
-                                onClick={() => {
-                                  setItemIndexToUpdate(i);
-                                  setOpenCreateSupply(true);
-                                  setOpenSupplyDropdown(null);
-                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
-                                }}
-                              >
-                                + Crear nuevo insumo
-                              </li>
-                              {availableSupplies
-                                .filter((s) =>
-                                  !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
-                                )
-                                .map((s) => (
-                                  <li
-                                    key={s.id}
-                                    className="px-3 py-2 cursor-pointer hover:bg-gray-100 flex items-center justify-between"
-                                    onClick={() => {
-                                      handleItemChange(i, "item", String(s.id));
-                                      setOpenSupplyDropdown(null);
-                                      setSupplySearch((prev) => ({ ...prev, [i]: "" }));
-                                    }}
-                                  >
-                                    <span className="font-semibold text-gray-900">{s.name}</span>
-                                    {s.qty > 0 && (
-                                      <span className="text-blue-500 font-semibold text-sm ml-2 whitespace-nowrap">
-                                        {s.qty.toFixed(2)} {s.unit}
-                                      </span>
-                                    )}
-                                  </li>
-                                ))}
-                              {availableSupplies.filter((s) =>
-                                !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
-                              ).length === 0 && (
-                                <li className="px-3 py-2 text-sm text-gray-400">Sin resultados</li>
-                              )}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
                       <div className="sm:col-span-1">
                         <InputField
                           label=""
