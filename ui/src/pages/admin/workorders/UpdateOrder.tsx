@@ -146,6 +146,9 @@ export default function UpdateOrder({
       dose: string;
     }[]
   >(emptyItems);
+  const [preciseDoseByRow, setPreciseDoseByRow] = useState<Record<number, number>>(
+    {}
+  );
 
   function CreateSupplyInline({
     projectId,
@@ -440,6 +443,7 @@ export default function UpdateOrder({
       }
 
       setItems(loadedItems);
+      setPreciseDoseByRow({});
     }
   }, [selectedOrder, investors, labors, lots]);
 
@@ -491,10 +495,12 @@ export default function UpdateOrder({
     if (surface && surface !== "" && surface !== "0") {
       items.forEach((item, i) => {
         if (item.totalUsed && item.totalUsed !== "") {
+          const preciseDose = Number(item.totalUsed) / Number(surface);
+          setPreciseDoseByRow((prev) => ({ ...prev, [i]: preciseDose }));
           handleItemChange(
             i,
             "dose",
-            (Number(item.totalUsed) / Number(surface)).toFixed(3).replace(/\.?0+$/, "")
+            formatDose(preciseDose)
           );
         }
       });
@@ -506,6 +512,17 @@ export default function UpdateOrder({
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
     );
   };
+
+  const roundTo = (value: number, decimals: number) => {
+    const factor = 10 ** decimals;
+    return Math.round((value + Number.EPSILON) * factor) / factor;
+  };
+
+  const formatDose = (value: number) =>
+    roundTo(value, 3).toFixed(3).replace(/\.?0+$/, "");
+
+  
+  const formatTotalUsedFromDose = (value: number) => roundTo(value, 0).toFixed(2);
 
   const scrollHighlightedSupplyIntoView = (rowIndex: number, optionIndex: number) => {
     requestAnimationFrame(() => {
@@ -1088,10 +1105,15 @@ export default function UpdateOrder({
                                 surface !== "" &&
                                 surface !== "0"
                               ) {
+                                const preciseDose = Number(value) / Number(surface);
+                                setPreciseDoseByRow((prev) => ({
+                                  ...prev,
+                                  [i]: preciseDose,
+                                }));
                                 handleItemChange(
                                   i,
                                   "dose",
-                                  (Number(value) / Number(surface)).toFixed(3).replace(/\.?0+$/, "")
+                                  formatDose(preciseDose)
                                 );
                               }
                             }
@@ -1115,10 +1137,18 @@ export default function UpdateOrder({
                                 surface !== "" &&
                                 surface !== "0"
                               ) {
+                                const preciseDose = preciseDoseByRow[i];
+                                const doseForCalc =
+                                  typeof preciseDose === "number" &&
+                                  formatDose(preciseDose) === value
+                                    ? preciseDose
+                                    : Number(value);
                                 handleItemChange(
                                   i,
                                   "totalUsed",
-                                  (Number(value) * Number(surface)).toFixed(3).replace(/\.?0+$/, "")
+                                  formatTotalUsedFromDose(
+                                    doseForCalc * Number(surface)
+                                  )
                                 );
                               }
                             }
