@@ -51,6 +51,13 @@ export const normalizeNumber = (val: unknown): number => {
   return Number.isNaN(parsed) ? NaN : parsed;
 };
 
+/** Remove trailing zeros from a fixed-point string (e.g. "1.200" → "1.2", "3.000" → "3"). */
+export const trimTrailingZeros = (value: string) =>
+  value.replace(/\.?0+$/, "");
+
+/** Default number of empty item rows shown in order / product forms. */
+export const DEFAULT_ITEM_ROW_COUNT = 7;
+
 /**
  * Normalize a value for filter comparison:
  * - trim/lowercase for strings

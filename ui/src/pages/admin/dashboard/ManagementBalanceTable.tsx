@@ -61,8 +61,6 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
         </div>
       </div>
 
-
-
       {directCostItems
         .sort((a, b) => a.order - b.order)
         .map((item, idx) => (
@@ -121,7 +119,6 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
             </div>
           </div>
         ))}
-
 
       {/* Totals Row */}
       {/*<div className="grid grid-cols-4 text-sm py-2 px-2 bg-gray-200 font-bold text-gray-900 border-t-2 border-gray-300 h-[45px]">*/}
