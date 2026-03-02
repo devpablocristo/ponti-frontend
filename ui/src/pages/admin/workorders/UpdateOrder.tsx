@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import useLabors from "../../../hooks/useLabors";
 import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import { LoaderCircle } from "lucide-react";
+import { ChevronDown, LoaderCircle } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
@@ -14,10 +14,8 @@ import useCategories from "../../../hooks/useCategories";
 import { units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
-import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
-import { trimTrailingZeros, DEFAULT_ITEM_ROW_COUNT } from "../utils";
 
-const emptyItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
+const emptyItems = Array.from({ length: 7 }, () => ({
   item: "",
   totalUsed: "",
   dose: "",
@@ -123,6 +121,12 @@ export default function UpdateOrder({
   const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
     null
   );
+  const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
+  const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
+  const [highlightedSupplyIndex, setHighlightedSupplyIndex] = useState<
+    Record<number, number>
+  >({});
+  const supplyListRefs = useRef<Record<number, HTMLUListElement | null>>({});
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
     null
   );
@@ -142,6 +146,9 @@ export default function UpdateOrder({
       dose: string;
     }[]
   >(emptyItems);
+  const [preciseDoseByRow, setPreciseDoseByRow] = useState<Record<number, number>>(
+    {}
+  );
 
   function CreateSupplyInline({
     projectId,
@@ -237,10 +244,7 @@ export default function UpdateOrder({
               size="sm"
             />
 
-            <label
-              className="inline-flex items-center gap-2 text-sm text-gray-700"
-              title="Indica que el precio cargado es parcial y puede completarse más adelante"
-            >
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"
                 className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -351,6 +355,23 @@ export default function UpdateOrder({
   }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
 
   useEffect(() => {
+    if (openSupplyDropdown === null) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const row = document.querySelector(
+        `[data-supply-row="${openSupplyDropdown}"]`
+      );
+      const target = event.target as Node;
+      if (row && !row.contains(target)) {
+        setOpenSupplyDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [openSupplyDropdown]);
+
+  useEffect(() => {
     if (!selectedProject || !selectedOrder) return;
     setInvestors(
       selectedProject.investors
@@ -417,11 +438,12 @@ export default function UpdateOrder({
         dose: item.final_dose.toString(),
       }));
 
-      while (loadedItems.length < DEFAULT_ITEM_ROW_COUNT) {
+      while (loadedItems.length < 7) {
         loadedItems.push({ item: "", totalUsed: "", dose: "" });
       }
 
       setItems(loadedItems);
+      setPreciseDoseByRow({});
     }
   }, [selectedOrder, investors, labors, lots]);
 
@@ -470,14 +492,18 @@ export default function UpdateOrder({
   }, [drawerOpen]);
 
   useEffect(() => {
-    if (surface && surface !== "0") {
-      setItems((prev) =>
-        prev.map((item) =>
-          item.totalUsed
-            ? { ...item, dose: trimTrailingZeros((Number(item.totalUsed) / Number(surface)).toFixed(3)) }
-            : item
-        )
-      );
+    if (surface && surface !== "" && surface !== "0") {
+      items.forEach((item, i) => {
+        if (item.totalUsed && item.totalUsed !== "") {
+          const preciseDose = Number(item.totalUsed) / Number(surface);
+          setPreciseDoseByRow((prev) => ({ ...prev, [i]: preciseDose }));
+          handleItemChange(
+            i,
+            "dose",
+            formatDose(preciseDose)
+          );
+        }
+      });
     }
   }, [surface]);
 
@@ -485,6 +511,28 @@ export default function UpdateOrder({
     setItems((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
     );
+  };
+
+  const roundTo = (value: number, decimals: number) => {
+    const factor = 10 ** decimals;
+    return Math.round((value + Number.EPSILON) * factor) / factor;
+  };
+
+  const formatDose = (value: number) =>
+    roundTo(value, 3).toFixed(3).replace(/\.?0+$/, "");
+
+  
+  const formatTotalUsedFromDose = (value: number) => roundTo(value, 0).toFixed(2);
+
+  const scrollHighlightedSupplyIntoView = (rowIndex: number, optionIndex: number) => {
+    requestAnimationFrame(() => {
+      const list = supplyListRefs.current[rowIndex];
+      if (!list) return;
+      const option = list.querySelector<HTMLLIElement>(
+        `[data-supply-option-index="${optionIndex}"]`
+      );
+      option?.scrollIntoView({ block: "nearest" });
+    });
   };
 
   const handleSaveOrder = () => {
@@ -875,28 +923,171 @@ export default function UpdateOrder({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4">
-                  {items.map((item, i) => (
+                  {items.map((item, i) => {
+                    const filteredSupplies = supplies.filter(
+                      (s) =>
+                        !supplySearch[i] ||
+                        s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
+                    );
+                    const highlightedIndex = highlightedSupplyIndex[i] ?? 0;
+
+                    return (
                     <div
                       key={i}
                       className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                     >
-                      <div className="sm:col-span-1">
-                        <SupplyDropdown
-                          options={supplies.map((s) => ({ id: s.id, name: s.name }))}
-                          value={item.item ? Number(item.item) : null}
-                          onSelect={(option) => {
-                            setItems((prev) =>
-                              prev.map((it, idx) =>
-                                idx === i ? { ...it, item: String(option.id), dose: "", totalUsed: "" } : it
-                              )
-                            );
+                      <div className="sm:col-span-1 relative" data-supply-row={i}>
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          aria-haspopup="listbox"
+                          aria-expanded={openSupplyDropdown === i}
+                          className="input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between"
+                          onClick={() => {
+                            const nextOpen = openSupplyDropdown === i ? null : i;
+                            setOpenSupplyDropdown(nextOpen);
+                            if (nextOpen !== null) {
+                              setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                            }
                           }}
-                          onCreateNew={() => {
-                            handleItemChange(i, "item", "");
-                            setItemIndexToUpdate(i);
-                            setOpenCreateSupply(true);
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              const nextOpen = openSupplyDropdown === i ? null : i;
+                              setOpenSupplyDropdown(nextOpen);
+                              if (nextOpen !== null) {
+                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                              }
+                            }
+                            if (e.key === "Escape" && openSupplyDropdown === i) {
+                              e.preventDefault();
+                              setOpenSupplyDropdown(null);
+                            }
                           }}
-                        />
+                        >
+                          {item.item ? (
+                            <span className="truncate font-semibold text-gray-900">
+                              {supplies.find((s) => s.id === Number(item.item))?.name ||
+                                "Seleccionar..."}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">Seleccionar...</span>
+                          )}
+                          <ChevronDown size={16} className="text-slate-400 shrink-0" />
+                        </div>
+                        {openSupplyDropdown === i && (
+                          <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
+                            <input
+                              type="text"
+                              placeholder="Buscar insumo..."
+                              className="w-full px-3 py-2 text-sm border-b outline-none"
+                              value={supplySearch[i] || ""}
+                              onChange={(e) => {
+                                setSupplySearch((prev) => ({
+                                  ...prev,
+                                  [i]: e.target.value,
+                                }));
+                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "ArrowDown") {
+                                  e.preventDefault();
+                                  if (filteredSupplies.length === 0) return;
+                                  const nextIndex =
+                                    highlightedIndex < filteredSupplies.length - 1
+                                      ? highlightedIndex + 1
+                                      : 0;
+                                  setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
+                                  scrollHighlightedSupplyIntoView(i, nextIndex);
+                                  return;
+                                }
+                                if (e.key === "ArrowUp") {
+                                  e.preventDefault();
+                                  if (filteredSupplies.length === 0) return;
+                                  const nextIndex =
+                                    highlightedIndex > 0
+                                      ? highlightedIndex - 1
+                                      : filteredSupplies.length - 1;
+                                  setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
+                                  scrollHighlightedSupplyIntoView(i, nextIndex);
+                                  return;
+                                }
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const selected = filteredSupplies[highlightedIndex];
+                                  if (!selected) return;
+                                  handleItemChange(i, "item", String(selected.id));
+                                  handleItemChange(i, "dose", "");
+                                  handleItemChange(i, "totalUsed", "");
+                                  setOpenSupplyDropdown(null);
+                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                  return;
+                                }
+                                if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  setOpenSupplyDropdown(null);
+                                  return;
+                                }
+                                if (e.key === "Tab") {
+                                  setOpenSupplyDropdown(null);
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <ul
+                              className="max-h-[200px] overflow-y-auto"
+                              ref={(el) => {
+                                supplyListRefs.current[i] = el;
+                              }}
+                            >
+                              <li
+                                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
+                                  handleItemChange(i, "item", "");
+                                  setItemIndexToUpdate(i);
+                                  setOpenCreateSupply(true);
+                                  setOpenSupplyDropdown(null);
+                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                }}
+                              >
+                                + Crear nuevo insumo
+                              </li>
+                              {filteredSupplies.map((s, supplyIdx) => (
+                                  <li
+                                    key={s.id}
+                                    data-supply-option-index={supplyIdx}
+                                    className={`px-3 py-2 cursor-pointer font-semibold text-gray-900 ${
+                                      highlightedIndex === supplyIdx
+                                        ? "bg-gray-100"
+                                        : "hover:bg-gray-100"
+                                    }`}
+                                    onMouseEnter={() =>
+                                      setHighlightedSupplyIndex((prev) => ({
+                                        ...prev,
+                                        [i]: supplyIdx,
+                                      }))
+                                    }
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      handleItemChange(i, "item", String(s.id));
+                                      handleItemChange(i, "dose", "");
+                                      handleItemChange(i, "totalUsed", "");
+                                      setOpenSupplyDropdown(null);
+                                      setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                    }}
+                                  >
+                                    {s.name}
+                                  </li>
+                                ))}
+                              {filteredSupplies.length === 0 && (
+                                <li className="px-3 py-2 text-sm text-gray-400">
+                                  Sin resultados
+                                </li>
+                              )}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                       <div className="sm:col-span-1">
                         <InputField
@@ -906,16 +1097,25 @@ export default function UpdateOrder({
                           type="text"
                           value={item.totalUsed}
                           onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, ".");
+                            let value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
-                              const dose = surface && surface !== "0"
-                                ? trimTrailingZeros((Number(value) / Number(surface)).toFixed(3))
-                                : undefined;
-                              setItems((prev) =>
-                                prev.map((it, idx) =>
-                                  idx === i ? { ...it, totalUsed: value, ...(dose !== undefined && { dose }) } : it
-                                )
-                              );
+                              handleItemChange(i, "totalUsed", value);
+                              if (
+                                surface &&
+                                surface !== "" &&
+                                surface !== "0"
+                              ) {
+                                const preciseDose = Number(value) / Number(surface);
+                                setPreciseDoseByRow((prev) => ({
+                                  ...prev,
+                                  [i]: preciseDose,
+                                }));
+                                handleItemChange(
+                                  i,
+                                  "dose",
+                                  formatDose(preciseDose)
+                                );
+                              }
                             }
                           }}
                           size="sm"
@@ -929,16 +1129,28 @@ export default function UpdateOrder({
                           type="text"
                           value={item.dose}
                           onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, ".");
+                            let value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
-                              const totalUsed = surface && surface !== "0"
-                                ? trimTrailingZeros((Number(value) * Number(surface)).toFixed(3))
-                                : undefined;
-                              setItems((prev) =>
-                                prev.map((it, idx) =>
-                                  idx === i ? { ...it, dose: value, ...(totalUsed !== undefined && { totalUsed }) } : it
-                                )
-                              );
+                              handleItemChange(i, "dose", value);
+                              if (
+                                surface &&
+                                surface !== "" &&
+                                surface !== "0"
+                              ) {
+                                const preciseDose = preciseDoseByRow[i];
+                                const doseForCalc =
+                                  typeof preciseDose === "number" &&
+                                  formatDose(preciseDose) === value
+                                    ? preciseDose
+                                    : Number(value);
+                                handleItemChange(
+                                  i,
+                                  "totalUsed",
+                                  formatTotalUsedFromDose(
+                                    doseForCalc * Number(surface)
+                                  )
+                                );
+                              }
                             }
                           }}
                           size="sm"
@@ -959,7 +1171,8 @@ export default function UpdateOrder({
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                   <Button
                     variant="primary"
                     size="xs"
