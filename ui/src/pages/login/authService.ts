@@ -71,11 +71,13 @@ export class AuthService {
         "/auth/access-token"
       );
 
-      if (!response.data.access_token || !response.data.refresh_token) {
+      const token = response.data;
+
+      if (!token?.access_token || !token?.refresh_token) {
         throw new Error("No se recibió un nuevo access token.");
       }
 
-      return response.data;
+      return token;
     } catch (error) {
       const axiosError = error as AxiosError;
 
