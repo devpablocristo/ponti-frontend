@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
@@ -15,28 +15,11 @@ import { units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
-const emptyItems = [
-  {
-    item: "",
-    totalUsed: "",
-    dose: "",
-  },
-  {
-    item: "",
-    totalUsed: "",
-    dose: "",
-  },
-  {
-    item: "",
-    totalUsed: "",
-    dose: "",
-  },
-  {
-    item: "",
-    totalUsed: "",
-    dose: "",
-  },
-];
+const emptyItems = Array.from({ length: 7 }, () => ({
+  item: "",
+  totalUsed: "",
+  dose: "",
+}));
 
 type InvestorSplit = {
   investorId: number | null;
@@ -140,6 +123,10 @@ export default function UpdateOrder({
   );
   const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
   const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
+  const [highlightedSupplyIndex, setHighlightedSupplyIndex] = useState<
+    Record<number, number>
+  >({});
+  const supplyListRefs = useRef<Record<number, HTMLUListElement | null>>({});
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
     null
   );
@@ -159,6 +146,9 @@ export default function UpdateOrder({
       dose: string;
     }[]
   >(emptyItems);
+  const [preciseDoseByRow, setPreciseDoseByRow] = useState<Record<number, number>>(
+    {}
+  );
 
   function CreateSupplyInline({
     projectId,
@@ -177,6 +167,7 @@ export default function UpdateOrder({
     const [name, setName] = useState("");
     const [unit, setUnit] = useState("");
     const [price, setPrice] = useState("");
+    const [isPartialPrice, setIsPartialPrice] = useState(false);
     const [category, setCategory] = useState("");
     const [type, setType] = useState("");
 
@@ -253,6 +244,16 @@ export default function UpdateOrder({
               size="sm"
             />
 
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={isPartialPrice}
+                onChange={(e) => setIsPartialPrice(e.target.checked)}
+              />
+              Precio parcial
+            </label>
+
             <SelectField
               label="Rubro"
               name="category"
@@ -307,7 +308,7 @@ export default function UpdateOrder({
                         price: Number(price),
                         category: Number(category),
                         type: Number(type),
-                        is_partial_price: false,
+                        is_partial_price: isPartialPrice,
                       },
                     ],
                     projectId
@@ -352,6 +353,23 @@ export default function UpdateOrder({
     setPendingCreatedSupplyName(null);
     setItemIndexToUpdate(null);
   }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
+
+  useEffect(() => {
+    if (openSupplyDropdown === null) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const row = document.querySelector(
+        `[data-supply-row="${openSupplyDropdown}"]`
+      );
+      const target = event.target as Node;
+      if (row && !row.contains(target)) {
+        setOpenSupplyDropdown(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [openSupplyDropdown]);
 
   useEffect(() => {
     if (!selectedProject || !selectedOrder) return;
@@ -420,11 +438,12 @@ export default function UpdateOrder({
         dose: item.final_dose.toString(),
       }));
 
-      while (loadedItems.length < 4) {
+      while (loadedItems.length < 7) {
         loadedItems.push({ item: "", totalUsed: "", dose: "" });
       }
 
       setItems(loadedItems);
+      setPreciseDoseByRow({});
     }
   }, [selectedOrder, investors, labors, lots]);
 
@@ -476,10 +495,12 @@ export default function UpdateOrder({
     if (surface && surface !== "" && surface !== "0") {
       items.forEach((item, i) => {
         if (item.totalUsed && item.totalUsed !== "") {
+          const preciseDose = Number(item.totalUsed) / Number(surface);
+          setPreciseDoseByRow((prev) => ({ ...prev, [i]: preciseDose }));
           handleItemChange(
             i,
             "dose",
-            (Number(item.totalUsed) / Number(surface)).toFixed(3)
+            formatDose(preciseDose)
           );
         }
       });
@@ -490,6 +511,28 @@ export default function UpdateOrder({
     setItems((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
     );
+  };
+
+  const roundTo = (value: number, decimals: number) => {
+    const factor = 10 ** decimals;
+    return Math.round((value + Number.EPSILON) * factor) / factor;
+  };
+
+  const formatDose = (value: number) =>
+    roundTo(value, 3).toFixed(3).replace(/\.?0+$/, "");
+
+  
+  const formatTotalUsedFromDose = (value: number) => roundTo(value, 0).toFixed(2);
+
+  const scrollHighlightedSupplyIntoView = (rowIndex: number, optionIndex: number) => {
+    requestAnimationFrame(() => {
+      const list = supplyListRefs.current[rowIndex];
+      if (!list) return;
+      const option = list.querySelector<HTMLLIElement>(
+        `[data-supply-option-index="${optionIndex}"]`
+      );
+      option?.scrollIntoView({ block: "nearest" });
+    });
   };
 
   const handleSaveOrder = () => {
@@ -880,17 +923,47 @@ export default function UpdateOrder({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4">
-                  {items.map((item, i) => (
+                  {items.map((item, i) => {
+                    const filteredSupplies = supplies.filter(
+                      (s) =>
+                        !supplySearch[i] ||
+                        s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
+                    );
+                    const highlightedIndex = highlightedSupplyIndex[i] ?? 0;
+
+                    return (
                     <div
                       key={i}
                       className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                     >
-                      <div className="sm:col-span-1 relative">
+                      <div className="sm:col-span-1 relative" data-supply-row={i}>
                         <div
+                          role="button"
+                          tabIndex={0}
+                          aria-haspopup="listbox"
+                          aria-expanded={openSupplyDropdown === i}
                           className="input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between"
-                          onClick={() =>
-                            setOpenSupplyDropdown(openSupplyDropdown === i ? null : i)
-                          }
+                          onClick={() => {
+                            const nextOpen = openSupplyDropdown === i ? null : i;
+                            setOpenSupplyDropdown(nextOpen);
+                            if (nextOpen !== null) {
+                              setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              const nextOpen = openSupplyDropdown === i ? null : i;
+                              setOpenSupplyDropdown(nextOpen);
+                              if (nextOpen !== null) {
+                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                              }
+                            }
+                            if (e.key === "Escape" && openSupplyDropdown === i) {
+                              e.preventDefault();
+                              setOpenSupplyDropdown(null);
+                            }
+                          }}
                         >
                           {item.item ? (
                             <span className="truncate font-semibold text-gray-900">
@@ -909,18 +982,68 @@ export default function UpdateOrder({
                               placeholder="Buscar insumo..."
                               className="w-full px-3 py-2 text-sm border-b outline-none"
                               value={supplySearch[i] || ""}
-                              onChange={(e) =>
+                              onChange={(e) => {
                                 setSupplySearch((prev) => ({
                                   ...prev,
                                   [i]: e.target.value,
-                                }))
-                              }
+                                }));
+                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "ArrowDown") {
+                                  e.preventDefault();
+                                  if (filteredSupplies.length === 0) return;
+                                  const nextIndex =
+                                    highlightedIndex < filteredSupplies.length - 1
+                                      ? highlightedIndex + 1
+                                      : 0;
+                                  setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
+                                  scrollHighlightedSupplyIntoView(i, nextIndex);
+                                  return;
+                                }
+                                if (e.key === "ArrowUp") {
+                                  e.preventDefault();
+                                  if (filteredSupplies.length === 0) return;
+                                  const nextIndex =
+                                    highlightedIndex > 0
+                                      ? highlightedIndex - 1
+                                      : filteredSupplies.length - 1;
+                                  setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
+                                  scrollHighlightedSupplyIntoView(i, nextIndex);
+                                  return;
+                                }
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  const selected = filteredSupplies[highlightedIndex];
+                                  if (!selected) return;
+                                  handleItemChange(i, "item", String(selected.id));
+                                  handleItemChange(i, "dose", "");
+                                  handleItemChange(i, "totalUsed", "");
+                                  setOpenSupplyDropdown(null);
+                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                  return;
+                                }
+                                if (e.key === "Escape") {
+                                  e.preventDefault();
+                                  setOpenSupplyDropdown(null);
+                                  return;
+                                }
+                                if (e.key === "Tab") {
+                                  setOpenSupplyDropdown(null);
+                                }
+                              }}
                               autoFocus
                             />
-                            <ul className="max-h-[200px] overflow-y-auto">
+                            <ul
+                              className="max-h-[200px] overflow-y-auto"
+                              ref={(el) => {
+                                supplyListRefs.current[i] = el;
+                              }}
+                            >
                               <li
                                 className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
-                                onClick={() => {
+                                onMouseDown={(e) => {
+                                  e.preventDefault();
                                   handleItemChange(i, "item", "");
                                   setItemIndexToUpdate(i);
                                   setOpenCreateSupply(true);
@@ -930,19 +1053,23 @@ export default function UpdateOrder({
                               >
                                 + Crear nuevo insumo
                               </li>
-                              {supplies
-                                .filter(
-                                  (s) =>
-                                    !supplySearch[i] ||
-                                    s.name
-                                      .toLowerCase()
-                                      .includes(supplySearch[i].toLowerCase())
-                                )
-                                .map((s) => (
+                              {filteredSupplies.map((s, supplyIdx) => (
                                   <li
                                     key={s.id}
-                                    className="px-3 py-2 cursor-pointer hover:bg-gray-100 font-semibold text-gray-900"
-                                    onClick={() => {
+                                    data-supply-option-index={supplyIdx}
+                                    className={`px-3 py-2 cursor-pointer font-semibold text-gray-900 ${
+                                      highlightedIndex === supplyIdx
+                                        ? "bg-gray-100"
+                                        : "hover:bg-gray-100"
+                                    }`}
+                                    onMouseEnter={() =>
+                                      setHighlightedSupplyIndex((prev) => ({
+                                        ...prev,
+                                        [i]: supplyIdx,
+                                      }))
+                                    }
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
                                       handleItemChange(i, "item", String(s.id));
                                       handleItemChange(i, "dose", "");
                                       handleItemChange(i, "totalUsed", "");
@@ -953,11 +1080,7 @@ export default function UpdateOrder({
                                     {s.name}
                                   </li>
                                 ))}
-                              {supplies.filter(
-                                (s) =>
-                                  !supplySearch[i] ||
-                                  s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
-                              ).length === 0 && (
+                              {filteredSupplies.length === 0 && (
                                 <li className="px-3 py-2 text-sm text-gray-400">
                                   Sin resultados
                                 </li>
@@ -982,10 +1105,15 @@ export default function UpdateOrder({
                                 surface !== "" &&
                                 surface !== "0"
                               ) {
+                                const preciseDose = Number(value) / Number(surface);
+                                setPreciseDoseByRow((prev) => ({
+                                  ...prev,
+                                  [i]: preciseDose,
+                                }));
                                 handleItemChange(
                                   i,
                                   "dose",
-                                  (Number(value) / Number(surface)).toFixed(3)
+                                  formatDose(preciseDose)
                                 );
                               }
                             }
@@ -1004,6 +1132,25 @@ export default function UpdateOrder({
                             let value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "dose", value);
+                              if (
+                                surface &&
+                                surface !== "" &&
+                                surface !== "0"
+                              ) {
+                                const preciseDose = preciseDoseByRow[i];
+                                const doseForCalc =
+                                  typeof preciseDose === "number" &&
+                                  formatDose(preciseDose) === value
+                                    ? preciseDose
+                                    : Number(value);
+                                handleItemChange(
+                                  i,
+                                  "totalUsed",
+                                  formatTotalUsedFromDose(
+                                    doseForCalc * Number(surface)
+                                  )
+                                );
+                              }
                             }
                           }}
                           size="sm"
@@ -1024,7 +1171,8 @@ export default function UpdateOrder({
                         </Button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                   <Button
                     variant="primary"
                     size="xs"
