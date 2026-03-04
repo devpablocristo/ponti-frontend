@@ -12,6 +12,7 @@ import { useClickOutside } from "../../login/useClickOutside";
 import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
+import { SupplyMovementRequest } from "../../../hooks/useSupplyMovement/types";
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import { DEFAULT_ITEM_ROW_COUNT } from "../utils";
 import {
@@ -33,6 +34,34 @@ const typeOptions = [
   { id: 2, name: "Movimiento interno" },
   { id: 3, name: "Remito oficial" },
 ];
+
+function replaceSupplyIdsWithNames(
+  message: string,
+  supplies: { id: number; name: string }[]
+) {
+  if (!message) return message;
+
+  return message.replace(/\binsumo\s+(\d+)\b/gi, (_match, idText: string) => {
+    const supply = supplies.find((entry) => entry.id === Number(idText));
+    return supply ? `insumo ${supply.name}` : `insumo ${idText}`;
+  });
+}
+
+function getDisplayErrorMessage(
+  rawMessage: string | null,
+  payload: {
+    error?: { details?: string };
+  } | null,
+  supplies: { id: number; name: string }[]
+) {
+  const message =
+    typeof payload?.error?.details === "string" &&
+    payload.error.details.trim() !== ""
+      ? payload.error.details
+      : rawMessage ?? "";
+
+  return replaceSupplyIdsWithNames(message, supplies);
+}
 
 function Drawer({
   open,
@@ -102,6 +131,7 @@ export default function CreateItem({
   const {
     resultCreation,
     errorCreation,
+    errorCreationPayload,
     processingCreation,
     saveSupplyMovement,
   } = useSupplyMovements();
@@ -168,6 +198,8 @@ export default function CreateItem({
     setItems(emptyItems);
     setOrderNumber("");
     setDate("");
+    setType(null);
+    setSelectedProjectDestination(null);
   };
 
   function CreateSupplyInline({
@@ -354,10 +386,12 @@ export default function CreateItem({
 
   useEffect(() => {
     if (errorCreation) {
-      setError(errorCreation);
+      setError(
+        getDisplayErrorMessage(errorCreation, errorCreationPayload, supplies)
+      );
       setSuccessMessage(null);
     }
-  }, [errorCreation]);
+  }, [errorCreation, errorCreationPayload, supplies]);
 
   useEffect(() => {
     if (lastSubmittedRowIndexes.length === 0) return;
@@ -569,7 +603,8 @@ export default function CreateItem({
 
     setLastSubmittedRowIndexes(itemsWithAnyValue.map(({ index }) => index));
     setItemErrors({});
-    saveSupplyMovement(projectId, {
+    const payload: SupplyMovementRequest = {
+      mode: "strict",
       items: itemsWithAnyValue.map(({ item }) => ({
         supply_id: Number(item.item),
         quantity: Number(item.quantity),
@@ -583,7 +618,9 @@ export default function CreateItem({
           name: provider ? provider.name : queryProvider,
         },
       })),
-    });
+    };
+
+    saveSupplyMovement(projectId, payload);
   };
 
   return (

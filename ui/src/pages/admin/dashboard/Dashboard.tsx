@@ -18,6 +18,11 @@ interface DashboardIndicatorsProps {
   dashboard: DashboardData | null;
 }
 
+interface DashboardFilterSummaryItem {
+  label: string;
+  value: string;
+}
+
 function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
   if (!dashboard) {
     return (
@@ -90,10 +95,63 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
   );
 }
 
+function DashboardContent({
+  dashboard,
+  selectedFilters,
+  includeFilters = false,
+  className = "",
+}: {
+  dashboard: DashboardData | null;
+  selectedFilters: DashboardFilterSummaryItem[];
+  includeFilters?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      {includeFilters && (
+        <div className="grid grid-cols-1 gap-3 my-4 md:grid-cols-2 xl:grid-cols-4">
+          {selectedFilters.map((filter) => (
+            <div
+              key={filter.label}
+              className="p-4 bg-white border rounded-xl"
+            >
+              <div className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                {filter.label}
+              </div>
+              <div className="mt-1 text-sm font-semibold text-slate-900">
+                {filter.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="my-4">
+        <DashboardIndicators dashboard={dashboard} />
+      </div>
+
+      <div className="w-full p-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="w-full md:w-1/2">
+            <ManagementBalanceTable dashboard={dashboard} />
+          </div>
+          <div className="w-full md:w-1/2">
+            <CostByCropTable dashboard={dashboard} />
+          </div>
+        </div>
+      </div>
+
+      <OperationalIndicators dashboard={dashboard} />
+    </div>
+  );
+}
+
 export function Dashboard() {
   const {
     filters,
     selectedCustomer,
+    selectedProject,
+    campaigns,
     projectId,
     selectedCampaignId,
     selectedField,
@@ -104,6 +162,26 @@ export function Dashboard() {
   const { toPDF, targetRef } = usePDF({
     filename: `dashboard-${timestamp}.pdf`,
   });
+  const selectedCampaign =
+    campaigns.find((campaign) => campaign.id === selectedCampaignId);
+  const selectedFilters = [
+    {
+      label: "Cliente",
+      value: selectedCustomer?.name || "Todos los clientes",
+    },
+    {
+      label: "Proyecto",
+      value: selectedProject?.name || "Todos los proyectos",
+    },
+    {
+      label: "Campana",
+      value: selectedCampaign?.name || "Todas las campanas",
+    },
+    {
+      label: "Campo",
+      value: selectedField?.name || "Todos los campos",
+    },
+  ];
 
   // Ultra-robust fallback: if the dashboard endpoint returns "invalid token"
   // (env switch / expired session), force a clean re-login.
@@ -196,23 +274,16 @@ export function Dashboard() {
         </div>
       )}
 
-      <div ref={targetRef}>
-        <div className="my-4">
-          <DashboardIndicators dashboard={dashboard} />
-        </div>
+      <DashboardContent dashboard={dashboard} selectedFilters={selectedFilters} />
 
-        <div className="w-full p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="w-full md:w-1/2">
-              <ManagementBalanceTable dashboard={dashboard} />
-            </div>
-            <div className="w-full md:w-1/2">
-              <CostByCropTable dashboard={dashboard} />
-            </div>
-          </div>
+      <div className="fixed left-[-10000px] top-0">
+        <div ref={targetRef} className="w-[1280px] p-6 bg-white">
+          <DashboardContent
+            dashboard={dashboard}
+            selectedFilters={selectedFilters}
+            includeFilters
+          />
         </div>
-
-        <OperationalIndicators dashboard={dashboard} />
       </div>
     </div>
   );

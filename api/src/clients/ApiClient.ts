@@ -18,6 +18,15 @@ interface ErrorResponse {
   context?: Record<string, any>;
 }
 
+interface BatchFailure {
+  index?: number;
+  message?: string;
+}
+
+interface BatchSupplyMovementError {
+  error_detail?: string;
+}
+
 export class ApiClient {
   private axiosInstance: AxiosInstance;
 
@@ -42,9 +51,37 @@ export class ApiClient {
       context?: Record<string, any>;
       error?: { details?: string };
       error_message?: string;
+      failures?: BatchFailure[];
+      warnings?: string[];
+      supply_movements?: BatchSupplyMovementError[];
     };
 
+    const batchFailureMessage =
+      Array.isArray(data?.failures) && data.failures.length > 0
+        ? data.failures
+            .map((failure) => {
+              const row =
+                typeof failure?.index === "number" ? failure.index + 2 : "?";
+              return `Fila ${row}: ${failure?.message || "Error de validación"}`;
+            })
+            .join(" ")
+        : undefined;
+
+    const batchMovementMessage =
+      Array.isArray(data?.supply_movements) && data.supply_movements.length > 0
+        ? data.supply_movements
+            .map((movement, index) =>
+              movement?.error_detail
+                ? `Fila ${index + 2}: ${movement.error_detail}`
+                : null
+            )
+            .filter(Boolean)
+            .join(" ")
+        : undefined;
+
     const details =
+      batchFailureMessage ||
+      batchMovementMessage ||
       data?.details ||
       data?.error?.details ||
       data?.message ||
@@ -61,7 +98,12 @@ export class ApiClient {
         code: data?.code,
         message: data?.message,
         details,
-        context: data?.context,
+        context: {
+          ...(data?.context || {}),
+          failures: data?.failures,
+          warnings: data?.warnings,
+          supply_movements: data?.supply_movements,
+        },
       },
     });
   }

@@ -1,6 +1,7 @@
 import { PageInfo, Provider, Summary } from "@/api/types";
 
 export interface SupplyMovementRequest {
+  mode?: "strict" | "partial";
   items: SupplyMovementItem[];
 }
 

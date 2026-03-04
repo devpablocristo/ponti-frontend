@@ -40,6 +40,8 @@ export interface ActionButton {
   icon?: React.ReactNode;
   disabled?: boolean;
   onClick?: () => void;
+  accept?: string;
+  onFileChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   href?: string;
   isPrimary?: boolean;
 }
@@ -69,6 +71,8 @@ const ResponsiveButtonContainer: React.FC<ResponsiveButtonProps> = ({
               iconLeft={action.icon}
               href={action.href}
               onClick={action.onClick}
+              onFileChange={action.onFileChange}
+              accept={action.accept}
               disabled={action.disabled}
             >
               {action.label}
@@ -318,6 +322,8 @@ const FilterBar: React.FC<FilterBarProps> = ({
                   disabled={action.disabled}
                   href={action.href}
                   onClick={action.onClick}
+                  onFileChange={action.onFileChange}
+                  accept={action.accept}
                   size={inputSize}
                   className="whitespace-nowrap"
                   iconLeft={action.icon}
