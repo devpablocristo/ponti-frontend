@@ -383,7 +383,9 @@ export function WorkOrders() {
       {
         key: "cost_per_ha",
         header: "Costo USD/Ha",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("cost_per_ha"),
         render: (value: any) => {
           const num = Number(value);
           return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
@@ -392,7 +394,9 @@ export function WorkOrders() {
       {
         key: "unit_price",
         header: "Precio unidad",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("unit_price"),
         render: (value: any) => {
           const num = Number(value);
           return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
@@ -401,7 +405,9 @@ export function WorkOrders() {
       {
         key: "total_cost",
         header: "Total costo (USD)",
-        filterable: false,
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("total_cost"),
         render: (value: any) => {
           const num = Number(value);
           return <span className="font-bold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;

@@ -1,11 +1,69 @@
 import React, { useState } from "react";
+import type { AxiosError } from "axios";
 import { apiClient } from "@/api/client";
-
 import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
 import { SuccessResponse } from "@/api/types";
-import { SupplyMovement, SupplyMovementRequest, SupplyResponse } from "./types";
+import {
+  BatchErrorPayload,
+  SupplyMovement,
+  SupplyMovementRequest,
+  SupplyResponse,
+} from "./types";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+
+function getImportErrorData(error: unknown): BatchErrorPayload | undefined {
+  const axiosError = error as AxiosError<BatchErrorPayload>;
+  return axiosError?.response?.data ?? (error as BatchErrorPayload | undefined);
+}
+
+function getImportErrorMessage(error: unknown): string {
+  const data = getImportErrorData(error);
+
+  if (!data) {
+    return "Error inesperado al importar insumos.";
+  }
+
+  const failures = data.failures ?? data.error?.context?.failures;
+  const supplyMovements =
+    data.supply_movements ?? data.error?.context?.supply_movements;
+
+  if (Array.isArray(failures) && failures.length > 0) {
+    return failures
+      .map((failure) => {
+        const row = typeof failure.index === "number" ? failure.index + 2 : "?";
+        return `Fila ${row}: ${failure.message ?? "Error de validación"}`;
+      })
+      .join("\n");
+  }
+
+  if (Array.isArray(supplyMovements) && supplyMovements.length > 0) {
+    const details = supplyMovements
+      .map((movement, index) =>
+        movement.error_detail
+          ? `Fila ${index + 2}: ${movement.error_detail}`
+          : null
+      )
+      .filter(Boolean);
+
+    if (details.length > 0) {
+      return details.join("\n");
+    }
+  }
+
+  if (
+    typeof data.error?.details === "string" &&
+    data.error.details.trim() !== ""
+  ) {
+    return data.error.details;
+  }
+
+  if (typeof data.message === "string" && data.message.trim() !== "") {
+    return data.message;
+  }
+
+  return "Error inesperado al importar insumos.";
+}
 
 const useSupplyMovements = () => {
   const [
@@ -23,6 +81,8 @@ const useSupplyMovements = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [errorCreation, setErrorCreation] = useState<string | null>(null);
+  const [errorCreationPayload, setErrorCreationPayload] =
+    useState<BatchErrorPayload | null>(null);
 
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteResult, setDeleteResult] = useState(false);
@@ -81,6 +141,7 @@ const useSupplyMovements = () => {
     async (projectId: number, supplyMovement: SupplyMovementRequest) => {
       setProcessingCreation(true);
       setErrorCreation(null);
+      setErrorCreationPayload(null);
       dispatch({
         type: actions.SET_RESULT_CREATION,
         payload: {
@@ -114,10 +175,51 @@ const useSupplyMovements = () => {
     []
   );
 
+  const saveImportedSupplyMovement = React.useCallback(
+    async (projectId: number, supplyMovement: SupplyMovementRequest) => {
+      setProcessingCreation(true);
+      setErrorCreation(null);
+      setErrorCreationPayload(null);
+      dispatch({
+        type: actions.SET_RESULT_CREATION,
+        payload: {
+          supply_movements: [],
+        },
+      });
+
+      try {
+        const response = await apiClient.post<SuccessResponse<any>>(
+          `/supply_movements/${projectId}/import`,
+          supplyMovement
+        );
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_RESULT_CREATION,
+            payload: response.data,
+          });
+          return;
+        }
+
+        setErrorCreation("Ocurrio un error en la importación del movimiento");
+      } catch (error) {
+        const payload = getImportErrorData(error) ?? null;
+        setErrorCreationPayload(payload);
+        setErrorCreation(
+          getImportErrorMessage(error)
+        );
+      } finally {
+        setProcessingCreation(false);
+      }
+    },
+    []
+  );
+
   const updateSupplyMovement = React.useCallback(
     async (supplyMovementId: number, projectId: number, supplyMovement: SupplyMovementRequest) => {
       setProcessingCreation(true);
       setErrorCreation(null);
+      setErrorCreationPayload(null);
       dispatch({
         type: actions.SET_RESULT_CREATION,
         payload: {
@@ -231,6 +333,7 @@ const useSupplyMovements = () => {
     deleteResult,
     processingDelete,
     saveSupplyMovement,
+    saveImportedSupplyMovement,
     updateSupplyMovement,
     getSupplyMovement,
     selectedSupplyMovement,
@@ -240,6 +343,7 @@ const useSupplyMovements = () => {
     error,
     processingCreation,
     errorCreation,
+    errorCreationPayload,
     pageInfo,
   };
 };

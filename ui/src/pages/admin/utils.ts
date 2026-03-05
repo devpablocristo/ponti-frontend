@@ -58,6 +58,18 @@ export const trimTrailingZeros = (value: string) =>
 /** Default number of empty item rows shown in order / product forms. */
 export const DEFAULT_ITEM_ROW_COUNT = 7;
 
+/** Replace numeric supply IDs in error messages with their human-readable names. */
+export const replaceSupplyIdsWithNames = (
+  message: string,
+  supplies: { id: number; name: string }[]
+): string => {
+  if (!message) return message;
+  return message.replace(/\binsumo\s+(\d+)\b/gi, (_match, idText: string) => {
+    const supply = supplies.find((entry) => entry.id === Number(idText));
+    return supply ? `insumo ${supply.name}` : `insumo ${idText}`;
+  });
+};
+
 /**
  * Normalize a value for filter comparison:
  * - trim/lowercase for strings
