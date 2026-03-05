@@ -14,6 +14,7 @@ import SelectField from "../../../components/Input/SelectField";
 import { cropColors } from "../colors";
 import { apiClient } from "@/api/client";
 import { formatNumberAr } from "../utils";
+import Drawer from "../../../components/Drawer/Drawer";
 
 const EditableCell = ({
   item,
@@ -309,58 +310,6 @@ function LotsHeader({
           ))}
         </div>
       </BaseModal>
-    </div>
-  );
-}
-
-function Drawer({
-  open,
-  onClose,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-40 flex">
-      <div
-        className="fixed inset-0 bg-black bg-opacity-30 transition-opacity"
-        onClick={onClose}
-      />
-      <div className="ml-auto h-full w-full max-w-xl bg-white shadow-xl p-8 overflow-y-auto relative animate-slide-in-right">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-          onClick={onClose}
-          aria-label="Cerrar"
-        >
-          <svg
-            width="24"
-            height="24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-        {children}
-      </div>
-      <style>{`
-        @keyframes slide-in-right {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.25s cubic-bezier(0.4,0,0.2,1);
-        }
-      `}</style>
     </div>
   );
 }
@@ -965,7 +914,7 @@ const filteredLots = useMemo(() => {
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
           </div>
         )}
-        <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} maxWidth="max-w-xl">
           <div className="flex flex-col h-full">
             <h2 className="text-lg font-semibold mb-4">
               {lot?.project_name} ({selectedField?.name}: {lot?.lot_name})

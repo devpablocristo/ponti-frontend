@@ -2,13 +2,13 @@ import { InvestorContributionReportData, RowToRender } from "../../../hooks/useR
 import { formatNumberAr, normalizeNumber } from "../utils.ts";
 
 const HeaderShareBadge = ({ value }: { value: number }) => (
-  <span className="ml-2 rounded-md border border-[#6B7280] bg-[#374151] px-2 py-1 text-xs font-normal text-[#D1D5DB]">
+  <span className="ml-2 rounded-md border border-[#9CA3AF] bg-[#D1D5DB] px-2 py-1 text-xs font-normal text-[#374151]">
     { value }%
   </span>
 );
 
 const TotalShareBadge = ({ value }: { value: number }) => (
-  <span className="ml-2 rounded-md border border-[#6B7280] bg-[#374151] px-2 py-1 text-xs font-medium text-[#D1D5DB]">
+  <span className="ml-2 rounded-md border border-[#9CA3AF] bg-[#D1D5DB] px-2 py-1 text-xs font-medium text-[#374151]">
     { value }%
   </span>
 );
@@ -26,10 +26,10 @@ const MainValueCell = ({ value }: { value: string }) => {
   );
 };
 
-const InvestorValueCell = ({ value, dark = false }: { value: string; dark?: boolean }) => {
+const InvestorValueCell = ({ value }: { value: string }) => {
   const [amount, share] = value.split(" - ");
-  const amountClass = dark ? "text-white" : "text-[#374151]";
-  const shareClass = dark ? "bg-[#374151] text-[#D1D5DB]" : "bg-[#EEF2F7] text-[#6B7280]";
+  const amountClass = "text-[#374151]";
+  const shareClass = "bg-[#EEF2F7] text-[#6B7280]";
 
   if (!share) return <span className={ `font-medium ${ amountClass }` }>{ value }</span>;
 
@@ -59,6 +59,7 @@ export const InvestorContributionTable = ({
   }
 
   const investors = data.investor_headers;
+  const investorColumnWidth = investors.length > 0 ? `${ 50 / investors.length }%` : "0%";
   const totalOnlyKeys = new Set(["total_inputs", "total_labors", "indirect_costs"]);
 
   const toAmountNumber = (value: unknown) => {
@@ -138,7 +139,15 @@ export const InvestorContributionTable = ({
 
   return (
     <div className="overflow-x-auto flex justify-between">
-      <table className="w-full border border-gray-300 bg-white text-sm">
+      <table className="w-full table-fixed border border-gray-300 bg-white text-sm">
+        <colgroup>
+          <col style={ { width: "22%" } }/>
+          <col style={ { width: "14%" } }/>
+          <col style={ { width: "14%" } }/>
+          { investors.map((investor) => (
+            <col key={ investor.investor_id } style={ { width: investorColumnWidth } }/>
+          )) }
+        </colgroup>
         <thead>
         <tr className="h-12">
           <th className="h-12 border-b border-gray-300 bg-[#F8FAFC] p-3 text-left text-sm font-semibold text-[#4B5563] text-nowrap">
@@ -151,11 +160,10 @@ export const InvestorContributionTable = ({
             TOTAL U$ / HA
           </th>
           { investors.map((investor, index) => {
-            const customBg = index % 2 === 0 ? "bg-[#6B7280] text-white" : "bg-[#4B5563] text-white";
             return (
               <th
                 key={ investor.investor_id }
-                className={ `${ customBg } h-12 border-b border-[#4B5563] p-2 text-center text-xs font-light uppercase` }
+                className={ `h-12 bg-[#F8FAFC] p-3 text-center text-sm font-semibold uppercase text-[#4B5563] text-nowrap ${ index === 0 ? "border-l border-l-gray-300" : "" }` }
               >
                 { investor.investor_name }
                 <HeaderShareBadge value={ investor.share_pct }/>
@@ -215,17 +223,12 @@ export const InvestorContributionTable = ({
                 let cellBg = baseBg;
                 let cellTextColor = "text-[#6B7280]";
 
-                if (key === "total" || key === "totals") {
-                  cellBg = index % 2 === 0 ? "bg-[#6B7280]" : "bg-[#4B5563]";
-                  cellTextColor = "text-white";
-                }
-
                 return (
                   <td
                     key={ investor.investor_id }
-                    className={ `${ cellBg } ${ cellTextColor } ${ (key === "total" || key === "totals") ? "font-bold" : "font-normal" } h-11 border-t border-t-gray-300 px-2 py-1.5 text-center` }
+                    className={ `${ cellBg } ${ cellTextColor } ${ (key === "total" || key === "totals") ? "font-bold" : "font-normal" } h-11 border-t border-t-gray-300 px-2 py-1.5 text-center ${ index === 0 ? "border-l border-l-gray-300" : "" }` }
                   >
-                    { totalOnlyKeys.has(key) ? "—" : <InvestorValueCell value={ valueFormat.investor(investorValue, investorSharePct) } dark={ key === "total" || key === "totals" }/> }
+                    { totalOnlyKeys.has(key) ? "—" : <InvestorValueCell value={ valueFormat.investor(investorValue, investorSharePct) }/> }
                     {
                       (key === "total" || key === "totals") && (
                         <TotalShareBadge value={ investorSharePct }/>
@@ -246,8 +249,8 @@ export const InvestorContributionTable = ({
               <td className="p-1.5 text-right font-bold text-[#111827]">
                 Aporte acordado
               </td>
-              { data.comparison.map((investor) => (
-                <td key={ investor.investor_id } className="p-1.5 text-center font-medium text-[#374151]">
+              { data.comparison.map((investor, index) => (
+                <td key={ investor.investor_id } className={ `p-1.5 text-center font-medium text-[#374151] ${ index === 0 ? "border-l border-l-gray-300" : "" }` }>
                   u${ formatNumberAr(investor.agreed_usd) } - { investor.agreed_share_pct }%
                 </td>
               )) }
@@ -258,8 +261,8 @@ export const InvestorContributionTable = ({
               <td className="border-t border-t-[#111827] p-1.5 text-right font-bold text-white">
                 Ajuste de aporte
               </td>
-              { data.comparison.map((investor) => (
-                <td key={ investor.investor_id } className="border-t border-t-[#111827] p-1.5 text-center font-semibold text-white">
+              { data.comparison.map((investor, index) => (
+                <td key={ investor.investor_id } className={ `border-t border-t-[#111827] p-1.5 text-center font-semibold text-white ${ index === 0 ? "border-l border-l-gray-300" : "" }` }>
                   u${ formatNumberAr(investor.adjustment_usd) }
                 </td>
               )) }
@@ -275,8 +278,8 @@ export const InvestorContributionTable = ({
               <td className="p-1.5 text-right font-bold text-[#111827]">
                 Pago acordado
               </td>
-              { data.harvest.footer_payment_agreed.map((investor) => (
-                <td key={ investor.investor_id } className="p-1.5 text-center font-medium text-[#374151]">
+              { data.harvest.footer_payment_agreed.map((investor, index) => (
+                <td key={ investor.investor_id } className={ `p-1.5 text-center font-medium text-[#374151] ${ index === 0 ? "border-l border-l-gray-300" : "" }` }>
                   u${ formatNumberAr(investor.amount_usd) } - { investor.share_pct }%
                 </td>
               )) }
@@ -287,8 +290,8 @@ export const InvestorContributionTable = ({
               <td className="border-t border-t-[#111827] p-1.5 text-right font-bold text-white">
                 Ajuste de pago
               </td>
-              { data.harvest.footer_payment_adjustment.map((investor) => (
-                <td key={ investor.investor_id } className="border-t border-t-[#111827] p-1.5 text-center font-semibold text-white">
+              { data.harvest.footer_payment_adjustment.map((investor, index) => (
+                <td key={ investor.investor_id } className={ `border-t border-t-[#111827] p-1.5 text-center font-semibold text-white ${ index === 0 ? "border-l border-l-gray-300" : "" }` }>
                   u${ formatNumberAr(investor.amount_usd) }
                 </td>
               )) }
