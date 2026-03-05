@@ -14,9 +14,7 @@ import useCategories from "../../../hooks/useCategories";
 import { units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
-import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import Drawer from "../../../components/Drawer/Drawer";
-import { trimTrailingZeros, DEFAULT_ITEM_ROW_COUNT } from "../utils";
 
 const emptyItems = Array.from({ length: 7 }, () => ({
   item: "",
