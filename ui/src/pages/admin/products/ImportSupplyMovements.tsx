@@ -1,10 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import Button from "../../../components/Button/Button";
+import Drawer from "../../../components/Drawer/Drawer";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useProviders from "../../../hooks/useProviders";
 import useSupplies from "../../../hooks/useSupplies";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
+import { replaceSupplyIdsWithNames } from "../utils";
+import {
+  normalizeText,
+  parseCsv,
+  parseImportDate,
+  toCanonicalMovementType,
+  normalizeSpreadsheetRow,
+  getValueByAliases,
+  MAX_IMPORT_FILE_SIZE_MB,
+} from "./importUtils";
 
 const HEADER_ALIASES = {
   movementType: ["ingreso", "tipo_ingreso", "movement_type"],
@@ -32,12 +43,6 @@ const ALLOWED_MOVEMENT_TYPES = new Set([
   "Remito oficial",
 ]);
 
-const MOVEMENT_TYPE_CANONICAL_MAP: Record<string, string> = {
-  stock: "Stock",
-  movimiento_interno: "Movimiento interno",
-  remito_oficial: "Remito oficial",
-};
-
 type PreviewRow = {
   rowIndex: number;
   movementType: string;
@@ -52,178 +57,6 @@ type PreviewRow = {
   supplyId?: number;
   errors: string[];
 };
-
-function normalizeText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s./-]+/g, "_")
-    .replace(/[^a-z0-9_]/g, "")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function parseCsvLine(line: string) {
-  const values: string[] = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-      continue;
-    }
-
-    if (char === "," && !insideQuotes) {
-      values.push(current.trim());
-      current = "";
-      continue;
-    }
-
-    current += char;
-  }
-
-  values.push(current.trim());
-  return values;
-}
-
-function parseCsv(content: string) {
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  if (lines.length < 2) return [];
-
-  const headers = parseCsvLine(lines[0]).map((header) => normalizeText(header));
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      row[header] = values[index] ?? "";
-    });
-    return row;
-  });
-}
-
-function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
-}
-
-function getValueByAliases(
-  row: Record<string, string>,
-  aliases: readonly string[]
-) {
-  for (const alias of aliases) {
-    const normalizedAlias = normalizeText(alias);
-    if (row[normalizedAlias] !== undefined) {
-      return row[normalizedAlias];
-    }
-  }
-  return "";
-}
-
-function parseImportDate(rawValue: string) {
-  const raw = rawValue.trim();
-  if (!raw) return "";
-
-  const isoMatch = raw.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  }
-
-  const argMatch = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
-  if (argMatch) {
-    const [, day, month, yearRaw] = argMatch;
-    const year = yearRaw.length === 2 ? `20${yearRaw}` : yearRaw;
-    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-  }
-
-  return "";
-}
-
-function toCanonicalMovementType(rawValue: string): string | null {
-  const key = normalizeText(rawValue);
-  return MOVEMENT_TYPE_CANONICAL_MAP[key] ?? null;
-}
-
-function replaceSupplyIdsWithNames(
-  message: string,
-  supplies: { id: number; name: string }[]
-) {
-  if (!message) return message;
-
-  return message.replace(/\binsumo\s+(\d+)\b/gi, (_match, idText: string) => {
-    const supply = supplies.find((entry) => entry.id === Number(idText));
-    return supply ? `insumo ${supply.name}` : `insumo ${idText}`;
-  });
-}
-
-function Drawer({
-  open,
-  onClose,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-40 flex">
-      <div
-        className="fixed inset-0 bg-black bg-opacity-30 transition-opacity"
-        onClick={onClose}
-      />
-      <div className="ml-auto h-full w-full max-w-6xl bg-white shadow-xl p-6 overflow-y-auto relative animate-slide-in-right">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-          onClick={onClose}
-          aria-label="Cerrar"
-        >
-          <svg
-            width="24"
-            height="24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-        {children}
-      </div>
-      <style>{`
-        @keyframes slide-in-right {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.25s cubic-bezier(0.4,0,0.2,1);
-        }
-      `}</style>
-    </div>
-  );
-}
 
 export default function ImportSupplyMovements({
   open,
@@ -318,6 +151,15 @@ export default function ImportSupplyMovements({
 
     const parseFile = async () => {
       setParseError(null);
+
+      if (file.size > MAX_IMPORT_FILE_SIZE_MB * 1024 * 1024) {
+        if (!cancelled) {
+          setPreviewRows([]);
+          setParseError(`El archivo excede el límite de ${MAX_IMPORT_FILE_SIZE_MB}MB.`);
+          setParsedFileKey(fileKey);
+        }
+        return;
+      }
 
       const lowerName = file.name.toLowerCase();
       const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
@@ -608,7 +450,7 @@ export default function ImportSupplyMovements({
   };
 
   return (
-    <Drawer open={open} onClose={onClose}>
+    <Drawer open={open} onClose={onClose} maxWidth="max-w-6xl">
       <div className="flex flex-col h-full">
         <div className="mb-4">
           <h2 className="text-xl font-semibold text-gray-900">

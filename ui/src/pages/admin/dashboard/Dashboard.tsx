@@ -174,8 +174,8 @@ export function Dashboard() {
       value: selectedProject?.name || "Todos los proyectos",
     },
     {
-      label: "Campana",
-      value: selectedCampaign?.name || "Todas las campanas",
+      label: "Campaña",
+      value: selectedCampaign?.name || "Todas las campañas",
     },
     {
       label: "Campo",

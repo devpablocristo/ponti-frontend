@@ -4,32 +4,13 @@ import { apiClient } from "@/api/client";
 import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
 import { SuccessResponse } from "@/api/types";
-import { SupplyMovement, SupplyMovementRequest, SupplyResponse } from "./types";
+import {
+  BatchErrorPayload,
+  SupplyMovement,
+  SupplyMovementRequest,
+  SupplyResponse,
+} from "./types";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
-
-interface BatchFailure {
-  index?: number;
-  message?: string;
-}
-
-interface BatchSupplyMovementError {
-  error_detail?: string;
-}
-
-interface BatchErrorPayload {
-  error?: {
-    details?: string;
-    context?: {
-      failures?: BatchFailure[];
-      warnings?: string[];
-      supply_movements?: BatchSupplyMovementError[];
-    };
-  };
-  failures?: BatchFailure[];
-  supply_movements?: BatchSupplyMovementError[];
-  message?: string;
-  warnings?: string[];
-}
 
 function getImportErrorData(error: unknown): BatchErrorPayload | undefined {
   const axiosError = error as AxiosError<BatchErrorPayload>;
@@ -53,7 +34,7 @@ function getImportErrorMessage(error: unknown): string {
         const row = typeof failure.index === "number" ? failure.index + 2 : "?";
         return `Fila ${row}: ${failure.message ?? "Error de validación"}`;
       })
-      .join(" ");
+      .join("\n");
   }
 
   if (Array.isArray(supplyMovements) && supplyMovements.length > 0) {
@@ -66,7 +47,7 @@ function getImportErrorMessage(error: unknown): string {
       .filter(Boolean);
 
     if (details.length > 0) {
-      return details.join(" ");
+      return details.join("\n");
     }
   }
 

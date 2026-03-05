@@ -358,7 +358,6 @@ export function Products() {
     setImportDrawerOpen(false);
   };
 
-
   const filteredMovements = useMemo(() => {
     return supplyMovements.filter((item) => {
       return Object.entries(columnsFilters).every(([key, value]) => {

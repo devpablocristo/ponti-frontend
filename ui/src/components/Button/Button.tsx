@@ -105,13 +105,15 @@ export default function Button({
           }}
           onChange={(event) => {
             onFileChange(event);
-            event.target.value = "";
+            requestAnimationFrame(() => {
+              event.target.value = "";
+            });
           }}
         />
         <span className="inline-flex items-center justify-center w-full">
-        {iconLeft && <span className="flex-shrink-0">{iconLeft}</span>}
-        {children}
-        {iconRight && <span className="flex-shrink-0">{iconRight}</span>}
+          {iconLeft && <span className="flex-shrink-0">{iconLeft}</span>}
+          {children}
+          {iconRight && <span className="flex-shrink-0">{iconRight}</span>}
         </span>
       </label>
     );

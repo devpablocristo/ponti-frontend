@@ -293,7 +293,7 @@ router.post("/:project_id/import", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const { data: result } = await apiClient.post<any>(
+    const { data: result } = await apiClient.post<Record<string, unknown>>(
       `/projects/${project_id}/supply-movements/import`,
       req.body,
       headers

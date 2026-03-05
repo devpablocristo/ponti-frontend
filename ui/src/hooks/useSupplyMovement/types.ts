@@ -1,5 +1,29 @@
 import { PageInfo, Provider, Summary } from "@/api/types";
 
+export interface BatchFailure {
+  index?: number;
+  message?: string;
+}
+
+export interface BatchSupplyMovementError {
+  error_detail?: string;
+}
+
+export interface BatchErrorPayload {
+  error?: {
+    details?: string;
+    context?: {
+      failures?: BatchFailure[];
+      warnings?: string[];
+      supply_movements?: BatchSupplyMovementError[];
+    };
+  };
+  failures?: BatchFailure[];
+  supply_movements?: BatchSupplyMovementError[];
+  message?: string;
+  warnings?: string[];
+}
+
 export interface SupplyMovementRequest {
   mode?: "strict" | "partial";
   items: SupplyMovementItem[];

@@ -64,7 +64,7 @@ export class ApiClient {
                 typeof failure?.index === "number" ? failure.index + 2 : "?";
               return `Fila ${row}: ${failure?.message || "Error de validación"}`;
             })
-            .join(" ")
+            .join("\n")
         : undefined;
 
     const batchMovementMessage =
@@ -76,7 +76,7 @@ export class ApiClient {
                 : null
             )
             .filter(Boolean)
-            .join(" ")
+            .join("\n")
         : undefined;
 
     const details =

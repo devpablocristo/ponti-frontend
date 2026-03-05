@@ -26,10 +26,10 @@ const MainValueCell = ({ value }: { value: string }) => {
   );
 };
 
-const InvestorValueCell = ({ value, dark = false }: { value: string; dark?: boolean }) => {
+const InvestorValueCell = ({ value }: { value: string }) => {
   const [amount, share] = value.split(" - ");
-  const amountClass = dark ? "text-white" : "text-[#374151]";
-  const shareClass = dark ? "bg-[#374151] text-[#D1D5DB]" : "bg-[#EEF2F7] text-[#6B7280]";
+  const amountClass = "text-[#374151]";
+  const shareClass = "bg-[#EEF2F7] text-[#6B7280]";
 
   if (!share) return <span className={ `font-medium ${ amountClass }` }>{ value }</span>;
 

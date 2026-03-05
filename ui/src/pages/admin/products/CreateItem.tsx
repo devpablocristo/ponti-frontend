@@ -14,7 +14,8 @@ import useProviders from "../../../hooks/useProviders";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
 import { SupplyMovementRequest } from "../../../hooks/useSupplyMovement/types";
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
-import { DEFAULT_ITEM_ROW_COUNT } from "../utils";
+import { DEFAULT_ITEM_ROW_COUNT, replaceSupplyIdsWithNames } from "../utils";
+import Drawer from "../../../components/Drawer/Drawer";
 import {
   Campaign,
   Customer,
@@ -34,86 +35,6 @@ const typeOptions = [
   { id: 2, name: "Movimiento interno" },
   { id: 3, name: "Remito oficial" },
 ];
-
-function replaceSupplyIdsWithNames(
-  message: string,
-  supplies: { id: number; name: string }[]
-) {
-  if (!message) return message;
-
-  return message.replace(/\binsumo\s+(\d+)\b/gi, (_match, idText: string) => {
-    const supply = supplies.find((entry) => entry.id === Number(idText));
-    return supply ? `insumo ${supply.name}` : `insumo ${idText}`;
-  });
-}
-
-function getDisplayErrorMessage(
-  rawMessage: string | null,
-  payload: {
-    error?: { details?: string };
-  } | null,
-  supplies: { id: number; name: string }[]
-) {
-  const message =
-    typeof payload?.error?.details === "string" &&
-    payload.error.details.trim() !== ""
-      ? payload.error.details
-      : rawMessage ?? "";
-
-  return replaceSupplyIdsWithNames(message, supplies);
-}
-
-function Drawer({
-  open,
-  onClose,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-40 flex">
-      <div
-        className="fixed inset-0 bg-black bg-opacity-30 transition-opacity"
-        onClick={onClose}
-      />
-      <div className="ml-auto h-full w-full max-w-3xl bg-white shadow-xl p-6 overflow-y-auto relative animate-slide-in-right">
-        <button
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-          onClick={onClose}
-          aria-label="Cerrar"
-        >
-          <svg
-            width="24"
-            height="24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-        {children}
-      </div>
-      <style>{`
-        @keyframes slide-in-right {
-          from { transform: translateX(100%); opacity: 0; }
-          to { transform: translateX(0); opacity: 1; }
-        }
-        .animate-slide-in-right {
-          animation: slide-in-right 0.25s cubic-bezier(0.4,0,0.2,1);
-        }
-      `}</style>
-    </div>
-  );
-}
 
 export default function CreateItem({
   drawerOpen,
@@ -386,9 +307,12 @@ export default function CreateItem({
 
   useEffect(() => {
     if (errorCreation) {
-      setError(
-        getDisplayErrorMessage(errorCreation, errorCreationPayload, supplies)
-      );
+      const message =
+        typeof errorCreationPayload?.error?.details === "string" &&
+        errorCreationPayload.error.details.trim() !== ""
+          ? errorCreationPayload.error.details
+          : errorCreation ?? "";
+      setError(replaceSupplyIdsWithNames(message, supplies));
       setSuccessMessage(null);
     }
   }, [errorCreation, errorCreationPayload, supplies]);
