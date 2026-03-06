@@ -767,10 +767,10 @@ export default function TasksForm() {
                           !Boolean(row.is_partial_price)
                         )
                       }
-                      className={`input-base w-full px-3 py-2 text-sm font-medium focus:ring-0 ${
+                      className={`input-base w-full px-3 py-2 text-sm font-medium transition-colors focus:ring-0 ${
                         row.is_partial_price
-                          ? "bg-slate-100 text-slate-700"
-                          : "bg-white text-slate-500"
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : "border-slate-200 bg-white text-slate-500"
                       }`}
                     >
                       Parcial
