@@ -19,6 +19,15 @@ const LABOR_HEADER_ALIASES = {
   category: ["rubro", "categoria", "category"],
   price: ["precio", "precio_usd", "usd", "u$s"],
   contractor: ["contratista", "contractor", "proveedor"],
+  priceStatus: [
+    "estado_precio",
+    "precio_parcial",
+    "is_partial_price",
+    "parcial",
+    "final_parcial",
+    "estado_del_precio",
+    "precio_tentativo",
+  ],
 } as const;
 
 function normalizeText(value: string) {
@@ -94,6 +103,35 @@ function getValueByAliases(
   return "";
 }
 
+function parsePartialPrice(rawValue: string) {
+  const raw = (rawValue ?? "").trim();
+  if (!raw) {
+    return { provided: false, valid: true, value: false };
+  }
+
+  const normalized = normalizeText(raw).replace(/_/g, "");
+  const partialValues = new Set([
+    "parcial",
+    "tentativo",
+    "si",
+    "true",
+    "1",
+    "x",
+    "check",
+    "checked",
+  ]);
+  const finalValues = new Set(["final", "no", "false", "0"]);
+
+  if (partialValues.has(normalized)) {
+    return { provided: true, valid: true, value: true };
+  }
+  if (finalValues.has(normalized)) {
+    return { provided: true, valid: true, value: false };
+  }
+
+  return { provided: true, valid: false, value: false };
+}
+
 const columns: Column<LaborInfo>[] = [
   {
     key: "name",
@@ -108,7 +146,16 @@ const columns: Column<LaborInfo>[] = [
   {
     key: "price",
     header: "Precio",
-    render: (value) => <strong>{value}</strong>,
+    render: (value, row) => (
+      <div className="flex items-center gap-2">
+        <strong>{value}</strong>
+        {row.is_partial_price ? (
+          <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
+            Parcial
+          </span>
+        ) : null}
+      </div>
+    ),
   },
   {
     key: "contractor_name",
@@ -324,7 +371,12 @@ export default function ListTasks() {
         const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
         const categoryRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.category).trim();
         const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
+        const priceStatusRaw = getValueByAliases(
+          rawRow,
+          LABOR_HEADER_ALIASES.priceStatus
+        ).trim();
         const contractor = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.contractor).trim();
+        const parsedPartial = parsePartialPrice(priceStatusRaw);
 
         if (!name && !categoryRaw && !priceRaw && !contractor) return;
 
@@ -339,6 +391,11 @@ export default function ListTasks() {
           importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
         if (!contractor)
           importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
+        if (parsedPartial.provided && !parsedPartial.valid) {
+          importErrors.push(
+            `Fila ${rowNumber}: "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
+          );
+        }
 
         if (
           name &&
@@ -353,6 +410,7 @@ export default function ListTasks() {
             category_id: categoryId,
             price: String(priceValue),
             contractor_name: contractor,
+            is_partial_price: parsedPartial.valid ? parsedPartial.value : false,
           });
         }
       });
@@ -583,6 +641,18 @@ export default function ListTasks() {
                   setLabor({ ...labor, contractor_name: e.target.value });
                 }}
               />
+              <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                  checked={Boolean(labor?.is_partial_price)}
+                  onChange={(e) => {
+                    if (!labor) return;
+                    setLabor({ ...labor, is_partial_price: e.target.checked });
+                  }}
+                />
+                Precio parcial (tentativo)
+              </label>
             </div>
           </BaseModal>
           <BaseModal

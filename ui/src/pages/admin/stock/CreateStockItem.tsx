@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
@@ -6,9 +6,6 @@ import useSupplies from "../../../hooks/useSupplies";
 import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
-import Search from "../../../components/Input/Search";
-import { useClickOutside } from "../../login/useClickOutside";
-import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useStockMovement from "../../../hooks/useStockMovement";
 import useStock from "../../../hooks/useStock";
@@ -134,9 +131,6 @@ export default function CreateStockItem({
 
   const [queryProvider, setQueryProvider] = useState<string>("");
   const [provider, setProvider] = useState<Entity>();
-  const [providerSuggestions, setProviderSuggestions] = useState<Entity[]>([]);
-  const [showProviderSuggestions, setShowProviderSuggestions] =
-    useState<boolean>(false);
 
   // Default "Stock": evita que el primer render muestre "Seleccionar..." y campos extra.
   const [type, setType] = useState<{ id: number; name: string } | null>(
@@ -153,7 +147,6 @@ export default function CreateStockItem({
     setErrorMessages([]);
     setProvider(undefined);
     setQueryProvider("");
-    setShowProviderSuggestions(false);
     setInvestor(null);
     setItems(emptyItems);
     setOrderNumber("");
@@ -187,12 +180,6 @@ export default function CreateStockItem({
       );
     }
   }, [customer, project]);
-
-  useEffect(() => {
-    if (providers) {
-      setProviderSuggestions(providers);
-    }
-  }, [providers]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -260,45 +247,6 @@ export default function CreateStockItem({
       setInvestor(investors[0]);
     }
   }, [isStockIngreso, queryProvider, investor, investors]);
-
-  const handleProviderSuggestionClick = (provider: Entity) => {
-    setQueryProvider(provider.name);
-    setProvider(provider);
-    setShowProviderSuggestions(false);
-  };
-
-  const {
-    highlightedIndex: highlightedProviderIndex,
-    handleKeyDown: handleProviderKeyDown,
-    setHighlightedIndex: setProviderHighlightedIndex,
-  } = useKeyboardNavigation({
-    suggestions: providerSuggestions,
-    showSuggestions: showProviderSuggestions,
-    onSelect: handleProviderSuggestionClick,
-    onEscape: () => setShowProviderSuggestions(false),
-  });
-
-  const providerRef = useRef<HTMLDivElement>(null);
-  useClickOutside(providerRef, () => setShowProviderSuggestions(false));
-
-  const handleProviderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQueryProvider(value);
-    setProvider(undefined);
-
-    if (providers) {
-      const filtered =
-        value.trim() === ""
-          ? providers
-          : providers.filter((provider) =>
-              provider.name.toLowerCase().includes(value.toLowerCase())
-            );
-
-      setProviderSuggestions(filtered);
-      setShowProviderSuggestions(true);
-      setProviderHighlightedIndex(0);
-    }
-  };
 
   const handleItemChange = (i: number, field: string, value: string) => {
     setItems((prev) =>
@@ -496,47 +444,23 @@ export default function CreateStockItem({
                 />
                 {!isStockIngreso && (
                   <>
-                    <div ref={providerRef} className="relative">
-                      <Search
-                        label="Proveedor"
-                        placeholder="Ingrese nombre o fecha"
-                        name="provider"
-                        value={queryProvider}
-                        onClick={() => {
-                          if (!showProviderSuggestions) {
-                            setShowProviderSuggestions(true);
-                          }
-                        }}
-                        onChange={handleProviderChange}
-                        onFocus={() => setShowProviderSuggestions(true)}
-                        onKeyDown={handleProviderKeyDown}
-                        className={"w-full"}
-                        size="sm"
-                        fullWidth
-                      />
-                      {showProviderSuggestions && (
-                        <div className="flex justify-between items-center">
-                          <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
-                            {providerSuggestions.length > 0 &&
-                              providerSuggestions.map((p, index) => (
-                                <li
-                                  key={index}
-                                  onClick={() =>
-                                    handleProviderSuggestionClick(p)
-                                  }
-                                  className={`px-4 py-2 cursor-pointer ${
-                                    index === highlightedProviderIndex
-                                      ? "bg-gray-300 font-medium"
-                                      : "hover:bg-gray-300 hover:font-medium"
-                                  }`}
-                                >
-                                  {p.name}
-                                </li>
-                              ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
+                    <SelectField
+                      label="Proveedor"
+                      placeholder="Seleccionar proveedor"
+                      name="provider"
+                      options={providers || []}
+                      value={provider?.id?.toString() || ""}
+                      onChange={(e) => {
+                        const selectedProvider = providers?.find(
+                          (p) => p.id === Number(e.target.value)
+                        );
+                        if (selectedProvider) {
+                          setProvider(selectedProvider);
+                          setQueryProvider(selectedProvider.name);
+                        }
+                      }}
+                      size="sm"
+                    />
                     <SelectField
                       label="Inversor"
                       placeholder="Selecciona el inversor"

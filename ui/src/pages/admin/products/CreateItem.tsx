@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
@@ -7,9 +7,6 @@ import useStock from "../../../hooks/useStock";
 import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
-import Search from "../../../components/Input/Search";
-import { useClickOutside } from "../../login/useClickOutside";
-import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
@@ -133,11 +130,7 @@ export default function CreateItem({
     []
   );
 
-  const [queryProvider, setQueryProvider] = useState<string>("");
   const [provider, setProvider] = useState<Entity>();
-  const [providerSuggestions, setProviderSuggestions] = useState<Entity[]>([]);
-  const [showProviderSuggestions, setShowProviderSuggestions] =
-    useState<boolean>(false);
 
   const [type, setType] = useState<{ id: number; name: string } | null>(null);
 
@@ -162,8 +155,6 @@ export default function CreateItem({
     setItemErrors({});
     setLastSubmittedRowIndexes([]);
     setProvider(undefined);
-    setQueryProvider("");
-    setShowProviderSuggestions(false);
     setInvestor(null);
     setItems(emptyItems);
     setOrderNumber("");
@@ -347,12 +338,6 @@ export default function CreateItem({
   }, [customer, project]);
 
   useEffect(() => {
-    if (providers) {
-      setProviderSuggestions(providers);
-    }
-  }, [providers]);
-
-  useEffect(() => {
     if (errorCreation) {
       setError(errorCreation);
       setSuccessMessage(null);
@@ -444,59 +429,6 @@ export default function CreateItem({
     );
   }, [selectedProject]);
 
-  const handleProviderSuggestionClick = (provider: Entity) => {
-    setQueryProvider(provider.name);
-    setProvider(provider);
-    setShowProviderSuggestions(false);
-  };
-
-  const {
-    highlightedIndex: highlightedProviderIndex,
-    handleKeyDown: handleProviderKeyDown,
-    setHighlightedIndex: setProviderHighlightedIndex,
-  } = useKeyboardNavigation({
-    suggestions: providerSuggestions,
-    showSuggestions: showProviderSuggestions,
-    onSelect: handleProviderSuggestionClick,
-    onEscape: () => setShowProviderSuggestions(false),
-  });
-
-  const providerRef = useRef<HTMLDivElement>(null);
-  const providerListRef = useRef<HTMLUListElement | null>(null);
-  useClickOutside(providerRef, () => setShowProviderSuggestions(false));
-
-  useEffect(() => {
-    if (!showProviderSuggestions || providerSuggestions.length === 0) return;
-
-    requestAnimationFrame(() => {
-      const list = providerListRef.current;
-      if (!list) return;
-      const option = list.querySelector<HTMLLIElement>(
-        `[data-provider-option-index="${highlightedProviderIndex}"]`
-      );
-      option?.scrollIntoView({ block: "nearest" });
-    });
-  }, [highlightedProviderIndex, showProviderSuggestions, providerSuggestions.length]);
-
-  const handleProviderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQueryProvider(value);
-    setProvider(undefined);
-
-    if (providers) {
-      const filtered =
-        value.trim() === ""
-          ? providers
-          : providers.filter((provider) =>
-              provider.name.toLowerCase().includes(value.toLowerCase())
-            );
-
-      setProviderSuggestions(filtered);
-      setShowProviderSuggestions(true);
-      setProviderHighlightedIndex(0);
-    }
-  };
-
   const handleItemChange = (i: number, field: string, value: string) => {
     setItemErrors((prev) => {
       if (!(i in prev)) return prev;
@@ -514,14 +446,7 @@ export default function CreateItem({
     setError(null);
 
     if (!provider) {
-      if (queryProvider === "") {
-        errors.push("Debe seleccionar un proveedor.");
-      } else {
-        setProvider({
-          id: 0,
-          name: queryProvider,
-        });
-      }
+      errors.push("Debe seleccionar un proveedor.");
     }
 
     if (!investor) {
@@ -580,7 +505,7 @@ export default function CreateItem({
         investor_id: investor?.id || 0,
         provider: {
           id: provider?.id || 0,
-          name: provider ? provider.name : queryProvider,
+          name: provider?.name || "",
         },
       })),
     });
@@ -658,56 +583,22 @@ export default function CreateItem({
                   size="sm"
                 />
 
-                <div ref={providerRef} className="relative">
-                  <Search
-                    label="Proveedor"
-                    placeholder="Ingrese nombre o fecha"
-                    name="provider"
-                    value={queryProvider}
-                    onClick={() => {
-                      if (!showProviderSuggestions) {
-                        setShowProviderSuggestions(true);
-                      }
-                    }}
-                    onChange={handleProviderChange}
-                    onFocus={() => setShowProviderSuggestions(true)}
-                    onKeyDown={(e) => {
-                      handleProviderKeyDown(e);
-                      if (e.key === "Tab") {
-                        setShowProviderSuggestions(false);
-                      }
-                    }}
-                    className={"w-full"}
-                    size="sm"
-                    fullWidth
-                  />
-                  {showProviderSuggestions && (
-                    <div className="flex justify-between items-center">
-                      <ul
-                        ref={providerListRef}
-                        className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto"
-                      >
-                        {providerSuggestions.length > 0 &&
-                          providerSuggestions.map((provider, index) => (
-                            <li
-                              key={index}
-                              data-provider-option-index={index}
-                              onClick={() =>
-                                handleProviderSuggestionClick(provider)
-                              }
-                              className={`px-4 py-2 cursor-pointer ${
-                                index === highlightedProviderIndex
-                                  ? "bg-gray-300 font-medium"
-                                  : "hover:bg-gray-300 hover:font-medium"
-                              }`}
-                            >
-                              {provider.name}
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                <SelectField
+                  label="Proveedor"
+                  placeholder="Seleccionar proveedor"
+                  name="provider"
+                  options={providers || []}
+                  value={provider?.id?.toString() || ""}
+                  onChange={(e) => {
+                    const selectedProvider = providers?.find(
+                      (p) => p.id === Number(e.target.value)
+                    );
+                    if (selectedProvider) {
+                      setProvider(selectedProvider);
+                    }
+                  }}
+                  size="sm"
+                />
                 <SelectField
                   label="Inversor"
                   placeholder="Selecciona el inversor"
@@ -802,26 +693,26 @@ export default function CreateItem({
 
                 <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
                   {items.map((item, i) => (
-                      <div
-                        key={i}
-                        className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                      >
-                        <div className="sm:col-span-1">
-                          <SupplyDropdown
-                            options={availableSupplies.map((s) => ({
-                              id: s.id,
-                              name: s.name,
-                              badge: s.qty > 0 ? <>{s.qty.toFixed(2)} {s.unit}</> : undefined,
-                            }))}
-                            value={item.item ? Number(item.item) : null}
-                            onSelect={(option) => handleItemChange(i, "item", String(option.id))}
-                            onCreateNew={() => {
-                              setItemIndexToUpdate(i);
-                              setOpenCreateSupply(true);
-                            }}
-                            hasError={!!itemErrors[i]}
-                          />
-                        </div>
+                    <div
+                      key={i}
+                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                    >
+                      <div className="sm:col-span-1">
+                        <SupplyDropdown
+                          options={availableSupplies.map((s) => ({
+                            id: s.id,
+                            name: s.name,
+                            badge: s.qty > 0 ? <>{s.qty.toFixed(2)} {s.unit}</> : undefined,
+                          }))}
+                          value={item.item ? Number(item.item) : null}
+                          onSelect={(option) => handleItemChange(i, "item", String(option.id))}
+                          onCreateNew={() => {
+                            setItemIndexToUpdate(i);
+                            setOpenCreateSupply(true);
+                          }}
+                          hasError={!!itemErrors[i]}
+                        />
+                      </div>
                       <div className="sm:col-span-1">
                         <InputField
                           label=""

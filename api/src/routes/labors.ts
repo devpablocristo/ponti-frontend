@@ -1,5 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
+import { parsePartialPriceFlag } from "../utils/partialPrice";
 import { configService } from "../configService";
 import { cache } from ".";
 
@@ -482,6 +483,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       category_id: req.body.category_id,
       price: req.body.price,
       contractor_name: req.body.contractor_name,
+      is_partial_price: parsePartialPriceFlag(req.body.is_partial_price),
     };
 
     const { data: workorder } = await apiClient.put<any>(
