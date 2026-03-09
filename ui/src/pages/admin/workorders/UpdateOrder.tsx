@@ -277,6 +277,12 @@ export default function UpdateOrder({
     );
   }
 
+  const handleItemChange = useCallback((i: number, field: string, value: string) => {
+    setItems((prev) =>
+      prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
+    );
+  }, []);
+
   useEffect(() => {
     if (orderId) {
       getWorkorder(orderId);
@@ -459,12 +465,6 @@ export default function UpdateOrder({
       });
     }
   }, [surface, handleItemChange]);
-
-  const handleItemChange = useCallback((i: number, field: string, value: string) => {
-    setItems((prev) =>
-      prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
-    );
-  }, []);
 
   const roundTo = useCallback((value: number, decimals: number) => {
     const factor = 10 ** decimals;

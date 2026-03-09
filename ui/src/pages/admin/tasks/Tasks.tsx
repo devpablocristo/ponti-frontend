@@ -377,7 +377,7 @@ export function Tasks() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("workorder_number", laborGroups, taskFilters),
-        render: (value) => <strong className="text-gray-900">{value}</strong>,
+        render: (value) => <strong className="text-gray-900">{String(value ?? "")}</strong>,
       },
       {
         key: "date",
@@ -391,7 +391,7 @@ export function Tasks() {
         }),
         render: (dateString) => {
           if (!dateString) return "";
-          const datePart = (dateString ?? "").split("T")[0];
+          const datePart = String(dateString).split("T")[0];
           const [year, month, day] = datePart.split("-").map(Number);
           const dayStr = String(day).padStart(2, "0");
           const monthStr = String(month).padStart(2, "0");
@@ -454,7 +454,7 @@ export function Tasks() {
         filterable: true,
         filterOptions: getFilterOptionsForColumn("surface_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
         ),
       },
       {
@@ -462,14 +462,14 @@ export function Tasks() {
         header: "Costo $/Ha",
         filterable: true,
         filterOptions: getFilterOptionsForColumn("cost_ha", laborGroups, taskFilters),
-        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "net_total",
         header: "Total $ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-rose-600">$ {formatNumberAr(value)}</span>
+          <span className="font-bold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -477,7 +477,7 @@ export function Tasks() {
         header: "Total $ IVA",
         filterable: false,
         render: (value) => (
-          <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>
+          <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -492,7 +492,7 @@ export function Tasks() {
         header: "u$ Prom",
         filterable: false,
         render: (value) => (
-          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>
+          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -502,7 +502,7 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("usd_cost_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>
+          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -510,7 +510,7 @@ export function Tasks() {
         header: "Total u$ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-emerald-700">u$ {formatNumberAr(value)}</span>
+          <span className="font-bold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -523,7 +523,7 @@ export function Tasks() {
           <input
             type="text"
             className="block w-full min-w-[80px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm disabled:opacity-50"
-            value={value}
+            value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
             disabled={true}
           />
         ),
@@ -538,7 +538,7 @@ export function Tasks() {
           <input
             type="text"
             className="block w-full min-w-[80px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm disabled:opacity-50"
-            value={value}
+            value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
             disabled={true}
           />
         ),
@@ -550,10 +550,13 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("invoice_date", laborGroups, taskFilters),
         render: (dateString) => {
+          const rawDate = typeof dateString === "string" || typeof dateString === "number"
+            ? String(dateString)
+            : "";
           if (
-            !dateString ||
-            dateString === "0001-01-01T00:00:00Z" ||
-            dateString.startsWith("0001-01-01")
+            !rawDate ||
+            rawDate === "0001-01-01T00:00:00Z" ||
+            rawDate.startsWith("0001-01-01")
           ) {
             return (
               <input
@@ -564,7 +567,7 @@ export function Tasks() {
               />
             );
           }
-          const datePart = (dateString ?? "").split("T")[0];
+          const datePart = rawDate.split("T")[0];
           const [year, month, day] = datePart.split("-").map(Number);
           const dayStr = String(day).padStart(2, "0");
           const monthStr = String(month).padStart(2, "0");
@@ -578,11 +581,10 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("invoice_status", laborGroups, taskFilters),
         render: (status) => {
-          if (!status) {
-            status = emptyStatus;
-          }
+          const normalizedStatus =
+            typeof status === "string" && status ? status : emptyStatus;
 
-          const config = statusConfig[status] || {
+          const config = statusConfig[normalizedStatus] || {
             classes: "bg-gray-100 text-gray-700",
             icon: null,
           };
@@ -592,7 +594,7 @@ export function Tasks() {
               className={`inline-flex items-center gap-1 px-2 py-1 text-[14px] rounded-xl ${config.classes}`}
             >
               {config.icon}
-              {status}
+              {normalizedStatus}
             </span>
           );
         },

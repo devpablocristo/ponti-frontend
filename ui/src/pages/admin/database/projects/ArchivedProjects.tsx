@@ -5,6 +5,7 @@ import DataTable from "../../../../components/Table/DataTable";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import { ProjectData } from "../../../../hooks/useDatabase/projects/types";
+import { Column } from "../../types";
 
 export default function ArchivedProjects() {
   const {
@@ -68,17 +69,15 @@ export default function ArchivedProjects() {
     setIsModalOpen(true);
   };
 
-  const columns = [
+  const columns: Column<ProjectData>[] = [
     { key: "customer", header: "Cliente/Sociedad" },
     { key: "name", header: "Proyecto" },
     { key: "campaign", header: "Campaña" },
     { key: "managers", header: "Responsable" },
     { key: "investors", header: "Inversores y aportes" },
     {
-      key: "actions",
+      key: "id",
       header: "Acciones",
-      align: "center" as const,
-      headerAlign: "center" as const,
       render: (_value: unknown, item: ProjectData) => (
         <div className="flex items-center justify-center gap-3">
           <button

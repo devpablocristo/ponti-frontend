@@ -362,7 +362,7 @@ export function WorkOrders() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("surface_ha"),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
         ),
       },
       {
@@ -515,7 +515,7 @@ export function WorkOrders() {
 
       children.forEach((child) => {
         const validValues = new Set(
-          validData.map((o) => o[child as keyof OrdersData])
+          validData.map((o) => String(o[child as keyof OrdersData] ?? ""))
         );
 
         const childFilter = columnsFilters[child];
@@ -536,7 +536,7 @@ export function WorkOrders() {
               });
             }
           } else {
-            if (!validValues.has(childFilter)) {
+            if (!validValues.has(String(childFilter))) {
               setColumnsFilters((prev) => {
                 const updated = { ...prev };
                 delete updated[child];

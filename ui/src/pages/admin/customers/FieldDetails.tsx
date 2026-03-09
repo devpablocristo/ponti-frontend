@@ -20,7 +20,7 @@ type Props = {
 export default function FieldDetails({ field }: Props) {
   const [showModal, setShowModal] = useState(false);
 
-  const items = [
+  const items: Array<{ label: string; value: string | CropItem[] }> = [
     { label: "fields", value: field.name },
     { label: "hectares", value: String(field.hectares) },
     { label: "crops", value: field.crops },
@@ -91,7 +91,7 @@ export default function FieldDetails({ field }: Props) {
                 )}
               </>
             ) : (
-              value
+              String(value)
             )}
           </div>
         </div>

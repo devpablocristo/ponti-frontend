@@ -26,20 +26,25 @@ type CreateUserResponse = {
   reset_link?: string;
 };
 
+function isNestedListBody<T>(value: unknown): value is NestedListBody<T> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function unwrapList<T>(body: unknown): T[] {
   // BFF routes wrap backend responses (and sometimes wrap their own wrappers).
   // Normalize to a plain array so the UI doesn't explode on map().
-  const source = body as NestedListBody<T> | T[] | undefined;
+  const source = body;
+  const level1 = isNestedListBody<T>(source) ? source.data : undefined;
+  const level2 = isNestedListBody<T>(level1) ? level1.data : undefined;
+  const level3 = isNestedListBody<T>(level2) ? level2.data : undefined;
   const candidates = [
     source,
-    source?.data,
-    (source?.data as NestedListBody<T> | undefined)?.data,
-    ((source?.data as NestedListBody<T> | undefined)?.data as NestedListBody<T> | undefined)
-      ?.data,
-    source?.items,
-    (source?.data as NestedListBody<T> | undefined)?.items,
-    ((source?.data as NestedListBody<T> | undefined)?.data as NestedListBody<T> | undefined)
-      ?.items,
+    level1,
+    level2,
+    level3,
+    isNestedListBody<T>(source) ? source.items : undefined,
+    isNestedListBody<T>(level1) ? level1.items : undefined,
+    isNestedListBody<T>(level2) ? level2.items : undefined,
   ];
   for (const c of candidates) {
     if (Array.isArray(c)) return c as T[];

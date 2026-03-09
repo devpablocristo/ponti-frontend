@@ -433,7 +433,7 @@ export function Lots() {
         render: (value, data) => (
           <strong className="text-blue-700">
             <a href={`/admin/database/customers/${data.project_id}`}>
-              {value as string}
+              {String(value ?? "")}
             </a>
           </strong>
         ),
@@ -494,7 +494,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("variety"),
-        render: (value) => <b>{value}</b>,
+        render: (value) => <b>{String(value ?? "")}</b>,
       },
       { 
         key: "hectares", 
@@ -503,7 +503,7 @@ export function Lots() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("hectares"),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
         ),
       },
       {
@@ -513,7 +513,7 @@ export function Lots() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("dates"),
         render: (value) => {
-          if (value?.length > 0) {
+          if (Array.isArray(value) && value.length > 0) {
             for (let i = value.length - 1; i >= 0; i--) {
               if (value[i].sowing_date) {
                 return <b>{value[i].sowing_date}</b>;
@@ -529,7 +529,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("cost_usd_per_ha"),
-        render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
     ];
 
@@ -542,7 +542,7 @@ export function Lots() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("harvested_area"),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
         ),
       },
       {
@@ -569,7 +569,7 @@ export function Lots() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("tons"),
         render: (value, item) => (
-          <EditableCell item={item} value={value} onSuccessEdit={onSuccessEdit} />
+          <EditableCell item={item} value={value == null ? "" : String(value)} onSuccessEdit={onSuccessEdit} />
         ),
       },
       {
@@ -578,7 +578,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("yield"),
-        render: (value) => <span className="font-semibold text-amber-600">{formatNumberAr(value)} <span className="text-amber-400 font-normal text-xs">Tn/Has</span></span>,
+        render: (value) => <span className="font-semibold text-amber-600">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-amber-400 font-normal text-xs">Tn/Has</span></span>,
       },
     ];
 
@@ -590,7 +590,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("net_income"),
-        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       { 
         key: "rent", 
@@ -598,7 +598,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("rent"),
-        render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "admin_cost",
@@ -606,7 +606,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("admin_cost"),
-        render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "total_assets",
@@ -614,7 +614,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("total_assets"),
-        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "operating_result",
@@ -622,7 +622,7 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("operating_result"),
-        render: (value) => <span className="font-bold text-rose-700">$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-bold text-rose-700">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
     ];
 

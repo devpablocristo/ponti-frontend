@@ -15,7 +15,7 @@ type FilterType = "text" | "number" | "select" | "date";
 type Column<T> = {
   key: keyof T;
   header: string;
-  render?: (value: T[keyof T], item: T) => React.ReactNode;
+  render?: (value: unknown, item: T) => React.ReactNode;
   filterable?: boolean;
   filterType?: FilterType;
   filterOptions?: string[];
@@ -347,10 +347,18 @@ const DataTable = <T,>({
                                     })}
                                   </div>
                                 ) : column.filterType === "date" ? (
+                                  (() => {
+                                    const currentValue = filters?.[String(column.key)];
+                                    const inputValue =
+                                      typeof currentValue === "string" ||
+                                      typeof currentValue === "number"
+                                        ? String(currentValue)
+                                        : "";
+                                    return (
                                   <input
                                     type="date"
                                     className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
-                                    value={filters?.[String(column.key)] || ""}
+                                    value={inputValue}
                                     onChange={(e) =>
                                       handleFilterChange(
                                         String(column.key),
@@ -358,11 +366,21 @@ const DataTable = <T,>({
                                       )
                                     }
                                   />
+                                    );
+                                  })()
                                 ) : column.filterType === "number" ? (
+                                  (() => {
+                                    const currentValue = filters?.[String(column.key)];
+                                    const inputValue =
+                                      typeof currentValue === "string" ||
+                                      typeof currentValue === "number"
+                                        ? String(currentValue)
+                                        : "";
+                                    return (
                                   <input
                                     type="number"
                                     className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
-                                    value={filters?.[String(column.key)] || ""}
+                                    value={inputValue}
                                     onChange={(e) =>
                                       handleFilterChange(
                                         String(column.key),
@@ -370,12 +388,22 @@ const DataTable = <T,>({
                                       )
                                     }
                                   />
+                                    );
+                                  })()
                                 ) : (
+                                  (() => {
+                                    const currentValue = filters?.[String(column.key)];
+                                    const inputValue =
+                                      typeof currentValue === "string" ||
+                                      typeof currentValue === "number"
+                                        ? String(currentValue)
+                                        : "";
+                                    return (
                                   <input
                                     type="text"
                                     className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
                                     placeholder="Search..."
-                                    value={filters?.[String(column.key)] || ""}
+                                    value={inputValue}
                                     onChange={(e) =>
                                       handleFilterChange(
                                         String(column.key),
@@ -383,6 +411,8 @@ const DataTable = <T,>({
                                       )
                                     }
                                   />
+                                    );
+                                  })()
                                 )}
 
                                 <div className="flex justify-between mt-2">

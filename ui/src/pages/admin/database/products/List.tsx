@@ -172,14 +172,14 @@ export default function ListItems() {
       {
         key: "name",
         header: "Nombre",
-        render: (value) => <strong className="text-blue-700">{value}</strong>,
+        render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
         filterType: "select",
         filterOptions: nameOptions,
       },
       {
         key: "unit_name",
         header: "Unidad",
-        render: (value) => value || "-",
+        render: (value) => String(value ?? "") || "-",
         filterType: "select",
         filterOptions: unitOptions,
       },
@@ -193,14 +193,14 @@ export default function ListItems() {
       {
         key: "category_name",
         header: "Rubro",
-        render: (value) => value,
+        render: (value) => String(value ?? ""),
         filterType: "select",
         filterOptions: categoryOptions,
       },
       {
         key: "type_name",
         header: "Tipo/Clase",
-        render: (value) => value,
+        render: (value) => String(value ?? ""),
         filterType: "select",
         filterOptions: typeOptions,
       },

@@ -4,10 +4,10 @@ import { apiClient } from "@/api/client";
 import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
 import { PaginatedResponse, SuccessResponse } from "@/api/types";
-import { Metrics, Workorder, WorkorderData } from "./types";
+import { Metrics, OrdersData, Workorder, WorkorderData } from "./types";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
-type OrdersListResponse = SuccessResponse<PaginatedResponse<WorkorderData>>;
+type OrdersListResponse = SuccessResponse<PaginatedResponse<OrdersData>>;
 type WorkOrderMutationResponse = SuccessResponse<unknown>;
 
 const useOrders = () => {
@@ -39,7 +39,7 @@ const useOrders = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_ORDERS,
-            payload: response.data.data,
+            payload: response.data.data ?? [],
           });
 
           dispatch({

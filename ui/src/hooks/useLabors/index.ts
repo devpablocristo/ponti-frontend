@@ -50,7 +50,7 @@ const useLabors = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_LABOR_GROUPS,
-            payload: response.data.data,
+            payload: response.data.data ?? [],
           });
 
           dispatch({
@@ -233,7 +233,7 @@ const useLabors = () => {
       if (response.success) {
         dispatch({
           type: actions.SET_LABORS,
-          payload: response.data.data,
+          payload: response.data,
         });
         return;
       }
