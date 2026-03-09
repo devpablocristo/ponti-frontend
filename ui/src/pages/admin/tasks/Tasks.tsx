@@ -784,6 +784,7 @@ export function Tasks() {
             category_id: categoryId,
             price: String(priceValue),
             contractor_name: contractor,
+            is_partial_price: false,
           });
         }
       });
