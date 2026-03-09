@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-
 import DataTable from "../../../components/Table/DataTable";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import CreateItem from "./CreateItem";
+import ImportSupplyMovements from "./ImportSupplyMovements";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
 import { SupplyMovement } from "../../../hooks/useSupplyMovement/types";
 import { Summary } from "@/api/types";
@@ -43,6 +43,8 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
 }
 
 export function Products() {
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+  const [importDrawerOpen, setImportDrawerOpen] = useState(false);
   const {
     getSupplyMovements,
     supplyMovements,
@@ -63,6 +65,18 @@ export function Products() {
     null
   );
   const itemsPerPage = 10;
+
+  const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (!projectId) return;
+
+    const file = event.target.files?.[0] ?? null;
+    if (!file) return;
+
+    setActionErrorMessage(null);
+    setSuccessMessage(null);
+    setPendingImportFile(file);
+    setImportDrawerOpen(true);
+  };
 
   function getFilterOptionsForColumn(
     key: keyof SupplyMovement,
@@ -334,6 +348,15 @@ export function Products() {
     getSupplyMovements(projectId);
   };
 
+  const handleImported = (message: string) => {
+    if (!projectId) return;
+    setSuccessMessage(message);
+    setActionErrorMessage(null);
+    setCurrentPage(1);
+    getSupplyMovements(projectId);
+    setPendingImportFile(null);
+    setImportDrawerOpen(false);
+  };
 
   const filteredMovements = useMemo(() => {
     return supplyMovements.filter((item) => {
@@ -461,6 +484,15 @@ export function Products() {
             onClick: () => handleExport(),
           },
           {
+            label: "Importar Insumos",
+            variant: "primary",
+            isPrimary: true,
+            disabled: !projectId,
+            accept:
+              ".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel",
+            onFileChange: handleImportFileChange,
+          },
+          {
             label: "+ Nuevo Insumo",
             variant: "primary",
             isPrimary: true,
@@ -496,13 +528,27 @@ export function Products() {
           </div>
         )}
         {projectId && (
-          <CreateItem
-            customers={customers}
-            drawerOpen={drawerOpen}
-            setDrawerOpen={setDrawerOpen}
-            projectId={projectId}
-            onProductCreated={handleProductCreated}
-          />
+          <>
+            <CreateItem
+              customers={customers}
+              drawerOpen={drawerOpen}
+              setDrawerOpen={setDrawerOpen}
+              projectId={projectId}
+              onProductCreated={handleProductCreated}
+            />
+            {importDrawerOpen && (
+              <ImportSupplyMovements
+                open={importDrawerOpen}
+                file={pendingImportFile}
+                projectId={projectId}
+                onClose={() => {
+                  setImportDrawerOpen(false);
+                  setPendingImportFile(null);
+                }}
+                onImported={handleImported}
+              />
+            )}
+          </>
         )}
         <DataTable
           data={filteredMovements}

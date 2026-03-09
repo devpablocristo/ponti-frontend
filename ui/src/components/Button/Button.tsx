@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ChangeEvent, ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 interface ButtonProps {
@@ -18,6 +18,9 @@ interface ButtonProps {
   iconLeft?: ReactNode;
   iconRight?: ReactNode;
   onClick?: () => void;
+  onFileChange?: (event: ChangeEvent<HTMLInputElement>) => void;
+  accept?: string;
+  multiple?: boolean;
   href?: string;
   className?: string;
   type?: "button" | "submit" | "reset";
@@ -62,6 +65,9 @@ export default function Button({
   iconLeft,
   iconRight,
   onClick,
+  onFileChange,
+  accept,
+  multiple = false,
   href,
   className = "",
   disabled = false,
@@ -78,6 +84,38 @@ export default function Button({
         {children}
         {iconRight && <span className="flex-shrink-0">{iconRight}</span>}
       </Link>
+    );
+  }
+
+  if (onFileChange) {
+    return (
+      <label
+        className={`${classes} relative overflow-hidden ${
+          disabled ? "pointer-events-none" : ""
+        }`}
+      >
+        <input
+          type="file"
+          className="absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+          accept={accept}
+          multiple={multiple}
+          disabled={disabled}
+          onClick={(event) => {
+            event.currentTarget.value = "";
+          }}
+          onChange={(event) => {
+            onFileChange(event);
+            requestAnimationFrame(() => {
+              event.target.value = "";
+            });
+          }}
+        />
+        <span className="inline-flex items-center justify-center w-full">
+          {iconLeft && <span className="flex-shrink-0">{iconLeft}</span>}
+          {children}
+          {iconRight && <span className="flex-shrink-0">{iconRight}</span>}
+        </span>
+      </label>
     );
   }
 
