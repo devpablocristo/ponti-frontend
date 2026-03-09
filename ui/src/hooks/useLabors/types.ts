@@ -38,6 +38,7 @@ export interface LaborToSave {
   category_id: number;
   price: string;
   contractor_name: string;
+  is_partial_price: boolean;
 }
 
 export interface LaborInfo {
@@ -47,6 +48,7 @@ export interface LaborInfo {
   price: string;
   contractor_name: string;
   category_name: string;
+  is_partial_price?: boolean;
 }
 
 export type Metrics = {

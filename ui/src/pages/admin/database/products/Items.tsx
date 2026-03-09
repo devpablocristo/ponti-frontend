@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { parsePartialPrice } from "@/lib/importHelpers";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
@@ -182,36 +183,6 @@ function getValueByAliases(
     }
   }
   return "";
-}
-
-function parsePartialPrice(rawValue: string) {
-  const raw = (rawValue ?? "").trim();
-  if (!raw) {
-    return { provided: false, valid: true, value: false };
-  }
-
-  const normalized = normalizeText(raw).replace(/_/g, "");
-
-  const partialValues = new Set([
-    "parcial",
-    "tentativo",
-    "si",
-    "true",
-    "1",
-    "x",
-    "check",
-    "checked",
-  ]);
-  const finalValues = new Set(["final", "no", "false", "0"]);
-
-  if (partialValues.has(normalized)) {
-    return { provided: true, valid: true, value: true };
-  }
-  if (finalValues.has(normalized)) {
-    return { provided: true, valid: true, value: false };
-  }
-
-  return { provided: true, valid: false, value: false };
 }
 
 export default function Items() {
@@ -924,7 +895,7 @@ export default function Items() {
             <span className="font-medium">Insumo</span>
             <span className="font-medium">Unidad</span>
             <span className="font-medium">Precio</span>
-            <span className="font-medium">¿Parcial?</span>
+            <span className="font-medium">Estado precio</span>
             <span className="font-medium">Rubro</span>
             <span className="font-medium">Tipo/Clase</span>
           </div>
@@ -983,25 +954,28 @@ export default function Items() {
                       placeholder="u$s"
                     />
                   </div>
-                  <div className="sm:col-span-1 flex items-center sm:items-end">
-                    {/*
-                      Qué había antes:
-                      - En alta no existía control para precio parcial.
-                      Qué agregamos:
-                      - Checkbox por fila para marcar precio tentativo.
-                      Por qué:
-                      - Permite decidir el estado al crear cada insumo.
-                    */}
-                    <label className="inline-flex items-center gap-2 text-sm text-gray-700 mt-6 sm:mt-0">
-                      <input
-                        type="checkbox"
-                        name={`is_partial_price-${index}`}
-                        className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
-                        checked={Boolean(row.is_partial_price)}
-                        onChange={(e) => handleChange(row.id, "is_partial_price", e.target.checked)}
-                      />
-                      <span className="sm:hidden">Precio parcial</span>
+                  <div className="sm:col-span-1">
+                    <label className="sm:hidden text-sm text-gray-600">
+                      Estado precio
                     </label>
+                    <button
+                      type="button"
+                      aria-pressed={Boolean(row.is_partial_price)}
+                      onClick={() =>
+                        handleChange(
+                          row.id,
+                          "is_partial_price",
+                          !Boolean(row.is_partial_price)
+                        )
+                      }
+                      className={`input-base w-full px-3 py-2 text-sm font-medium transition-colors focus:ring-0 ${
+                        row.is_partial_price
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : "border-slate-200 bg-white text-slate-500"
+                      }`}
+                    >
+                      Parcial
+                    </button>
                   </div>
                   <div className="sm:col-span-1">
                     <label className="sm:hidden text-sm text-gray-600">

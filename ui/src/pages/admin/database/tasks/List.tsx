@@ -13,86 +13,14 @@ import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "../../../../api/client";
-
-const LABOR_HEADER_ALIASES = {
-  name: ["labor", "nombre", "name"],
-  category: ["rubro", "categoria", "category"],
-  price: ["precio", "precio_usd", "usd", "u$s"],
-  contractor: ["contratista", "contractor", "proveedor"],
-} as const;
-
-function normalizeText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_");
-}
-
-function parseCsvLine(line: string) {
-  const values: string[] = [];
-  let current = "";
-  let insideQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-      continue;
-    }
-    if (char === "," && !insideQuotes) {
-      values.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-  values.push(current.trim());
-  return values;
-}
-
-function parseCsv(content: string) {
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  if (lines.length < 2) return [];
-  const headers = parseCsvLine(lines[0]).map((h) => normalizeText(h));
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] ?? "";
-    });
-    return row;
-  });
-}
-
-function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
-}
-
-function getValueByAliases(
-  row: Record<string, string>,
-  aliases: readonly string[]
-) {
-  for (const alias of aliases) {
-    const normalizedAlias = normalizeText(alias);
-    if (row[normalizedAlias] !== undefined) {
-      return row[normalizedAlias];
-    }
-  }
-  return "";
-}
+import {
+  getValueByAliases,
+  LABOR_HEADER_ALIASES,
+  normalizeSpreadsheetRow,
+  normalizeText,
+  parseCsv,
+  parsePartialPrice,
+} from "./importUtils";
 
 const columns: Column<LaborInfo>[] = [
   {
@@ -108,7 +36,16 @@ const columns: Column<LaborInfo>[] = [
   {
     key: "price",
     header: "Precio",
-    render: (value) => <strong>{value}</strong>,
+    render: (value, row) => (
+      <div className="flex items-center gap-2">
+        <strong>{value}</strong>
+        {row.is_partial_price ? (
+          <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
+            Parcial
+          </span>
+        ) : null}
+      </div>
+    ),
   },
   {
     key: "contractor_name",
@@ -324,7 +261,12 @@ export default function ListTasks() {
         const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
         const categoryRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.category).trim();
         const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
+        const priceStatusRaw = getValueByAliases(
+          rawRow,
+          LABOR_HEADER_ALIASES.priceStatus
+        ).trim();
         const contractor = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.contractor).trim();
+        const parsedPartial = parsePartialPrice(priceStatusRaw);
 
         if (!name && !categoryRaw && !priceRaw && !contractor) return;
 
@@ -339,6 +281,11 @@ export default function ListTasks() {
           importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
         if (!contractor)
           importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
+        if (parsedPartial.provided && !parsedPartial.valid) {
+          importErrors.push(
+            `Fila ${rowNumber}: "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
+          );
+        }
 
         if (
           name &&
@@ -346,13 +293,15 @@ export default function ListTasks() {
           !Number.isNaN(categoryId) &&
           !Number.isNaN(priceValue) &&
           priceValue > 0 &&
-          contractor
+          contractor &&
+          (!parsedPartial.provided || parsedPartial.valid)
         ) {
           laborsToSave.push({
             name,
             category_id: categoryId,
             price: String(priceValue),
             contractor_name: contractor,
+            is_partial_price: parsedPartial.valid ? parsedPartial.value : false,
           });
         }
       });
@@ -366,7 +315,11 @@ export default function ListTasks() {
         return;
       }
 
-      await saveLabors(laborsToSave, projectId);
+      const saved = await saveLabors(laborsToSave, projectId);
+      if (!saved) {
+        return;
+      }
+
       getLabors(projectId);
 
       if (importErrors.length > 0) {
@@ -541,14 +494,14 @@ export default function ListTasks() {
                 type="text"
                 value={labor?.name || ""}
                 onChange={(e) => {
-                  setLabor({
-                    id: labor?.id || 0,
-                    category_id: labor?.category_id || 0,
-                    price: labor?.price || "",
-                    contractor_name: labor?.contractor_name || "",
-                    category_name: labor?.category_name || "",
-                    name: e.target.value,
-                  });
+                  setLabor((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          name: e.target.value,
+                        }
+                      : null
+                  );
                 }}
               />
               <SelectField
@@ -583,6 +536,18 @@ export default function ListTasks() {
                   setLabor({ ...labor, contractor_name: e.target.value });
                 }}
               />
+              <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                  checked={Boolean(labor?.is_partial_price)}
+                  onChange={(e) => {
+                    if (!labor) return;
+                    setLabor({ ...labor, is_partial_price: e.target.checked });
+                  }}
+                />
+                Precio parcial (tentativo)
+              </label>
             </div>
           </BaseModal>
           <BaseModal

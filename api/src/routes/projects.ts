@@ -1,5 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
+import { parsePartialPriceFlag } from "../utils/partialPrice";
 import { configService } from "../configService";
 import { cache } from ".";
 
@@ -705,9 +706,20 @@ router.post("/:id/labors", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
+    if (!Array.isArray(req.body)) {
+      res.status(400).json({ message: "Labores obligatorias" });
+      return;
+    }
+
     const requestData = {
-      labors: req.body,
+      labors: Array.isArray(req.body)
+        ? req.body.map((item: any) => ({
+          ...item,
+          is_partial_price: parsePartialPriceFlag(item?.is_partial_price),
+        }))
+        : [],
     };
+
 
     await apiClient.post<any>(
       `/projects/${projectId}/labors`,

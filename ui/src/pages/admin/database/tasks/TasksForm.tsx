@@ -11,6 +11,14 @@ import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
 import { LoaderCircle } from "lucide-react";
 import * as XLSX from "xlsx";
+import {
+  getValueByAliases,
+  LABOR_HEADER_ALIASES,
+  normalizeSpreadsheetRow,
+  normalizeText,
+  parseCsv,
+  parsePartialPrice,
+} from "./importUtils";
 
 interface Labor {
   id: number;
@@ -18,97 +26,13 @@ interface Labor {
   category: string;
   price: string;
   contractor: string;
+  is_partial_price: boolean;
 }
 
 interface PendingLaborImport {
   newRows: Labor[];
   duplicates: { existing: LaborInfo; updated: LaborInfo }[];
   warnings: string[];
-}
-
-const LABOR_HEADER_ALIASES = {
-  name: ["labor", "nombre", "name"],
-  category: ["rubro", "categoria", "category"],
-  price: ["precio", "precio_usd", "usd", "u$s"],
-  contractor: ["contratista", "contractor", "proveedor"],
-} as const;
-
-function normalizeText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_");
-}
-
-function parseCsvLine(line: string) {
-  const values: string[] = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-      continue;
-    }
-    if (char === "," && !insideQuotes) {
-      values.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-  values.push(current.trim());
-  return values;
-}
-
-function parseCsv(content: string) {
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  if (lines.length < 2) {
-    return [];
-  }
-
-  const headers = parseCsvLine(lines[0]).map((h) => normalizeText(h));
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] ?? "";
-    });
-    return row;
-  });
-}
-
-function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
-}
-
-function getValueByAliases(
-  row: Record<string, string>,
-  aliases: readonly string[]
-) {
-  for (const alias of aliases) {
-    const normalizedAlias = normalizeText(alias);
-    if (row[normalizedAlias] !== undefined) {
-      return row[normalizedAlias];
-    }
-  }
-  return "";
 }
 
 export default function TasksForm() {
@@ -121,7 +45,6 @@ export default function TasksForm() {
   const [pendingImport, setPendingImport] = useState<PendingLaborImport | null>(null);
   const [overwriting, setOverwriting] = useState(false);
   const { categories, getCategories } = useCategories();
-
   const { filters, projectId } = useWorkspaceFilters([
     "customer",
     "project",
@@ -135,6 +58,7 @@ export default function TasksForm() {
       category: "",
       price: "",
       contractor: "",
+      is_partial_price: false,
     }))
   );
 
@@ -156,6 +80,7 @@ export default function TasksForm() {
         category: "",
         price: "",
         contractor: "",
+        is_partial_price: false,
       }))
     );
   }
@@ -185,7 +110,7 @@ export default function TasksForm() {
     }
   }, [errorMessage]);
 
-  const handleChange = (id: number, field: keyof Labor, value: string) => {
+  const handleChange = (id: number, field: keyof Labor, value: string | boolean) => {
     setLabors((prev) =>
       prev.map((labor) =>
         labor.id === id ? { ...labor, [field]: value } : labor
@@ -225,11 +150,12 @@ export default function TasksForm() {
         category_id: Number(row.category),
         price: row.price,
         contractor_name: row.contractor,
+        is_partial_price: Boolean(row.is_partial_price),
       }));
 
     if (laborsToSave.length === 0) {
       setErrorMessage(
-        "Por favor, ingrese al menos un insumo antes de guardar."
+        "Por favor, ingrese al menos una labor antes de guardar."
       );
       return;
     }
@@ -246,6 +172,7 @@ export default function TasksForm() {
         category: "",
         price: "",
         contractor: "",
+        is_partial_price: false,
       });
     }
 
@@ -416,10 +343,15 @@ export default function TasksForm() {
           LABOR_HEADER_ALIASES.category
         ).trim();
         const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
+        const priceStatusRaw = getValueByAliases(
+          rawRow,
+          LABOR_HEADER_ALIASES.priceStatus
+        ).trim();
         const contractor = getValueByAliases(
           rawRow,
           LABOR_HEADER_ALIASES.contractor
         ).trim();
+        const parsedPartial = parsePartialPrice(priceStatusRaw);
 
         if (!name && !categoryRaw && !priceRaw && !contractor) return;
 
@@ -432,6 +364,12 @@ export default function TasksForm() {
         // Check if labor already exists
         const existing = laborByName.get(name.trim().toLowerCase());
         if (existing) {
+          if (parsedPartial.provided && !parsedPartial.valid) {
+            importErrors.push(
+              `Fila ${rowNumber}: "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
+            );
+            return;
+          }
           const catName = categoryByText?.name ?? existing.category_name;
           duplicates.push({
             existing,
@@ -442,6 +380,9 @@ export default function TasksForm() {
               category_id: (categoryId && !Number.isNaN(categoryId)) ? categoryId : existing.category_id,
               category_name: catName,
               contractor_name: contractor || existing.contractor_name,
+              is_partial_price: parsedPartial.provided && parsedPartial.valid
+                ? parsedPartial.value
+                : Boolean(existing.is_partial_price),
             },
           });
           return;
@@ -456,6 +397,11 @@ export default function TasksForm() {
         if (!contractor) {
           importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
         }
+        if (parsedPartial.provided && !parsedPartial.valid) {
+          importErrors.push(
+            `Fila ${rowNumber}: "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
+          );
+        }
 
         if (
           name &&
@@ -463,7 +409,8 @@ export default function TasksForm() {
           !Number.isNaN(categoryId) &&
           !Number.isNaN(priceValue) &&
           priceValue > 0 &&
-          contractor
+          contractor &&
+          (!parsedPartial.provided || parsedPartial.valid)
         ) {
           importedRows.push({
             id: importedRows.length,
@@ -471,6 +418,7 @@ export default function TasksForm() {
             category: String(categoryId),
             price: String(priceValue),
             contractor,
+            is_partial_price: parsedPartial.valid ? parsedPartial.value : false,
           });
         }
       });
@@ -633,14 +581,15 @@ export default function TasksForm() {
           </div>
         ) : (
           <div className="mt-4">
-            <div className="hidden sm:grid grid-cols-[1fr_1fr_0.5fr_1fr] gap-4 mb-2">
+            <div className="hidden sm:grid grid-cols-[1fr_1fr_0.5fr_0.45fr_1fr] gap-4 mb-2">
               <span className="font-semibold">Labor</span>
               <span className="font-semibold">Rubro</span>
               <span className="font-semibold">Precio</span>
+              <span className="font-semibold">Estado precio</span>
               <span className="font-semibold">Contratista</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_0.5fr_1fr] gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_0.5fr_0.45fr_1fr] gap-4">
               {rows.map((row, index) => (
                 <div
                   key={index}
@@ -655,7 +604,7 @@ export default function TasksForm() {
                       name={`labor-${index}`}
                       value={row.name}
                       onChange={(e) =>
-                        handleChange(index, "name", e.target.value)
+                        handleChange(row.id, "name", e.target.value)
                       }
                       placeholder="nombre"
                     />
@@ -686,11 +635,34 @@ export default function TasksForm() {
                       onChange={(e) => {
                         let value = e.target.value.replace(/,/g, ".");
                         if (/^\d*\.?\d{0,2}$/.test(value)) {
-                          handleChange(index, "price", value);
+                          handleChange(row.id, "price", value);
                         }
                       }}
                       placeholder="u$s"
                     />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <label className="sm:hidden text-sm text-gray-600">
+                      Estado precio
+                    </label>
+                    <button
+                      type="button"
+                      aria-pressed={Boolean(row.is_partial_price)}
+                      onClick={() =>
+                        handleChange(
+                          row.id,
+                          "is_partial_price",
+                          !Boolean(row.is_partial_price)
+                        )
+                      }
+                      className={`input-base w-full px-3 py-2 text-sm font-medium transition-colors focus:ring-0 ${
+                        row.is_partial_price
+                          ? "border-blue-200 bg-blue-50 text-blue-700"
+                          : "border-slate-200 bg-white text-slate-500"
+                      }`}
+                    >
+                      Parcial
+                    </button>
                   </div>
                   <div className="sm:col-span-1">
                     <label className="sm:hidden text-sm text-gray-600">
@@ -701,7 +673,7 @@ export default function TasksForm() {
                       name={`contratista-${index}`}
                       value={row.contractor}
                       onChange={(e) =>
-                        handleChange(index, "contractor", e.target.value)
+                        handleChange(row.id, "contractor", e.target.value)
                       }
                       placeholder="nombre"
                     />

@@ -187,14 +187,15 @@ const useLabors = () => {
             type: actions.SET_RESULT,
             payload: "Se han creado las labores con éxito!",
           });
-          return;
+          return true;
         }
 
         setError("Ocurrio un error en la creación de los labores");
+        return false;
       } catch (error) {
         if (extractErrorStatus(error) === 409) {
           setError("Ya existe una labor con el mismo nombre.");
-          return;
+          return false;
         }
 
         setError(
@@ -203,6 +204,7 @@ const useLabors = () => {
             "Error desconocido en la creación de las labores."
           )
         );
+        return false;
       } finally {
         setProcessing(false);
       }
