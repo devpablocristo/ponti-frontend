@@ -11,7 +11,7 @@ import useProjects from "../../../hooks/useDatabase/projects";
 import ExpandedRow from "./ExpandedRow";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import useCustomers from "../../../hooks/useCustomers";
-import { useSelection } from "../../login/context/SelectionContext";
+import { useSelection } from "../../login/context/useSelection";
 
 const columns: Column<ProjectData>[] = [
   { key: "customer", header: "Cliente/Sociedad" },
@@ -94,7 +94,7 @@ export function Customers() {
   };
 
   const handlePageChange = (newPage: number) => {
-    let queryString = `page=${newPage}&limit=${
+    const queryString = `page=${newPage}&limit=${
       projectPageInfo?.per_page || 10
     }&customer_id=${selectedCustomer?.id}${
       selectedProject && selectedProject.id !== 0
@@ -357,7 +357,7 @@ export function Customers() {
 type Column<T> = {
   key: keyof T;
   header: string;
-  render?: (value: any, item: T) => React.ReactNode;
+  render?: (value: T[keyof T], item: T) => React.ReactNode;
 };
 
 export default Customers;

@@ -53,7 +53,7 @@ export default function CommerceForm() {
     }
 
     getProject(projectId);
-  }, [projectId]);
+  }, [projectId, getProject]);
 
   useEffect(() => {
     if (!projectId) {
@@ -63,7 +63,7 @@ export default function CommerceForm() {
 
     getCommercializations(projectId);
     setErrorMessage("");
-  }, [projectId]);
+  }, [projectId, getCommercializations]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -98,7 +98,7 @@ export default function CommerceForm() {
         })
       );
     }
-  }, [projectCropList, commercializations]);
+  }, [projectCropList, commercializations, rows.length]);
 
   useEffect(() => {
     if (result !== "") {
@@ -311,7 +311,7 @@ export default function CommerceForm() {
                           name={`price-${index}`}
                           value={crop.boardPrice}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,2}$/.test(value)) {
                               handleChange(index, "boardPrice", value);
                             }
@@ -328,7 +328,7 @@ export default function CommerceForm() {
                           name={`cost-${index}`}
                           value={crop.freightCost}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,2}$/.test(value)) {
                               handleChange(index, "freightCost", value);
                             }
@@ -345,7 +345,7 @@ export default function CommerceForm() {
                           name={`expenses-${index}`}
                           value={crop.commercialCost}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,2}$/.test(value)) {
                               handleChange(index, "commercialCost", value);
                             }

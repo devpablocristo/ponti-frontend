@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
@@ -80,6 +80,7 @@ export default function CreateStockItem({
 
   const [queryProvider, setQueryProvider] = useState<string>("");
   const [provider, setProvider] = useState<Entity>();
+  const latestOnStockCreatedRef = useRef(onStockCreated);
 
   // Default "Stock": evita que el primer render muestre "Seleccionar..." y campos extra.
   const [type, setType] = useState<{ id: number; name: string } | null>(
@@ -115,12 +116,12 @@ export default function CreateStockItem({
 
   useEffect(() => {
     getProviders("");
-  }, []);
+  }, [getProviders]);
 
   useEffect(() => {
     if (!customer) return;
     getProjectsDropdown(customer.id);
-  }, [customer]);
+  }, [customer, getProjectsDropdown]);
 
   useEffect(() => {
     if (customer && project) {
@@ -128,7 +129,7 @@ export default function CreateStockItem({
         `customer_id=${customer.id}&project_name=${project.name}&limit=100`
       );
     }
-  }, [customer, project]);
+  }, [customer, project, getCampaigns]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -136,6 +137,10 @@ export default function CreateStockItem({
       setSuccessMessage(null);
     }
   }, [errorCreation]);
+
+  useEffect(() => {
+    latestOnStockCreatedRef.current = onStockCreated;
+  }, [onStockCreated]);
 
   useEffect(() => {
     if (resultCreation.supply_movements.length > 0) {
@@ -153,7 +158,7 @@ export default function CreateStockItem({
       }
 
       setSuccessMessage("Movimiento guardado correctamente");
-      onStockCreated();
+      latestOnStockCreatedRef.current();
       clearForm();
     }
   }, [resultCreation]);
@@ -163,7 +168,7 @@ export default function CreateStockItem({
       getSupplies(projectId);
       getProject(projectId);
     }
-  }, [projectId]);
+  }, [projectId, getProject, getSupplies]);
 
   useEffect(() => {
     if (type?.id === 2 && projectId) {
@@ -517,7 +522,7 @@ export default function CreateStockItem({
                           type="text"
                           value={item.quantity}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "quantity", value);
                             }

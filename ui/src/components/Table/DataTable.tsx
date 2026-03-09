@@ -36,8 +36,8 @@ type Column<T> = {
 
 type DataTableProps<T> = {
   data: T[];
-  filters?: Record<string, any>;
-  onFilterChange?: (filters: Record<string, any>) => void;
+  filters?: Record<string, unknown>;
+  onFilterChange?: (filters: Record<string, unknown>) => void;
   columns: Column<T>[];
   headerComponent?: React.ReactNode;
   expandableRowRender?: (item: T) => React.ReactNode;
@@ -193,7 +193,7 @@ const DataTable = <T,>({
     }
   };
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: unknown) => {
     onFilterChange?.({ ...(filters || {}), [key]: value });
   };
 

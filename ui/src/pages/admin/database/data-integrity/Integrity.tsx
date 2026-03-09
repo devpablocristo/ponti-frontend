@@ -87,7 +87,7 @@ export default function Integrity() {
     },
     { key: "difference_a", header: "Dif A", sortable: true },
     { key: "tolerance", header: "Tolerancia", sortable: true },
-  ] as any;
+  ];
 
   return (
     <div>

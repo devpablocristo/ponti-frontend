@@ -1,8 +1,6 @@
 // contexts/SelectionContext.tsx
-import { createContext, useContext, useState, useEffect } from "react";
-import { Entity } from "../../../hooks/useDatabase/options/types";
-import { ProjectData } from "../../../hooks/useDatabase/projects/types";
-import { Data } from "../../../hooks/useFields/types";
+import { useState, useEffect } from "react";
+import { SelectionContext } from "./SelectionContext.shared";
 
 function prefix() {
   return `ponti:${window.location.host}:`;
@@ -11,22 +9,6 @@ function prefix() {
 function key(name: string) {
   return `${prefix()}${name}`;
 }
-
-type SelectionContextType = {
-  customer: Entity;
-  setCustomer: (c: Entity | undefined) => void;
-  project: ProjectData;
-  setProject: (p: Entity | undefined) => void;
-  projectId: number | null;
-  setProjectId: (p: number | undefined) => void;
-  campaign: Entity;
-  setCampaign: (c: Entity | undefined) => void;
-  field: Data;
-  setField: (f: Data | undefined) => void;
-  seasons: { name: string; id: number }[];
-};
-
-const SelectionContext = createContext<SelectionContextType | null>(null);
 
 export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -126,11 +108,4 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
       {children}
     </SelectionContext.Provider>
   );
-};
-
-export const useSelection = () => {
-  const ctx = useContext(SelectionContext);
-  if (!ctx)
-    throw new Error("useSelection debe usarse dentro de SelectionProvider");
-  return ctx;
 };

@@ -113,20 +113,20 @@ const FilterBar: React.FC<FilterBarProps> = ({
     [key: string]: number;
   }>({});
 
+  const hideSuggestions = useCallback((name: string) => {
+    setSuggestionsVisible((prev) => ({ ...prev, [name]: false }));
+  }, []);
+
   const hideClientSuggestions = useCallback(() => {
     hideSuggestions("cliente");
-  }, []);
+  }, [hideSuggestions]);
 
   const hideProjectSuggestions = useCallback(() => {
     hideSuggestions("proyecto");
-  }, []);
+  }, [hideSuggestions]);
 
   const showSuggestions = useCallback((name: string) => {
     setSuggestionsVisible((prev) => ({ ...prev, [name]: true }));
-  }, []);
-
-  const hideSuggestions = useCallback((name: string) => {
-    setSuggestionsVisible((prev) => ({ ...prev, [name]: false }));
   }, []);
 
   const handleSuggestionClick = useCallback(

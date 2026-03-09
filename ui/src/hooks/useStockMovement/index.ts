@@ -4,9 +4,19 @@ import { apiClient } from "@/api/client";
 import { SuccessResponse, ErrorResponse } from "@/api/types";
 import { StockMovementRequest } from "./types";
 
+type StockMovementResult = {
+  supply_movement_id: number;
+  is_saved: boolean;
+  error_detail: string;
+};
+
+type StockMovementCreationResponse = SuccessResponse<{
+  supply_movements: StockMovementResult[];
+}>;
+
 const useStockMovement = () => {
   const [resultCreation, setResultCreation] = useState<{
-    supply_movements: { supply_movement_id: number; is_saved: boolean; error_detail: string }[];
+    supply_movements: StockMovementResult[];
   }>({ supply_movements: [] });
   const [processingCreation, setProcessingCreation] = useState(false);
   const [errorCreation, setErrorCreation] = useState<string | null>(null);
@@ -18,7 +28,7 @@ const useStockMovement = () => {
       setResultCreation({ supply_movements: [] });
 
       try {
-        const response = await apiClient.post<SuccessResponse<any>>(
+        const response = await apiClient.post<StockMovementCreationResponse>(
           `/stock_movements/${projectId}`,
           stockMovement
         );

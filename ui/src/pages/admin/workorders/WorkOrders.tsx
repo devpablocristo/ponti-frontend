@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 import DataTable from "../../../components/Table/DataTable";
@@ -57,10 +57,10 @@ function OrdersHeader({
 }: {
   ordersAmount: number;
   laborAmount: number;
-  selectedColumns: string[];
-  setSelectedColumns: (columns: string[]) => void;
-  setVisibleColumns: (columns: string[]) => void;
-  allColumns: any[];
+  selectedColumns: Array<keyof OrdersData>;
+  setSelectedColumns: (columns: Array<keyof OrdersData>) => void;
+  setVisibleColumns: (columns: Array<keyof OrdersData>) => void;
+  allColumns: Column<OrdersData>[];
 }) {
   const [showColumnsModal, setShowColumnsModal] = useState(false);
 
@@ -200,48 +200,57 @@ export function WorkOrders() {
   } = useOrders();
 
   // Filtros activos por columna
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
 
   // Helper: filtra las órdenes según todos los filtros activos
-  const filterOrders = (data: OrdersData[], filters: Record<string, any>) => {
-    return data.filter((order) => {
-      return Object.entries(filters).every(([key, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
+  const filterOrders = useCallback(
+    (data: OrdersData[], filters: Record<string, unknown>) => {
+      return data.filter((order) => {
+        return Object.entries(filters).every(([key, value]) => {
+          if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        if (key === "date") {
-          const orderDate = normalizeDate(String(order.date));
-          if (Array.isArray(value)) {
-            return value.some((v) => orderDate === normalizeDate(String(v)));
+          if (key === "date") {
+            const orderDate = normalizeDate(String(order.date));
+            if (Array.isArray(value)) {
+              return value.some((v) => orderDate === normalizeDate(String(v)));
+            }
+            return orderDate === normalizeDate(String(value));
           }
-          return orderDate === normalizeDate(String(value));
-        }
 
-        const orderValRaw = order[key as keyof OrdersData];
-        const orderVal = String(orderValRaw ?? "").toLowerCase();
-        if (Array.isArray(value)) {
-          return value.some((v) => orderVal === String(v).toLowerCase());
-        }
-        return orderVal === String(value).toLowerCase();
+          const orderValRaw = order[key as keyof OrdersData];
+          const orderVal = String(orderValRaw ?? "").toLowerCase();
+          if (Array.isArray(value)) {
+            return value.some((v) => orderVal === String(v).toLowerCase());
+          }
+          return orderVal === String(value).toLowerCase();
+        });
       });
-    });
-  };
+    },
+    []
+  );
 
   // Helper: obtiene las opciones válidas para una columna
-  const getFilterOptionsForColumn = (
-    key: keyof OrdersData,
-    customSort?: (a: any, b: any) => number
-  ) => {
-    const filtersExceptCurrent = { ...columnsFilters };
-    delete filtersExceptCurrent[key];
-    const filtered = filterOrders(orders, filtersExceptCurrent);
-    let options = [...new Set(filtered.map((order) => order[key]))];
-    if (customSort) {
-      options.sort(customSort);
-    } else {
-      options.sort();
-    }
-    return options.map(String);
-  };
+  const getFilterOptionsForColumn = useCallback(
+    (
+      key: keyof OrdersData,
+      customSort?: (
+        a: OrdersData[keyof OrdersData],
+        b: OrdersData[keyof OrdersData]
+      ) => number
+    ) => {
+      const filtersExceptCurrent = { ...columnsFilters };
+      delete filtersExceptCurrent[key];
+      const filtered = filterOrders(orders, filtersExceptCurrent);
+      const options = [...new Set(filtered.map((order) => order[key]))];
+      if (customSort) {
+        options.sort(customSort);
+      } else {
+        options.sort();
+      }
+      return options.map(String);
+    },
+    [columnsFilters, filterOrders, orders]
+  );
 
   const columns: Column<OrdersData>[] = React.useMemo(() => {
     return [
@@ -294,7 +303,7 @@ export function WorkOrders() {
           .map(formatISODate)
           .filter((v, i, a) => a.indexOf(v) === i)
           .sort(),
-        render: (dateString) => formatISODate(dateString),
+        render: (dateString) => formatISODate(String(dateString)),
       },
       {
         key: "crop_name",
@@ -302,14 +311,17 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("crop_name"),
-        render: (crop) => (
+        render: (crop) => {
+          const cropName = String(crop);
+          return (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
               }`}
           >
-            {crop}
+            {cropName}
           </span>
-        ),
+          );
+        },
       },
       {
         key: "labor_category_name",
@@ -317,14 +329,17 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("labor_category_name"),
-        render: (labor) => (
+        render: (labor) => {
+          const laborName = String(labor);
+          return (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[labor] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
               }`}
           >
-            {labor}
+            {laborName}
           </span>
-        ),
+          );
+        },
       },
       {
         key: "type_name",
@@ -346,7 +361,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("surface_ha"),
-        render: (value: any) => (
+        render: (value) => (
           <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
         ),
       },
@@ -363,7 +378,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("consumption"),
-        render: (value: any) => <span className="font-semibold text-blue-700">{value}</span>,
+        render: (value) => <span className="font-semibold text-blue-700">{String(value)}</span>,
       },
       {
         key: "category_name",
@@ -378,7 +393,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("dose"),
-        render: (value: any) => <span className="font-semibold text-blue-700">{value}</span>
+        render: (value) => <span className="font-semibold text-blue-700">{String(value)}</span>
       },
       {
         key: "cost_per_ha",
@@ -386,7 +401,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("cost_per_ha"),
-        render: (value: any) => {
+        render: (value) => {
           const num = Number(value);
           return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
@@ -397,7 +412,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("unit_price"),
-        render: (value: any) => {
+        render: (value) => {
           const num = Number(value);
           return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
@@ -408,25 +423,40 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("total_cost"),
-        render: (value: any) => {
+        render: (value) => {
           const num = Number(value);
           return <span className="font-bold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
     ];
-  }, [orders, columnsFilters]);
+  }, [getFilterOptionsForColumn]);
 
-  const allColumnsMap = new Map();
-  [...columns].forEach((col) => {
-    allColumnsMap.set(col.key, col);
-  });
-  const allColumns = Array.from(allColumnsMap.values());
+  const allColumns = useMemo(
+    () =>
+      Array.from(
+        new Map<keyof OrdersData, Column<OrdersData>>(
+          columns.map((col) => [col.key, col])
+        ).values()
+      ),
+    [columns]
+  );
+  const allColumnKeys = useMemo(
+    () => allColumns.map((col) => col.key),
+    [allColumns]
+  );
+  const latestAllColumnKeysRef = useRef(allColumnKeys);
+
+  useEffect(() => {
+    latestAllColumnKeysRef.current = allColumnKeys;
+  }, [allColumnKeys]);
 
   const [columnsToShow, setColumnsToShow] = useState(columns);
-  const [selectedColumns, setSelectedColumns] = useState(
-    allColumns.map((col) => col.key)
+  const [selectedColumns, setSelectedColumns] = useState<Array<keyof OrdersData>>(
+    () => allColumnKeys
   );
-  const [visibleColumns, setVisibleColumns] = useState(selectedColumns);
+  const [visibleColumns, setVisibleColumns] = useState<Array<keyof OrdersData>>(
+    () => allColumnKeys
+  );
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -519,14 +549,14 @@ export function WorkOrders() {
     });
   }, [columnsFilters, orders]);
 
-  const buildQueryParams = () => {
+  const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
     if (selectedCustomer && selectedCustomer.id !== 0) params.customer_id = String(selectedCustomer.id);
     if (projectId) params.project_id = String(projectId);
     if (selectedCampaignId) params.campaign_id = String(selectedCampaignId);
     if (selectedField && selectedField.id !== 0) params.field_id = String(selectedField.id);
     return new URLSearchParams(params).toString();
-  };
+  }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
   useEffect(() => {
     if (!projectId && !selectedField) {
@@ -534,20 +564,20 @@ export function WorkOrders() {
       return;
     }
     setErrorMessage("");
-    setVisibleColumns(columns.map((col) => col.key));
+    setVisibleColumns(latestAllColumnKeysRef.current);
 
     const query = buildQueryParams();
     setCurrentPage(1);
     getOrders(query);
     getMetrics(query);
-  }, [projectId, selectedField, selectedCampaignId, selectedCustomer]);
+  }, [projectId, selectedField, buildQueryParams, getOrders, getMetrics]);
 
-  const handleOrderCreated = () => {
+  const handleOrderCreated = useCallback(() => {
     const query = buildQueryParams();
     setCurrentPage(1);
     getOrders(query);
     getMetrics(query);
-  };
+  }, [buildQueryParams, getOrders, getMetrics]);
 
   const handleOrderDuplicated = (order: WorkorderData) => {
     setSelectedOrderId(null);
@@ -606,7 +636,7 @@ export function WorkOrders() {
     setColumnsToShow(
       allColumns.filter((col) => visibleColumns.includes(col.key))
     );
-  }, [visibleColumns]);
+  }, [visibleColumns, allColumns]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -635,7 +665,7 @@ export function WorkOrders() {
   }, [orders, columnsFilters]);
 
   const derivedMetrics: Metrics = useMemo(() => {
-    const toNum = (v: any) => Number(v) || 0;
+    const toNum = (v: unknown) => Number(v) || 0;
     let surface_ha = 0, liters = 0, kilograms = 0, direct_cost = 0;
 
     filteredOrders.forEach((order) => {
@@ -673,12 +703,12 @@ export function WorkOrders() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       setErrorMessage("No se pudo exportar el listado de órdenes.");
     }
   };
 
-  const handleFilterChange = (filters: Record<string, any>) => {
+  const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
     setCurrentPage(1);
   };

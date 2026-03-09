@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useSelection } from "../pages/login/context/SelectionContext";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSelection } from "../pages/login/context/useSelection";
 import useCustomers from "./useCustomers";
 import useProjects from "./useDatabase/projects";
 import useCampaigns from "./useCampaigns";
@@ -73,6 +73,17 @@ type FilterKey = "customer" | "project" | "campaign" | "field";
 export const useWorkspaceFilters = (
   enabledFilters: FilterKey[] = ["customer", "project", "campaign", "field"]
 ): UseWorkspaceFiltersReturn => {
+  const enabledFiltersKey = enabledFilters.join("|");
+  const enabledFilterSet = useMemo(
+    () =>
+      new Set(
+        enabledFiltersKey
+          ? (enabledFiltersKey.split("|") as FilterKey[])
+          : []
+      ),
+    [enabledFiltersKey]
+  );
+
   const {
     customer: contextCustomer,
     setCustomer: contextSetCustomer,
@@ -96,53 +107,69 @@ export const useWorkspaceFilters = (
 
   const setSelectedCustomer: React.Dispatch<
     React.SetStateAction<Customer | undefined>
-  > = (value) => {
-    if (typeof value === "function") {
-      // Not supported for contextSetCustomer
-      return;
-    }
-    contextSetCustomer(value);
-    contextSetProject(undefined);
-    contextSetCampaign(undefined);
-    contextSetField(undefined);
-    contextSetProjectId(undefined);
-  };
+  > = useCallback(
+    (value) => {
+      if (typeof value === "function") {
+        // Not supported for contextSetCustomer
+        return;
+      }
+      contextSetCustomer(value);
+      contextSetProject(undefined);
+      contextSetCampaign(undefined);
+      contextSetField(undefined);
+      contextSetProjectId(undefined);
+    },
+    [
+      contextSetCampaign,
+      contextSetCustomer,
+      contextSetField,
+      contextSetProject,
+      contextSetProjectId,
+    ]
+  );
 
   const setSelectedProject: React.Dispatch<
     React.SetStateAction<Project | undefined>
-  > = (value) => {
-    if (typeof value === "function") {
-      return;
-    }
-    contextSetProject(value);
-    contextSetCampaign(undefined);
-    contextSetField(undefined);
-    contextSetProjectId(undefined);
-  };
+  > = useCallback(
+    (value) => {
+      if (typeof value === "function") {
+        return;
+      }
+      contextSetProject(value);
+      contextSetCampaign(undefined);
+      contextSetField(undefined);
+      contextSetProjectId(undefined);
+    },
+    [contextSetCampaign, contextSetField, contextSetProject, contextSetProjectId]
+  );
 
-  const setSelectedCampaign: (campaign: Campaign | undefined) => void = (
-    campaign
-  ) => {
-    if (campaign && selectedProject) {
-      const updatedProject = { ...selectedProject, id: campaign.project_id };
-      contextSetProject(updatedProject);
-      contextSetProjectId(campaign.project_id);
-      contextSetCampaign(campaign);
-    }
-  };
+  const setSelectedCampaign = useCallback(
+    (campaign: Campaign | undefined) => {
+      if (campaign && selectedProject) {
+        const updatedProject = { ...selectedProject, id: campaign.project_id };
+        contextSetProject(updatedProject);
+        contextSetProjectId(campaign.project_id);
+        contextSetCampaign(campaign);
+      }
+    },
+    [contextSetCampaign, contextSetProject, contextSetProjectId, selectedProject]
+  );
 
   const setSelectedField: React.Dispatch<
     React.SetStateAction<Field | undefined>
-  > = (value) => {
-    if (typeof value === "function") {
-      return;
-    }
-    if (value?.id === 0) {
-      contextSetField(undefined);
-      return;
-    }
-    contextSetField(value);
-  };
+  > = useCallback(
+    (value) => {
+      if (typeof value === "function") {
+        return;
+      }
+      if (value?.id === 0) {
+        contextSetField(undefined);
+        return;
+      }
+      contextSetField(value);
+    },
+    [contextSetField]
+  );
 
   const normalizedSelectedProject =
     selectedProject && typeof selectedProject.id === "number" && selectedProject.id > 0
@@ -207,11 +234,11 @@ export const useWorkspaceFilters = (
   const filters: FilterBarFilter[] = [];
 
   useEffect(() => {
-    if (enabledFilters.includes("customer")) {
+    if (enabledFilterSet.has("customer")) {
       //TODO: limit=1000, implement pagination
       getCustomers("limit=1000");
     }
-  }, [getCustomers]);
+  }, [enabledFilterSet, getCustomers]);
 
   const handleSetCustomer = useCallback(
     (customer: Customer | undefined) => {
@@ -230,7 +257,7 @@ export const useWorkspaceFilters = (
     [handleSetCustomer]
   );
 
-  if (enabledFilters.includes("customer")) {
+  if (enabledFilterSet.has("customer")) {
     filters.push({
       type: "search",
       name: "cliente",
@@ -247,12 +274,12 @@ export const useWorkspaceFilters = (
   }
 
   useEffect(() => {
-    if (enabledFilters.includes("project")) {
+    if (enabledFilterSet.has("project")) {
       if (selectedCustomer && selectedCustomer.id !== 0) {
         getProjectsDropdown(selectedCustomer.id);
       }
     }
-  }, [selectedCustomer, getProjectsDropdown]);
+  }, [enabledFilterSet, selectedCustomer, getProjectsDropdown]);
 
   const handleSetProject = useCallback(
     (project: Project | undefined) => {
@@ -270,7 +297,7 @@ export const useWorkspaceFilters = (
     [handleSetProject]
   );
 
-  if (enabledFilters.includes("project")) {
+  if (enabledFilterSet.has("project")) {
     filters.push({
       type: "search",
       name: "proyecto",
@@ -291,7 +318,7 @@ export const useWorkspaceFilters = (
 
   useEffect(() => {
     if (
-      enabledFilters.includes("campaign") &&
+      enabledFilterSet.has("campaign") &&
       selectedCustomer &&
       selectedCustomer.id !== 0 &&
       selectedProject &&
@@ -301,9 +328,9 @@ export const useWorkspaceFilters = (
         `customer_id=${selectedCustomer.id}&project_name=${selectedProject.name}&limit=100`
       );
     }
-  }, [selectedCustomer, selectedProject, getCampaigns]);
+  }, [enabledFilterSet, selectedCustomer, selectedProject, getCampaigns]);
 
-  if (enabledFilters.includes("campaign")) {
+  if (enabledFilterSet.has("campaign")) {
     filters.push({
       type: "select",
       name: "campaña",
@@ -326,12 +353,12 @@ export const useWorkspaceFilters = (
   }
 
   useEffect(() => {
-    if (enabledFilters.includes("field") && normalizedProjectId) {
+    if (enabledFilterSet.has("field") && normalizedProjectId) {
       getFields(`project_id=${normalizedProjectId}`);
     }
-  }, [getFields, normalizedProjectId]);
+  }, [enabledFilterSet, getFields, normalizedProjectId]);
 
-  if (enabledFilters.includes("field")) {
+  if (enabledFilterSet.has("field")) {
     filters.push({
       type: "select",
       name: "campo",

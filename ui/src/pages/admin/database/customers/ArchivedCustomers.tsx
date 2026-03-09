@@ -110,7 +110,7 @@ export default function ArchivedCustomers() {
       headerPadding: "xs" as const,
       render: () => null,
     },
-  ] as any;
+  ];
 
   return (
     <div>

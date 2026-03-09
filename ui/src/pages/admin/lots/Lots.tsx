@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle, Pencil } from "lucide-react";
 import DataTable from "../../../components/Table/DataTable";
@@ -12,6 +12,7 @@ import InputField from "../../../components/Input/InputField";
 import Button from "../../../components/Button/Button";
 import SelectField from "../../../components/Input/SelectField";
 import { cropColors } from "../colors";
+import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr } from "../utils";
 import Drawer from "../../../components/Drawer/Drawer";
@@ -21,7 +22,7 @@ const EditableCell = ({
   value,
   onSuccessEdit,
 }: {
-  item: any;
+  item: LotsData;
   value: string;
   onSuccessEdit: () => void;
 }) => {
@@ -50,7 +51,7 @@ const EditableCell = ({
       onSuccessEdit();
       return;
     }
-  }, [errorTons, resultTons]);
+  }, [errorTons, resultTons, onSuccessEdit]);
 
   if (editing) {
     return (
@@ -182,13 +183,13 @@ function LotsHeader({
 }: {
   fieldsAmount: number;
   lotsAmount: number;
-  selectedColumns: string[];
-  setSelectedColumns: (columns: string[]) => void;
-  setVisibleColumns: (columns: string[]) => void;
-  columns: any[];
-  harvestColumns: any[];
-  commercializationColumns: any[];
-  allColumns: any[];
+  selectedColumns: Array<keyof LotsData>;
+  setSelectedColumns: (columns: Array<keyof LotsData>) => void;
+  setVisibleColumns: (columns: Array<keyof LotsData>) => void;
+  columns: Column<LotsData>[];
+  harvestColumns: Column<LotsData>[];
+  commercializationColumns: Column<LotsData>[];
+  allColumns: Column<LotsData>[];
 }) {
   const [active, setActive] = useState("Siembra");
   const [showColumnsModal, setShowColumnsModal] = useState(false);
@@ -321,7 +322,7 @@ export function Lots() {
   const [errorMessage, setErrorMessage] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
 
   const {
     getLots,
@@ -338,14 +339,14 @@ export function Lots() {
 
 
   // Handler para resetear página al aplicar filtros (igual que en WorkOrders)
-  const handleFilterChange = (filters: Record<string, any>) => {
+  const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
     setCurrentPage(1); // Importante: volver a la página 1 si filtramos
   };
 
-   const getFilterOptionsForColumn = (columnKey: keyof LotsData) => {
+  const getFilterOptionsForColumn = useCallback((columnKey: keyof LotsData) => {
       // Aplicar TODOS los filtros EXCEPTO el de esta columna
-      let filteredData = lots.filter((lot) => {
+      const filteredData = lots.filter((lot) => {
         return Object.entries(columnsFilters).every(([filterKey, filterValue]) => {
           // Saltar el filtro de esta misma columna (permitir que muestre todas las opciones)
           if (filterKey === columnKey) return true;
@@ -355,7 +356,7 @@ export function Lots() {
 
           // Manejo especial para 'dates'
           if (filterKey === 'dates') {
-            const lotDates = lot.dates as any[] || [];
+            const lotDates = lot.dates || [];
             const sowingDates = lotDates
               .map(d => d.sowing_date)
               .filter(Boolean);
@@ -396,7 +397,29 @@ export function Lots() {
       
       const options = [...new Set(filteredData.map((lot) => lot[columnKey]))].filter(Boolean);
       return options.map(String).sort() as string[];
-    };
+    }, [lots, columnsFilters]);
+
+  const {
+    selectedCustomer,
+    projectId,
+    selectedCampaignId,
+    selectedField,
+    fields,
+    filters,
+    seasons,
+  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+
+  const onSuccessEdit = useCallback(() => {
+    if (selectedField) {
+      setCurrentPage(1);
+      getLots(`field_id=${selectedField.id}`);
+      getLotsKpis(`field_id=${selectedField.id}`);
+    } else if (projectId) {
+      setCurrentPage(1);
+      getLots(`project_id=${projectId}`);
+      getLotsKpis(`project_id=${projectId}`);
+    }
+  }, [selectedField, projectId, getLots, getLotsKpis]);
 
   const { columns, harvestColumns, commercializationColumns } = useMemo(() => {
 
@@ -435,14 +458,17 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("previous_crop"),
-        render: (crop) => (
+        render: (crop) => {
+          const cropName = String(crop);
+          return (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
               }`}
           >
-            {crop}
+            {cropName}
           </span>
-        ),
+          );
+        },
       },
       {
         key: "current_crop",
@@ -450,14 +476,17 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("current_crop"),
-        render: (crop) => (
+        render: (crop) => {
+          const cropName = String(crop);
+          return (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
               }`}
           >
-            {crop}
+            {cropName}
           </span>
-        ),
+          );
+        },
       },
       {
         key: "variety",
@@ -602,20 +631,35 @@ export function Lots() {
       harvestColumns: harvest,
       commercializationColumns: commercialization,
     };
-  }, [lots, columnsFilters]); // Dependencia: lots (para recalcular opciones)
+  }, [getFilterOptionsForColumn, onSuccessEdit]);
 
-  const allColumnsMap = new Map();
-  [...columns, ...harvestColumns, ...commercializationColumns].forEach(
-    (col) => {
-      allColumnsMap.set(col.key, col);
-    }
+  const allColumns = useMemo(
+    () =>
+      Array.from(
+        new Map<keyof LotsData, Column<LotsData>>(
+          [...columns, ...harvestColumns, ...commercializationColumns].map((col) => [
+            col.key,
+            col,
+          ])
+        ).values()
+      ),
+    [columns, harvestColumns, commercializationColumns]
   );
-  const allColumns = Array.from(allColumnsMap.values());
+  const defaultColumnKeys = useMemo(
+    () => columns.map((col) => col.key),
+    [columns]
+  );
+  const [selectedColumns, setSelectedColumns] = useState<Array<keyof LotsData>>(
+    () => defaultColumnKeys
+  );
+  const [visibleColumns, setVisibleColumns] = useState<Array<keyof LotsData>>(
+    () => defaultColumnKeys
+  );
+  const defaultColumnKeysRef = useRef(defaultColumnKeys);
 
-  const [selectedColumns, setSelectedColumns] = useState(
-    allColumns.map((col) => col.key)
-  );
-  const [visibleColumns, setVisibleColumns] = useState(selectedColumns);
+  useEffect(() => {
+    defaultColumnKeysRef.current = defaultColumnKeys;
+  }, [defaultColumnKeys]);
 
   const columnsToShow = allColumns.filter((col) => visibleColumns.includes(col.key));
 
@@ -623,23 +667,15 @@ export function Lots() {
 
   // Esto está bien, lo dejamos como está
   useEffect(() => {
-    setVisibleColumns(columns.map((col) => col.key));
-  }, []); // Solo al montar, carga las columnas por defecto (Siembra)
+    setVisibleColumns((prev) =>
+      prev.length === 0 ? defaultColumnKeysRef.current : prev
+    );
+  }, [columns]); // Solo inicializa cuando aún no hay selección explícita
 
 
   useEffect(() => {
     getCrops();
   }, [getCrops]);
-
-  const {
-    selectedCustomer,
-    projectId,
-    selectedCampaignId,
-    selectedField,
-    fields,
-    filters,
-    seasons,
-  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
     // Filtros globales de workspace y limpiar filtros al cambiar de cliente
     useEffect(() => {
@@ -665,7 +701,7 @@ export function Lots() {
       getLots(`project_id=${projectId}`);
       getLotsKpis(`project_id=${projectId}`);
     }
-  }, [getLots, selectedCustomer, projectId, selectedCampaignId, selectedField]);
+  }, [getLots, getLotsKpis, selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
   useEffect(() => {
     if (result !== "") {
@@ -680,7 +716,7 @@ export function Lots() {
         getLotsKpis(`project_id=${projectId}`);
       }
     }
-  }, [result]);
+  }, [result, selectedField, projectId, getLots, getLotsKpis]);
 
   useEffect(() => {
     if (drawerOpen && lot) {
@@ -689,7 +725,7 @@ export function Lots() {
         setLot(newLot);
       }
     }
-  }, [lots]);
+  }, [lots, drawerOpen, lot]);
 
   useEffect(() => {
     if (updateLotError && updateLotError !== "") {
@@ -697,18 +733,6 @@ export function Lots() {
       setSuccessMessage("");
     }
   }, [updateLotError]);
-
-  const onSuccessEdit = () => {
-    if (selectedField) {
-      setCurrentPage(1);
-      getLots(`field_id=${selectedField.id}`);
-      getLotsKpis(`field_id=${selectedField.id}`);
-    } else if (projectId) {
-      setCurrentPage(1);
-      getLots(`project_id=${projectId}`);
-      getLotsKpis(`project_id=${projectId}`);
-    }
-  };
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -722,7 +746,7 @@ const filteredLots = useMemo(() => {
 
         // Manejo especial para la columna 'dates'
         if (key === 'dates') {
-          const lotDates = lot.dates as any[] || [];
+          const lotDates = lot.dates || [];
           const sowingDates = lotDates
             .map(d => d.sowing_date)
             .filter(Boolean);
@@ -853,7 +877,7 @@ const filteredLots = useMemo(() => {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       setErrorMessage("No se pudo exportar el listado de lotes.");
     }
   };
@@ -1210,15 +1234,5 @@ const filteredLots = useMemo(() => {
     </div>
   );
 }
-
-type Column<T> = {
-  key: keyof T;
-  header: string;
-  render?: (value: any, item: T) => React.ReactNode;
-  // --- Agregamos las propiedades faltantes ---
-  filterable?: boolean;
-  filterType?: "text" | "number" | "select" | "date";
-  filterOptions?: string[];
-};
 
 export default Lots;

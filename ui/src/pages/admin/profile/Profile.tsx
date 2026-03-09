@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import Button from "../../../components/Button/Button";
 import Header from "../../../components/Header/Header";
-import { useAuth } from "../../login/context/AuthProvider";
+import { useAuth } from "../../login/context/useAuth";
 
 export function Profile() {
   const auth = useAuth();

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 
@@ -14,7 +14,7 @@ import { Project, Field as ProjectField } from "../../../../hooks/useDatabase/pr
 import Search from "../../../../components/Input/Search";
 import { useKeyboardNavigation } from "./hooks/useKeyboardNavigation";
 import { useClickOutside } from "./hooks/useClickOutside";
-import { useSelection } from "../../../login/context/SelectionContext";
+import { useSelection } from "../../../login/context/useSelection";
 import {
   mapProjectFieldsPayload,
   parseProjectFieldErrorMessage,
@@ -112,7 +112,7 @@ export default function Customers() {
 
   useEffect(() => {
     getOptions();
-  }, []);
+  }, [getOptions]);
 
   useEffect(() => {
     if (options) {
@@ -126,7 +126,7 @@ export default function Customers() {
     if (projectId) {
       getProject(Number(projectId));
     }
-  }, [id, duplicateId]);
+  }, [id, duplicateId, getProject]);
 
   const convertFields = (
     fields: ProjectField[]
@@ -215,7 +215,7 @@ export default function Customers() {
       setInvestors(convertToInvestorEntities(selectedProject.investors));
       setAdminCostInvestors(convertToInvestorEntities(selectedProject.admin_cost_investors || []));
     }
-  }, [selectedProject, options]);
+  }, [selectedProject, options, id]);
 
   useEffect(() => {
     if (error && error.trim() !== "") {
@@ -245,9 +245,28 @@ export default function Customers() {
     }
   }, [projectError]);
 
-  const cleanForm = () => {
+  const cleanForm = useCallback(() => {
     setProjectName("");
-    setFields([emptyField]);
+    setFields([
+      {
+        id: 0,
+        name: "",
+        leaseType: "",
+        leaseTypePercent: "",
+        leaseTypeValue: "",
+        investors: [],
+        plots: [
+          {
+            id: 0,
+            name: "",
+            hectares: 0,
+            previousCrop: { id: 0, name: "" },
+            currentCrop: { id: 0, name: "" },
+            season: "",
+          },
+        ],
+      },
+    ]);
     setQueryCustomer("");
     setQueryInvestor("");
     setQueryManager("");
@@ -258,7 +277,7 @@ export default function Customers() {
     setProjectManagers([]);
     setInvestors([]);
     setAdminCostInvestors([]);
-  };
+  }, []);
 
   useEffect(() => {
     if (result !== "") {
@@ -273,7 +292,27 @@ export default function Customers() {
     }
     setErrorMessages([]);
     setSuccessMessage(result);
-  }, [result, id]);
+  }, [result, id, cleanForm]);
+
+  const handleSaveConfirmed = useCallback(async () => {
+    if (!pendingPayload) return;
+
+    setIsSaving(true);
+
+    try {
+      if (!id) {
+        await saveProject(pendingPayload);
+      } else {
+        await updateProject(Number(id), pendingPayload);
+      }
+    } catch {
+      // error saving project
+    } finally {
+      setIsSaving(false);
+      setIsModalOpen(false);
+      setPendingPayload(null);
+    }
+  }, [pendingPayload, id, saveProject, updateProject]);
 
   useEffect(() => {
     if (pendingPayload) {
@@ -286,7 +325,7 @@ export default function Customers() {
       });
       setIsModalOpen(true);
     }
-  }, [pendingPayload]);
+  }, [pendingPayload, handleSaveConfirmed]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -704,26 +743,6 @@ export default function Customers() {
       }
       setIsModalOpen(true);
       setIsSaving(false);
-    }
-  };
-
-  const handleSaveConfirmed = async () => {
-    if (!pendingPayload) return;
-
-    setIsSaving(true);
-
-    try {
-      if (!id) {
-        await saveProject(pendingPayload);
-      } else {
-        await updateProject(Number(id), pendingPayload);
-      }
-    } catch (error) {
-      // error saving project
-    } finally {
-      setIsSaving(false);
-      setIsModalOpen(false);
-      setPendingPayload(null);
     }
   };
 

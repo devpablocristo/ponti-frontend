@@ -53,7 +53,7 @@ export class AuthService {
     };
 
     try {
-      await apiClient.post<any>("/auth/logout", logoutData);
+      await apiClient.post<SuccessResponse<unknown>>("/auth/logout", logoutData);
       return;
     } catch (error) {
       const axiosError = error as AxiosError;

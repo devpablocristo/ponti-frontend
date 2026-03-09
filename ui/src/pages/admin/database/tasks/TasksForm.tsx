@@ -64,13 +64,13 @@ export default function TasksForm() {
 
   useEffect(() => {
     getCategories("type_id=4");
-  }, []);
+  }, [getCategories]);
 
   useEffect(() => {
     if (projectId) {
       getLabors(projectId);
     }
-  }, [projectId]);
+  }, [projectId, getLabors]);
 
   function cleanForm() {
     setLabors(
@@ -633,7 +633,7 @@ export default function TasksForm() {
                       name={`precio-${index}`}
                       value={row.price}
                       onChange={(e) => {
-                        let value = e.target.value.replace(/,/g, ".");
+                        const value = e.target.value.replace(/,/g, ".");
                         if (/^\d*\.?\d{0,2}$/.test(value)) {
                           handleChange(row.id, "price", value);
                         }
@@ -652,7 +652,7 @@ export default function TasksForm() {
                         handleChange(
                           row.id,
                           "is_partial_price",
-                          !Boolean(row.is_partial_price)
+                          !row.is_partial_price
                         )
                       }
                       className={`input-base w-full px-3 py-2 text-sm font-medium transition-colors focus:ring-0 ${

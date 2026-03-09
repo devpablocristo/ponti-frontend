@@ -90,7 +90,7 @@ export default function ListTasks() {
       getLabors(projectId);
       getCategories("type_id=4");
     }
-  }, [projectId]);
+  }, [projectId, getCategories, getLabors]);
 
   useEffect(() => {
     if (result && projectId) {
@@ -98,7 +98,7 @@ export default function ListTasks() {
       setErrorMessage("");
       getLabors(projectId);
     }
-  }, [result, projectId]);
+  }, [result, projectId, getLabors]);
 
   useEffect(() => {
     if (resultUpdate && projectId) {
@@ -106,7 +106,7 @@ export default function ListTasks() {
       setErrorMessage("");
       getLabors(projectId);
     }
-  }, [resultUpdate, projectId]);
+  }, [resultUpdate, projectId, getLabors]);
 
   useEffect(() => {
     if (error) {
@@ -181,7 +181,7 @@ export default function ListTasks() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       setErrorMessage("No se pudo exportar el listado de labores.");
     }
   };

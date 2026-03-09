@@ -98,7 +98,7 @@ export default function ArchivedProjects() {
         </div>
       ),
     },
-  ] as any;
+  ];
 
   return (
     <div>

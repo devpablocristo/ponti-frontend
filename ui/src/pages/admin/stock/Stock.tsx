@@ -22,7 +22,7 @@ const EditableCell = ({
   projectId,
   onSaved,
 }: {
-  item: any;
+  item: GetStockItems;
   value: string | number;
   projectId: number | null;
   onSaved?: () => void;
@@ -236,7 +236,7 @@ export function Stock() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
@@ -335,7 +335,7 @@ export function Stock() {
   function getFilterOptionsForColumn(
     key: keyof GetStockItems,
     stock: GetStockItems[],
-    filters: Record<string, any>
+    filters: Record<string, unknown>
   ) {
     const otherFilters = { ...filters };
     delete otherFilters[key];
@@ -375,7 +375,9 @@ export function Stock() {
           stock,
           columnsFilters
         ),
-        render: (value: any) => <span className="font-semibold text-gray-900">{value}</span>,
+        render: (value) => (
+          <span className="font-semibold text-gray-900">{String(value ?? "")}</span>
+        ),
       },
       {
         key: "class_type",
@@ -588,7 +590,7 @@ export function Stock() {
     getPeriods(projectId);
     setDisabledCloseStock(false);
     setSelectedDate("");
-  }, [getStock, projectId, selectedCustomer, selectedCampaignId]);
+  }, [getStock, getPeriods, projectId, selectedCustomer, selectedCampaignId]);
 
   useEffect(() => {
     if (periods && periods.length > 0) {
@@ -620,7 +622,7 @@ export function Stock() {
     getStock(projectId, stockPeriods[periodNumber]?.name || "");
     setSelectedDate(stockPeriods[periodNumber]?.name || "");
     setDisabledCloseStock(true);
-  }, [period, stockPeriods]);
+  }, [period, stockPeriods, getStock, projectId]);
 
   useEffect(() => {
     if (errorCloseStock) {
@@ -637,7 +639,7 @@ export function Stock() {
       setDisabledCloseStock(false);
       setSelectedDate("");
     }
-  }, [resultCloseStock]);
+  }, [resultCloseStock, projectId, getStock, getPeriods]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -676,12 +678,12 @@ export function Stock() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       setExportErrorMessage("No se pudo exportar el stock.");
     }
   };
 
-  const handleFilterChange = (filters: Record<string, any>) => {
+  const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
     setCurrentPage(1);
   };

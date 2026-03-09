@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { ArrowUp, Hourglass, LoaderCircle, Wallet } from "lucide-react";
 import { usePDF } from "react-to-pdf";
 
@@ -200,7 +200,7 @@ export function Dashboard() {
     }
   }, [error]);
 
-  const buildQueryParams = () => {
+  const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
 
     if (selectedCustomer && selectedCustomer.id !== 0) {
@@ -218,7 +218,7 @@ export function Dashboard() {
     }
 
     return new URLSearchParams(params).toString();
-  };
+  }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
   useEffect(() => {
     const hasCustomer = Boolean(selectedCustomer && selectedCustomer.id !== 0);
@@ -233,6 +233,7 @@ export function Dashboard() {
     selectedCampaignId,
     selectedField,
     getDashboardInfo,
+    buildQueryParams,
   ]);
 
   return (

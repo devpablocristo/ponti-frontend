@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
@@ -96,6 +96,12 @@ export default function UpdateOrder({
   const [preciseDoseByRow, setPreciseDoseByRow] = useState<Record<number, number>>(
     {}
   );
+  const latestItemsRef = useRef(items);
+  const latestFormatDoseRef = useRef<(value: number) => string>(() => "");
+
+  useEffect(() => {
+    latestItemsRef.current = items;
+  }, [items]);
 
   function CreateSupplyInline({
     projectId,
@@ -122,7 +128,7 @@ export default function UpdateOrder({
     useEffect(() => {
       getCategories("");
       getTypes();
-    }, []);
+    }, [getCategories, getTypes]);
 
     useEffect(() => {
       if (!result) return;
@@ -183,7 +189,7 @@ export default function UpdateOrder({
               name="supplyPrice"
               value={price}
               onChange={(e) => {
-                let value = e.target.value.replace(/,/g, ".");
+                const value = e.target.value.replace(/,/g, ".");
                 if (/^\d*\.?\d{0,2}$/.test(value)) {
                   setPrice(value);
                 }
@@ -275,7 +281,7 @@ export default function UpdateOrder({
     if (orderId) {
       getWorkorder(orderId);
     }
-  }, [orderId]);
+  }, [orderId, getWorkorder]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -283,7 +289,7 @@ export default function UpdateOrder({
       getSupplies(selectedOrder.project_id);
       getLabors(selectedOrder.project_id);
     }
-  }, [selectedOrder]);
+  }, [selectedOrder, getProject, getSupplies, getLabors]);
 
   useEffect(() => {
     if (!pendingCreatedSupplyName) return;
@@ -299,7 +305,7 @@ export default function UpdateOrder({
     handleItemChange(itemIndexToUpdate, "item", String(createdSupply.id));
     setPendingCreatedSupplyName(null);
     setItemIndexToUpdate(null);
-  }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
+  }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate, handleItemChange]);
 
   useEffect(() => {
     if (openSupplyDropdown === null) return;
@@ -379,7 +385,7 @@ export default function UpdateOrder({
       setContractor(selectedOrder.contractor);
       setObservations(selectedOrder.observations);
 
-      let loadedItems = selectedOrder.items.map((item) => ({
+      const loadedItems = selectedOrder.items.map((item) => ({
         item: item.supply_id.toString(),
         totalUsed: item.total_used.toString(),
         dose: item.final_dose.toString(),
@@ -432,7 +438,7 @@ export default function UpdateOrder({
       setSuccessMessage(resultCreation);
       onOrderUpdated();
     }
-  }, [resultCreation]);
+  }, [resultCreation, onOrderUpdated]);
 
   useEffect(() => {
     setSuccessMessage(null);
@@ -440,33 +446,39 @@ export default function UpdateOrder({
 
   useEffect(() => {
     if (surface && surface !== "" && surface !== "0") {
-      items.forEach((item, i) => {
+      latestItemsRef.current.forEach((item, i) => {
         if (item.totalUsed && item.totalUsed !== "") {
           const preciseDose = Number(item.totalUsed) / Number(surface);
           setPreciseDoseByRow((prev) => ({ ...prev, [i]: preciseDose }));
           handleItemChange(
             i,
             "dose",
-            formatDose(preciseDose)
+            latestFormatDoseRef.current(preciseDose)
           );
         }
       });
     }
-  }, [surface]);
+  }, [surface, handleItemChange]);
 
-  const handleItemChange = (i: number, field: string, value: string) => {
+  const handleItemChange = useCallback((i: number, field: string, value: string) => {
     setItems((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
     );
-  };
+  }, []);
 
-  const roundTo = (value: number, decimals: number) => {
+  const roundTo = useCallback((value: number, decimals: number) => {
     const factor = 10 ** decimals;
     return Math.round((value + Number.EPSILON) * factor) / factor;
-  };
+  }, []);
 
-  const formatDose = (value: number) =>
-    roundTo(value, 3).toFixed(3).replace(/\.?0+$/, "");
+  const formatDose = useCallback(
+    (value: number) => roundTo(value, 3).toFixed(3).replace(/\.?0+$/, ""),
+    [roundTo]
+  );
+
+  useEffect(() => {
+    latestFormatDoseRef.current = formatDose;
+  }, [formatDose]);
 
   
   const formatTotalUsedFromDose = (value: number) => roundTo(value, 0).toFixed(2);
@@ -703,7 +715,7 @@ export default function UpdateOrder({
                     type="text"
                     value={surface}
                     onChange={(e) => {
-                      let value = e.target.value.replace(/,/g, ".");
+                      const value = e.target.value.replace(/,/g, ".");
                       if (/^\d*\.?\d{0,2}$/.test(value)) {
                         setSurface(value);
                       }
@@ -1044,7 +1056,7 @@ export default function UpdateOrder({
                           type="text"
                           value={item.totalUsed}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "totalUsed", value);
                               if (
@@ -1076,7 +1088,7 @@ export default function UpdateOrder({
                           type="text"
                           value={item.dose}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "dose", value);
                               if (

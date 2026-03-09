@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
@@ -124,7 +124,7 @@ export default function CreateOrder({
     useEffect(() => {
       getCategories("");
       getTypes();
-    }, []);
+    }, [getCategories, getTypes]);
 
     useEffect(() => {
       if (!result) return;
@@ -179,7 +179,7 @@ export default function CreateOrder({
             name="supplyPrice"
             value={price}
             onChange={(e) => {
-              let value = e.target.value.replace(/,/g, ".");
+              const value = e.target.value.replace(/,/g, ".");
               if (/^\d*\.?\d{0,2}$/.test(value)) {
                 setPrice(value);
               }
@@ -258,7 +258,7 @@ export default function CreateOrder({
     );
   }
 
-  const clearForm = () => {
+  const clearForm = useCallback(() => {
     setItems(emptyItems.map((item) => ({ ...item })));
     setOpenSupplyDropdown(null);
     setSupplySearch({});
@@ -278,7 +278,14 @@ export default function CreateOrder({
     setContractor("");
     setObservations("");
     setError(null);
-  };
+  }, []);
+
+  const latestItemsRef = useRef(items);
+  const latestFormatDoseRef = useRef<(value: number) => string>(() => "");
+
+  useEffect(() => {
+    latestItemsRef.current = items;
+  }, [items]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -293,7 +300,7 @@ export default function CreateOrder({
       onOrderCreated();
       clearForm();
     }
-  }, [resultCreation]);
+  }, [resultCreation, onOrderCreated, clearForm]);
 
   useEffect(() => {
     if (projectId) {
@@ -301,7 +308,7 @@ export default function CreateOrder({
       getLabors(projectId);
       getProject(projectId);
     }
-  }, [projectId]);
+  }, [projectId, getSupplies, getLabors, getProject]);
 
   useEffect(() => {
     if (!pendingCreatedSupplyName) return;
@@ -362,7 +369,7 @@ export default function CreateOrder({
     } else {
       setLots([]);
     }
-  }, [selectedProject]);
+  }, [selectedProject, selectedField, projectId]);
 
   useEffect(() => {
     if (
@@ -415,7 +422,7 @@ export default function CreateOrder({
       setContractor(orderToDuplicate.contractor);
       setObservations(orderToDuplicate.observations);
 
-      let loadedItems: WorkOrderItem[] = orderToDuplicate.items.map((item) => ({
+      const loadedItems: WorkOrderItem[] = orderToDuplicate.items.map((item) => ({
         itemId: item.supply_id,
         totalUsed: item.total_used.toString(),
         dose: item.final_dose.toString(),
@@ -427,7 +434,7 @@ export default function CreateOrder({
 
       setItems(loadedItems);
     }
-  }, [orderToDuplicate, investors, labors, lots]);
+  }, [orderToDuplicate, investors, labors, selectedProject, projectId]);
 
   const getValidInvestorSplits = () => {
     const validSplits = investorSplits
@@ -460,18 +467,18 @@ export default function CreateOrder({
       setSuccessMessage(null);
       clearForm();
     }
-  }, [drawerOpen, orderToDuplicate]);
+  }, [drawerOpen, orderToDuplicate, clearForm]);
 
   useEffect(() => {
     if (surface && surface !== "" && surface !== "0") {
-      items.forEach((item, i) => {
+      latestItemsRef.current.forEach((item, i) => {
         if (item.totalUsed && item.totalUsed !== "") {
           const preciseDose = Number(item.totalUsed) / Number(surface);
           setPreciseDoseByRow((prev) => ({ ...prev, [i]: preciseDose }));
           handleItemChange(
             i,
             "dose",
-            formatDose(preciseDose)
+            latestFormatDoseRef.current(preciseDose)
           );
         }
       });
@@ -488,13 +495,19 @@ export default function CreateOrder({
     );
   };
 
-  const roundTo = (value: number, decimals: number) => {
+  const roundTo = useCallback((value: number, decimals: number) => {
     const factor = 10 ** decimals;
     return Math.round((value + Number.EPSILON) * factor) / factor;
-  };
+  }, []);
 
-  const formatDose = (value: number) =>
-    roundTo(value, 3).toFixed(3).replace(/\.?0+$/, "");
+  const formatDose = useCallback(
+    (value: number) => roundTo(value, 3).toFixed(3).replace(/\.?0+$/, ""),
+    [roundTo]
+  );
+
+  useEffect(() => {
+    latestFormatDoseRef.current = formatDose;
+  }, [formatDose]);
 
   
   const formatTotalUsedFromDose = (value: number) => roundTo(value, 0).toFixed(2);
@@ -751,7 +764,7 @@ export default function CreateOrder({
                     type="text"
                     value={surface}
                     onChange={(e) => {
-                      let value = e.target.value.replace(/,/g, ".");
+                      const value = e.target.value.replace(/,/g, ".");
                       if (/^\d*\.?\d{0,2}$/.test(value)) {
                         setSurface(value);
                       }
@@ -1092,7 +1105,7 @@ export default function CreateOrder({
                           type="text"
                           value={item.totalUsed}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "totalUsed", value);
                               if (
@@ -1124,7 +1137,7 @@ export default function CreateOrder({
                           type="text"
                           value={item.dose}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "dose", value);
                               if (

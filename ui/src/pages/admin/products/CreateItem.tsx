@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
@@ -101,6 +101,11 @@ export default function CreateItem({
   const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
     null
   );
+  const latestItemsRef = useRef(items);
+  const latestSuppliesRef = useRef(supplies);
+  const latestProjectIdRef = useRef(projectId);
+  const latestOnProductCreatedRef = useRef(onProductCreated);
+  const latestGetStockRef = useRef(getStock);
 
   const clearForm = () => {
     setError(null);
@@ -141,7 +146,7 @@ export default function CreateItem({
     useEffect(() => {
       getCategories("");
       getTypes();
-    }, []);
+    }, [getCategories, getTypes]);
 
     useEffect(() => {
       if (!result) return;
@@ -277,12 +282,12 @@ export default function CreateItem({
 
   useEffect(() => {
     getProviders("");
-  }, []);
+  }, [getProviders]);
 
   useEffect(() => {
     if (!customer) return;
     getProjectsDropdown(customer.id);
-  }, [customer]);
+  }, [customer, getProjectsDropdown]);
 
   useEffect(() => {
     if (customer && project) {
@@ -290,7 +295,7 @@ export default function CreateItem({
         `customer_id=${customer.id}&project_name=${project.name}&limit=100`
       );
     }
-  }, [customer, project]);
+  }, [customer, project, getCampaigns]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -305,6 +310,14 @@ export default function CreateItem({
   }, [errorCreation, errorCreationPayload, supplies]);
 
   useEffect(() => {
+    latestItemsRef.current = items;
+    latestSuppliesRef.current = supplies;
+    latestProjectIdRef.current = projectId;
+    latestOnProductCreatedRef.current = onProductCreated;
+    latestGetStockRef.current = getStock;
+  }, [items, supplies, projectId, onProductCreated, getStock]);
+
+  useEffect(() => {
     if (lastSubmittedRowIndexes.length === 0) return;
 
     if (resultCreation.supply_movements.length > 0) {
@@ -313,9 +326,9 @@ export default function CreateItem({
       resultCreation.supply_movements.forEach((movement, responseIndex) => {
         if (movement.error_detail !== "") {
           const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
-          const selectedSupplyId = Number(items[uiRowIndex]?.item || 0);
+          const selectedSupplyId = Number(latestItemsRef.current[uiRowIndex]?.item || 0);
           const selectedSupplyName =
-            supplies.find((s) => s.id === selectedSupplyId)?.name ||
+            latestSuppliesRef.current.find((s) => s.id === selectedSupplyId)?.name ||
             `fila ${uiRowIndex + 1}`;
           const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
           const message = `${selectedSupplyName}: ${detail}`;
@@ -333,9 +346,11 @@ export default function CreateItem({
 
       setItemErrors({});
       setSuccessMessage("Movimiento guardado correctamente");
-      onProductCreated();
+      latestOnProductCreatedRef.current();
       clearForm();
-      if (projectId) getStock(projectId, "");
+      if (latestProjectIdRef.current) {
+        latestGetStockRef.current(latestProjectIdRef.current, "");
+      }
     }
   }, [resultCreation, lastSubmittedRowIndexes]);
 
@@ -345,7 +360,7 @@ export default function CreateItem({
       getProject(projectId);
       getStock(projectId, "");
     }
-  }, [projectId]);
+  }, [projectId, getProject, getStock, getSupplies]);
 
   useEffect(() => {
     if (!pendingCreatedSupplyName || itemIndexToUpdate === null) return;
@@ -705,7 +720,7 @@ export default function CreateItem({
                               : ""
                           }
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "quantity", value);
                             }
