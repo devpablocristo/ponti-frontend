@@ -185,8 +185,9 @@ export default function CreateStockItem({
   useEffect(() => {
     if (!isStockIngreso) return;
 
-    // Default: proveedor "Stock" (se autocrea si no existe).
-    if (!queryProvider.trim()) {
+    // En modo Stock el proveedor siempre debe volver a "Stock",
+    // aunque el usuario venga de otro tipo con un proveedor previo.
+    if (queryProvider !== "Stock" || provider?.name !== "Stock" || provider?.id !== 0) {
       setQueryProvider("Stock");
       setProvider({ id: 0, name: "Stock" });
     }
@@ -195,7 +196,7 @@ export default function CreateStockItem({
     if (!investor && investors.length > 0) {
       setInvestor(investors[0]);
     }
-  }, [isStockIngreso, queryProvider, investor, investors]);
+  }, [isStockIngreso, queryProvider, provider, investor, investors]);
 
   const handleItemChange = (i: number, field: string, value: string) => {
     setItems((prev) =>
@@ -273,25 +274,19 @@ export default function CreateStockItem({
 
     // Para stock elegimos defaults "transparentes" (no se piden en UI).
     const effectiveProvider =
-      isStockIngreso && !provider
+      provider ||
+      (queryProvider.trim()
         ? { id: 0, name: queryProvider.trim() || "Stock" }
-        : provider;
+        : undefined);
     const effectiveProviderName =
-      effectiveProvider?.name || queryProvider.trim() || "Stock";
+      effectiveProvider?.name || (isStockIngreso ? "Stock" : "");
     const effectiveInvestorId = isStockIngreso
       ? investor?.id || investors[0]?.id || 0
       : investor?.id || 0;
 
     if (!isStockIngreso) {
       if (!effectiveProvider) {
-        if (queryProvider === "") {
-          errors.push("Debe seleccionar un proveedor.");
-        } else {
-          setProvider({
-            id: 0,
-            name: queryProvider,
-          });
-        }
+        errors.push("Debe seleccionar o ingresar un proveedor.");
       }
       if (!investor) {
         errors.push("Debe seleccionar un inversor.");
@@ -393,23 +388,35 @@ export default function CreateStockItem({
                 />
                 {!isStockIngreso && (
                   <>
-                    <SelectField
-                      label="Proveedor"
-                      placeholder="Seleccionar proveedor"
-                      name="provider"
-                      options={providers || []}
-                      value={provider?.id?.toString() || ""}
-                      onChange={(e) => {
-                        const selectedProvider = providers?.find(
-                          (p) => p.id === Number(e.target.value)
-                        );
-                        if (selectedProvider) {
+                    <div className="space-y-2">
+                      <SelectField
+                        label="Proveedor existente"
+                        placeholder="Seleccionar proveedor"
+                        name="provider"
+                        options={providers || []}
+                        value={provider?.id?.toString() || ""}
+                        onChange={(e) => {
+                          const selectedProvider = providers?.find(
+                            (p) => p.id === Number(e.target.value)
+                          );
                           setProvider(selectedProvider);
-                          setQueryProvider(selectedProvider.name);
-                        }
-                      }}
-                      size="sm"
-                    />
+                          setQueryProvider(selectedProvider?.name || "");
+                        }}
+                        size="sm"
+                      />
+                      <InputField
+                        label="O escribir proveedor nuevo"
+                        placeholder="Nombre del proveedor"
+                        name="providerName"
+                        type="text"
+                        value={queryProvider}
+                        onChange={(e) => {
+                          setQueryProvider(e.target.value);
+                          setProvider(undefined);
+                        }}
+                        size="sm"
+                      />
+                    </div>
                     <SelectField
                       label="Inversor"
                       placeholder="Selecciona el inversor"

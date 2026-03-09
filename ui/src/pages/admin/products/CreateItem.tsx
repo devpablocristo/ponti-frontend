@@ -81,6 +81,7 @@ export default function CreateItem({
     []
   );
 
+  const [queryProvider, setQueryProvider] = useState("");
   const [provider, setProvider] = useState<Entity>();
 
   const [type, setType] = useState<{ id: number; name: string } | null>(null);
@@ -106,6 +107,7 @@ export default function CreateItem({
     setItemErrors({});
     setLastSubmittedRowIndexes([]);
     setProvider(undefined);
+    setQueryProvider("");
     setInvestor(null);
     setItems(emptyItems);
     setOrderNumber("");
@@ -403,8 +405,11 @@ export default function CreateItem({
     const errors: string[] = [];
     setError(null);
 
-    if (!provider) {
-      errors.push("Debe seleccionar un proveedor.");
+    const effectiveProvider =
+      provider ?? (queryProvider.trim() ? { id: 0, name: queryProvider.trim() } : undefined);
+
+    if (!effectiveProvider) {
+      errors.push("Debe seleccionar o ingresar un proveedor.");
     }
 
     if (!investor) {
@@ -463,8 +468,8 @@ export default function CreateItem({
         project_destination_id: selectedProjectDestination || 0,
         investor_id: investor?.id || 0,
         provider: {
-          id: provider?.id || 0,
-          name: provider?.name || "",
+          id: effectiveProvider?.id || 0,
+          name: effectiveProvider?.name || "",
         },
       })),
     };
@@ -544,22 +549,35 @@ export default function CreateItem({
                   size="sm"
                 />
 
-                <SelectField
-                  label="Proveedor"
-                  placeholder="Seleccionar proveedor"
-                  name="provider"
-                  options={providers || []}
-                  value={provider?.id?.toString() || ""}
-                  onChange={(e) => {
-                    const selectedProvider = providers?.find(
-                      (p) => p.id === Number(e.target.value)
-                    );
-                    if (selectedProvider) {
+                <div className="space-y-2">
+                  <SelectField
+                    label="Proveedor existente"
+                    placeholder="Seleccionar proveedor"
+                    name="provider"
+                    options={providers || []}
+                    value={provider?.id?.toString() || ""}
+                    onChange={(e) => {
+                      const selectedProvider = providers?.find(
+                        (p) => p.id === Number(e.target.value)
+                      );
                       setProvider(selectedProvider);
-                    }
-                  }}
-                  size="sm"
-                />
+                      setQueryProvider(selectedProvider?.name || "");
+                    }}
+                    size="sm"
+                  />
+                  <InputField
+                    label="O escribir proveedor nuevo"
+                    placeholder="Nombre del proveedor"
+                    name="providerName"
+                    type="text"
+                    value={queryProvider}
+                    onChange={(e) => {
+                      setQueryProvider(e.target.value);
+                      setProvider(undefined);
+                    }}
+                    size="sm"
+                  />
+                </div>
                 <SelectField
                   label="Inversor"
                   placeholder="Selecciona el inversor"

@@ -13,124 +13,14 @@ import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "../../../../api/client";
-
-const LABOR_HEADER_ALIASES = {
-  name: ["labor", "nombre", "name"],
-  category: ["rubro", "categoria", "category"],
-  price: ["precio", "precio_usd", "usd", "u$s"],
-  contractor: ["contratista", "contractor", "proveedor"],
-  priceStatus: [
-    "estado_precio",
-    "precio_parcial",
-    "is_partial_price",
-    "parcial",
-    "final_parcial",
-    "estado_del_precio",
-    "precio_tentativo",
-  ],
-} as const;
-
-function normalizeText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_");
-}
-
-function parseCsvLine(line: string) {
-  const values: string[] = [];
-  let current = "";
-  let insideQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-      continue;
-    }
-    if (char === "," && !insideQuotes) {
-      values.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-  values.push(current.trim());
-  return values;
-}
-
-function parseCsv(content: string) {
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-  if (lines.length < 2) return [];
-  const headers = parseCsvLine(lines[0]).map((h) => normalizeText(h));
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] ?? "";
-    });
-    return row;
-  });
-}
-
-function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
-}
-
-function getValueByAliases(
-  row: Record<string, string>,
-  aliases: readonly string[]
-) {
-  for (const alias of aliases) {
-    const normalizedAlias = normalizeText(alias);
-    if (row[normalizedAlias] !== undefined) {
-      return row[normalizedAlias];
-    }
-  }
-  return "";
-}
-
-function parsePartialPrice(rawValue: string) {
-  const raw = (rawValue ?? "").trim();
-  if (!raw) {
-    return { provided: false, valid: true, value: false };
-  }
-
-  const normalized = normalizeText(raw).replace(/_/g, "");
-  const partialValues = new Set([
-    "parcial",
-    "tentativo",
-    "si",
-    "true",
-    "1",
-    "x",
-    "check",
-    "checked",
-  ]);
-  const finalValues = new Set(["final", "no", "false", "0"]);
-
-  if (partialValues.has(normalized)) {
-    return { provided: true, valid: true, value: true };
-  }
-  if (finalValues.has(normalized)) {
-    return { provided: true, valid: true, value: false };
-  }
-
-  return { provided: true, valid: false, value: false };
-}
+import {
+  getValueByAliases,
+  LABOR_HEADER_ALIASES,
+  normalizeSpreadsheetRow,
+  normalizeText,
+  parseCsv,
+  parsePartialPrice,
+} from "./importUtils";
 
 const columns: Column<LaborInfo>[] = [
   {
@@ -403,7 +293,8 @@ export default function ListTasks() {
           !Number.isNaN(categoryId) &&
           !Number.isNaN(priceValue) &&
           priceValue > 0 &&
-          contractor
+          contractor &&
+          (!parsedPartial.provided || parsedPartial.valid)
         ) {
           laborsToSave.push({
             name,
@@ -424,7 +315,11 @@ export default function ListTasks() {
         return;
       }
 
-      await saveLabors(laborsToSave, projectId);
+      const saved = await saveLabors(laborsToSave, projectId);
+      if (!saved) {
+        return;
+      }
+
       getLabors(projectId);
 
       if (importErrors.length > 0) {
@@ -599,14 +494,14 @@ export default function ListTasks() {
                 type="text"
                 value={labor?.name || ""}
                 onChange={(e) => {
-                  setLabor({
-                    id: labor?.id || 0,
-                    category_id: labor?.category_id || 0,
-                    price: labor?.price || "",
-                    contractor_name: labor?.contractor_name || "",
-                    category_name: labor?.category_name || "",
-                    name: e.target.value,
-                  });
+                  setLabor((prev) =>
+                    prev
+                      ? {
+                          ...prev,
+                          name: e.target.value,
+                        }
+                      : null
+                  );
                 }}
               />
               <SelectField

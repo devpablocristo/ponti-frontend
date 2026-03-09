@@ -11,6 +11,14 @@ import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
 import { LoaderCircle } from "lucide-react";
 import * as XLSX from "xlsx";
+import {
+  getValueByAliases,
+  LABOR_HEADER_ALIASES,
+  normalizeSpreadsheetRow,
+  normalizeText,
+  parseCsv,
+  parsePartialPrice,
+} from "./importUtils";
 
 interface Labor {
   id: number;
@@ -25,131 +33,6 @@ interface PendingLaborImport {
   newRows: Labor[];
   duplicates: { existing: LaborInfo; updated: LaborInfo }[];
   warnings: string[];
-}
-
-const LABOR_HEADER_ALIASES = {
-  name: ["labor", "nombre", "name"],
-  category: ["rubro", "categoria", "category"],
-  price: ["precio", "precio_usd", "usd", "u$s"],
-  contractor: ["contratista", "contractor", "proveedor"],
-  priceStatus: [
-    "estado_precio",
-    "precio_parcial",
-    "is_partial_price",
-    "parcial",
-    "final_parcial",
-    "estado_del_precio",
-    "precio_tentativo",
-  ],
-} as const;
-
-function normalizeText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_");
-}
-
-function parseCsvLine(line: string) {
-  const values: string[] = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-      continue;
-    }
-    if (char === "," && !insideQuotes) {
-      values.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-  values.push(current.trim());
-  return values;
-}
-
-function parseCsv(content: string) {
-  const lines = content
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
-
-  if (lines.length < 2) {
-    return [];
-  }
-
-
-
-  const headers = parseCsvLine(lines[0]).map((h) => normalizeText(h));
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] ?? "";
-    });
-    return row;
-  });
-}
-
-function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
-}
-
-function getValueByAliases(
-  row: Record<string, string>,
-  aliases: readonly string[]
-) {
-  for (const alias of aliases) {
-    const normalizedAlias = normalizeText(alias);
-    if (row[normalizedAlias] !== undefined) {
-      return row[normalizedAlias];
-    }
-  }
-  return "";
-}
-
-function parsePartialPrice(rawValue: string) {
-  const raw = (rawValue ?? "").trim();
-  if (!raw) {
-    return { provided: false, valid: true, value: false };
-  }
-
-  const normalized = normalizeText(raw).replace(/_/g, "");
-  const partialValues = new Set([
-    "parcial",
-    "tentativo",
-    "si",
-    "true",
-    "1",
-    "x",
-    "check",
-    "checked",
-  ]);
-  const finalValues = new Set(["final", "no", "false", "0"]);
-
-  if (partialValues.has(normalized)) {
-    return { provided: true, valid: true, value: true };
-  }
-  if (finalValues.has(normalized)) {
-    return { provided: true, valid: true, value: false };
-  }
-
-  return { provided: true, valid: false, value: false };
 }
 
 export default function TasksForm() {
@@ -481,6 +364,12 @@ export default function TasksForm() {
         // Check if labor already exists
         const existing = laborByName.get(name.trim().toLowerCase());
         if (existing) {
+          if (parsedPartial.provided && !parsedPartial.valid) {
+            importErrors.push(
+              `Fila ${rowNumber}: "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
+            );
+            return;
+          }
           const catName = categoryByText?.name ?? existing.category_name;
           duplicates.push({
             existing,
@@ -494,7 +383,6 @@ export default function TasksForm() {
               is_partial_price: parsedPartial.provided && parsedPartial.valid
                 ? parsedPartial.value
                 : Boolean(existing.is_partial_price),
-
             },
           });
           return;
@@ -521,7 +409,8 @@ export default function TasksForm() {
           !Number.isNaN(categoryId) &&
           !Number.isNaN(priceValue) &&
           priceValue > 0 &&
-          contractor
+          contractor &&
+          (!parsedPartial.provided || parsedPartial.valid)
         ) {
           importedRows.push({
             id: importedRows.length,
@@ -530,7 +419,6 @@ export default function TasksForm() {
             price: String(priceValue),
             contractor,
             is_partial_price: parsedPartial.valid ? parsedPartial.value : false,
-
           });
         }
       });
