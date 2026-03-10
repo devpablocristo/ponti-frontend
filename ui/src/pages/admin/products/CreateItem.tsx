@@ -138,6 +138,7 @@ export default function CreateItem({
     const [name, setName] = useState("");
     const [unit, setUnit] = useState("");
     const [price, setPrice] = useState("");
+    const [isPartialPrice, setIsPartialPrice] = useState(false);
     const [category, setCategory] = useState("");
     const [type, setType] = useState("");
 
@@ -212,6 +213,16 @@ export default function CreateItem({
               size="sm"
             />
 
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                checked={isPartialPrice}
+                onChange={(e) => setIsPartialPrice(e.target.checked)}
+              />
+              Precio parcial
+            </label>
+
             <SelectField
               label="Rubro"
               name="category"
@@ -258,7 +269,7 @@ export default function CreateItem({
                         price: Number(price),
                         category: Number(category),
                         type: Number(type),
-                        is_partial_price: false,
+                        is_partial_price: isPartialPrice,
                       },
                     ],
                     projectId

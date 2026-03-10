@@ -27,6 +27,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
 }) => {
   const sizeClasses =
     size === "sm" ? "text-sm py-2 px-3.5" : "text-sm py-2.5 px-3.5";
+  const safeOptions = Array.isArray(options) ? options : [];
 
   return (
     <div className={`${fullWidth ? "w-full" : ""}`}>
@@ -46,7 +47,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
           <option value="" disabled>
             {placeholder ? placeholder : "Seleccionar..."}
           </option>
-          {options.map((opt) => (
+          {safeOptions.map((opt) => (
             <option key={opt.id} value={opt.id}>
               {opt.name}
             </option>

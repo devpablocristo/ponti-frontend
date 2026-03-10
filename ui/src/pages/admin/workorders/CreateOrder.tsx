@@ -77,6 +77,8 @@ export default function CreateOrder({
     Record<number, number>
   >({});
   const supplyListRefs = useRef<Record<number, HTMLUListElement | null>>({});
+  const typeaheadBufferByRowRef = useRef<Record<number, string>>({});
+  const lastTypeaheadAtByRowRef = useRef<Record<number, number>>({});
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
     null
   );
@@ -521,6 +523,69 @@ export default function CreateOrder({
       );
       option?.scrollIntoView({ block: "nearest" });
     });
+  };
+
+  const handleSupplyTypeahead = (
+    rowIndex: number,
+    typedKey: string,
+    selectedSupplyId: number | null
+  ) => {
+    const safeSupplies = Array.isArray(supplies) ? supplies : [];
+    if (safeSupplies.length === 0) return;
+
+    const now = Date.now();
+    const lowerKey = typedKey.toLowerCase();
+    const previousBuffer = typeaheadBufferByRowRef.current[rowIndex] || "";
+    const lastTypedAt = lastTypeaheadAtByRowRef.current[rowIndex] || 0;
+    const withinWindow = now - lastTypedAt <= 700;
+
+    const findByPrefix = (prefix: string, startIndex = 0) => {
+      if (!prefix) return null;
+      const normalizedPrefix = prefix.toLowerCase();
+      const ordered = [
+        ...safeSupplies.slice(startIndex),
+        ...safeSupplies.slice(0, startIndex),
+      ];
+      return (
+        ordered.find((s) => s.name.toLowerCase().startsWith(normalizedPrefix)) ||
+        null
+      );
+    };
+
+    const shouldCycleSameLetter =
+      withinWindow && previousBuffer.length === 1 && previousBuffer === lowerKey;
+
+    let matchedSupply = null;
+
+    if (shouldCycleSameLetter) {
+      const currentIndex = selectedSupplyId
+        ? safeSupplies.findIndex((s) => s.id === selectedSupplyId)
+        : -1;
+      matchedSupply = findByPrefix(lowerKey, currentIndex + 1);
+      typeaheadBufferByRowRef.current[rowIndex] = lowerKey;
+    } else {
+      const nextBuffer = withinWindow
+        ? `${previousBuffer}${lowerKey}`
+        : lowerKey;
+
+      matchedSupply = findByPrefix(nextBuffer);
+
+      if (!matchedSupply && nextBuffer.length > 1) {
+        matchedSupply = findByPrefix(lowerKey);
+        typeaheadBufferByRowRef.current[rowIndex] = lowerKey;
+      } else {
+        typeaheadBufferByRowRef.current[rowIndex] = nextBuffer;
+      }
+    }
+
+    lastTypeaheadAtByRowRef.current[rowIndex] = now;
+
+    if (!matchedSupply) return;
+
+    handleItemChange(rowIndex, "itemId", matchedSupply.id);
+    handleItemChange(rowIndex, "dose", "");
+    handleItemChange(rowIndex, "totalUsed", "");
+    setSupplySearch((prev) => ({ ...prev, [rowIndex]: "" }));
   };
 
   const handleSaveOrder = () => {
@@ -970,6 +1035,16 @@ export default function CreateOrder({
                             if (e.key === "Escape" && openSupplyDropdown === i) {
                               e.preventDefault();
                               setOpenSupplyDropdown(null);
+                            }
+                            if (
+                              openSupplyDropdown !== i &&
+                              e.key.length === 1 &&
+                              !e.altKey &&
+                              !e.ctrlKey &&
+                              !e.metaKey
+                            ) {
+                              e.preventDefault();
+                              handleSupplyTypeahead(i, e.key, item.itemId);
                             }
                           }}
                         >
