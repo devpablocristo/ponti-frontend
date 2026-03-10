@@ -6,9 +6,6 @@ import useSupplies from "../../../hooks/useSupplies";
 import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
-import Search from "../../../components/Input/Search";
-import { useClickOutside } from "../../login/useClickOutside";
-import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useStockMovement from "../../../hooks/useStockMovement";
 import useStock from "../../../hooks/useStock";
@@ -83,9 +80,7 @@ export default function CreateStockItem({
 
   const [queryProvider, setQueryProvider] = useState<string>("");
   const [provider, setProvider] = useState<Entity>();
-  const [providerSuggestions, setProviderSuggestions] = useState<Entity[]>([]);
-  const [showProviderSuggestions, setShowProviderSuggestions] =
-    useState<boolean>(false);
+  const latestOnStockCreatedRef = useRef(onStockCreated);
 
   // Default "Stock": evita que el primer render muestre "Seleccionar..." y campos extra.
   const [type, setType] = useState<{ id: number; name: string } | null>(
@@ -102,7 +97,6 @@ export default function CreateStockItem({
     setErrorMessages([]);
     setProvider(undefined);
     setQueryProvider("");
-    setShowProviderSuggestions(false);
     setInvestor(null);
     setItems(emptyItems);
     setOrderNumber("");
@@ -122,12 +116,12 @@ export default function CreateStockItem({
 
   useEffect(() => {
     getProviders("");
-  }, []);
+  }, [getProviders]);
 
   useEffect(() => {
     if (!customer) return;
     getProjectsDropdown(customer.id);
-  }, [customer]);
+  }, [customer, getProjectsDropdown]);
 
   useEffect(() => {
     if (customer && project) {
@@ -135,13 +129,7 @@ export default function CreateStockItem({
         `customer_id=${customer.id}&project_name=${project.name}&limit=100`
       );
     }
-  }, [customer, project]);
-
-  useEffect(() => {
-    if (providers) {
-      setProviderSuggestions(providers);
-    }
-  }, [providers]);
+  }, [customer, project, getCampaigns]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -149,6 +137,10 @@ export default function CreateStockItem({
       setSuccessMessage(null);
     }
   }, [errorCreation]);
+
+  useEffect(() => {
+    latestOnStockCreatedRef.current = onStockCreated;
+  }, [onStockCreated]);
 
   useEffect(() => {
     if (resultCreation.supply_movements.length > 0) {
@@ -166,7 +158,7 @@ export default function CreateStockItem({
       }
 
       setSuccessMessage("Movimiento guardado correctamente");
-      onStockCreated();
+      latestOnStockCreatedRef.current();
       clearForm();
     }
   }, [resultCreation]);
@@ -176,7 +168,7 @@ export default function CreateStockItem({
       getSupplies(projectId);
       getProject(projectId);
     }
-  }, [projectId]);
+  }, [projectId, getProject, getSupplies]);
 
   useEffect(() => {
     if (type?.id === 2 && projectId) {
@@ -198,8 +190,9 @@ export default function CreateStockItem({
   useEffect(() => {
     if (!isStockIngreso) return;
 
-    // Default: proveedor "Stock" (se autocrea si no existe).
-    if (!queryProvider.trim()) {
+    // En modo Stock el proveedor siempre debe volver a "Stock",
+    // aunque el usuario venga de otro tipo con un proveedor previo.
+    if (queryProvider !== "Stock" || provider?.name !== "Stock" || provider?.id !== 0) {
       setQueryProvider("Stock");
       setProvider({ id: 0, name: "Stock" });
     }
@@ -208,46 +201,7 @@ export default function CreateStockItem({
     if (!investor && investors.length > 0) {
       setInvestor(investors[0]);
     }
-  }, [isStockIngreso, queryProvider, investor, investors]);
-
-  const handleProviderSuggestionClick = (provider: Entity) => {
-    setQueryProvider(provider.name);
-    setProvider(provider);
-    setShowProviderSuggestions(false);
-  };
-
-  const {
-    highlightedIndex: highlightedProviderIndex,
-    handleKeyDown: handleProviderKeyDown,
-    setHighlightedIndex: setProviderHighlightedIndex,
-  } = useKeyboardNavigation({
-    suggestions: providerSuggestions,
-    showSuggestions: showProviderSuggestions,
-    onSelect: handleProviderSuggestionClick,
-    onEscape: () => setShowProviderSuggestions(false),
-  });
-
-  const providerRef = useRef<HTMLDivElement>(null);
-  useClickOutside(providerRef, () => setShowProviderSuggestions(false));
-
-  const handleProviderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQueryProvider(value);
-    setProvider(undefined);
-
-    if (providers) {
-      const filtered =
-        value.trim() === ""
-          ? providers
-          : providers.filter((provider) =>
-              provider.name.toLowerCase().includes(value.toLowerCase())
-            );
-
-      setProviderSuggestions(filtered);
-      setShowProviderSuggestions(true);
-      setProviderHighlightedIndex(0);
-    }
-  };
+  }, [isStockIngreso, queryProvider, provider, investor, investors]);
 
   const handleItemChange = (i: number, field: string, value: string) => {
     setItems((prev) =>
@@ -325,25 +279,19 @@ export default function CreateStockItem({
 
     // Para stock elegimos defaults "transparentes" (no se piden en UI).
     const effectiveProvider =
-      isStockIngreso && !provider
+      provider ||
+      (queryProvider.trim()
         ? { id: 0, name: queryProvider.trim() || "Stock" }
-        : provider;
+        : undefined);
     const effectiveProviderName =
-      effectiveProvider?.name || queryProvider.trim() || "Stock";
+      effectiveProvider?.name || (isStockIngreso ? "Stock" : "");
     const effectiveInvestorId = isStockIngreso
       ? investor?.id || investors[0]?.id || 0
       : investor?.id || 0;
 
     if (!isStockIngreso) {
       if (!effectiveProvider) {
-        if (queryProvider === "") {
-          errors.push("Debe seleccionar un proveedor.");
-        } else {
-          setProvider({
-            id: 0,
-            name: queryProvider,
-          });
-        }
+        errors.push("Debe seleccionar o ingresar un proveedor.");
       }
       if (!investor) {
         errors.push("Debe seleccionar un inversor.");
@@ -445,46 +393,34 @@ export default function CreateStockItem({
                 />
                 {!isStockIngreso && (
                   <>
-                    <div ref={providerRef} className="relative">
-                      <Search
-                        label="Proveedor"
-                        placeholder="Ingrese nombre o fecha"
+                    <div className="space-y-2">
+                      <SelectField
+                        label="Proveedor existente"
+                        placeholder="Seleccionar proveedor"
                         name="provider"
-                        value={queryProvider}
-                        onClick={() => {
-                          if (!showProviderSuggestions) {
-                            setShowProviderSuggestions(true);
-                          }
+                        options={providers || []}
+                        value={provider?.id?.toString() || ""}
+                        onChange={(e) => {
+                          const selectedProvider = providers?.find(
+                            (p) => p.id === Number(e.target.value)
+                          );
+                          setProvider(selectedProvider);
+                          setQueryProvider(selectedProvider?.name || "");
                         }}
-                        onChange={handleProviderChange}
-                        onFocus={() => setShowProviderSuggestions(true)}
-                        onKeyDown={handleProviderKeyDown}
-                        className={"w-full"}
                         size="sm"
-                        fullWidth
                       />
-                      {showProviderSuggestions && (
-                        <div className="flex justify-between items-center">
-                          <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
-                            {providerSuggestions.length > 0 &&
-                              providerSuggestions.map((p, index) => (
-                                <li
-                                  key={index}
-                                  onClick={() =>
-                                    handleProviderSuggestionClick(p)
-                                  }
-                                  className={`px-4 py-2 cursor-pointer ${
-                                    index === highlightedProviderIndex
-                                      ? "bg-gray-300 font-medium"
-                                      : "hover:bg-gray-300 hover:font-medium"
-                                  }`}
-                                >
-                                  {p.name}
-                                </li>
-                              ))}
-                          </ul>
-                        </div>
-                      )}
+                      <InputField
+                        label="O escribir proveedor nuevo"
+                        placeholder="Nombre del proveedor"
+                        name="providerName"
+                        type="text"
+                        value={queryProvider}
+                        onChange={(e) => {
+                          setQueryProvider(e.target.value);
+                          setProvider(undefined);
+                        }}
+                        size="sm"
+                      />
                     </div>
                     <SelectField
                       label="Inversor"
@@ -586,7 +522,7 @@ export default function CreateStockItem({
                           type="text"
                           value={item.quantity}
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "quantity", value);
                             }

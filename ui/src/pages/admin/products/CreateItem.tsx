@@ -7,9 +7,6 @@ import useStock from "../../../hooks/useStock";
 import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
-import Search from "../../../components/Input/Search";
-import { useClickOutside } from "../../login/useClickOutside";
-import { useKeyboardNavigation } from "../database/customers/hooks/useKeyboardNavigation";
 import useProviders from "../../../hooks/useProviders";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
 import { SupplyMovementRequest } from "../../../hooks/useSupplyMovement/types";
@@ -84,11 +81,8 @@ export default function CreateItem({
     []
   );
 
-  const [queryProvider, setQueryProvider] = useState<string>("");
+  const [queryProvider, setQueryProvider] = useState("");
   const [provider, setProvider] = useState<Entity>();
-  const [providerSuggestions, setProviderSuggestions] = useState<Entity[]>([]);
-  const [showProviderSuggestions, setShowProviderSuggestions] =
-    useState<boolean>(false);
 
   const [type, setType] = useState<{ id: number; name: string } | null>(null);
 
@@ -107,6 +101,11 @@ export default function CreateItem({
   const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
     null
   );
+  const latestItemsRef = useRef(items);
+  const latestSuppliesRef = useRef(supplies);
+  const latestProjectIdRef = useRef(projectId);
+  const latestOnProductCreatedRef = useRef(onProductCreated);
+  const latestGetStockRef = useRef(getStock);
 
   const clearForm = () => {
     setError(null);
@@ -114,7 +113,6 @@ export default function CreateItem({
     setLastSubmittedRowIndexes([]);
     setProvider(undefined);
     setQueryProvider("");
-    setShowProviderSuggestions(false);
     setInvestor(null);
     setItems(emptyItems);
     setOrderNumber("");
@@ -148,7 +146,7 @@ export default function CreateItem({
     useEffect(() => {
       getCategories("");
       getTypes();
-    }, []);
+    }, [getCategories, getTypes]);
 
     useEffect(() => {
       if (!result) return;
@@ -284,12 +282,12 @@ export default function CreateItem({
 
   useEffect(() => {
     getProviders("");
-  }, []);
+  }, [getProviders]);
 
   useEffect(() => {
     if (!customer) return;
     getProjectsDropdown(customer.id);
-  }, [customer]);
+  }, [customer, getProjectsDropdown]);
 
   useEffect(() => {
     if (customer && project) {
@@ -297,13 +295,7 @@ export default function CreateItem({
         `customer_id=${customer.id}&project_name=${project.name}&limit=100`
       );
     }
-  }, [customer, project]);
-
-  useEffect(() => {
-    if (providers) {
-      setProviderSuggestions(providers);
-    }
-  }, [providers]);
+  }, [customer, project, getCampaigns]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -318,6 +310,14 @@ export default function CreateItem({
   }, [errorCreation, errorCreationPayload, supplies]);
 
   useEffect(() => {
+    latestItemsRef.current = items;
+    latestSuppliesRef.current = supplies;
+    latestProjectIdRef.current = projectId;
+    latestOnProductCreatedRef.current = onProductCreated;
+    latestGetStockRef.current = getStock;
+  }, [items, supplies, projectId, onProductCreated, getStock]);
+
+  useEffect(() => {
     if (lastSubmittedRowIndexes.length === 0) return;
 
     if (resultCreation.supply_movements.length > 0) {
@@ -326,9 +326,9 @@ export default function CreateItem({
       resultCreation.supply_movements.forEach((movement, responseIndex) => {
         if (movement.error_detail !== "") {
           const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
-          const selectedSupplyId = Number(items[uiRowIndex]?.item || 0);
+          const selectedSupplyId = Number(latestItemsRef.current[uiRowIndex]?.item || 0);
           const selectedSupplyName =
-            supplies.find((s) => s.id === selectedSupplyId)?.name ||
+            latestSuppliesRef.current.find((s) => s.id === selectedSupplyId)?.name ||
             `fila ${uiRowIndex + 1}`;
           const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
           const message = `${selectedSupplyName}: ${detail}`;
@@ -346,9 +346,11 @@ export default function CreateItem({
 
       setItemErrors({});
       setSuccessMessage("Movimiento guardado correctamente");
-      onProductCreated();
+      latestOnProductCreatedRef.current();
       clearForm();
-      if (projectId) getStock(projectId, "");
+      if (latestProjectIdRef.current) {
+        latestGetStockRef.current(latestProjectIdRef.current, "");
+      }
     }
   }, [resultCreation, lastSubmittedRowIndexes]);
 
@@ -358,7 +360,7 @@ export default function CreateItem({
       getProject(projectId);
       getStock(projectId, "");
     }
-  }, [projectId]);
+  }, [projectId, getProject, getStock, getSupplies]);
 
   useEffect(() => {
     if (!pendingCreatedSupplyName || itemIndexToUpdate === null) return;
@@ -402,59 +404,6 @@ export default function CreateItem({
     );
   }, [selectedProject]);
 
-  const handleProviderSuggestionClick = (provider: Entity) => {
-    setQueryProvider(provider.name);
-    setProvider(provider);
-    setShowProviderSuggestions(false);
-  };
-
-  const {
-    highlightedIndex: highlightedProviderIndex,
-    handleKeyDown: handleProviderKeyDown,
-    setHighlightedIndex: setProviderHighlightedIndex,
-  } = useKeyboardNavigation({
-    suggestions: providerSuggestions,
-    showSuggestions: showProviderSuggestions,
-    onSelect: handleProviderSuggestionClick,
-    onEscape: () => setShowProviderSuggestions(false),
-  });
-
-  const providerRef = useRef<HTMLDivElement>(null);
-  const providerListRef = useRef<HTMLUListElement | null>(null);
-  useClickOutside(providerRef, () => setShowProviderSuggestions(false));
-
-  useEffect(() => {
-    if (!showProviderSuggestions || providerSuggestions.length === 0) return;
-
-    requestAnimationFrame(() => {
-      const list = providerListRef.current;
-      if (!list) return;
-      const option = list.querySelector<HTMLLIElement>(
-        `[data-provider-option-index="${highlightedProviderIndex}"]`
-      );
-      option?.scrollIntoView({ block: "nearest" });
-    });
-  }, [highlightedProviderIndex, showProviderSuggestions, providerSuggestions.length]);
-
-  const handleProviderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setQueryProvider(value);
-    setProvider(undefined);
-
-    if (providers) {
-      const filtered =
-        value.trim() === ""
-          ? providers
-          : providers.filter((provider) =>
-              provider.name.toLowerCase().includes(value.toLowerCase())
-            );
-
-      setProviderSuggestions(filtered);
-      setShowProviderSuggestions(true);
-      setProviderHighlightedIndex(0);
-    }
-  };
-
   const handleItemChange = (i: number, field: string, value: string) => {
     setItemErrors((prev) => {
       if (!(i in prev)) return prev;
@@ -471,15 +420,11 @@ export default function CreateItem({
     const errors: string[] = [];
     setError(null);
 
-    if (!provider) {
-      if (queryProvider === "") {
-        errors.push("Debe seleccionar un proveedor.");
-      } else {
-        setProvider({
-          id: 0,
-          name: queryProvider,
-        });
-      }
+    const effectiveProvider =
+      provider ?? (queryProvider.trim() ? { id: 0, name: queryProvider.trim() } : undefined);
+
+    if (!effectiveProvider) {
+      errors.push("Debe seleccionar o ingresar un proveedor.");
     }
 
     if (!investor) {
@@ -538,8 +483,8 @@ export default function CreateItem({
         project_destination_id: selectedProjectDestination || 0,
         investor_id: investor?.id || 0,
         provider: {
-          id: provider?.id || 0,
-          name: provider ? provider.name : queryProvider,
+          id: effectiveProvider?.id || 0,
+          name: effectiveProvider?.name || "",
         },
       })),
     };
@@ -619,55 +564,34 @@ export default function CreateItem({
                   size="sm"
                 />
 
-                <div ref={providerRef} className="relative">
-                  <Search
-                    label="Proveedor"
-                    placeholder="Ingrese nombre o fecha"
+                <div className="space-y-2">
+                  <SelectField
+                    label="Proveedor existente"
+                    placeholder="Seleccionar proveedor"
                     name="provider"
-                    value={queryProvider}
-                    onClick={() => {
-                      if (!showProviderSuggestions) {
-                        setShowProviderSuggestions(true);
-                      }
+                    options={providers || []}
+                    value={provider?.id?.toString() || ""}
+                    onChange={(e) => {
+                      const selectedProvider = providers?.find(
+                        (p) => p.id === Number(e.target.value)
+                      );
+                      setProvider(selectedProvider);
+                      setQueryProvider(selectedProvider?.name || "");
                     }}
-                    onChange={handleProviderChange}
-                    onFocus={() => setShowProviderSuggestions(true)}
-                    onKeyDown={(e) => {
-                      handleProviderKeyDown(e);
-                      if (e.key === "Tab") {
-                        setShowProviderSuggestions(false);
-                      }
-                    }}
-                    className={"w-full"}
                     size="sm"
-                    fullWidth
                   />
-                  {showProviderSuggestions && (
-                    <div className="flex justify-between items-center">
-                      <ul
-                        ref={providerListRef}
-                        className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto"
-                      >
-                        {providerSuggestions.length > 0 &&
-                          providerSuggestions.map((provider, index) => (
-                            <li
-                              key={index}
-                              data-provider-option-index={index}
-                              onClick={() =>
-                                handleProviderSuggestionClick(provider)
-                              }
-                              className={`px-4 py-2 cursor-pointer ${
-                                index === highlightedProviderIndex
-                                  ? "bg-gray-300 font-medium"
-                                  : "hover:bg-gray-300 hover:font-medium"
-                              }`}
-                            >
-                              {provider.name}
-                            </li>
-                          ))}
-                      </ul>
-                    </div>
-                  )}
+                  <InputField
+                    label="O escribir proveedor nuevo"
+                    placeholder="Nombre del proveedor"
+                    name="providerName"
+                    type="text"
+                    value={queryProvider}
+                    onChange={(e) => {
+                      setQueryProvider(e.target.value);
+                      setProvider(undefined);
+                    }}
+                    size="sm"
+                  />
                 </div>
                 <SelectField
                   label="Inversor"
@@ -763,26 +687,26 @@ export default function CreateItem({
 
                 <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
                   {items.map((item, i) => (
-                      <div
-                        key={i}
-                        className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                      >
-                        <div className="sm:col-span-1">
-                          <SupplyDropdown
-                            options={availableSupplies.map((s) => ({
-                              id: s.id,
-                              name: s.name,
-                              badge: s.qty > 0 ? <>{s.qty.toFixed(2)} {s.unit}</> : undefined,
-                            }))}
-                            value={item.item ? Number(item.item) : null}
-                            onSelect={(option) => handleItemChange(i, "item", String(option.id))}
-                            onCreateNew={() => {
-                              setItemIndexToUpdate(i);
-                              setOpenCreateSupply(true);
-                            }}
-                            hasError={!!itemErrors[i]}
-                          />
-                        </div>
+                    <div
+                      key={i}
+                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                    >
+                      <div className="sm:col-span-1">
+                        <SupplyDropdown
+                          options={availableSupplies.map((s) => ({
+                            id: s.id,
+                            name: s.name,
+                            badge: s.qty > 0 ? <>{s.qty.toFixed(2)} {s.unit}</> : undefined,
+                          }))}
+                          value={item.item ? Number(item.item) : null}
+                          onSelect={(option) => handleItemChange(i, "item", String(option.id))}
+                          onCreateNew={() => {
+                            setItemIndexToUpdate(i);
+                            setOpenCreateSupply(true);
+                          }}
+                          hasError={!!itemErrors[i]}
+                        />
+                      </div>
                       <div className="sm:col-span-1">
                         <InputField
                           label=""
@@ -796,7 +720,7 @@ export default function CreateItem({
                               : ""
                           }
                           onChange={(e) => {
-                            let value = e.target.value.replace(/,/g, ".");
+                            const value = e.target.value.replace(/,/g, ".");
                             if (/^\d*\.?\d{0,3}$/.test(value)) {
                               handleItemChange(i, "quantity", value);
                             }

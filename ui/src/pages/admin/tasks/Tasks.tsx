@@ -1,4 +1,4 @@
-import { JSX, useEffect, useState, useMemo, useRef } from "react";
+import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
 import {
   LoaderCircle,
   ClockIcon,
@@ -142,10 +142,10 @@ function TaskHeader({
   allColumns,
 }: {
   taskAmount: number;
-  selectedColumns: string[];
-  setSelectedColumns: (columns: string[]) => void;
-  setVisibleColumns: (columns: string[]) => void;
-  allColumns: any[];
+  selectedColumns: Array<keyof LaborGroupData>;
+  setSelectedColumns: (columns: Array<keyof LaborGroupData>) => void;
+  setVisibleColumns: (columns: Array<keyof LaborGroupData>) => void;
+  allColumns: Column<LaborGroupData>[];
 }) {
   const [showColumnsModal, setShowColumnsModal] = useState(false);
 
@@ -280,7 +280,7 @@ export function Tasks() {
   const [importError, setImportError] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [taskFilters, setTaskFilters] = useState<Record<string, any>>({});
+  const [taskFilters, setTaskFilters] = useState<Record<string, unknown>>({});
   const [invoice, setInvoice] = useState<InvoiceData>({
     workorder_id: 0,
     invoice_id: 0,
@@ -308,32 +308,20 @@ export function Tasks() {
     "field",
   ]);
 
-  useEffect(() => {
-    if (!projectId) return;
-
-    let query = "";
-    if (selectedField) {
-      query += `?field_id=${selectedField.id}`;
-    }
-    setVisibleColumns(columns.map((col) => col.key));
-    setCurrentPage(1);
-    getLaborGroups(projectId, query);
-    getMetrics(projectId, query);
-    getCategories("");
-  }, [projectId, selectedField]);
+  const buildFieldQuery = useCallback(() => {
+    if (!selectedField) return "";
+    return `?field_id=${selectedField.id}`;
+  }, [selectedField]);
 
   useEffect(() => {
     if (resultInvoice && projectId) {
       setResultInvoiceMessage(resultInvoice);
-      let query = "";
-      if (selectedField) {
-        query += `?field_id=${selectedField.id}`;
-      }
+      const query = buildFieldQuery();
       setCurrentPage(1);
       getLaborGroups(projectId, query);
       getMetrics(projectId, query);
     }
-  }, [resultInvoice, projectId, selectedField]);
+  }, [resultInvoice, projectId, buildFieldQuery, getLaborGroups, getMetrics]);
 
   useEffect(() => {
     if (errorInvoice) {
@@ -342,39 +330,44 @@ export function Tasks() {
     }
   }, [errorInvoice]);
 
-  function getFilterOptionsForColumn(
-    key: keyof LaborGroupData,
-    data: LaborGroupData[],
-    filters: Record<string, any>
-  ) {
-    const otherFilters = { ...filters };
-    delete otherFilters[key];
+  const getFilterOptionsForColumn = useCallback(
+    (
+      key: keyof LaborGroupData,
+      data: LaborGroupData[],
+      filters: Record<string, unknown>
+    ) => {
+      const otherFilters = { ...filters };
+      delete otherFilters[key];
 
-    const filtered = data.filter((task) =>
-      Object.entries(otherFilters).every(([k, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
+      const filtered = data.filter((task) =>
+        Object.entries(otherFilters).every(([k, value]) => {
+          if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        if (k === "date") {
-          const normalize = (d: string) =>
-            d.includes("/") ? d.split("/").reverse().join("-") : d.split("T")[0];
-          if (Array.isArray(value)) {
-            return value.some((v) => normalize(String(v)) === normalize(String(task.date)));
+          if (k === "date") {
+            const normalize = (d: string) =>
+              d.includes("/") ? d.split("/").reverse().join("-") : d.split("T")[0];
+            if (Array.isArray(value)) {
+              return value.some((v) => normalize(String(v)) === normalize(String(task.date)));
+            }
+            return normalize(String(value)) === normalize(String(task.date));
           }
-          return normalize(String(value)) === normalize(String(task.date));
-        }
 
-        const val = String(task[k as keyof LaborGroupData] ?? "").toLowerCase();
+          const val = String(task[k as keyof LaborGroupData] ?? "").toLowerCase();
 
-        if (Array.isArray(value)) {
-          return value.some((v) => val.includes(String(v).toLowerCase()));
-        }
+          if (Array.isArray(value)) {
+            return value.some((v) => val.includes(String(v).toLowerCase()));
+          }
 
-        return val.includes(String(value).toLowerCase());
-      })
-    );
+          return val.includes(String(value).toLowerCase());
+        })
+      );
 
-    return [...new Set(filtered.map((t) => String(t[key] ?? "")))].filter(Boolean).sort();
-  }
+      return [...new Set(filtered.map((t) => String(t[key] ?? "")))]
+        .filter(Boolean)
+        .sort();
+    },
+    []
+  );
 
   const columns: Column<LaborGroupData>[] = useMemo(
     () => [
@@ -384,7 +377,7 @@ export function Tasks() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("workorder_number", laborGroups, taskFilters),
-        render: (value) => <strong className="text-gray-900">{value}</strong>,
+        render: (value) => <strong className="text-gray-900">{String(value ?? "")}</strong>,
       },
       {
         key: "date",
@@ -398,7 +391,7 @@ export function Tasks() {
         }),
         render: (dateString) => {
           if (!dateString) return "";
-          const datePart = (dateString ?? "").split("T")[0];
+          const datePart = String(dateString).split("T")[0];
           const [year, month, day] = datePart.split("-").map(Number);
           const dayStr = String(day).padStart(2, "0");
           const monthStr = String(month).padStart(2, "0");
@@ -418,14 +411,17 @@ export function Tasks() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("crop_name", laborGroups, taskFilters),
-        render: (crop) => (
+        render: (crop) => {
+          const cropName = String(crop);
+          return (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[crop] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
               }`}
           >
-            {crop}
+            {cropName}
           </span>
-        ),
+          );
+        },
       },
       {
         key: "contractor",
@@ -440,14 +436,17 @@ export function Tasks() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("category_name", laborGroups, taskFilters),
-        render: (crop) => (
+        render: (crop) => {
+          const laborName = String(crop);
+          return (
           <span
-            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[crop] || "bg-green-200 text-green-800"
+            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-green-200 text-green-800"
               }`}
           >
-            {crop}
+            {laborName}
           </span>
-        ),
+          );
+        },
       },
       {
         key: "surface_ha",
@@ -455,7 +454,7 @@ export function Tasks() {
         filterable: true,
         filterOptions: getFilterOptionsForColumn("surface_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(value)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
         ),
       },
       {
@@ -463,14 +462,14 @@ export function Tasks() {
         header: "Costo $/Ha",
         filterable: true,
         filterOptions: getFilterOptionsForColumn("cost_ha", laborGroups, taskFilters),
-        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "net_total",
         header: "Total $ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-rose-600">$ {formatNumberAr(value)}</span>
+          <span className="font-bold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -478,7 +477,7 @@ export function Tasks() {
         header: "Total $ IVA",
         filterable: false,
         render: (value) => (
-          <span className="font-semibold text-rose-600">$ {formatNumberAr(value)}</span>
+          <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -493,7 +492,7 @@ export function Tasks() {
         header: "u$ Prom",
         filterable: false,
         render: (value) => (
-          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>
+          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -503,7 +502,7 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("usd_cost_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>
+          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -511,7 +510,7 @@ export function Tasks() {
         header: "Total u$ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-emerald-700">u$ {formatNumberAr(value)}</span>
+          <span className="font-bold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
         ),
       },
       {
@@ -524,7 +523,7 @@ export function Tasks() {
           <input
             type="text"
             className="block w-full min-w-[80px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm disabled:opacity-50"
-            value={value}
+            value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
             disabled={true}
           />
         ),
@@ -539,7 +538,7 @@ export function Tasks() {
           <input
             type="text"
             className="block w-full min-w-[80px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm disabled:opacity-50"
-            value={value}
+            value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
             disabled={true}
           />
         ),
@@ -551,10 +550,13 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("invoice_date", laborGroups, taskFilters),
         render: (dateString) => {
+          const rawDate = typeof dateString === "string" || typeof dateString === "number"
+            ? String(dateString)
+            : "";
           if (
-            !dateString ||
-            dateString === "0001-01-01T00:00:00Z" ||
-            dateString.startsWith("0001-01-01")
+            !rawDate ||
+            rawDate === "0001-01-01T00:00:00Z" ||
+            rawDate.startsWith("0001-01-01")
           ) {
             return (
               <input
@@ -565,7 +567,7 @@ export function Tasks() {
               />
             );
           }
-          const datePart = (dateString ?? "").split("T")[0];
+          const datePart = rawDate.split("T")[0];
           const [year, month, day] = datePart.split("-").map(Number);
           const dayStr = String(day).padStart(2, "0");
           const monthStr = String(month).padStart(2, "0");
@@ -579,11 +581,10 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("invoice_status", laborGroups, taskFilters),
         render: (status) => {
-          if (!status) {
-            status = emptyStatus;
-          }
+          const normalizedStatus =
+            typeof status === "string" && status ? status : emptyStatus;
 
-          const config = statusConfig[status] || {
+          const config = statusConfig[normalizedStatus] || {
             classes: "bg-gray-100 text-gray-700",
             icon: null,
           };
@@ -593,28 +594,50 @@ export function Tasks() {
               className={`inline-flex items-center gap-1 px-2 py-1 text-[14px] rounded-xl ${config.classes}`}
             >
               {config.icon}
-              {status}
+              {normalizedStatus}
             </span>
           );
         },
       },
     ],
-    [laborGroups, taskFilters]
+    [laborGroups, taskFilters, getFilterOptionsForColumn]
   );
 
   const allColumns = useMemo(() => {
-    const map = new Map();
+    const map = new Map<keyof LaborGroupData, Column<LaborGroupData>>();
     [...columns].forEach((col) => {
       map.set(col.key, col);
     });
     return Array.from(map.values());
   }, [columns]);
+  const allColumnKeys = useMemo(
+    () => allColumns.map((col) => col.key),
+    [allColumns]
+  );
+  const latestAllColumnKeysRef = useRef(allColumnKeys);
+
+  useEffect(() => {
+    latestAllColumnKeysRef.current = allColumnKeys;
+  }, [allColumnKeys]);
 
   const [columnsToShow, setColumnsToShow] = useState(columns);
-  const [selectedColumns, setSelectedColumns] = useState(
-    allColumns.map((col) => col.key)
+  const [selectedColumns, setSelectedColumns] = useState<Array<keyof LaborGroupData>>(
+    () => allColumnKeys
   );
-  const [visibleColumns, setVisibleColumns] = useState(selectedColumns);
+  const [visibleColumns, setVisibleColumns] = useState<Array<keyof LaborGroupData>>(
+    () => allColumnKeys
+  );
+
+  useEffect(() => {
+    if (!projectId) return;
+
+    const query = buildFieldQuery();
+    setVisibleColumns(latestAllColumnKeysRef.current);
+    setCurrentPage(1);
+    getLaborGroups(projectId, query);
+    getMetrics(projectId, query);
+    getCategories("");
+  }, [projectId, buildFieldQuery, getLaborGroups, getMetrics, getCategories]);
 
   const filteredTasks = useMemo(() => {
     return laborGroups.filter((task) => {
@@ -683,7 +706,7 @@ export function Tasks() {
     setColumnsToShow(
       allColumns.filter((col) => visibleColumns.includes(col.key))
     );
-  }, [visibleColumns]);
+  }, [visibleColumns, allColumns]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -691,7 +714,7 @@ export function Tasks() {
 
   const isValidDate = (dateString: string) => {
     if (!dateString) return false;
-    if (/^(00|0000)[\/\-](00|00)[\/\-](0000|00)$/.test(dateString))
+    if (/^(00|0000)[/-](00|00)[/-](0000|00)$/.test(dateString))
       return false;
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date.getTime());
@@ -784,6 +807,7 @@ export function Tasks() {
             category_id: categoryId,
             price: String(priceValue),
             contractor_name: contractor,
+            is_partial_price: false,
           });
         }
       });
@@ -838,13 +862,13 @@ export function Tasks() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       setExportErrorMessage("No se pudo exportar el listado de labores.");
     }
   };
 
   // Handler para resetear página al aplicar filtros
-  const handleFilterChange = (filters: Record<string, any>) => {
+  const handleFilterChange = (filters: Record<string, unknown>) => {
     setTaskFilters(filters);
     setCurrentPage(1);
   };

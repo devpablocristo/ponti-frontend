@@ -12,6 +12,17 @@ import {
 } from "./types";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
+type SupplyMovementResult = {
+  supply_movement_id: number;
+  is_saved: boolean;
+  error_detail: string;
+};
+
+type SupplyMovementCreationResponse = SuccessResponse<{
+  supply_movements: SupplyMovementResult[];
+}>;
+type SupplyMovementMutationResponse = SuccessResponse<unknown>;
+
 function getImportErrorData(error: unknown): BatchErrorPayload | undefined {
   const axiosError = error as AxiosError<BatchErrorPayload>;
   return axiosError?.response?.data ?? (error as BatchErrorPayload | undefined);
@@ -134,7 +145,7 @@ const useSupplyMovements = () => {
         setProcessing(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const saveSupplyMovement = React.useCallback(
@@ -150,7 +161,7 @@ const useSupplyMovements = () => {
       });
 
       try {
-        const response = await apiClient.post<SuccessResponse<any>>(
+        const response = await apiClient.post<SupplyMovementCreationResponse>(
           `/supply_movements/${projectId}`,
           supplyMovement
         );
@@ -172,7 +183,7 @@ const useSupplyMovements = () => {
         setProcessingCreation(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const saveImportedSupplyMovement = React.useCallback(
@@ -188,7 +199,7 @@ const useSupplyMovements = () => {
       });
 
       try {
-        const response = await apiClient.post<SuccessResponse<any>>(
+        const response = await apiClient.post<SupplyMovementCreationResponse>(
           `/supply_movements/${projectId}/import`,
           supplyMovement
         );
@@ -212,7 +223,7 @@ const useSupplyMovements = () => {
         setProcessingCreation(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const updateSupplyMovement = React.useCallback(
@@ -228,7 +239,7 @@ const useSupplyMovements = () => {
       });
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SupplyMovementCreationResponse>(
           `/supply_movements/${supplyMovementId}/project/${projectId}`,
           supplyMovement
         );
@@ -253,7 +264,7 @@ const useSupplyMovements = () => {
         setProcessingCreation(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const [processingDelete, setProcessingDelete] = useState(false);
@@ -266,7 +277,7 @@ const useSupplyMovements = () => {
       setDeleteResult(false);
 
       try {
-        const response = await apiClient.delete<SuccessResponse<any>>(
+        const response = await apiClient.delete<SupplyMovementMutationResponse>(
           `/supply_movements/${id}/project/${projectId}`
         );
 
@@ -322,7 +333,7 @@ const useSupplyMovements = () => {
     } finally {
       setProcessingDetail(false);
     }
-  }, []);
+  }, [dispatch]);
 
   return {
     supplyMovements,

@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { cropColors } from "../colors";
 
+type CropItem = {
+  id: number;
+  name: string;
+};
+
 type FieldData = {
   name: string;
   hectares: string;
-  crops: any[];
+  crops: CropItem[];
   lease_type: string;
 };
 
@@ -15,7 +20,7 @@ type Props = {
 export default function FieldDetails({ field }: Props) {
   const [showModal, setShowModal] = useState(false);
 
-  const items = [
+  const items: Array<{ label: string; value: string | CropItem[] }> = [
     { label: "fields", value: field.name },
     { label: "hectares", value: String(field.hectares) },
     { label: "crops", value: field.crops },
@@ -35,7 +40,7 @@ export default function FieldDetails({ field }: Props) {
                 <div className="flex flex-wrap gap-2">
                   {value
                     .slice(0, 4)
-                    .map((crop: { id: number; name: string }) => (
+                    .map((crop) => (
                       <span
                         key={crop.id}
                         className={`px-2 py-1 text-[14px] rounded-md ${
@@ -62,7 +67,7 @@ export default function FieldDetails({ field }: Props) {
                         Todos los cultivos
                       </h2>
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {value.map((crop: { id: number; name: string }) => (
+                        {value.map((crop) => (
                           <span
                             key={crop.id}
                             className={`px-4 py-1 rounded-xl text-base font-medium ${
@@ -86,7 +91,7 @@ export default function FieldDetails({ field }: Props) {
                 )}
               </>
             ) : (
-              value
+              String(value)
             )}
           </div>
         </div>

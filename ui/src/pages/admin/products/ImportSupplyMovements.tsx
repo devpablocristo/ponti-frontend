@@ -358,7 +358,7 @@ export default function ImportSupplyMovements({
           setPreviewRows(nextRows);
           setParsedFileKey(fileKey);
         }
-      } catch (error) {
+      } catch {
         if (!cancelled) {
           setPreviewRows([]);
           setParseError("No se pudo leer el archivo. Use .xlsx, .xls o .csv válidos.");

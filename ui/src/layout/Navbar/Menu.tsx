@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useSelection } from "../../pages/login/context/SelectionContext";
+import { useSelection } from "../../pages/login/context/useSelection";
 import { getInsightsSummary } from "@/api/aiClient";
 
 const POLL_INTERVAL_MS = 60_000;

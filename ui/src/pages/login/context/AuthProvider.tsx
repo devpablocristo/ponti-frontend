@@ -1,6 +1,4 @@
 import {
-  createContext,
-  useContext,
   useState,
   ReactNode,
   useCallback,
@@ -18,16 +16,7 @@ import {
   getRefreshToken,
   setLocalStorage,
 } from "./useLocalStorage";
-
-interface AuthContextType {
-  loading: boolean;
-  isAuthenticated: boolean;
-  user: DecodedToken | null;
-  login: (data: UserData) => Promise<void>;
-  logout: () => void;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from "./AuthContext";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -101,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     verifyToken();
-  }, [location.pathname, verifyToken]);
+  }, [verifyToken]);
 
   /* ---- login ---- */
 
@@ -157,12 +146,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth debe usarse dentro de un AuthProvider");
-  }
-  return context;
 }

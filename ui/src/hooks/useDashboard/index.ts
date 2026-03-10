@@ -63,7 +63,7 @@ const useDashboard = () => {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [dispatch]);
 
   return {
     dashboard,

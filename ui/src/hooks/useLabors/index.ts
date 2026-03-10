@@ -2,10 +2,22 @@ import React, { useState } from "react";
 
 import useLaborReducer from "./laborsReducer";
 import * as actions from "./actions";
-import { InvoiceData, Metrics, LaborInfo, LaborToSave } from "./types";
-import { SuccessResponse } from "@/api/types";
+import {
+  InvoiceData,
+  Metrics,
+  LaborGroupData,
+  LaborInfo,
+  LaborToSave,
+} from "./types";
+import { PaginatedResponse, SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+
+type LaborGroupsResponse = SuccessResponse<PaginatedResponse<LaborGroupData>>;
+type LaborsResponse = SuccessResponse<LaborInfo[]>;
+type InvoiceMutationResponse = SuccessResponse<unknown>;
+type LaborMutationResponse = SuccessResponse<unknown>;
+type WorkOrdersCountResponse = SuccessResponse<{ count: number }>;
 
 const useLabors = () => {
   const [
@@ -33,14 +45,12 @@ const useLabors = () => {
       });
 
       try {
-        const response = await apiClient.get<SuccessResponse<any>>(
-          `/labors/${projectId}${query}`
-        );
+        const response = await apiClient.get<LaborGroupsResponse>(`/labors/${projectId}${query}`);
 
         if (response.success) {
           dispatch({
             type: actions.SET_LABOR_GROUPS,
-            payload: response.data.data,
+            payload: response.data.data ?? [],
           });
 
           dispatch({
@@ -64,7 +74,7 @@ const useLabors = () => {
         setProcessing(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const getMetrics = React.useCallback(
@@ -106,10 +116,7 @@ const useLabors = () => {
     });
 
     try {
-      const response = await apiClient.post<SuccessResponse<any>>(
-        `/labors/invoice`,
-        invoice
-      );
+      const response = await apiClient.post<InvoiceMutationResponse>(`/labors/invoice`, invoice);
 
       if (response.success) {
         dispatch({
@@ -127,7 +134,7 @@ const useLabors = () => {
     } finally {
       setProcessingInvoice(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const updateInvoice = React.useCallback(
     async (id: number, invoice: InvoiceData) => {
@@ -139,7 +146,7 @@ const useLabors = () => {
       });
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<InvoiceMutationResponse>(
           `/labors/invoice/${id}`,
           invoice
         );
@@ -164,7 +171,7 @@ const useLabors = () => {
         setProcessingInvoice(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const saveLabors = React.useCallback(
@@ -177,7 +184,7 @@ const useLabors = () => {
       });
 
       try {
-        const response = await apiClient.post<SuccessResponse<any>>(
+        const response = await apiClient.post<LaborMutationResponse>(
           `/projects/${projectId}/labors`,
           laborsToSave
         );
@@ -187,14 +194,15 @@ const useLabors = () => {
             type: actions.SET_RESULT,
             payload: "Se han creado las labores con éxito!",
           });
-          return;
+          return true;
         }
 
         setError("Ocurrio un error en la creación de los labores");
+        return false;
       } catch (error) {
         if (extractErrorStatus(error) === 409) {
           setError("Ya existe una labor con el mismo nombre.");
-          return;
+          return false;
         }
 
         setError(
@@ -203,11 +211,12 @@ const useLabors = () => {
             "Error desconocido en la creación de las labores."
           )
         );
+        return false;
       } finally {
         setProcessing(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const getLabors = React.useCallback(async (projectId: number) => {
@@ -219,14 +228,12 @@ const useLabors = () => {
     });
 
     try {
-      const response = await apiClient.get<SuccessResponse<any>>(
-        `/projects/${projectId}/labors`
-      );
+      const response = await apiClient.get<LaborsResponse>(`/projects/${projectId}/labors`);
 
       if (response.success) {
         dispatch({
           type: actions.SET_LABORS,
-          payload: response.data.data,
+          payload: response.data,
         });
         return;
       }
@@ -239,7 +246,7 @@ const useLabors = () => {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const deleteLabor = React.useCallback(async (id: number) => {
     setProcessing(true);
@@ -250,9 +257,7 @@ const useLabors = () => {
     });
 
     try {
-      const response = await apiClient.delete<SuccessResponse<any>>(
-        `/labors/${id}`
-      );
+      const response = await apiClient.delete<LaborMutationResponse>(`/labors/${id}`);
 
       if (response.success) {
         dispatch({
@@ -275,12 +280,12 @@ const useLabors = () => {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const getWorkOrdersCount = React.useCallback(
     async (projectId: number, laborId: number): Promise<number> => {
       try {
-        const response = await apiClient.get<SuccessResponse<any>>(
+        const response = await apiClient.get<WorkOrdersCountResponse>(
           `/labors/workorders-count/${projectId}/${laborId}`
         );
         if (response.success) {
@@ -301,7 +306,7 @@ const useLabors = () => {
       setResultUpdate(null);
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<LaborMutationResponse>(
           `/labors/projects/${projectId}/${labor.id}`,
           labor
         );

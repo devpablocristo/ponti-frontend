@@ -220,8 +220,8 @@ export const InvestorContributionTable = ({
                 const investorValue = getInvestorValue(key, investor.investor_id);
                 const investorSharePct = getInvestorSharePct(key, investor.investor_id);
 
-                let cellBg = baseBg;
-                let cellTextColor = "text-[#6B7280]";
+                const cellBg = baseBg;
+                const cellTextColor = "text-[#6B7280]";
 
                 return (
                   <td

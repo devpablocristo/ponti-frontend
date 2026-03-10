@@ -7,6 +7,8 @@ import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
+type DollarMutationResponse = SuccessResponse<unknown>;
+
 const useDollar = () => {
   const [{ dollars, result }, dispatch] = useDollarReducer();
   const [processing, setProcessing] = useState(false);
@@ -39,7 +41,7 @@ const useDollar = () => {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const saveDollarInfo = React.useCallback(
     async (dollar: DollarData[], id: number) => {
@@ -51,7 +53,7 @@ const useDollar = () => {
       });
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<DollarMutationResponse>(
           `/projects/${id}/dollar-values`,
           dollar
         );
@@ -76,7 +78,7 @@ const useDollar = () => {
         setProcessing(false);
       }
     },
-    []
+    [dispatch]
   );
 
   return {

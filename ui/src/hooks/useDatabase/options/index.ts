@@ -35,7 +35,7 @@ const useOptions = () => {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [dispatch]);
 
   return {
     options,

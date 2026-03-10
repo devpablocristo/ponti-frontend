@@ -79,7 +79,11 @@ export default function SupplyDropdown({
   const handleTriggerKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      isOpen ? close() : open();
+      if (isOpen) {
+        close();
+      } else {
+        open();
+      }
     }
     if (e.key === "Escape" && isOpen) {
       e.preventDefault();

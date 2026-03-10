@@ -56,7 +56,7 @@ export function Products() {
   } = useSupplyMovements();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(
     null
@@ -81,7 +81,7 @@ export function Products() {
   function getFilterOptionsForColumn(
     key: keyof SupplyMovement,
     data: SupplyMovement[],
-    filters: Record<string, any>
+    filters: Record<string, unknown>
   ) {
     const otherFilters = { ...filters };
     delete otherFilters[key];
@@ -109,7 +109,7 @@ export function Products() {
 
   function getDateFilterOptions(
     data: SupplyMovement[],
-    filters: Record<string, any>
+    filters: Record<string, unknown>
   ) {
     const otherFilters = { ...filters };
     delete otherFilters.entry_date;
@@ -157,7 +157,7 @@ export function Products() {
       {
         key: "reference_number",
         header: "N° Remito",
-        render: (value: any) => <strong>{value}</strong>,
+        render: (value) => <strong>{String(value ?? "")}</strong>,
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -176,7 +176,7 @@ export function Products() {
           supplyMovements,
           columnsFilters
         ),
-        render: (value: any) => {
+        render: (value) => {
           const label = typeof value === "string" ? value : value == null ? "" : String(value);
           if (!label) {
             return <span className="block w-full text-center">—</span>;
@@ -221,7 +221,7 @@ export function Products() {
           supplyMovements,
           columnsFilters
         ),
-        render: (value: any) => <strong>{value}</strong>,
+        render: (value) => <strong>{String(value ?? "")}</strong>,
       },
       {
         key: "quantity",
@@ -233,7 +233,9 @@ export function Products() {
           supplyMovements,
           columnsFilters
         ),
-        render: (value: any) => <span className="font-semibold text-blue-700">{value}</span>,
+        render: (value) => (
+          <span className="font-semibold text-blue-700">{String(value ?? "")}</span>
+        ),
       },
       {
         key: "category",
@@ -278,7 +280,7 @@ export function Products() {
           supplyMovements,
           columnsFilters
         ),
-        render: (value: any) => {
+        render: (value) => {
           const num = Number(value);
           return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
@@ -293,7 +295,7 @@ export function Products() {
           supplyMovements,
           columnsFilters
         ),
-        render: (value: any) => {
+        render: (value) => {
           const num = Number(value);
           return <span className="font-bold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
@@ -328,14 +330,15 @@ export function Products() {
       setActionErrorMessage(null);
       getSupplyMovements(projectId);
     }
-  }, [deleteResult, projectId]);
+  }, [deleteResult, projectId, getSupplyMovements]);
 
   const handleDelete = async (p: SupplyMovement) => {
     if (!projectId || !p.id) return;
     setSuccessMessage(null);
     setActionErrorMessage(null);
-    window.confirm("¿Estás seguro de eliminar este movimiento?") &&
+    if (window.confirm("¿Estás seguro de eliminar este movimiento?")) {
       deleteSupplyMovement(p.id, projectId);
+    }
   };
 
   const handlePageChange = (newPage: number) => {
@@ -455,12 +458,12 @@ export function Products() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       setExportErrorMessage("No se pudo exportar el listado de insumos.");
     }
   };
 
-  const handleFilterChange = (filters: Record<string, any>) => {
+  const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
     setCurrentPage(1);
   };

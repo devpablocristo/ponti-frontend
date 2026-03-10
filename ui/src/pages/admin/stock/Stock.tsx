@@ -22,7 +22,7 @@ const EditableCell = ({
   projectId,
   onSaved,
 }: {
-  item: any;
+  item: GetStockItems;
   value: string | number;
   projectId: number | null;
   onSaved?: () => void;
@@ -236,7 +236,7 @@ export function Stock() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
@@ -335,7 +335,7 @@ export function Stock() {
   function getFilterOptionsForColumn(
     key: keyof GetStockItems,
     stock: GetStockItems[],
-    filters: Record<string, any>
+    filters: Record<string, unknown>
   ) {
     const otherFilters = { ...filters };
     delete otherFilters[key];
@@ -375,7 +375,9 @@ export function Stock() {
           stock,
           columnsFilters
         ),
-        render: (value: any) => <span className="font-semibold text-gray-900">{value}</span>,
+        render: (value) => (
+          <span className="font-semibold text-gray-900">{String(value ?? "")}</span>
+        ),
       },
       {
         key: "class_type",
@@ -417,7 +419,7 @@ export function Stock() {
         header: "Ingresados",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-blue-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
       },
       {
@@ -428,7 +430,7 @@ export function Stock() {
         headerPadding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-blue-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -445,7 +447,7 @@ export function Stock() {
         padding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-blue-700">{formatNumberAr(value)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-blue-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -462,7 +464,7 @@ export function Stock() {
         render: (value, item) => (
           <EditableCell
             item={item}
-            value={value}
+            value={typeof value === "string" || typeof value === "number" ? value : ""}
             projectId={projectId}
             onSaved={refreshStock}
           />
@@ -543,7 +545,7 @@ export function Stock() {
         header: "Fecha de cierre",
         render: (dateString) => {
           if (!dateString) return " - ";
-          const datePart = dateString.split("T")[0];
+          const datePart = String(dateString).split("T")[0];
           const [year, month, day] = datePart.split("-").map(Number);
           const dayStr = String(day).padStart(2, "0");
           const monthStr = String(month).padStart(2, "0");
@@ -556,7 +558,7 @@ export function Stock() {
         padding: "xs",
         headerPadding: "xs",
         filterable: false,
-        render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(value)}</span>,
+        render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "total_usd",
@@ -588,7 +590,7 @@ export function Stock() {
     getPeriods(projectId);
     setDisabledCloseStock(false);
     setSelectedDate("");
-  }, [getStock, projectId, selectedCustomer, selectedCampaignId]);
+  }, [getStock, getPeriods, projectId, selectedCustomer, selectedCampaignId]);
 
   useEffect(() => {
     if (periods && periods.length > 0) {
@@ -620,7 +622,7 @@ export function Stock() {
     getStock(projectId, stockPeriods[periodNumber]?.name || "");
     setSelectedDate(stockPeriods[periodNumber]?.name || "");
     setDisabledCloseStock(true);
-  }, [period, stockPeriods]);
+  }, [period, stockPeriods, getStock, projectId]);
 
   useEffect(() => {
     if (errorCloseStock) {
@@ -637,7 +639,7 @@ export function Stock() {
       setDisabledCloseStock(false);
       setSelectedDate("");
     }
-  }, [resultCloseStock]);
+  }, [resultCloseStock, projectId, getStock, getPeriods]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -676,12 +678,12 @@ export function Stock() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       setExportErrorMessage("No se pudo exportar el stock.");
     }
   };
 
-  const handleFilterChange = (filters: Record<string, any>) => {
+  const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
     setCurrentPage(1);
   };

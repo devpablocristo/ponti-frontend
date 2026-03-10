@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -162,7 +162,7 @@ export function InvestorContributionReport() {
     getInvestorContributionReportingData,
   } = useReporting();
 
-  const buildQueryParams = () => {
+  const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
 
     if (projectId) {
@@ -173,11 +173,11 @@ export function InvestorContributionReport() {
     }
 
     return new URLSearchParams(params).toString();
-  };
+  }, [projectId, selectedCampaignId]);
 
   useEffect(() => {
     getInvestorContributionReportingData(buildQueryParams());
-  }, []);
+  }, [buildQueryParams, getInvestorContributionReportingData]);
 
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
   const { toPDF, targetRef } = usePDF({ filename: `informe-aporte-inversor-${ timestamp }.pdf` });
