@@ -9,6 +9,7 @@ import {
   SupplyMovement,
   SupplyMovementRequest,
   SupplyResponse,
+  UpdateSupplyMovementRequest,
 } from "./types";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
@@ -215,46 +216,53 @@ const useSupplyMovements = () => {
     []
   );
 
-  const updateSupplyMovement = React.useCallback(
-    async (supplyMovementId: number, projectId: number, supplyMovement: SupplyMovementRequest) => {
-      setProcessingCreation(true);
-      setErrorCreation(null);
-      setErrorCreationPayload(null);
-      dispatch({
-        type: actions.SET_RESULT_CREATION,
-        payload: {
-          supply_movements: [],
-        },
-      });
+ const updateSupplyMovement = React.useCallback(
+  async (
+    supplyMovementId: number,
+    projectId: number,
+    supplyMovement: UpdateSupplyMovementRequest
+  ): Promise<boolean> => {
+    setProcessingCreation(true);
+    setErrorCreation(null);
+    setErrorCreationPayload(null);
+    dispatch({
+      type: actions.SET_RESULT_CREATION,
+      payload: {
+        supply_movements: [],
+      },
+    });
 
-      try {
-        const response = await apiClient.put<SuccessResponse<any>>(
-          `/supply_movements/${supplyMovementId}/project/${projectId}`,
-          supplyMovement
-        );
+    try {
+      const response = await apiClient.put<SuccessResponse<any>>(
+        `/supply_movements/${supplyMovementId}/project/${projectId}`,
+        supplyMovement
+      );
 
-        if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT_CREATION,
-            payload: response.data,
-          });
-          return;
-        }
-
-        setErrorCreation("Ocurrio un error en la actualización del movimiento");
-      } catch (error) {
-        setErrorCreation(
-          extractErrorMessage(
-            error,
-            "Error desconocido en la actualización del movimiento."
-          )
-        );
-      } finally {
-        setProcessingCreation(false);
+      if (response.success) {
+        dispatch({
+          type: actions.SET_RESULT_CREATION,
+          payload: response.data,
+        });
+        return true;
       }
-    },
-    []
-  );
+
+      setErrorCreation("Ocurrio un error en la actualización del movimiento");
+      return false;
+    } catch (error) {
+      setErrorCreation(
+        extractErrorMessage(
+          error,
+          "Error desconocido en la actualización del movimiento."
+        )
+      );
+      return false;
+    } finally {
+      setProcessingCreation(false);
+    }
+  },
+  []
+);
+
 
   const [processingDelete, setProcessingDelete] = useState(false);
   const [processingDetail, setProcessingDetail] = useState(false);

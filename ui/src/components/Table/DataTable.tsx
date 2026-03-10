@@ -42,6 +42,7 @@ type DataTableProps<T> = {
   headerComponent?: React.ReactNode;
   expandableRowRender?: (item: T) => React.ReactNode;
   onEdit?: (item: T) => void;
+  canEdit?: (item: T) => boolean;
   onCopy?: (item: T) => void;
   onDelete?: (item: T) => void;
   className?: string;
@@ -97,6 +98,7 @@ const DataTable = <T,>({
   headerComponent,
   expandableRowRender,
   onEdit,
+  canEdit,
   onDelete,
   onCopy,
   className,
@@ -161,6 +163,7 @@ const DataTable = <T,>({
   }, [sortedData, pagination]);
 
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [filterSearch, setFilterSearch] = useState<Record<string, string>>({});
   const filterRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -186,12 +189,15 @@ const DataTable = <T,>({
   };
 
   const toggleFilter = (key: string) => {
-    if (activeFilter === key) {
-      setActiveFilter(null);
-    } else {
-      setActiveFilter(key);
-    }
-  };
+  if (activeFilter === key) {
+    setActiveFilter(null);
+    setFilterSearch((prev) => ({ ...prev, [key]: "" }));
+  } else {
+    setActiveFilter(key);
+    setFilterSearch((prev) => ({ ...prev, [key]: prev[key] || "" }));
+  }
+};
+
 
   const handleFilterChange = (key: string, value: any) => {
     onFilterChange?.({ ...(filters || {}), [key]: value });
@@ -319,34 +325,66 @@ const DataTable = <T,>({
                                   Filtro
                                 </label>
 
-                                {column.filterType === "select" &&
-                                  column.filterOptions ? (
-                                  <div className="max-h-48 overflow-auto pr-1 text-slate-600">
-                                    {/*       <div className="text-xs text-gray-500 mb-1">Selecciona uno o varios</div> */}
-                                    {column.filterOptions.map((option) => {
-                                      const current = filters?.[String(column.key)];
-                                      const selected = Array.isArray(current)
-                                        ? current.includes(option)
-                                        : false;
-                                      return (
-                                        <label key={option} className="flex items-center gap-2 text-xs py-1 text-slate-600">
-                                          <input
-                                            type="checkbox"
-                                            checked={selected}
-                                            onChange={(e) => {
-                                              const prev = Array.isArray(current) ? current : [];
-                                              const next = e.target.checked
-                                                ? [...prev, option]
-                                                : prev.filter((v: string) => v !== option);
-                                              handleFilterChange(String(column.key), next);
-                                            }}
-                                          />
-                                          {option}
-                                        </label>
-                                      );
-                                    })}
-                                  </div>
-                                ) : column.filterType === "date" ? (
+                                {column.filterType === "select" && column.filterOptions ? (
+  <>
+    <input
+      type="text"
+      className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600 mb-2"
+      placeholder="Buscar opción..."
+      value={filterSearch[String(column.key)] || ""}
+      onChange={(e) =>
+        setFilterSearch((prev) => ({
+          ...prev,
+          [String(column.key)]: e.target.value,
+        }))
+      }
+    />
+
+    <div className="max-h-48 overflow-auto pr-1 text-slate-600">
+      {column.filterOptions
+        .filter((option) =>
+          option
+            .toLowerCase()
+            .includes((filterSearch[String(column.key)] || "").toLowerCase())
+        )
+        .map((option) => {
+          const current = filters?.[String(column.key)];
+          const selected = Array.isArray(current)
+            ? current.includes(option)
+            : false;
+
+          return (
+            <label
+              key={option}
+              className="flex items-center gap-2 text-xs py-1 text-slate-600"
+            >
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={(e) => {
+                  const prev = Array.isArray(current) ? current : [];
+                  const next = e.target.checked
+                    ? [...prev, option]
+                    : prev.filter((v: string) => v !== option);
+                  handleFilterChange(String(column.key), next);
+                }}
+              />
+              {option}
+            </label>
+          );
+        })}
+
+      {column.filterOptions.filter((option) =>
+        option
+          .toLowerCase()
+          .includes((filterSearch[String(column.key)] || "").toLowerCase())
+      ).length === 0 && (
+        <p className="text-xs text-slate-400 py-1">Sin resultados</p>
+      )}
+    </div>
+  </>
+) : column.filterType === "date" ? (
+
                                   <input
                                     type="date"
                                     className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
@@ -492,9 +530,21 @@ const DataTable = <T,>({
                         <div className="flex justify-center space-x-2">
                           {onEdit && (
                             <button
-                              onClick={() => onEdit(item)}
-                              className="font-medium text-slate-500 hover:text-slate-700 hover:underline mr-3"
-                              title="Editar proyecto"
+                              onClick={() => {
+                                if ((canEdit?.(item) ?? true) === false) return;
+                                onEdit(item);
+                              }}
+                              disabled={(canEdit?.(item) ?? true) === false}
+                              className={`font-medium mr-3 ${
+                                (canEdit?.(item) ?? true) === false
+                                  ? "text-slate-300 cursor-not-allowed"
+                                  : "text-slate-500 hover:text-slate-700 hover:underline"
+                              }`}
+                              title={
+                                (canEdit?.(item) ?? true) === false
+                                  ? "Edición bloqueada para este tipo de movimiento"
+                                  : "Editar proyecto"
+                              }
                             >
                               <Edit size={16} />
                             </button>
