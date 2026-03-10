@@ -217,10 +217,10 @@ function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
   const iconColor = active ? "#34D399" : "#94A3B8";
 
   useEffect(() => {
-    if (isActive(item.route)) {
+    if (active) {
       setTitle(item.name);
     }
-  }, [location.pathname, item, setTitle]);
+  }, [active, item.name, setTitle]);
 
   return (
     <Link
@@ -275,10 +275,10 @@ function SidebarSubmenuItem({
   const active = isActive(item.route);
 
   useEffect(() => {
-    if (isActive(item.route)) {
+    if (active) {
       setTitle(item.name);
     }
-  }, [location.pathname, item, setTitle]);
+  }, [active, item.name, setTitle]);
 
   return (
     <Link

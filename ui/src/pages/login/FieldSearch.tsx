@@ -55,7 +55,7 @@ const FieldSearch: React.FC<Props> = ({
     };
 
     search();
-  }, [debouncedValue]);
+  }, [debouncedValue, fields, getFields, skipSearch, total]);
 
   const handleSelect = (field: Entity) => {
     setSkipSearch(true);

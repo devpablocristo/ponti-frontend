@@ -25,20 +25,20 @@ import {
 const columns: Column<LaborInfo>[] = [
   {
     key: "name",
-    header: "Labor",
-    render: (value) => <strong className="text-blue-700">{value}</strong>,
+    header: "Nombre",
+    render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
   },
   {
     key: "category_name",
-    header: "Rubro",
-    render: (value) => value,
+    header: "Categoría",
+    render: (value) => String(value ?? ""),
   },
   {
     key: "price",
     header: "Precio",
     render: (value, row) => (
       <div className="flex items-center gap-2">
-        <strong>{value}</strong>
+        <strong>{String(value ?? "")}</strong>
         {row.is_partial_price ? (
           <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
             Parcial
@@ -50,7 +50,7 @@ const columns: Column<LaborInfo>[] = [
   {
     key: "contractor_name",
     header: "Contratista",
-    render: (value) => value,
+    render: (value) => String(value ?? ""),
   },
 ];
 
@@ -90,7 +90,7 @@ export default function ListTasks() {
       getLabors(projectId);
       getCategories("type_id=4");
     }
-  }, [projectId]);
+  }, [projectId, getCategories, getLabors]);
 
   useEffect(() => {
     if (result && projectId) {
@@ -98,7 +98,7 @@ export default function ListTasks() {
       setErrorMessage("");
       getLabors(projectId);
     }
-  }, [result, projectId]);
+  }, [result, projectId, getLabors]);
 
   useEffect(() => {
     if (resultUpdate && projectId) {
@@ -106,7 +106,7 @@ export default function ListTasks() {
       setErrorMessage("");
       getLabors(projectId);
     }
-  }, [resultUpdate, projectId]);
+  }, [resultUpdate, projectId, getLabors]);
 
   useEffect(() => {
     if (error) {
@@ -181,7 +181,7 @@ export default function ListTasks() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       setErrorMessage("No se pudo exportar el listado de labores.");
     }
   };

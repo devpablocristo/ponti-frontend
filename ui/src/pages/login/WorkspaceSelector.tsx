@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 
-import { AuthProvider, useAuth } from "./context/AuthProvider";
+import { AuthProvider } from "./context/AuthProvider";
+import { useAuth } from "./context/useAuth";
 import { Entity } from "../../hooks/useDatabase/options/types";
 import useCustomers from "../../hooks/useCustomers";
 import Cover from "./Cover";
@@ -10,7 +11,8 @@ import Search from "../../components/Input/Search";
 import useProjects from "../../hooks/useDatabase/projects";
 import { ProjectDropdown } from "../../hooks/useDatabase/projects/types";
 import { useClickOutside } from "./useClickOutside";
-import { SelectionProvider, useSelection } from "./context/SelectionContext";
+import { SelectionProvider } from "./context/SelectionContext";
+import { useSelection } from "./context/useSelection";
 
 function WorkspaceSelector() {
   const navigate = useNavigate();
@@ -79,11 +81,11 @@ function WorkspaceSelector() {
     setQueryProject(project?.name || "");
     setCampaign(campaign);
     setQueryCampaign(campaign?.name || "");
-  }, [customer, project, campaign]);
+  }, [campaign, customer, project, setCampaign, setCustomer, setProject]);
 
   useEffect(() => {
     getCustomers("limit=1000");
-  }, []);
+  }, [getCustomers]);
 
   useEffect(() => {
     setSuggestions(customers);
@@ -209,11 +211,11 @@ function WorkspaceSelector() {
   };
 
   const createHandleKeyDown =
-    (
-      suggestions: any[],
+    <T,>(
+      suggestions: T[],
       highlightedIndex: number,
       setHighlightedIndex: React.Dispatch<React.SetStateAction<number>>,
-      onSelect: (item: any) => void
+      onSelect: (item: T) => void
     ) =>
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (suggestions.length === 0) return;

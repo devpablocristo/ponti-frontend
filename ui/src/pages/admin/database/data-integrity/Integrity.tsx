@@ -7,6 +7,7 @@ import Button from "../../../../components/Button/Button";
 import DataTable from "../../../../components/Table/DataTable";
 import { apiClient } from "@/api/client";
 import { ErrorResponse } from "@/api/types";
+import { Column } from "../../types";
 import {
   IntegrityCheck,
   hasRecalcBData,
@@ -66,7 +67,7 @@ export default function Integrity() {
     }
   };
 
-  const columns = [
+  const columns: Column<IntegrityCheck>[] = [
     { key: "control_number", header: "#", sortable: true, width: "60px" },
     { key: "data_to_verify", header: "Dato", sortable: true },
     { key: "system_value", header: "Valor sistema", sortable: true },
@@ -87,7 +88,7 @@ export default function Integrity() {
     },
     { key: "difference_a", header: "Dif A", sortable: true },
     { key: "tolerance", header: "Tolerancia", sortable: true },
-  ] as any;
+  ];
 
   return (
     <div>

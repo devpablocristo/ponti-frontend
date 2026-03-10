@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 
 import DataTable from "../../../components/Table/DataTable";
@@ -11,7 +11,8 @@ import useProjects from "../../../hooks/useDatabase/projects";
 import ExpandedRow from "./ExpandedRow";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import useCustomers from "../../../hooks/useCustomers";
-import { useSelection } from "../../login/context/SelectionContext";
+import { useSelection } from "../../login/context/useSelection";
+import { Column } from "../types";
 
 const columns: Column<ProjectData>[] = [
   { key: "customer", header: "Cliente/Sociedad" },
@@ -21,7 +22,7 @@ const columns: Column<ProjectData>[] = [
     render: (value, data) => (
       <strong className="text-blue-700">
         <a href={`/admin/database/customers/${data.id}`}>
-          {value as string} ({data.campaign})
+          {String(value ?? "")} ({data.campaign})
         </a>
       </strong>
     ),
@@ -94,7 +95,7 @@ export function Customers() {
   };
 
   const handlePageChange = (newPage: number) => {
-    let queryString = `page=${newPage}&limit=${
+    const queryString = `page=${newPage}&limit=${
       projectPageInfo?.per_page || 10
     }&customer_id=${selectedCustomer?.id}${
       selectedProject && selectedProject.id !== 0
@@ -353,11 +354,5 @@ export function Customers() {
     </div>
   );
 }
-
-type Column<T> = {
-  key: keyof T;
-  header: string;
-  render?: (value: any, item: T) => React.ReactNode;
-};
 
 export default Customers;

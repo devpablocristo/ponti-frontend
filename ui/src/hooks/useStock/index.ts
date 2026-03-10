@@ -7,6 +7,8 @@ import { SuccessResponse } from "@/api/types";
 import { GetStocksResponse } from "./types";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
+type StockMutationResponse = SuccessResponse<unknown>;
+
 const useStock = () => {
   const [{ currentPage, stock, summary }, dispatch] = useStockReducer();
   const [processing, setProcessing] = useState(false);
@@ -59,7 +61,7 @@ const useStock = () => {
         setProcessing(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const getPeriods = React.useCallback(
@@ -95,7 +97,7 @@ const useStock = () => {
       setResultStock(null);
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<StockMutationResponse>(
           `/stock/${projectId}/${id}`,
           { real_stock_units: realStock }
         );
@@ -117,7 +119,7 @@ const useStock = () => {
         setProcessingStock(false);
       }
     },
-    [dispatch]
+    []
   );
 
   const closeStock = React.useCallback(
@@ -127,7 +129,7 @@ const useStock = () => {
       setResultCloseStock(null);
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<StockMutationResponse>(
           `/stock/close/${projectId}`,
           { close_date: closeDate }
         );
@@ -146,7 +148,7 @@ const useStock = () => {
         setProcessingCloseStock(false);
       }
     },
-    [dispatch]
+    []
   );
 
   return {

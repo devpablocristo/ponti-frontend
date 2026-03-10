@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthProvider";
+import { AuthProvider } from "./context/AuthProvider";
+import { useAuth } from "./context/useAuth";
 import { useEffect, useState } from "react";
 import { UserData } from "./types";
 import { RequestError } from "@/api/types";

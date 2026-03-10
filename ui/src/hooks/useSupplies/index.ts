@@ -7,6 +7,9 @@ import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
+type SupplyMutationResponse = SuccessResponse<unknown>;
+type SupplyWorkOrdersCountResponse = SuccessResponse<{ count: number }>;
+
 const useSupplies = () => {
   const [{ supplies, result }, dispatch] = useSupplyReducer();
   const [processing, setProcessing] = useState(false);
@@ -41,7 +44,7 @@ const useSupplies = () => {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const saveSupplies = React.useCallback(
     async (supplies: SupplyCreatePayload[], projectId: number) => {
@@ -53,7 +56,7 @@ const useSupplies = () => {
       });
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SupplyMutationResponse>(
           `/supplies/${projectId}`,
           supplies
         );
@@ -83,7 +86,7 @@ const useSupplies = () => {
         setProcessing(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const deleteSupply = React.useCallback(async (id: number) => {
@@ -95,9 +98,7 @@ const useSupplies = () => {
     });
 
     try {
-      const response = await apiClient.delete<SuccessResponse<any>>(
-        `/supplies/${id}`
-      );
+      const response = await apiClient.delete<SupplyMutationResponse>(`/supplies/${id}`);
 
       if (response.success) {
         dispatch({
@@ -123,12 +124,12 @@ const useSupplies = () => {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const getWorkOrdersCount = React.useCallback(
     async (supplyId: number): Promise<number> => {
       try {
-        const response = await apiClient.get<SuccessResponse<any>>(
+        const response = await apiClient.get<SupplyWorkOrdersCountResponse>(
           `/supplies/workorders-count/${supplyId}`
         );
         if (response.success) {
@@ -149,7 +150,7 @@ const useSupplies = () => {
       setResultUpdate(null);
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<SupplyMutationResponse>(
           `/supplies/projects/${projectId}/${supply.id}`,
           supply
         );

@@ -1,5 +1,5 @@
 import { ClipboardList, Newspaper, Calendar, ChartNoAxesCombined } from "lucide-react";
-import { DashboardData } from "../../../hooks/useDashboard/types";
+import { DashboardData, OperationalItem } from "../../../hooks/useDashboard/types";
 
 interface OperationalIndicatorsProps {
   dashboard: DashboardData | null;
@@ -42,7 +42,7 @@ export default function OperationalIndicators({dashboard}: OperationalIndicators
     }
   };
 
-  const getCodeDisplay = (item: any) => {
+  const getCodeDisplay = (item: OperationalItem) => {
     if (item.workorder_id) return `N°${item.workorder_id}`;
     return null;
   };

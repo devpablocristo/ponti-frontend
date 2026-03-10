@@ -15,7 +15,7 @@ type FilterType = "text" | "number" | "select" | "date";
 type Column<T> = {
   key: keyof T;
   header: string;
-  render?: (value: T[keyof T], item: T) => React.ReactNode;
+  render?: (value: unknown, item: T) => React.ReactNode;
   filterable?: boolean;
   filterType?: FilterType;
   filterOptions?: string[];
@@ -36,8 +36,8 @@ type Column<T> = {
 
 type DataTableProps<T> = {
   data: T[];
-  filters?: Record<string, any>;
-  onFilterChange?: (filters: Record<string, any>) => void;
+  filters?: Record<string, unknown>;
+  onFilterChange?: (filters: Record<string, unknown>) => void;
   columns: Column<T>[];
   headerComponent?: React.ReactNode;
   expandableRowRender?: (item: T) => React.ReactNode;
@@ -199,7 +199,7 @@ const DataTable = <T,>({
 };
 
 
-  const handleFilterChange = (key: string, value: any) => {
+  const handleFilterChange = (key: string, value: unknown) => {
     onFilterChange?.({ ...(filters || {}), [key]: value });
   };
 
@@ -325,70 +325,78 @@ const DataTable = <T,>({
                                   Filtro
                                 </label>
 
-                                {column.filterType === "select" && column.filterOptions ? (
-  <>
-    <input
-      type="text"
-      className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600 mb-2"
-      placeholder="Buscar opción..."
-      value={filterSearch[String(column.key)] || ""}
-      onChange={(e) =>
-        setFilterSearch((prev) => ({
-          ...prev,
-          [String(column.key)]: e.target.value,
-        }))
-      }
-    />
+                                {column.filterType === "select" &&
+                                  column.filterOptions ? (
+                                  <>
+                                    <input
+                                      type="text"
+                                      className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600 mb-2"
+                                      placeholder="Buscar opción..."
+                                      value={filterSearch[String(column.key)] || ""}
+                                      onChange={(e) =>
+                                        setFilterSearch((prev) => ({
+                                          ...prev,
+                                          [String(column.key)]: e.target.value,
+                                        }))
+                                      }
+                                    />
 
-    <div className="max-h-48 overflow-auto pr-1 text-slate-600">
-      {column.filterOptions
-        .filter((option) =>
-          option
-            .toLowerCase()
-            .includes((filterSearch[String(column.key)] || "").toLowerCase())
-        )
-        .map((option) => {
-          const current = filters?.[String(column.key)];
-          const selected = Array.isArray(current)
-            ? current.includes(option)
-            : false;
+                                    <div className="max-h-48 overflow-auto pr-1 text-slate-600">
+                                      {column.filterOptions
+                                        .filter((option) =>
+                                          option
+                                            .toLowerCase()
+                                            .includes((filterSearch[String(column.key)] || "").toLowerCase())
+                                        )
+                                        .map((option) => {
+                                          const current = filters?.[String(column.key)];
+                                          const selected = Array.isArray(current)
+                                            ? current.includes(option)
+                                            : false;
 
-          return (
-            <label
-              key={option}
-              className="flex items-center gap-2 text-xs py-1 text-slate-600"
-            >
-              <input
-                type="checkbox"
-                checked={selected}
-                onChange={(e) => {
-                  const prev = Array.isArray(current) ? current : [];
-                  const next = e.target.checked
-                    ? [...prev, option]
-                    : prev.filter((v: string) => v !== option);
-                  handleFilterChange(String(column.key), next);
-                }}
-              />
-              {option}
-            </label>
-          );
-        })}
+                                          return (
+                                            <label
+                                              key={option}
+                                              className="flex items-center gap-2 text-xs py-1 text-slate-600"
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                checked={selected}
+                                                onChange={(e) => {
+                                                  const prev = Array.isArray(current) ? current : [];
+                                                  const next = e.target.checked
+                                                    ? [...prev, option]
+                                                    : prev.filter((v: string) => v !== option);
+                                                  handleFilterChange(String(column.key), next);
+                                                }}
+                                              />
+                                              {option}
+                                            </label>
+                                          );
+                                        })}
 
-      {column.filterOptions.filter((option) =>
-        option
-          .toLowerCase()
-          .includes((filterSearch[String(column.key)] || "").toLowerCase())
-      ).length === 0 && (
-        <p className="text-xs text-slate-400 py-1">Sin resultados</p>
-      )}
-    </div>
-  </>
-) : column.filterType === "date" ? (
-
+                                      {column.filterOptions.filter((option) =>
+                                        option
+                                          .toLowerCase()
+                                          .includes((filterSearch[String(column.key)] || "").toLowerCase())
+                                      ).length === 0 && (
+                                        <p className="text-xs text-slate-400 py-1">Sin resultados</p>
+                                      )}
+                                    </div>
+                                  </>
+                                ) : column.filterType === "date" ? (
+                                  (() => {
+                                    const currentValue = filters?.[String(column.key)];
+                                    const inputValue =
+                                      typeof currentValue === "string" ||
+                                      typeof currentValue === "number"
+                                        ? String(currentValue)
+                                        : "";
+                                    return (
                                   <input
                                     type="date"
                                     className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
-                                    value={filters?.[String(column.key)] || ""}
+                                    value={inputValue}
                                     onChange={(e) =>
                                       handleFilterChange(
                                         String(column.key),
@@ -396,11 +404,21 @@ const DataTable = <T,>({
                                       )
                                     }
                                   />
+                                    );
+                                  })()
                                 ) : column.filterType === "number" ? (
+                                  (() => {
+                                    const currentValue = filters?.[String(column.key)];
+                                    const inputValue =
+                                      typeof currentValue === "string" ||
+                                      typeof currentValue === "number"
+                                        ? String(currentValue)
+                                        : "";
+                                    return (
                                   <input
                                     type="number"
                                     className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
-                                    value={filters?.[String(column.key)] || ""}
+                                    value={inputValue}
                                     onChange={(e) =>
                                       handleFilterChange(
                                         String(column.key),
@@ -408,12 +426,22 @@ const DataTable = <T,>({
                                       )
                                     }
                                   />
+                                    );
+                                  })()
                                 ) : (
+                                  (() => {
+                                    const currentValue = filters?.[String(column.key)];
+                                    const inputValue =
+                                      typeof currentValue === "string" ||
+                                      typeof currentValue === "number"
+                                        ? String(currentValue)
+                                        : "";
+                                    return (
                                   <input
                                     type="text"
                                     className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600"
                                     placeholder="Search..."
-                                    value={filters?.[String(column.key)] || ""}
+                                    value={inputValue}
                                     onChange={(e) =>
                                       handleFilterChange(
                                         String(column.key),
@@ -421,6 +449,8 @@ const DataTable = <T,>({
                                       )
                                     }
                                   />
+                                    );
+                                  })()
                                 )}
 
                                 <div className="flex justify-between mt-2">

@@ -469,7 +469,7 @@ export default function Fields({
                   type="text"
                   value={plot.hectares === 0 ? "" : plot.hectares.toString()}
                   onChange={(e) => {
-                    let value = e.target.value.replace(/,/g, ".");
+                    const value = e.target.value.replace(/,/g, ".");
                     if (/^\d*\.?\d{0,3}$/.test(value)) {
                       handlePlotChange(key, plotkey, "hectares", value);
                     }

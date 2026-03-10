@@ -7,6 +7,8 @@ import { Crop, LotsDataUpdate, Payload, LotKPIs } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
+type LotMutationResponse = SuccessResponse<unknown>;
+
 const useLots = () => {
   const [{ lots, pageInfo, crops, result, kpis }, dispatch] = useLotsReducer();
   const [processing, setProcessing] = useState(false);
@@ -121,7 +123,7 @@ const useLots = () => {
       });
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<LotMutationResponse>(
           `/lots/${lot.id}`,
           lot
         );
@@ -151,7 +153,7 @@ const useLots = () => {
       setResultTons(null);
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<LotMutationResponse>(
           `/lots/${id}/tons`,
           { tons }
         );
@@ -168,7 +170,7 @@ const useLots = () => {
         setProcessingTons(false);
       }
     },
-    [dispatch]
+    []
   );
 
   return {

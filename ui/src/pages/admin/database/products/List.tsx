@@ -48,7 +48,7 @@ export default function ListItems() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, any>>({});
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const itemsPerPage = 10;
 
   const { filters, projectId } = useWorkspaceFilters([
@@ -63,7 +63,7 @@ export default function ListItems() {
       getCategories("");
       getTypes();
     }
-  }, [projectId]);
+  }, [projectId, getSupplies, getCategories, getTypes]);
 
   useEffect(() => {
     if (result && projectId) {
@@ -71,7 +71,7 @@ export default function ListItems() {
       setErrorMessage("");
       getSupplies(projectId);
     }
-  }, [result, projectId]);
+  }, [result, projectId, getSupplies]);
 
   useEffect(() => {
     if (resultUpdate && projectId) {
@@ -79,7 +79,7 @@ export default function ListItems() {
       setErrorMessage("");
       getSupplies(projectId);
     }
-  }, [resultUpdate, projectId]);
+  }, [resultUpdate, projectId, getSupplies]);
 
   useEffect(() => {
     if (error) {
@@ -97,7 +97,7 @@ export default function ListItems() {
 
   const applyColumnFilters = (
     data: Supply[],
-    activeFilters: Record<string, any>,
+    activeFilters: Record<string, unknown>,
     excludeKey?: string
   ) => {
     return data.filter((supply) =>
@@ -113,7 +113,7 @@ export default function ListItems() {
           return status.toLowerCase().includes(String(value).toLowerCase());
         }
 
-        const currentValue = String((supply as any)[key] ?? "");
+        const currentValue = String(supply[key as keyof Supply] ?? "");
         if (Array.isArray(value)) {
           if (value.length === 0) return true;
           return value.includes(currentValue);
@@ -172,14 +172,14 @@ export default function ListItems() {
       {
         key: "name",
         header: "Nombre",
-        render: (value) => <strong className="text-blue-700">{value}</strong>,
+        render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
         filterType: "select",
         filterOptions: nameOptions,
       },
       {
         key: "unit_name",
         header: "Unidad",
-        render: (value) => value || "-",
+        render: (value) => String(value ?? "") || "-",
         filterType: "select",
         filterOptions: unitOptions,
       },
@@ -193,21 +193,21 @@ export default function ListItems() {
       {
         key: "category_name",
         header: "Rubro",
-        render: (value) => value,
+        render: (value) => String(value ?? ""),
         filterType: "select",
         filterOptions: categoryOptions,
       },
       {
         key: "type_name",
         header: "Tipo/Clase",
-        render: (value) => value,
+        render: (value) => String(value ?? ""),
         filterType: "select",
         filterOptions: typeOptions,
       },
     ];
   }, [supplies, columnsFilters]);
 
-  const handleFilterChange = (filters: Record<string, any>) => {
+  const handleFilterChange = (filters: Record<string, unknown>) => {
     const nextFilters = { ...filters };
     if (Array.isArray(nextFilters.price) && nextFilters.price.length > 1) {
       nextFilters.price = [nextFilters.price[nextFilters.price.length - 1]];
@@ -277,7 +277,7 @@ export default function ListItems() {
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       // error exporting products
     }
   };
@@ -453,7 +453,7 @@ export default function ListItems() {
                     value={item?.price || ""}
                     onChange={(e) => {
                       if (!item) return;
-                      let value = e.target.value.replace(/,/g, ".");
+                      const value = e.target.value.replace(/,/g, ".");
                       if (/^\d*\.?\d{0,3}$/.test(value)) {
                         setItem({ ...item, price: value} );
                       }

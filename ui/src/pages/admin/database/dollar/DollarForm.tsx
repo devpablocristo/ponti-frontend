@@ -269,7 +269,7 @@ export default function DollarForm() {
                         type="text"
                         size="sm"
                         onChange={(e) => {
-                          let value = e.target.value.replace(/,/g, ".");
+                          const value = e.target.value.replace(/,/g, ".");
                           if (/^\d*\.?\d{0,2}$/.test(value)) {
                             handleChange(index, "initialValue", value);
                           }
@@ -287,7 +287,7 @@ export default function DollarForm() {
                         type="text"
                         size="sm"
                         onChange={(e) => {
-                          let value = e.target.value.replace(/,/g, ".");
+                          const value = e.target.value.replace(/,/g, ".");
                           if (/^\d*\.?\d{0,2}$/.test(value)) {
                             handleChange(index, "finalValue", value);
                           }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -227,7 +227,7 @@ export function ByFieldOrCropReport() {
 
   // ...existing code...
 
-  const buildQueryParams = () => {
+  const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
 
     if (projectId) {
@@ -238,11 +238,11 @@ export function ByFieldOrCropReport() {
     }
 
     return new URLSearchParams(params).toString();
-  };
+  }, [projectId, selectedCampaignId]);
 
   useEffect(() => {
     getFieldCropReportingData(buildQueryParams());
-  }, []);
+  }, [buildQueryParams, getFieldCropReportingData]);
 
   const filteredData = () => {
     const filteredByField = selectedField === "0"

@@ -5,6 +5,7 @@ import DataTable from "../../../../components/Table/DataTable";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import useCustomers from "../../../../hooks/useCustomers";
 import { getHardDeleteCustomerMessage } from "./hardDeleteCopy";
+import { Column } from "../../types";
 
 type ArchivedCustomer = {
   id: number;
@@ -67,18 +68,11 @@ export default function ArchivedCustomers() {
     setIsModalOpen(true);
   };
 
-  const columns = [
-    { key: "name", header: "Cliente/Sociedad", width: "1%", minWidth: "0", maxWidth: "none" },
+  const columns: Column<ArchivedCustomer>[] = [
+    { key: "name", header: "Cliente/Sociedad" },
     {
-      key: "actions",
+      key: "id",
       header: "Acciones",
-      width: "96px",
-      minWidth: "96px",
-      maxWidth: "96px",
-      align: "center" as const,
-      headerAlign: "center" as const,
-      sortable: false,
-      filterable: false,
       render: (_value: unknown, item: ArchivedCustomer) => (
         <div className="flex items-center justify-center gap-3">
           <button
@@ -98,19 +92,7 @@ export default function ArchivedCustomers() {
         </div>
       ),
     },
-    {
-      key: "_spacer",
-      header: "",
-      sortable: false,
-      filterable: false,
-      width: "auto",
-      minWidth: "0",
-      maxWidth: "none",
-      padding: "xs" as const,
-      headerPadding: "xs" as const,
-      render: () => null,
-    },
-  ] as any;
+  ];
 
   return (
     <div>

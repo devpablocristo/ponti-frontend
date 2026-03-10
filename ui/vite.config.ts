@@ -9,7 +9,9 @@ export default defineConfig(({ mode }: ConfigEnv) => {
   // Local dev: BFF is at http://localhost:3000
   // Prefer process.env so docker-compose env vars work without needing files.
   // Note: keep this file compilable without Node typings in CI.
-  const runtimeEnv = (globalThis as any)?.process?.env ?? {};
+  const runtimeEnv = (
+    globalThis as { process?: { env?: Record<string, string | undefined> } }
+  )?.process?.env ?? {};
   const bffTarget = runtimeEnv.BFF_URL || env.BFF_URL || "http://localhost:3000";
 
   return {

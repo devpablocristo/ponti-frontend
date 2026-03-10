@@ -14,22 +14,50 @@ type UserRow = {
   role: string;
 };
 
-function unwrapList<T>(body: any): T[] {
+type NestedListBody<T> = {
+  data?: NestedListBody<T> | T[];
+  items?: T[];
+};
+
+type CreateUserResponse = {
+  data?: {
+    reset_link?: string;
+  };
+  reset_link?: string;
+};
+
+function isNestedListBody<T>(value: unknown): value is NestedListBody<T> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function unwrapList<T>(body: unknown): T[] {
   // BFF routes wrap backend responses (and sometimes wrap their own wrappers).
   // Normalize to a plain array so the UI doesn't explode on map().
+  const source = body;
+  const level1 = isNestedListBody<T>(source) ? source.data : undefined;
+  const level2 = isNestedListBody<T>(level1) ? level1.data : undefined;
+  const level3 = isNestedListBody<T>(level2) ? level2.data : undefined;
   const candidates = [
-    body,
-    body?.data,
-    body?.data?.data,
-    body?.data?.data?.data,
-    body?.items,
-    body?.data?.items,
-    body?.data?.data?.items,
+    source,
+    level1,
+    level2,
+    level3,
+    isNestedListBody<T>(source) ? source.items : undefined,
+    isNestedListBody<T>(level1) ? level1.items : undefined,
+    isNestedListBody<T>(level2) ? level2.items : undefined,
   ];
   for (const c of candidates) {
     if (Array.isArray(c)) return c as T[];
   }
   return [];
+}
+
+function getErrorMessage(error: unknown): string {
+  const err = error as {
+    message?: string;
+    response?: { data?: { error?: { details?: string } } };
+  };
+  return err?.response?.data?.error?.details || err?.message || "Error";
 }
 
 export default function Access() {
@@ -54,13 +82,13 @@ export default function Access() {
     setLoading(true);
     setError("");
     try {
-      const tenantsBody = await apiClient.get<any>("/admin/tenants");
+      const tenantsBody = await apiClient.get<unknown>("/admin/tenants");
       setTenants(unwrapList<Tenant>(tenantsBody));
 
-      const usersBody = await apiClient.get<any>("/admin/users");
+      const usersBody = await apiClient.get<unknown>("/admin/users");
       setUsers(unwrapList<UserRow>(usersBody));
-    } catch (e: any) {
-      setError(e?.message || "No se pudo cargar la informacion");
+    } catch (error) {
+      setError(getErrorMessage(error) || "No se pudo cargar la informacion");
     } finally {
       setLoading(false);
     }
@@ -80,8 +108,8 @@ export default function Access() {
       setResult("Tenant creado");
       setNewTenantName("");
       await refresh();
-    } catch (err: any) {
-      setError(err?.response?.data?.error?.details || err?.message || "Error");
+    } catch (error) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -103,14 +131,14 @@ export default function Access() {
         send_reset_link: sendResetLink,
       };
 
-      const resp = await apiClient.post<any>("/admin/users", payload);
+      const resp = await apiClient.post<CreateUserResponse>("/admin/users", payload);
       const link = resp?.data?.reset_link as string | undefined;
       if (link) setResetLink(link);
       setResult("Usuario creado / actualizado");
       setPassword("");
       await refresh();
-    } catch (err: any) {
-      setError(err?.response?.data?.error?.details || err?.message || "Error");
+    } catch (error) {
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }

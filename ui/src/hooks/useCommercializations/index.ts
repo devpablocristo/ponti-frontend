@@ -7,6 +7,8 @@ import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
+type CommercializationMutationResponse = SuccessResponse<unknown>;
+
 const useCommercializations = () => {
   const [{ result, commercializations }, dispatch] = useCommercializationsReducer();
   const [processing, setProcessing] = useState(false);
@@ -43,7 +45,7 @@ const useCommercializations = () => {
     } finally {
       setProcessing(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const saveCommercializations = React.useCallback(
     async (commercializationData: CommercializationData[], id: number) => {
@@ -55,7 +57,7 @@ const useCommercializations = () => {
       });
 
       try {
-        const response = await apiClient.post<SuccessResponse<any>>(
+        const response = await apiClient.post<CommercializationMutationResponse>(
           `/projects/${id}/commercializations`,
           commercializationData
         );
@@ -80,7 +82,7 @@ const useCommercializations = () => {
         setProcessing(false);
       }
     },
-    []
+    [dispatch]
   );
 
   return {

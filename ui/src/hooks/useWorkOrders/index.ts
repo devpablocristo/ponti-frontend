@@ -3,9 +3,12 @@ import { apiClient } from "@/api/client";
 
 import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
-import { SuccessResponse } from "@/api/types";
-import { Metrics, Workorder, WorkorderData } from "./types";
+import { PaginatedResponse, SuccessResponse } from "@/api/types";
+import { Metrics, OrdersData, Workorder, WorkorderData } from "./types";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+
+type OrdersListResponse = SuccessResponse<PaginatedResponse<OrdersData>>;
+type WorkOrderMutationResponse = SuccessResponse<unknown>;
 
 const useOrders = () => {
   const [
@@ -31,14 +34,12 @@ const useOrders = () => {
       }
 
       try {
-        const response = await apiClient.get<SuccessResponse<any>>(
-          `/work-orders${queryParams}`
-        );
+        const response = await apiClient.get<OrdersListResponse>(`/work-orders${queryParams}`);
 
         if (response.success) {
           dispatch({
             type: actions.SET_ORDERS,
-            payload: response.data.data,
+            payload: response.data.data ?? [],
           });
 
           dispatch({
@@ -61,7 +62,7 @@ const useOrders = () => {
         setProcessing(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const getMetrics = React.useCallback(
@@ -107,10 +108,7 @@ const useOrders = () => {
     });
 
     try {
-      const response = await apiClient.post<SuccessResponse<any>>(
-        `/work-orders`,
-        order
-      );
+      const response = await apiClient.post<WorkOrderMutationResponse>(`/work-orders`, order);
 
       if (response.success) {
         dispatch({
@@ -133,7 +131,7 @@ const useOrders = () => {
     } finally {
       setProcessingCreation(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const updateOrder = React.useCallback(
     async (id: number, order: Workorder) => {
@@ -145,7 +143,7 @@ const useOrders = () => {
       });
 
       try {
-        const response = await apiClient.put<SuccessResponse<any>>(
+        const response = await apiClient.put<WorkOrderMutationResponse>(
           `/work-orders/${id}`,
           order
         );
@@ -170,7 +168,7 @@ const useOrders = () => {
         setProcessingCreation(false);
       }
     },
-    []
+    [dispatch]
   );
 
   const [processingDetail, setProcessingDetail] = useState(false);
@@ -203,7 +201,7 @@ const useOrders = () => {
     } finally {
       setProcessingDetail(false);
     }
-  }, []);
+  }, [dispatch]);
 
   const deleteOrder = React.useCallback(async (id: number): Promise<void> => {
     setProcessing(true);
