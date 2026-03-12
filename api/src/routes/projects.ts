@@ -146,19 +146,22 @@ router.get("/archived", async (req: Request, res: Response) => {
       headers
     );
 
-    if (!Array.isArray(projects?.items) || !Array.isArray(archivedCustomers?.items)) {
+    const projectItems = projects?.items ?? projects?.data;
+    const customerItems = archivedCustomers?.data ?? archivedCustomers?.items;
+
+    if (!Array.isArray(projectItems) || !Array.isArray(customerItems)) {
       res.status(502).json({
         success: false,
         message: "Respuesta inválida del backend (/projects/archived o /customers/archived)",
-        error: { status: 502, details: "Se esperaba projects.items y archivedCustomers.items como arrays" },
+        error: { status: 502, details: "Se esperaba projects y archivedCustomers como arrays" },
       });
       return;
     }
 
     const archivedCustomerIds = new Set<number>(
-      archivedCustomers.items.map((customer: any) => Number(customer.id))
+      customerItems.map((customer: any) => Number(customer.id))
     );
-    const filteredProjects = projects.items.filter((project: any) => {
+    const filteredProjects = projectItems.filter((project: any) => {
       const customerId = Number((project.customer && project.customer.id) || 0);
       return !archivedCustomerIds.has(customerId);
     });
@@ -459,9 +462,9 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.delete<any>(`/projects/${id}/hard`, headers);
+    await apiClient.delete<any>(`/projects/${id}`, headers);
     setImmediate(() => cache.flushAll());
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -492,9 +495,9 @@ router.put("/:id/archive", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.put<any>(`/projects/${id}/archive`, {}, headers);
+    await apiClient.post<any>(`/projects/${id}/archive`, {}, headers);
     setImmediate(() => cache.flushAll());
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -525,9 +528,9 @@ router.put("/:id/restore", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.put<any>(`/projects/${id}/restore`, {}, headers);
+    await apiClient.post<any>(`/projects/${id}/restore`, {}, headers);
     setImmediate(() => cache.flushAll());
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -558,9 +561,9 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.delete<any>(`/projects/${id}/hard`, headers);
+    await apiClient.delete<any>(`/projects/${id}`, headers);
     setImmediate(() => cache.flushAll());
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 

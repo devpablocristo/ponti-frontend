@@ -32,7 +32,7 @@ router.post("", async (req: Request, res: Response) => {
 
     const data = {
       success: true,
-      data: workorder.data,
+      data: workorder,
     };
 
     setImmediate(() => cache.flushAll());
@@ -71,7 +71,7 @@ router.put("/:id", async (req: Request, res: Response) => {
       date: new Date(req.body.date).toISOString(),
     };
 
-    const { data: workorder } = await apiClient.put<any>(
+    await apiClient.put<any>(
       `/work-orders/${req.params.id}`,
       requestData,
       headers
@@ -79,7 +79,7 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     const data = {
       success: true,
-      data: workorder.data,
+      message: "Orden actualizada exitosamente",
     };
 
     setImmediate(() => cache.flushAll());
@@ -317,14 +317,14 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const { data: workorder } = await apiClient.delete<any>(
+    await apiClient.delete<any>(
       `/work-orders/${req.params.id}`,
       headers
     );
 
     const data = {
       success: true,
-      data: workorder,
+      message: "Orden eliminada exitosamente",
     };
 
     setImmediate(() => cache.flushAll());
