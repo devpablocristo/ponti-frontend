@@ -81,9 +81,9 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.delete<any>(`/fields/${id}`, headers);
+    await apiClient.delete<any>(`/fields/${id}`, headers);
     setImmediate(() => cache.flushAll());
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 

@@ -60,7 +60,7 @@ router.post("/invoice", async (req: Request, res: Response) => {
       status: req.body.invoice_status,
     };
 
-    const { data: workorder } = await apiClient.post<any>(
+    const { data: invoice } = await apiClient.post<any>(
       `/invoices/${req.body.workorder_id}`,
       requestData,
       headers
@@ -70,7 +70,7 @@ router.post("/invoice", async (req: Request, res: Response) => {
 
     const data = {
       success: true,
-      data: workorder.data,
+      data: invoice,
     };
 
     res.status(200).json(data);
@@ -142,7 +142,7 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
       status: req.body.invoice_status,
     };
 
-    const { data: workorder } = await apiClient.put<any>(
+    await apiClient.put<any>(
       `/invoices/${req.body.workorder_id}`,
       requestData,
       headers
@@ -152,7 +152,7 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
 
     const data = {
       success: true,
-      data: workorder.data,
+      message: "Factura actualizada exitosamente",
     };
 
     res.status(200).json(data);
@@ -436,14 +436,14 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const { data: labor } = await apiClient.delete<any>(
+    await apiClient.delete<any>(
       `/labors/${req.params.id}`,
       headers
     );
 
     const data = {
       success: true,
-      data: labor,
+      message: "Labor eliminada exitosamente",
     };
 
     setImmediate(() => cache.flushAll());
@@ -486,7 +486,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       is_partial_price: parsePartialPriceFlag(req.body.is_partial_price),
     };
 
-    const { data: workorder } = await apiClient.put<any>(
+    await apiClient.put<any>(
       `projects/${req.params.project_id}/labors/${req.params.id}`,
       requestData,
       headers
@@ -496,7 +496,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
 
     const data = {
       success: true,
-      data: workorder.data,
+      message: "Labor actualizada exitosamente",
     };
 
     res.status(200).json(data);

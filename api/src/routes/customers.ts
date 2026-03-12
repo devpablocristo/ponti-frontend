@@ -28,28 +28,28 @@ router.get("", async (req: Request, res: Response) => {
 
     const { data: customers } = await apiClient.get<any>("/customers", headers);
 
-    if (!Array.isArray(customers?.items)) {
+    if (!Array.isArray(customers?.data)) {
       res.status(502).json({
         success: false,
         message: "Respuesta inválida del backend (/customers)",
-        error: { status: 502, details: "Se esperaba customers.items como array" },
+        error: { status: 502, details: "Se esperaba customers.data como array" },
       });
       return;
     }
     const total =
       typeof customers?.page_info?.total === "number"
         ? customers.page_info.total
-        : customers.items.length;
+        : customers.data.length;
 
     const data = {
       success: true,
       data: {
-        data: customers.items,
+        data: customers.data,
         total,
       },
     };
 
-    if (customers.items.length > 0) {
+    if (customers.data.length > 0) {
       cache.set("customers", data);
     }
 
@@ -88,23 +88,23 @@ router.get("/archived", async (req: Request, res: Response) => {
       headers
     );
 
-    if (!Array.isArray(customers?.items)) {
+    if (!Array.isArray(customers?.data)) {
       res.status(502).json({
         success: false,
         message: "Respuesta inválida del backend (/customers/archived)",
-        error: { status: 502, details: "Se esperaba customers.items como array" },
+        error: { status: 502, details: "Se esperaba customers.data como array" },
       });
       return;
     }
     const total =
       typeof customers?.page_info?.total === "number"
         ? customers.page_info.total
-        : customers.items.length;
+        : customers.data.length;
 
     const data = {
       success: true,
       data: {
-        data: customers.items,
+        data: customers.data,
         total,
       },
     };
@@ -140,9 +140,9 @@ router.put("/:id/archive", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.put<any>(`/customers/${id}/archive`, {}, headers);
+    await apiClient.post<any>(`/customers/${id}/archive`, {}, headers);
     setImmediate(() => cache.flushAll());
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -173,9 +173,9 @@ router.put("/:id/restore", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.put<any>(`/customers/${id}/restore`, {}, headers);
+    await apiClient.post<any>(`/customers/${id}/restore`, {}, headers);
     setImmediate(() => cache.flushAll());
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -206,9 +206,9 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const data = await apiClient.delete<any>(`/customers/${id}/hard`, headers);
+    await apiClient.delete<any>(`/customers/${id}`, headers);
     setImmediate(() => cache.flushAll());
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
