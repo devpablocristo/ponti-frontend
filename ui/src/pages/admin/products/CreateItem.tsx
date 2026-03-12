@@ -33,6 +33,9 @@ const typeOptions = [
   { id: 3, name: "Remito oficial" },
 ];
 
+const formatAvailableQty = (value: number) =>
+  value.toFixed(2).replace(/\.?0+$/, "");
+
 export default function CreateItem({
   drawerOpen,
   setDrawerOpen,
@@ -106,6 +109,7 @@ export default function CreateItem({
   const latestProjectIdRef = useRef(projectId);
   const latestOnProductCreatedRef = useRef(onProductCreated);
   const latestGetStockRef = useRef(getStock);
+  const latestGetProvidersRef = useRef(getProviders);
 
   const clearForm = () => {
     setError(null);
@@ -326,12 +330,16 @@ export default function CreateItem({
     latestProjectIdRef.current = projectId;
     latestOnProductCreatedRef.current = onProductCreated;
     latestGetStockRef.current = getStock;
-  }, [items, supplies, projectId, onProductCreated, getStock]);
+    latestGetProvidersRef.current = getProviders;
+  }, [items, supplies, projectId, onProductCreated, getStock, getProviders]);
 
   useEffect(() => {
     if (lastSubmittedRowIndexes.length === 0) return;
 
     if (resultCreation.supply_movements.length > 0) {
+      const hasSavedMovements = resultCreation.supply_movements.some(
+        (movement) => movement.is_saved
+      );
       const errors: string[] = [];
       const nextItemErrors: Record<number, string> = {};
       resultCreation.supply_movements.forEach((movement, responseIndex) => {
@@ -352,6 +360,13 @@ export default function CreateItem({
         setError(errors.join("\n"));
         setItemErrors(nextItemErrors);
         setSuccessMessage(null);
+        if (hasSavedMovements) {
+          latestOnProductCreatedRef.current();
+          if (latestProjectIdRef.current) {
+            latestGetStockRef.current(latestProjectIdRef.current, "");
+          }
+          latestGetProvidersRef.current("");
+        }
         return;
       }
 
@@ -362,6 +377,7 @@ export default function CreateItem({
       if (latestProjectIdRef.current) {
         latestGetStockRef.current(latestProjectIdRef.current, "");
       }
+      latestGetProvidersRef.current("");
     }
   }, [resultCreation, lastSubmittedRowIndexes]);
 
@@ -707,7 +723,14 @@ export default function CreateItem({
                           options={availableSupplies.map((s) => ({
                             id: s.id,
                             name: s.name,
-                            badge: s.qty > 0 ? <>{s.qty.toFixed(2)} {s.unit}</> : undefined,
+                            badge: (
+                              <span className="ml-1 text-xs text-gray-400 font-normal">
+                                <span className={s.qty < 0 ? "text-red-600" : undefined}>
+                                  {formatAvailableQty(s.qty)}
+                                </span>{" "}
+                                {s.unit}
+                              </span>
+                            ),
                           }))}
                           value={item.item ? Number(item.item) : null}
                           onSelect={(option) => handleItemChange(i, "item", String(option.id))}

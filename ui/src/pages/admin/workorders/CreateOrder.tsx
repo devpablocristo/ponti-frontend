@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
@@ -12,7 +12,8 @@ import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useSupplies from "../../../hooks/useSupplies";
 import useCategories from "../../../hooks/useCategories";
-import { units } from "../../../constants/units";
+import useStock from "../../../hooks/useStock";
+import { getUnitName, units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Drawer from "../../../components/Drawer/Drawer";
@@ -33,6 +34,9 @@ const emptyItems: WorkOrderItem[] = Array.from({ length: 7 }, () => ({
   totalUsed: "",
   dose: "",
 }));
+
+const formatAvailableQty = (value: number) =>
+  value.toFixed(2).replace(/\.?0+$/, "");
 
 export default function CreateOrder({
   drawerOpen,
@@ -58,6 +62,7 @@ export default function CreateOrder({
   const [field, setField] = useState<Field | null>(null);
   const [lots, setLots] = useState<Plot[]>([]);
   const { getSupplies, supplies } = useSupplies();
+  const { getStock, stock } = useStock();
   const { getLabors, labors } = useLabors();
   const [lot, setLot] = useState<Plot | null>(null);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
@@ -296,21 +301,42 @@ export default function CreateOrder({
     }
   }, [errorCreation]);
 
+  const refreshStock = useCallback(() => {
+    if (!projectId) return;
+    getStock(projectId, "");
+  }, [projectId, getStock]);
+
   useEffect(() => {
     if (resultCreation) {
       setSuccessMessage(resultCreation);
       onOrderCreated();
       clearForm();
+      refreshStock();
     }
-  }, [resultCreation, onOrderCreated, clearForm]);
+  }, [resultCreation, onOrderCreated, clearForm, refreshStock]);
 
   useEffect(() => {
     if (projectId) {
       getSupplies(projectId);
       getLabors(projectId);
       getProject(projectId);
+      getStock(projectId, "");
     }
-  }, [projectId, getSupplies, getLabors, getProject]);
+  }, [projectId, getSupplies, getLabors, getProject, getStock]);
+
+  const availableSupplies = useMemo(() => {
+    const stockBySupply = new Map<string, number>();
+    for (const stockItem of stock || []) {
+      const current = stockBySupply.get(stockItem.supply_name) || 0;
+      stockBySupply.set(stockItem.supply_name, current + Number(stockItem.stock_units));
+    }
+
+    return supplies.map((supply) => ({
+      ...supply,
+      availableQty: Number(stockBySupply.get(supply.name) || 0),
+      availableUnit: getUnitName(supply.unit_id),
+    }));
+  }, [supplies, stock]);
 
   useEffect(() => {
     if (!pendingCreatedSupplyName) return;
@@ -682,6 +708,7 @@ export default function CreateOrder({
         setSuccessMessage("Se creó la orden con división por inversor.");
         onOrderCreated();
         clearForm();
+        refreshStock();
       } catch (err) {
         setError(extractErrorMessage(err, "Error al crear la orden con división por inversor."));
       } finally {
@@ -997,12 +1024,15 @@ export default function CreateOrder({
 
                 <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4">
                   {items.map((item, i) => {
-                    const filteredSupplies = supplies.filter(
+                    const filteredSupplies = availableSupplies.filter(
                       (s) =>
                         !supplySearch[i] ||
                         s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
                     );
                     const highlightedIndex = highlightedSupplyIndex[i] ?? 0;
+                    const selectedSupply = availableSupplies.find(
+                      (s) => s.id === Number(item.itemId)
+                    );
 
                     return (
                     <div
@@ -1050,8 +1080,21 @@ export default function CreateOrder({
                         >
                           {item.itemId ? (
                             <span className="truncate font-semibold text-gray-900">
-                              {supplies.find((s) => s.id === Number(item.itemId))?.name ||
-                                "Seleccionar..."}
+                              {selectedSupply?.name || "Seleccionar..."}
+                              {selectedSupply && (
+                                <span className="ml-1 text-xs text-gray-400 font-normal">
+                                  <span
+                                    className={
+                                      selectedSupply.availableQty < 0
+                                        ? "text-red-600"
+                                        : undefined
+                                    }
+                                  >
+                                    {formatAvailableQty(selectedSupply.availableQty)}
+                                  </span>{" "}
+                                  {selectedSupply.availableUnit}
+                                </span>
+                              )}
                             </span>
                           ) : (
                             <span className="text-gray-400">Seleccionar...</span>
@@ -1160,7 +1203,15 @@ export default function CreateOrder({
                                       setSupplySearch((prev) => ({ ...prev, [i]: "" }));
                                     }}
                                   >
-                                    {s.name}
+                                    <span>{s.name}</span>
+                                    <span className="ml-1 text-xs text-gray-400 font-normal">
+                                      <span
+                                        className={s.availableQty < 0 ? "text-red-600" : undefined}
+                                      >
+                                        {formatAvailableQty(s.availableQty)}
+                                      </span>{" "}
+                                      {s.availableUnit}
+                                    </span>
                                   </li>
                                 ))}
                               {filteredSupplies.length === 0 && (
