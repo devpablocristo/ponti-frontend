@@ -25,11 +25,11 @@ router.get("", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const { data: types } = await apiClient.get<any>("/types", headers);
+    const { data: raw } = await apiClient.get<any>("/types", headers);
 
     const data = {
       success: true,
-      data: types,
+      data: raw.data ?? raw,
     };
 
     setImmediate(() => {

@@ -33,20 +33,21 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const { data: fields } = await apiClient.get<any>(
+    const { data: raw } = await apiClient.get<any>(
       `/projects/${project_id}/fields`,
       headers
     );
 
+    const fields = raw.data ?? raw;
     const data = {
       success: true,
       data: {
         data: fields,
-        total: fields.length,
+        total: Array.isArray(fields) ? fields.length : 0,
       },
     };
 
-    if (fields.length > 0) {
+    if (Array.isArray(fields) && fields.length > 0) {
       cache.set(url, data);
     }
 

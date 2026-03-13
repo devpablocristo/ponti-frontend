@@ -784,12 +784,13 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
       headers
     );
 
+    const items = labors.data ?? labors;
     const data = {
       success: true,
-      data: labors,
+      data: items,
     };
 
-    if (labors.length > 0) {
+    if (Array.isArray(items) && items.length > 0) {
       setImmediate(() => cache.set(`labors:${projectId}`, data));
     }
 
