@@ -30,6 +30,8 @@ export default function SupplyDropdown({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const typeaheadRef = useRef("");
+  const lastTypeaheadTimeRef = useRef(0);
 
   const filtered = options.filter(
     (o) => !search || o.name.toLowerCase().includes(search.toLowerCase())
@@ -38,6 +40,17 @@ export default function SupplyDropdown({
   const selected = value != null
     ? options.find((o) => o.id === Number(value))
     : null;
+
+  const findByPrefix = (prefix: string, startIndex = 0) => {
+    if (!prefix) return null;
+    const normalizedPrefix = prefix.toLowerCase();
+    const searchOrder = [...options.slice(startIndex), ...options.slice(0, startIndex)];
+    return (
+      searchOrder.find((option) =>
+        option.name.toLowerCase().startsWith(normalizedPrefix)
+      ) || null
+    );
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -88,6 +101,50 @@ export default function SupplyDropdown({
     if (e.key === "Escape" && isOpen) {
       e.preventDefault();
       close();
+    }
+
+    if (!isOpen && e.key.length === 1 && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+
+      const now = Date.now();
+      const lowerKey = e.key.toLowerCase();
+      const previousBuffer = typeaheadRef.current;
+      const elapsed = now - lastTypeaheadTimeRef.current;
+      const withinWindow = elapsed <= 700;
+
+      const shouldCycleSameLetter =
+        withinWindow &&
+        previousBuffer.length === 1 &&
+        previousBuffer === lowerKey;
+
+      let nextOption = null;
+
+      if (shouldCycleSameLetter) {
+        const currentIndex = selected
+          ? options.findIndex((option) => option.id === selected.id)
+          : -1;
+        nextOption = findByPrefix(lowerKey, currentIndex + 1);
+        typeaheadRef.current = lowerKey;
+      } else {
+        const nextBuffer = withinWindow
+          ? `${previousBuffer}${lowerKey}`
+          : lowerKey;
+
+        nextOption = findByPrefix(nextBuffer);
+
+        if (!nextOption && nextBuffer.length > 1) {
+          nextOption = findByPrefix(lowerKey);
+          typeaheadRef.current = lowerKey;
+        } else {
+          typeaheadRef.current = nextBuffer;
+        }
+      }
+
+      lastTypeaheadTimeRef.current = now;
+
+      if (nextOption) {
+        onSelect(nextOption);
+      }
     }
   };
 

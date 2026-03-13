@@ -19,6 +19,28 @@ type InvoiceMutationResponse = SuccessResponse<unknown>;
 type LaborMutationResponse = SuccessResponse<unknown>;
 type WorkOrdersCountResponse = SuccessResponse<{ count: number }>;
 
+const extractLaborsArray = (payload: unknown): LaborInfo[] => {
+  if (Array.isArray(payload)) {
+    return payload as LaborInfo[];
+  }
+
+  if (payload && typeof payload === "object") {
+    const directData = (payload as { data?: unknown }).data;
+    if (Array.isArray(directData)) {
+      return directData as LaborInfo[];
+    }
+
+    if (directData && typeof directData === "object") {
+      const nestedData = (directData as { data?: unknown }).data;
+      if (Array.isArray(nestedData)) {
+        return nestedData as LaborInfo[];
+      }
+    }
+  }
+
+  return [];
+};
+
 const useLabors = () => {
   const [
     { laborGroups, labors, result, pageInfo, resultInvoice, metrics },
@@ -231,9 +253,10 @@ const useLabors = () => {
       const response = await apiClient.get<LaborsResponse>(`/projects/${projectId}/labors`);
 
       if (response.success) {
+        const normalizedLabors = extractLaborsArray(response.data);
         dispatch({
           type: actions.SET_LABORS,
-          payload: response.data,
+          payload: normalizedLabors,
         });
         return;
       }
