@@ -121,7 +121,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       is_partial_price: parsePartialPriceFlag(req.body.is_partial_price),
     };
 
-    const { data: workorder } = await apiClient.put<any>(
+    await apiClient.put<any>(
       `/supplies/${req.params.id}`,
       requestData,
       headers
@@ -131,7 +131,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
 
     const data = {
       success: true,
-      data: workorder.data,
+      message: "Insumo actualizado exitosamente",
     };
 
     res.status(200).json(data);
@@ -342,14 +342,14 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": String(userId),
     };
 
-    const { data: supplies } = await apiClient.delete<any>(
+    await apiClient.delete<any>(
       `/supplies/${supplyId}`,
       headers
     );
 
     const data = {
       success: true,
-      data: supplies,
+      message: "Insumo eliminado exitosamente",
     };
 
     setImmediate(() => cache.flushAll());

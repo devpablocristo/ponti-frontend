@@ -29,6 +29,17 @@ export interface SupplyMovementRequest {
   items: SupplyMovementItem[];
 }
 
+export interface UpdateSupplyMovementRequest {
+  quantity?: number;
+  movement_type?: string;
+  movement_date?: Date;
+  reference_number?: string;
+  project_destination_id?: number;
+  supply_id?: number;
+  investor_id?: number;
+  provider?: Provider;
+}
+
 export interface SupplyMovementItem {
   quantity: number;
   movement_type: string;
@@ -53,6 +64,10 @@ export interface SupplyMovement {
   entry_date: string;
   origin_project_id?: number | null;
   origin_project_name?: string | null;
+  destination_project_id?: number | null;
+  destination_project_name?: string | null;
+  destination_customer_name?: string | null;
+  destination_campaign_name?: string | null;
   investor_name: string;
   supply_name: string;
   quantity: string;

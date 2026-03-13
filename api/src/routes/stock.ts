@@ -86,7 +86,7 @@ router.get("/periods/:id", async (req: Request, res: Response) => {
       data: periods,
     };
 
-    if (periods.length > 0) {
+    if (Array.isArray(periods) && periods.length > 0) {
       setImmediate(() => cache.set(`stock:periods:${projectId}`, data));
     }
 
@@ -148,7 +148,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       data: stock,
     };
 
-    if (stock.length > 0) {
+    if (Array.isArray(stock?.items) && stock.items.length > 0) {
       setImmediate(() => cache.set(`stock:${projectId}:${queryString}`, data));
     }
 

@@ -53,10 +53,13 @@ export function Products() {
     deleteResult,
     processing,
     error,
+    errorCreation,
   } = useSupplyMovements();
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
+  const [editingMovement, setEditingMovement] = useState<SupplyMovement | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(
     null
@@ -65,6 +68,18 @@ export function Products() {
     null
   );
   const itemsPerPage = 10;
+
+  const isInternalMovementEditionBlocked = (entryType?: string) => {
+    const normalized = String(entryType ?? "")
+      .toLowerCase()
+      .trim();
+
+    return (
+      normalized === "movimiento interno" ||
+      normalized === "movimiento interno de entrada" ||
+      normalized === "movimiento interno entrada"
+    );
+  };
 
   const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (!projectId) return;
@@ -314,7 +329,7 @@ export function Products() {
   useEffect(() => {
     if (!projectId) return;
     getSupplyMovements(projectId);
-    
+
   }, [getSupplyMovements, projectId]);
 
   useEffect(() => {
@@ -332,6 +347,14 @@ export function Products() {
     }
   }, [deleteResult, projectId, getSupplyMovements]);
 
+  useEffect(() => {
+    if (errorCreation) {
+      setActionErrorMessage(errorCreation);
+      setSuccessMessage(null);
+    }
+  }, [errorCreation]);
+
+
   const handleDelete = async (p: SupplyMovement) => {
     if (!projectId || !p.id) return;
     setSuccessMessage(null);
@@ -339,6 +362,14 @@ export function Products() {
     if (window.confirm("¿Estás seguro de eliminar este movimiento?")) {
       deleteSupplyMovement(p.id, projectId);
     }
+  };
+
+  const handleEdit = (movement: SupplyMovement) => {
+    if (isInternalMovementEditionBlocked(movement.entry_type)) return;
+    setActionErrorMessage(null);
+    setSuccessMessage(null);
+    setEditingMovement(movement);
+    setDrawerOpen(true);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -382,13 +413,15 @@ export function Products() {
         }
 
         // 🟢 NUMÉRICOS
-        if (["quantity", "price_usd", "total_usd"].includes(key)) {
+        // 🟢 NUMÉRICOS (solo campos realmente numéricos)
+        if (["price_usd", "total_usd"].includes(key)) {
           const num = Number(rawValue);
           if (Array.isArray(value)) {
             return value.some((v) => Number(v) === num);
           }
           return Number(value) === num;
         }
+
 
         // 🟢 STRING (multi + single)
         const itemValue = String(rawValue ?? "").toLowerCase();
@@ -405,36 +438,36 @@ export function Products() {
   }, [supplyMovements, columnsFilters]);
 
   const derivedSummary = useMemo(() => {
-  let totalKg = 0;
-  let totalLt = 0;
-  let totalUsd = 0;
+    let totalKg = 0;
+    let totalLt = 0;
+    let totalUsd = 0;
 
-  filteredMovements.forEach((m) => {
-    const quantityRaw = String(m.quantity ?? "").toLowerCase();
-    const totalUsdValue = Number(m.total_usd) || 0;
+    filteredMovements.forEach((m) => {
+      const quantityRaw = String(m.quantity ?? "").toLowerCase();
+      const totalUsdValue = Number(m.total_usd) || 0;
 
-    // Extraer número (320 de "320 kg")
-    const numericQty = parseFloat(quantityRaw.replace(",", "."));
+      // Extraer número (320 de "320 kg")
+      const numericQty = parseFloat(quantityRaw.replace(",", "."));
 
-    if (!isNaN(numericQty)) {
-      if (quantityRaw.includes("kg")) {
-        totalKg += numericQty;
+      if (!isNaN(numericQty)) {
+        if (quantityRaw.includes("kg")) {
+          totalKg += numericQty;
+        }
+
+        if (quantityRaw.includes("lt") || quantityRaw.includes("l ")) {
+          totalLt += numericQty;
+        }
       }
 
-      if (quantityRaw.includes("lt") || quantityRaw.includes("l ")) {
-        totalLt += numericQty;
-      }
-    }
+      totalUsd += totalUsdValue;
+    });
 
-    totalUsd += totalUsdValue;
-  });
-
-  return {
-    total_kg: totalKg,
-    total_lt: totalLt,
-    total_usd: totalUsd,
-  };
-}, [filteredMovements]);
+    return {
+      total_kg: totalKg,
+      total_lt: totalLt,
+      total_usd: totalUsd,
+    };
+  }, [filteredMovements]);
 
 
 
@@ -488,6 +521,9 @@ export function Products() {
           },
           {
             label: "Importar Insumos",
+            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M7 1.1665V7.83317M7 7.83317L4.33333 5.1665M7 7.83317L9.66667 5.1665M1.66675 9.1665V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H11.0001C11.3537 11.8332 11.6928 11.6927 11.9429 11.4426C12.1929 11.1926 12.3334 10.8535 12.3334 10.4998V9.1665" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>,
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
@@ -501,8 +537,10 @@ export function Products() {
             isPrimary: true,
             disabled: !projectId,
             onClick: () => {
+              setEditingMovement(null);
               setDrawerOpen(true);
             },
+
           },
         ]}
       />
@@ -538,7 +576,15 @@ export function Products() {
               setDrawerOpen={setDrawerOpen}
               projectId={projectId}
               onProductCreated={handleProductCreated}
+              editingMovement={editingMovement}
+              onEditSaved={() => {
+                setEditingMovement(null);
+                setSuccessMessage("Movimiento actualizado con éxito.");
+                setActionErrorMessage(null);
+                if (projectId) getSupplyMovements(projectId);
+              }}
             />
+
             {importDrawerOpen && (
               <ImportSupplyMovements
                 open={importDrawerOpen}
@@ -560,6 +606,8 @@ export function Products() {
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           enableFilters={true}
+          canEdit={(item) => !isInternalMovementEditionBlocked(item.entry_type)}
+          onEdit={(item) => handleEdit(item)}
           onDelete={(item) => handleDelete(item)}
           message="No hay movimientos disponibles"
           pagination={{

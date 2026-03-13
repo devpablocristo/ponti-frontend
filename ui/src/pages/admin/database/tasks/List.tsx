@@ -78,6 +78,8 @@ export default function ListTasks() {
   const [labor, setLabor] = useState<LaborInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const safeLabors = Array.isArray(labors) ? labors : [];
+  const safeCategories = Array.isArray(categories) ? categories : [];
 
   const { filters, projectId } = useWorkspaceFilters([
     "customer",
@@ -138,7 +140,7 @@ export default function ListTasks() {
     setDeleteTarget(null);
 
     setTimeout(() => {
-      const totalAfterDelete = labors.length - 1;
+      const totalAfterDelete = safeLabors.length - 1;
       const lastPage = Math.max(
         1,
         Math.ceil(totalAfterDelete / itemsPerPage)
@@ -250,7 +252,7 @@ export default function ListTasks() {
       }
 
       const categoryByName = new Map(
-        categories.map((c) => [normalizeText(c.name), c])
+        safeCategories.map((c) => [normalizeText(c.name), c])
       );
 
       const laborsToSave: LaborToSave[] = [];
@@ -336,8 +338,8 @@ export default function ListTasks() {
 
   const paginatedLabors = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return labors.slice(startIndex, startIndex + itemsPerPage);
-  }, [labors, currentPage, itemsPerPage]);
+    return safeLabors.slice(startIndex, startIndex + itemsPerPage);
+  }, [safeLabors, currentPage, itemsPerPage]);
 
   return (
     <div className="w-full mx-auto">
@@ -512,7 +514,7 @@ export default function ListTasks() {
                   if (!labor) return;
                   setLabor({ ...labor, category_id: parseInt(e.target.value) });
                 }}
-                options={categories}
+                options={safeCategories}
               />
               <InputField
                 label="Precio"
@@ -575,7 +577,7 @@ export default function ListTasks() {
             pagination={{
               page: currentPage,
               perPage: itemsPerPage,
-              total: labors.length,
+              total: safeLabors.length,
               onPageChange: (newPage: number) => setCurrentPage(newPage),
             }}
           />
