@@ -719,15 +719,6 @@ export function Lots() {
   }, [result, selectedField, projectId, getLots, getLotsKpis]);
 
   useEffect(() => {
-    if (drawerOpen && lot) {
-      const newLot = lots.find((l) => l.id === lot.id);
-      if (newLot) {
-        setLot(newLot);
-      }
-    }
-  }, [lots, drawerOpen, lot]);
-
-  useEffect(() => {
     if (updateLotError && updateLotError !== "") {
       setErrorMessage(updateLotError);
       setSuccessMessage("");
