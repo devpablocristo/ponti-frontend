@@ -6,6 +6,7 @@ import useProjects from "../../../hooks/useDatabase/projects";
 import useProviders from "../../../hooks/useProviders";
 import useSupplies from "../../../hooks/useSupplies";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
+import { apiClient } from "@/api/client";
 import { replaceSupplyIdsWithNames } from "../utils";
 import {
   normalizeText,
@@ -35,7 +36,42 @@ const HEADER_ALIASES = {
   investor: ["inversor", "investor"],
   supply: ["insumo", "producto", "item"],
   quantity: ["cantidad", "qty", "cantidad_unidades"],
+
+  // Movimiento interno (destino)
+  destinationCustomer: [
+    "cliente_destino",
+    "cliente destino",
+    "customer_destino",
+    "customer_destination",
+    "destino_cliente",
+  ],
+  destinationProject: [
+    "proyecto_destino",
+    "proyecto destino",
+    "project_destino",
+    "project_destination",
+    "destino_proyecto",
+  ],
+  destinationCampaign: [
+    "campana_destino",
+    "campaña_destino",
+    "campana destino",
+    "campaña destino",
+    "campaign_destino",
+    "campaign_destination",
+    "destino_campana",
+    "destino_campaña",
+  ],
+
+  // Opcional: solo para validar contra el proyecto activo
+  originProject: [
+    "proyecto_origen",
+    "proyecto origen",
+    "project_origin",
+    "origen_proyecto",
+  ],
 } as const;
+
 
 const ALLOWED_MOVEMENT_TYPES = new Set([
   "Stock",
@@ -52,11 +88,38 @@ type PreviewRow = {
   investorName: string;
   supplyName: string;
   quantity: string;
+
+  originProjectName?: string;
+  destinationCustomerName?: string;
+  destinationProjectName?: string;
+  destinationCampaignName?: string;
+
   providerId?: number;
   investorId?: number;
   supplyId?: number;
+  destinationCustomerId?: number;
+  destinationProjectId?: number;
+  destinationCampaignId?: number;
+
   errors: string[];
 };
+
+type CustomerOption = {
+  id: number;
+  name: string;
+};
+
+type ProjectOption = {
+  id: number;
+  name: string;
+};
+
+type CampaignOption = {
+  id: number;
+  name: string;
+  project_id?: number;
+};
+
 
 export default function ImportSupplyMovements({
   open,
@@ -227,6 +290,70 @@ export default function ImportSupplyMovements({
           supplies.map((entry) => [normalizeText(entry.name), entry])
         );
 
+        const customerByName = new Map<string, CustomerOption>();
+        const projectsByCustomerId = new Map<number, ProjectOption[]>();
+        const campaignsByCustomerAndProject = new Map<string, CampaignOption[]>();
+
+        const customersResponse = await apiClient.get<any>("/customers?limit=1000");
+        const customers: CustomerOption[] =
+          customersResponse?.data?.data ?? customersResponse?.data ?? [];
+
+        customers.forEach((customer) => {
+          if (customer?.id != null && customer?.name) {
+            customerByName.set(normalizeText(customer.name), {
+              id: Number(customer.id),
+              name: String(customer.name),
+            });
+          }
+        });
+
+        const rawInternalDestinationCustomers = new Set<string>();
+        parsedRows.forEach((rawRow) => {
+          const rawMovementType = getValueByAliases(
+            rawRow,
+            HEADER_ALIASES.movementType
+          ).trim();
+          const canonicalMovementType = rawMovementType
+            ? toCanonicalMovementType(rawMovementType)
+            : "Remito oficial";
+          if (canonicalMovementType !== "Movimiento interno") return;
+
+          const customerName = getValueByAliases(
+            rawRow,
+            HEADER_ALIASES.destinationCustomer
+          ).trim();
+          if (customerName) {
+            rawInternalDestinationCustomers.add(normalizeText(customerName));
+          }
+        });
+
+        for (const normalizedCustomerName of rawInternalDestinationCustomers) {
+          const customer = customerByName.get(normalizedCustomerName);
+          if (!customer) continue;
+
+          const projectsResponse = await apiClient.get<any>(
+            `/projects/customers/${customer.id}?limit=1000`
+          );
+          const projects: ProjectOption[] =
+            projectsResponse?.data?.data ?? projectsResponse?.data ?? [];
+          projectsByCustomerId.set(customer.id, projects);
+
+          for (const project of projects) {
+            if (!project?.name) continue;
+            const campaignsResponse = await apiClient.get<any>(
+              `/campaigns?customer_id=${customer.id}&project_name=${encodeURIComponent(
+                project.name
+              )}&limit=1000`
+            );
+            const campaigns: CampaignOption[] =
+              campaignsResponse?.data?.data ?? campaignsResponse?.data ?? [];
+            campaignsByCustomerAndProject.set(
+              `${customer.id}::${normalizeText(project.name)}`,
+              campaigns
+            );
+          }
+        }
+
         const duplicateRowsByKey = new Map<string, number>();
         const nextRows: PreviewRow[] = [];
 
@@ -255,6 +382,27 @@ export default function ImportSupplyMovements({
             HEADER_ALIASES.quantity
           ).trim();
 
+          const rawOriginProject = getValueByAliases(
+            rawRow,
+            HEADER_ALIASES.originProject
+          ).trim();
+
+          const rawDestinationCustomer = getValueByAliases(
+            rawRow,
+            HEADER_ALIASES.destinationCustomer
+          ).trim();
+
+          const rawDestinationProject = getValueByAliases(
+            rawRow,
+            HEADER_ALIASES.destinationProject
+          ).trim();
+
+          const rawDestinationCampaign = getValueByAliases(
+            rawRow,
+            HEADER_ALIASES.destinationCampaign
+          ).trim();
+
+
           if (
             !rawMovementType &&
             !rawDate &&
@@ -278,6 +426,9 @@ export default function ImportSupplyMovements({
           const supply = supplyByName.get(normalizeText(rawSupply));
           const normalizedQuantity = rawQuantity.replace(/,/g, ".");
           const quantity = Number(normalizedQuantity);
+          let destinationCustomerId: number | undefined;
+          let destinationProjectId: number | undefined;
+          let destinationCampaignId: number | undefined;
 
           if (!canonicalMovementType || !ALLOWED_MOVEMENT_TYPES.has(canonicalMovementType)) {
             errors.push(`Fila ${rowIndex}: ingreso inválido "${movementType}".`);
@@ -324,8 +475,93 @@ export default function ImportSupplyMovements({
             );
           }
 
+          if (movementType === "Movimiento interno") {
+            if (rawOriginProject) {
+              const currentOriginName = selectedProject?.name ?? "";
+              if (
+                !currentOriginName ||
+                normalizeText(rawOriginProject) !== normalizeText(currentOriginName)
+              ) {
+                errors.push(
+                  `Fila ${rowIndex}: el proyecto origen "${rawOriginProject}" no coincide con el proyecto activo.`
+                );
+              }
+            }
+
+            if (!rawDestinationCustomer) {
+              errors.push(`Fila ${rowIndex}: falta cliente destino.`);
+            } else {
+              const customer = customerByName.get(
+                normalizeText(rawDestinationCustomer)
+              );
+              if (!customer) {
+                errors.push(
+                  `Fila ${rowIndex}: el cliente destino "${rawDestinationCustomer}" no existe.`
+                );
+              } else {
+                destinationCustomerId = customer.id;
+              }
+            }
+
+            if (!rawDestinationProject) {
+              errors.push(`Fila ${rowIndex}: falta proyecto destino.`);
+            }
+
+            if (!rawDestinationCampaign) {
+              errors.push(`Fila ${rowIndex}: falta campaña destino.`);
+            }
+
+            if (
+              destinationCustomerId &&
+              rawDestinationProject &&
+              rawDestinationCampaign
+            ) {
+              const destinationProjects =
+                projectsByCustomerId.get(destinationCustomerId) ?? [];
+              const matchedProject = destinationProjects.find(
+                (entry) =>
+                  normalizeText(entry.name) === normalizeText(rawDestinationProject)
+              );
+
+              if (!matchedProject) {
+                errors.push(
+                  `Fila ${rowIndex}: el proyecto destino "${rawDestinationProject}" no existe para el cliente "${rawDestinationCustomer}".`
+                );
+              } else {
+                destinationProjectId = matchedProject.id;
+                const campaignKey = `${destinationCustomerId}::${normalizeText(
+                  matchedProject.name
+                )}`;
+                const campaigns =
+                  campaignsByCustomerAndProject.get(campaignKey) ?? [];
+                const matchedCampaign = campaigns.find(
+                  (entry) =>
+                    normalizeText(entry.name) ===
+                    normalizeText(rawDestinationCampaign)
+                );
+
+                if (!matchedCampaign) {
+                  errors.push(
+                    `Fila ${rowIndex}: la campaña destino "${rawDestinationCampaign}" no coincide con el cliente/proyecto destino.`
+                  );
+                } else {
+                  destinationCampaignId = matchedCampaign.id;
+                }
+              }
+            }
+
+            if (destinationProjectId && destinationProjectId === projectId) {
+              errors.push(
+                `Fila ${rowIndex}: el proyecto destino no puede ser igual al proyecto origen.`
+              );
+            }
+          }
+
           if (rawReferenceNumber && supply) {
-            const duplicateKey = `${normalizeText(rawReferenceNumber)}::${supply.id}`;
+            const duplicateKey =
+              movementType === "Movimiento interno"
+                ? `${normalizeText(rawReferenceNumber)}::${supply.id}::${destinationProjectId ?? 0}`
+                : `${normalizeText(rawReferenceNumber)}::${supply.id}`;
             const firstIndex = duplicateRowsByKey.get(duplicateKey);
             if (firstIndex !== undefined) {
               const duplicateMessage = `Fila ${rowIndex}: el remito "${rawReferenceNumber}" repite el insumo "${supply.name}".`;
@@ -350,6 +586,14 @@ export default function ImportSupplyMovements({
             providerId: provider?.id,
             investorId: investor?.id,
             supplyId: supply?.id,
+            originProjectName: rawOriginProject,
+            destinationCustomerName: rawDestinationCustomer,
+            destinationProjectName: rawDestinationProject,
+            destinationCampaignName: rawDestinationCampaign,
+            destinationCustomerId,
+            destinationProjectId,
+            destinationCampaignId,
+
             errors,
           });
         });
@@ -372,7 +616,7 @@ export default function ImportSupplyMovements({
     return () => {
       cancelled = true;
     };
-  }, [open, file, fileKey, parsedFileKey, lookupReady, providers, investors, supplies]);
+  }, [open, file, fileKey, parsedFileKey, lookupReady, providers, investors, supplies, selectedProject, projectId]);
 
   const rowErrors = useMemo(
     () => previewRows.flatMap((row) => row.errors),
@@ -421,8 +665,7 @@ export default function ImportSupplyMovements({
     if (hasErrors) return;
 
     onImported(
-      `Se importaron ${importedMovements.length} movimiento${
-        importedMovements.length !== 1 ? "s" : ""
+      `Se importaron ${importedMovements.length} movimiento${importedMovements.length !== 1 ? "s" : ""
       } con éxito.`
     );
   }, [open, importAttempted, resultCreation, onImported]);
@@ -437,7 +680,10 @@ export default function ImportSupplyMovements({
         movement_type: row.movementType,
         movement_date: new Date(row.movementDate),
         reference_number: row.referenceNumber,
-        project_destination_id: 0,
+        project_destination_id:
+          row.movementType === "Movimiento interno"
+            ? row.destinationProjectId || 0
+            : 0,
         supply_id: row.supplyId || 0,
         investor_id: row.investorId || 0,
         quantity: Number(row.quantity),
@@ -527,6 +773,15 @@ export default function ImportSupplyMovements({
                   Cantidad
                 </th>
                 <th className="px-3 py-3 text-left font-semibold text-gray-700">
+                  Cliente destino
+                </th>
+                <th className="px-3 py-3 text-left font-semibold text-gray-700">
+                  Proyecto destino
+                </th>
+                <th className="px-3 py-3 text-left font-semibold text-gray-700">
+                  Campaña destino
+                </th>
+                <th className="px-3 py-3 text-left font-semibold text-gray-700">
                   Estado
                 </th>
               </tr>
@@ -535,7 +790,7 @@ export default function ImportSupplyMovements({
               {previewRows.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={9}
+                    colSpan={12}
                     className="px-4 py-8 text-center text-gray-500"
                   >
                     No hay filas importadas para previsualizar.
@@ -567,6 +822,15 @@ export default function ImportSupplyMovements({
                     </td>
                     <td className="px-3 py-3 align-top text-gray-700">
                       {row.quantity || "—"}
+                    </td>
+                    <td className="px-3 py-3 align-top text-gray-700">
+                      {row.destinationCustomerName || "—"}
+                    </td>
+                    <td className="px-3 py-3 align-top text-gray-700">
+                      {row.destinationProjectName || "—"}
+                    </td>
+                    <td className="px-3 py-3 align-top text-gray-700">
+                      {row.destinationCampaignName || "—"}
                     </td>
                     <td className="px-3 py-3 align-top">
                       {row.errors.length > 0 ? (

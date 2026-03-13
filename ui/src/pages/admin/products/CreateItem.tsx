@@ -9,7 +9,12 @@ import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
 import useProviders from "../../../hooks/useProviders";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
-import { SupplyMovementRequest } from "../../../hooks/useSupplyMovement/types";
+import {
+  SupplyMovement,
+  SupplyMovementRequest,
+  UpdateSupplyMovementRequest,
+} from "../../../hooks/useSupplyMovement/types";
+
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import { DEFAULT_ITEM_ROW_COUNT, replaceSupplyIdsWithNames } from "../utils";
 import Drawer from "../../../components/Drawer/Drawer";
@@ -39,12 +44,17 @@ export default function CreateItem({
   projectId,
   customers,
   onProductCreated,
+  editingMovement,
+  onEditSaved,
 }: {
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
   projectId: number;
   customers: Customer[];
   onProductCreated: () => void;
+  editingMovement: SupplyMovement | null;
+  onEditSaved: () => void;
+
 }) {
   const {
     resultCreation,
@@ -52,9 +62,11 @@ export default function CreateItem({
     errorCreationPayload,
     processingCreation,
     saveSupplyMovement,
+    updateSupplyMovement,
   } = useSupplyMovements();
   const { getProject, selectedProject, processing } = useProjects();
   const { getProviders, providers } = useProviders();
+  const isEditing = !!editingMovement;
 
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -114,6 +126,9 @@ export default function CreateItem({
     setProvider(undefined);
     setQueryProvider("");
     setInvestor(null);
+    setCustomer(null);
+    setProject(null);
+    setCampaign(null);
     setItems(emptyItems);
     setOrderNumber("");
     setDate("");
@@ -234,7 +249,7 @@ export default function CreateItem({
               value={type}
               options={types}
               disabled
-              onChange={() => {}}
+              onChange={() => { }}
               size="sm"
             />
 
@@ -301,7 +316,7 @@ export default function CreateItem({
     if (errorCreation) {
       const message =
         typeof errorCreationPayload?.error?.details === "string" &&
-        errorCreationPayload.error.details.trim() !== ""
+          errorCreationPayload.error.details.trim() !== ""
           ? errorCreationPayload.error.details
           : errorCreation ?? "";
       setError(replaceSupplyIdsWithNames(message, supplies));
@@ -404,6 +419,123 @@ export default function CreateItem({
     );
   }, [selectedProject]);
 
+  useEffect(() => {
+    if (!drawerOpen) return;
+
+    if (!editingMovement) {
+      clearForm();
+      return;
+    }
+
+
+    setError(null);
+    setSuccessMessage(null);
+    setItemErrors({});
+
+    const matchedType =
+      typeOptions.find((t) => t.name === editingMovement.entry_type) || null;
+    setType(matchedType);
+
+    const isInternalMovement = matchedType?.id === 2;
+
+    // Reset de destino para no arrastrar valores viejos
+    setCustomer(null);
+    setProject(null);
+    setCampaign(null);
+    setSelectedProjectDestination(null);
+
+    if (isInternalMovement) {
+      if (editingMovement.destination_project_id) {
+        setSelectedProjectDestination(editingMovement.destination_project_id);
+      }
+
+      if (editingMovement.destination_customer_name) {
+        const matchedCustomer = customers.find(
+          (c) => c.name === editingMovement.destination_customer_name
+        );
+        if (matchedCustomer) setCustomer(matchedCustomer);
+      }
+    }
+
+
+    setOrderNumber(editingMovement.reference_number || "");
+    setDate(String(editingMovement.entry_date || "").slice(0, 10));
+
+    const matchedProvider = (providers || []).find(
+      (p) => p.name === editingMovement.provider_name
+    );
+    setProvider(matchedProvider);
+    setQueryProvider(editingMovement.provider_name || "");
+
+    const matchedInvestor = investors.find(
+      (i) => i.name === editingMovement.investor_name
+    );
+    setInvestor(matchedInvestor || null);
+
+    const matchedSupply = supplies.find(
+      (s) => s.name === editingMovement.supply_name
+    );
+
+    const firstItem = {
+      item: matchedSupply ? String(matchedSupply.id) : "",
+      quantity: String(editingMovement.quantity ?? "")
+        .replace(/[^\d.,]/g, "")
+        .replace(",", "."),
+    };
+
+    const nextItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
+      item: "",
+      quantity: "",
+    }));
+    nextItems[0] = firstItem;
+    setItems(nextItems);
+  }, [drawerOpen, editingMovement, providers, investors, supplies, customers]);
+
+  useEffect(() => {
+    if (!drawerOpen || !editingMovement) return;
+    if (editingMovement.entry_type !== "Movimiento interno") return;
+
+    if (!project) {
+      const matchedProject = projectsDropdown.find((p) => {
+        if (
+          editingMovement.destination_project_id &&
+          p.id === editingMovement.destination_project_id
+        ) {
+          return true;
+        }
+        return (
+          !!editingMovement.destination_project_name &&
+          p.name === editingMovement.destination_project_name
+        );
+      });
+
+      if (matchedProject) setProject(matchedProject);
+    }
+
+    if (!campaign && editingMovement.destination_campaign_name) {
+      const matchedCampaign = campaigns.find((c) => {
+        const sameName = c.name === editingMovement.destination_campaign_name;
+        const sameProject = editingMovement.destination_project_id
+          ? c.project_id === editingMovement.destination_project_id
+          : true;
+        return sameName && sameProject;
+      });
+
+      if (matchedCampaign) {
+        setCampaign(matchedCampaign);
+        setSelectedProjectDestination(matchedCampaign.project_id);
+      }
+    }
+  }, [
+    drawerOpen,
+    editingMovement,
+    projectsDropdown,
+    campaigns,
+    project,
+    campaign,
+  ]);
+
+
   const handleItemChange = (i: number, field: string, value: string) => {
     setItemErrors((prev) => {
       if (!(i in prev)) return prev;
@@ -449,7 +581,13 @@ export default function CreateItem({
 
     const itemsWithAnyValue = items
       .map((item, index) => ({ item, index }))
-      .filter(({ item }) => item.item || item.quantity);
+      .filter(({ item }) => item.item || item.quantity)
+
+    if (isEditing && itemsWithAnyValue.length !== 1) {
+      setError("En edición debe haber exactamente un insumo cargado.");
+      return;
+    }
+    ;
 
     if (itemsWithAnyValue.length === 0) {
       errors.push("Debe cargar al menos un insumo");
@@ -472,6 +610,33 @@ export default function CreateItem({
 
     setLastSubmittedRowIndexes(itemsWithAnyValue.map(({ index }) => index));
     setItemErrors({});
+
+    if (isEditing && editingMovement?.id) {
+      const editItem = itemsWithAnyValue[0].item;
+      const payload: UpdateSupplyMovementRequest = {
+        supply_id: Number(editItem.item),
+        quantity: Number(editItem.quantity),
+        movement_type: type?.name || "",
+        movement_date: new Date(date),
+        reference_number: orderNumber,
+        project_destination_id: selectedProjectDestination || 0,
+        investor_id: investor?.id || 0,
+        provider: {
+          id: effectiveProvider?.id || 0,
+          name: effectiveProvider?.name || "",
+        },
+      };
+
+      updateSupplyMovement(editingMovement.id, projectId, payload).then((ok) => {
+        if (!ok) return;
+        clearForm();
+        setDrawerOpen(false);
+        onEditSaved();
+      });
+
+      return;
+    }
+
     const payload: SupplyMovementRequest = {
       mode: "strict",
       items: itemsWithAnyValue.map(({ item }) => ({
@@ -490,12 +655,16 @@ export default function CreateItem({
     };
 
     saveSupplyMovement(projectId, payload);
+
   };
 
   return (
     <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">Ingreso de Insumo</h2>
+        <h2 className="text-lg font-semibold mb-2">
+          {isEditing ? "Editar Insumo" : "Ingreso de Insumo"}
+        </h2>
+
         {processing || processingCreation ? (
           <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
@@ -559,7 +728,7 @@ export default function CreateItem({
                   name="project"
                   type="text"
                   value={selectedProject?.name || ""}
-                  onChange={() => {}}
+                  onChange={() => { }}
                   disabled
                   size="sm"
                 />
@@ -747,16 +916,19 @@ export default function CreateItem({
                       </div>
                     </div>
                   ))}
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => {
-                      setItems([...items, { item: "", quantity: "" }]);
-                    }}
-                    className="max-w-fit"
-                  >
-                    Agregar insumo +
-                  </Button>
+                  {!isEditing && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        setItems([...items, { item: "", quantity: "" }]);
+                      }}
+                      className="max-w-fit"
+                    >
+                      Agregar insumo +
+                    </Button>
+                  )}
+
                 </div>
               </div>
               {error && (
@@ -827,8 +999,9 @@ export default function CreateItem({
                   onClick={handlePreSave}
                   disabled={processing || processingCreation}
                 >
-                  Guardar
+                  {isEditing ? "Guardar cambios" : "Guardar"}
                 </Button>
+
               </div>
             </div>
           </>
