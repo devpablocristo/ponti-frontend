@@ -29,11 +29,10 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
   };
 
   const totalRotationPct = Math.round(
-  (crops.reduce((sum, crop) => sum + Number(crop.hectares || 0), 0) /
-    Number(crop_incidence.total.hectares || 1)) *
-    100
-);
-
+    (crops.reduce((sum, crop) => sum + Number(crop.hectares || 0), 0) /
+      Number(crop_incidence.total.hectares || 1)) *
+      100
+  );
 
   return (
     <div className="bg-white rounded-xl border p-4 w-full">
