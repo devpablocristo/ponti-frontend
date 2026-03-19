@@ -24,13 +24,13 @@ type SupplyMovementCreationResponse = SuccessResponse<{
 }>;
 type SupplyMovementMutationResponse = SuccessResponse<unknown>;
 
-function getImportErrorData(error: unknown): BatchErrorPayload | undefined {
+function getBatchErrorData(error: unknown): BatchErrorPayload | undefined {
   const axiosError = error as AxiosError<BatchErrorPayload>;
   return axiosError?.response?.data ?? (error as BatchErrorPayload | undefined);
 }
 
-function getImportErrorMessage(error: unknown): string {
-  const data = getImportErrorData(error);
+function getBatchErrorMessage(error: unknown): string {
+  const data = getBatchErrorData(error);
 
   if (!data) {
     return "Error inesperado al importar insumos.";
@@ -177,8 +177,10 @@ const useSupplyMovements = () => {
 
         setErrorCreation("Ocurrio un error en la creación del movimiento");
       } catch (error) {
+        const payload = getBatchErrorData(error) ?? null;
+        setErrorCreationPayload(payload);
         setErrorCreation(
-          extractErrorMessage(error, "Error desconocido en la creación del movimiento.")
+          getBatchErrorMessage(error)
         );
       } finally {
         setProcessingCreation(false);
@@ -215,10 +217,10 @@ const useSupplyMovements = () => {
 
         setErrorCreation("Ocurrio un error en la importación del movimiento");
       } catch (error) {
-        const payload = getImportErrorData(error) ?? null;
+        const payload = getBatchErrorData(error) ?? null;
         setErrorCreationPayload(payload);
         setErrorCreation(
-          getImportErrorMessage(error)
+          getBatchErrorMessage(error)
         );
       } finally {
         setProcessingCreation(false);
