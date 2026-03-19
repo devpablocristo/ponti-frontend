@@ -16,7 +16,7 @@ import {
 } from "../../../hooks/useSupplyMovement/types";
 
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
-import { DEFAULT_ITEM_ROW_COUNT } from "../utils";
+import { DEFAULT_ITEM_ROW_COUNT, replaceSupplyIdsWithNames } from "../utils";
 import Drawer from "../../../components/Drawer/Drawer";
 import {
   Campaign,
@@ -120,6 +120,7 @@ export default function CreateItem({
     null
   );
   const latestItemsRef = useRef(items);
+  const latestSuppliesRef = useRef(supplies);
   const latestProjectIdRef = useRef(projectId);
   const latestOnProductCreatedRef = useRef(onProductCreated);
   const latestGetStockRef = useRef(getStock);
@@ -336,18 +337,19 @@ export default function CreateItem({
           errorCreationPayload.error.details.trim() !== ""
           ? errorCreationPayload.error.details
           : errorCreation ?? "";
-      setError(message);
+      setError(replaceSupplyIdsWithNames(message, supplies));
       setSuccessMessage(null);
     }
-  }, [errorCreation, errorCreationPayload]);
+  }, [errorCreation, errorCreationPayload, supplies]);
 
   useEffect(() => {
     latestItemsRef.current = items;
+    latestSuppliesRef.current = supplies;
     latestProjectIdRef.current = projectId;
     latestOnProductCreatedRef.current = onProductCreated;
     latestGetStockRef.current = getStock;
     latestGetProvidersRef.current = getProviders;
-  }, [items, projectId, onProductCreated, getStock, getProviders]);
+  }, [items, supplies, projectId, onProductCreated, getStock, getProviders]);
 
   useEffect(() => {
     if (lastSubmittedRowIndexes.length === 0) return;
@@ -362,13 +364,14 @@ export default function CreateItem({
         if (movement.error_detail !== "") {
           const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
           const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
-          errors.push(detail);
-          nextItemErrors[uiRowIndex] = detail;
+          const detailWithNames = replaceSupplyIdsWithNames(detail, latestSuppliesRef.current);
+          errors.push(detailWithNames);
+          nextItemErrors[uiRowIndex] = detailWithNames;
         }
       });
 
       if (errors.length > 0) {
-        setError(errors.join("\n"));
+        setError(replaceSupplyIdsWithNames(errors.join("\n"), latestSuppliesRef.current));
         setItemErrors(nextItemErrors);
         setSuccessMessage(null);
         if (hasSavedMovements) {
@@ -654,8 +657,11 @@ export default function CreateItem({
           : 0;
 
         if (seenSupplyIds.has(supplyId)) {
+          const remitoLabel = orderNumber.trim()
+            ? `El remito de devolución ${orderNumber.trim()}`
+            : "Este remito de devolución";
           errors.push(
-            `El remito de devolución ${orderNumber.trim()} ya contiene el insumo ${selectedSupply?.name || "seleccionado"} dentro del request.`
+            `${remitoLabel} ya contiene el insumo ${selectedSupply?.name || "seleccionado"} dentro del request.`
           );
           return;
         }
