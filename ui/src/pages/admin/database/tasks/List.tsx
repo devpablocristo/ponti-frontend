@@ -25,12 +25,12 @@ import {
 const columns: Column<LaborInfo>[] = [
   {
     key: "name",
-    header: "Nombre",
+    header: "Labor",
     render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
   },
   {
     key: "category_name",
-    header: "Categoría",
+    header: "Rubro",
     render: (value) => String(value ?? ""),
   },
   {

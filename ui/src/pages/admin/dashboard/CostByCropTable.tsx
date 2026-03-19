@@ -28,6 +28,13 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
     return match ? match[0] : "bg-gray-50";
   };
 
+  const totalRotationPct = Math.round(
+  (crops.reduce((sum, crop) => sum + Number(crop.hectares || 0), 0) /
+    Number(crop_incidence.total.hectares || 1)) *
+    100
+);
+
+
   return (
     <div className="bg-white rounded-xl border p-4 w-full">
       <h3 className="font-medium text-[#020617] font-sans mb-4 text-xl">
@@ -63,7 +70,7 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
         <div className="h-[45px]"></div>
         <div className="bg-[#E5E7EB] h-[45px] text-center content-center rounded-l-[5px]">{crop_incidence.total.hectares} Has</div>
         <div className="bg-[#E5E7EB] h-[45px] text-center content-center">
-          {crops.reduce((sum, crop) => sum + parseFloat(crop.incidence_pct), 0)}%
+          {totalRotationPct}%
         </div>
         <div className="bg-[#E5E7EB] h-[45px] text-center content-center rounded-r-[5px]">{crop_incidence.total.avg_cost_per_ha_usd} u$/Ha</div>
       </div>
