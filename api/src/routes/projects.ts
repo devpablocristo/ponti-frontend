@@ -615,7 +615,7 @@ router.get("/:id/dollar-values", async (req: Request, res: Response) => {
       data: dollar,
     };
 
-    if (dollar.length > 0) {
+    if (Array.isArray(dollar) && dollar.length > 0) {
       setImmediate(() => cache.set(`dollar:${projectId}`, data));
     }
 
@@ -846,7 +846,7 @@ router.get("/:id/commercializations", async (req: Request, res: Response) => {
       data: commerce,
     };
 
-    if (commerce.length > 0) {
+    if (Array.isArray(commerce) && commerce.length > 0) {
       setImmediate(() => cache.set(`commerce:${projectId}`, data));
     }
 
