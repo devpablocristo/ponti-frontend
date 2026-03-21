@@ -7,6 +7,7 @@ COPY ui/package*.json ui/yarn.lock ./
 RUN yarn install --frozen-lockfile
 
 COPY ui/ ./
+COPY ui/.deps/core /app/.deps/core
 RUN yarn build
 
 # Server

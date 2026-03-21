@@ -1,3 +1,4 @@
+import { request } from "@devpablocristo/core-http/fetch";
 import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 
 export type AskRequest = {
@@ -53,19 +54,12 @@ export const askAICopilot = async (
   payload: AskRequest,
   headers: AskHeaders
 ): Promise<AskResponse> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}/ask`, {
+  return request<AskResponse>("/ask", {
     method: "POST",
+    body: payload,
     headers: buildHeaders(headers.projectId),
-    body: JSON.stringify(payload),
+    baseURLs: [getBaseUrl()],
   });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al consultar el AI Copilot Service");
-  }
-
-  return (await response.json()) as AskResponse;
 };
 
 export type InsightItem = {
@@ -106,16 +100,11 @@ export type InsightsSummary = {
 export const getInsightsSummary = async (
   headers: AskHeaders
 ): Promise<InsightsSummary> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}/insights/summary`, {
+  return request<InsightsSummary>("/insights/summary", {
     method: "GET",
     headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
   });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al consultar summary de insights");
-  }
-  return (await response.json()) as InsightsSummary;
 };
 
 export const getInsights = async (
@@ -123,19 +112,11 @@ export const getInsights = async (
   entityType: string,
   entityId: string
 ): Promise<{ insights: InsightItem[] }> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(
-    `${baseUrl}/insights/${entityType}/${entityId}`,
-    {
-      method: "GET",
-      headers: buildHeaders(headers.projectId),
-    }
-  );
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al consultar insights");
-  }
-  return (await response.json()) as { insights: InsightItem[] };
+  return request<{ insights: InsightItem[] }>(`/insights/${entityType}/${entityId}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
 };
 
 export type ComputeInsightsResult = {
@@ -147,14 +128,9 @@ export type ComputeInsightsResult = {
 export const computeInsights = async (
   headers: AskHeaders
 ): Promise<ComputeInsightsResult> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}/insights/compute`, {
+  return request<ComputeInsightsResult>("/insights/compute", {
     method: "POST",
     headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
   });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al recomputar insights");
-  }
-  return (await response.json()) as ComputeInsightsResult;
 };

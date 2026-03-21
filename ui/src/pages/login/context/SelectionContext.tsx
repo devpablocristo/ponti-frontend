@@ -1,14 +1,9 @@
 // contexts/SelectionContext.tsx
 import { useState, useEffect } from "react";
+import { createBrowserStorageNamespace } from "@devpablocristo/core-browser/storage";
 import { SelectionContext } from "./SelectionContext.shared";
 
-function prefix() {
-  return `ponti:${window.location.host}:`;
-}
-
-function key(name: string) {
-  return `${prefix()}${name}`;
-}
+const storage = createBrowserStorageNamespace({ namespace: "ponti" });
 
 export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -21,72 +16,46 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
   ];
 
   const [customer, setCustomer] = useState(() => {
-    const stored = localStorage.getItem(key("customer"));
-    return stored ? JSON.parse(stored) : null;
+    return storage.getJSON("customer");
   });
 
   const [project, setProject] = useState(() => {
-    const stored = localStorage.getItem(key("project"));
-    return stored ? JSON.parse(stored) : null;
+    return storage.getJSON("project");
   });
 
   const [projectId, setProjectId] = useState(() => {
-    const stored = localStorage.getItem(key("project_id"));
-    return stored ? JSON.parse(stored) : null;
+    return storage.getJSON("project_id");
   });
 
   const [campaign, setCampaign] = useState(() => {
-    const stored = localStorage.getItem(key("campaign"));
-    return stored ? JSON.parse(stored) : null;
+    return storage.getJSON("campaign");
   });
 
   const [field, setField] = useState(() => {
-    const stored = localStorage.getItem(key("field"));
-    return stored ? JSON.parse(stored) : null;
+    return storage.getJSON("field");
   });
 
   useEffect(() => {
-    if (customer === undefined || customer === null) {
-      localStorage.removeItem(key("customer"));
-    } else {
-      localStorage.setItem(key("customer"), JSON.stringify(customer));
-    }
+    storage.setJSON("customer", customer);
   }, [customer]);
 
   useEffect(() => {
-    if (project === undefined || project === null) {
-      localStorage.removeItem(key("project"));
-    } else {
-      localStorage.setItem(key("project"), JSON.stringify(project));
-    }
+    storage.setJSON("project", project);
   }, [project]);
 
   useEffect(() => {
-    if (projectId === undefined || projectId === null) {
-      localStorage.removeItem(key("project_id"));
-    } else {
-      localStorage.setItem(key("project_id"), JSON.stringify(projectId));
-    }
+    storage.setJSON("project_id", projectId);
   }, [projectId]);
 
   useEffect(() => {
-    if (campaign === undefined || campaign === null) {
-      localStorage.removeItem(key("campaign"));
-    } else {
-      localStorage.setItem(key("campaign"), JSON.stringify(campaign));
-      // Guardar el project_id del proyecto seleccionado
-      if (project?.id) {
-        localStorage.setItem(key("project_id"), JSON.stringify(project.id));
-      }
+    storage.setJSON("campaign", campaign);
+    if (campaign && project?.id) {
+      storage.setJSON("project_id", project.id);
     }
   }, [campaign, project]);
 
   useEffect(() => {
-    if (field === undefined || field === null) {
-      localStorage.removeItem(key("field"));
-    } else {
-      localStorage.setItem(key("field"), JSON.stringify(field));
-    }
+    storage.setJSON("field", field);
   }, [field]);
 
   return (

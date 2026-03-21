@@ -24,6 +24,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Checkout core
+        uses: actions/checkout@v4
+        with:
+          repository: devpablocristo/core
+          token: ${{ secrets.CORE_REPO_READ_TOKEN }}
+          path: ui/.deps/core
+
       - name: Set DEV environment
         id: env
         run: |
