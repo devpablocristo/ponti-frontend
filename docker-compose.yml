@@ -7,6 +7,7 @@ services:
       - "5173:5173"
     volumes:
       - ./ui:/app
+      - ../../core:/app/.deps/core
       - ui_node_modules:/app/node_modules
       - yarn_cache:/yarn-cache
     # Vite lee `./ui/.env` (montado). Evitar hardcodear infra acá.

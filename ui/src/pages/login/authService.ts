@@ -59,7 +59,7 @@ export class AuthService {
       const axiosError = error as AxiosError;
 
       throw new RequestError(
-        axiosError.status,
+        axiosError.response?.status,
         "Ocurrió un error en la busqueda de datos, por favor intente mas tarde."
       );
     }
@@ -82,7 +82,7 @@ export class AuthService {
       const axiosError = error as AxiosError;
 
       throw new RequestError(
-        axiosError.status,
+        axiosError.response?.status,
         "Error al refrescar el token, por favor intente más tarde."
       );
     }
@@ -95,7 +95,7 @@ export class AuthService {
       const axiosError = error as AxiosError;
 
       throw new RequestError(
-        axiosError.status,
+        axiosError.response?.status,
         "Ocurrió un error en la busqueda de datos, por favor intente mas tarde."
       );
     }

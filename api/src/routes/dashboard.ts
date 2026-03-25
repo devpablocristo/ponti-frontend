@@ -58,6 +58,7 @@ router.get("", async (req: Request, res: Response) => {
       data: dashboard,
     };
 
+    cache.set(url, data);
     res.status(200).json(data);
   } catch (error: any) {
     const err = error as ApiResponse<null>;

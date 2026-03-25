@@ -6,5 +6,6 @@
 
 .cursorignore
 .cursorrules
+.deps/
 *.code-workspace
 .id

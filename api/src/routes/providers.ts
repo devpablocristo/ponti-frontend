@@ -27,16 +27,18 @@ router.get("", async (req: Request, res: Response) => {
     }
 
     const { data: providers } = await apiClient.get<any>("/providers", headers);
+    const raw = providers;
+    const items = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
 
     const data = {
       success: true,
       data: {
-        data: providers,
-        total: providers.length,
+        data: items,
+        total: items.length,
       },
     };
 
-    if (providers.length > 0) {
+    if (items.length > 0) {
       cache.set("providers", data);
     }
 

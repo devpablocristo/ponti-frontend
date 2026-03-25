@@ -66,7 +66,7 @@ router.get("", async (req: Request, res: Response) => {
         clients: customers.data,
         managers: managers?.data ?? managers,
         investors: investors.data,
-        campaigns: campaigns,
+        campaigns: campaigns?.data ?? campaigns,
         crops: crops.data,
         rentTypes: leaseTypes?.data ?? leaseTypes,
       },

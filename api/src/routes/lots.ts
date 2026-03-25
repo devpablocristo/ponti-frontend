@@ -66,7 +66,7 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    if (lots.items.length > 0) {
+    if (Array.isArray(lots?.items) && lots.items.length > 0) {
       setImmediate(() => cache.set(key, data));
     }
 

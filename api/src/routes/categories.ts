@@ -33,6 +33,7 @@ router.get("", async (req: Request, res: Response) => {
 
     const { data: raw } = await apiClient.get<any>("/categories", headers);
     let categories = raw.data ?? raw;
+    if (!Array.isArray(categories)) categories = [];
     if (Array.isArray(categories) && type_id !== 0) {
       categories = categories.filter(
         (category: any) => category.type_id === type_id
