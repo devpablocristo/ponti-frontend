@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 
-import DataTable from "../../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import useCustomers from "../../../../hooks/useCustomers";
 import { getHardDeleteCustomerMessage } from "./hardDeleteCopy";

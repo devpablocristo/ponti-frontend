@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { AxiosError } from "axios";
 
-import FilterBar from "../../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import Button from "../../../../components/Button/Button";
-import DataTable from "../../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { apiClient } from "@/api/client";
 import { ErrorResponse } from "@/api/types";
 import { Column } from "../../types";

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle, Pencil } from "lucide-react";
-import DataTable from "../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import { LotKPIs, LotsData, LotsDataUpdate } from "../../../hooks/useLots/types";
 import useLots from "../../../hooks/useLots";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import InputField from "../../../components/Input/InputField";

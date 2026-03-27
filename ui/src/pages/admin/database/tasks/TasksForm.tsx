@@ -3,7 +3,7 @@ import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import FilterBar from "../../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import useCategories from "../../../../hooks/useCategories";
 import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";

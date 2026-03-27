@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react";
 import { ArrowUp, Hourglass, LoaderCircle, Wallet } from "lucide-react";
 import { usePDF } from "react-to-pdf";
 
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import Button from "../../../components/Button/Button";
 import ManagementBalanceTable from "./ManagementBalanceTable";

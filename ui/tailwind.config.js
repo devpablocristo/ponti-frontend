@@ -2,7 +2,14 @@
 const withMT = require("@material-tailwind/react/utils/withMT");
 
 export default withMT({
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "../../../core/authn/ts/src/**/*.{js,ts,jsx,tsx}",
+    "../../../core/browser/ts/src/**/*.{js,ts,jsx,tsx}",
+    "../../../core/http/ts/src/**/*.{js,ts,jsx,tsx}",
+    "../../../modules/**/ts/src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
       colors: {

@@ -284,10 +284,10 @@ export const useWorkspaceFilters = (
   const handleSetProject = useCallback(
     (project: Project | undefined) => {
       setSelectedProject(project);
+      contextSetProjectId(project?.id);
       setSelectedCampaign(undefined);
-      //contextSetProjectId(null);
     },
-    [setSelectedProject, setSelectedCampaign]
+    [contextSetProjectId, setSelectedProject, setSelectedCampaign]
   );
 
   const handleSetProjectUnknown = useCallback(

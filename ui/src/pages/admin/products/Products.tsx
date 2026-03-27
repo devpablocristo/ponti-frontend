@@ -1,8 +1,8 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import DataTable from "../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import CreateItem from "./CreateItem";
 import ImportSupplyMovements from "./ImportSupplyMovements";
