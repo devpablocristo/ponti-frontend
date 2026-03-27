@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
-import FilterBar from "../../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import useCommercializations from "../../../../hooks/useCommercializations";

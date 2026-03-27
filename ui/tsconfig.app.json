@@ -41,6 +41,30 @@
       "@devpablocristo/core-browser/*": [
         "./.deps/core/browser/ts/src/*",
         "../../../core/browser/ts/src/*"
+      ],
+      "@devpablocristo/modules-ui-data-display": [
+        "./.deps/modules/ui/data-display/ts/src/index.ts",
+        "../../../modules/ui/data-display/ts/src/index.ts"
+      ],
+      "@devpablocristo/modules-ui-data-display/*": [
+        "./.deps/modules/ui/data-display/ts/src/*",
+        "../../../modules/ui/data-display/ts/src/*"
+      ],
+      "@devpablocristo/modules-ui-filters": [
+        "./.deps/modules/ui/filters/ts/src/index.ts",
+        "../../../modules/ui/filters/ts/src/index.ts"
+      ],
+      "@devpablocristo/modules-ui-filters/*": [
+        "./.deps/modules/ui/filters/ts/src/*",
+        "../../../modules/ui/filters/ts/src/*"
+      ],
+      "@devpablocristo/modules-ui-forms": [
+        "./.deps/modules/ui/forms/ts/src/index.ts",
+        "../../../modules/ui/forms/ts/src/index.ts"
+      ],
+      "@devpablocristo/modules-ui-forms/*": [
+        "./.deps/modules/ui/forms/ts/src/*",
+        "../../../modules/ui/forms/ts/src/*"
       ]
     },
 

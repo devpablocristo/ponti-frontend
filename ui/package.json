@@ -15,6 +15,10 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@devpablocristo/core-browser": "file:../../../core/browser/ts",
+    "@devpablocristo/modules-ui-data-display": "file:../../../modules/ui/data-display/ts",
+    "@devpablocristo/modules-ui-filters": "file:../../../modules/ui/filters/ts",
+    "@devpablocristo/modules-ui-forms": "file:../../../modules/ui/forms/ts",
     "@heroicons/react": "^2.2.0",
     "@material-tailwind/react": "^2.1.10",
     "axios": "^1.8.1",

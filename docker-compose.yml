@@ -2,12 +2,15 @@ services:
   ponti-ui:
     image: node:20.17.0
     working_dir: /app
-    command: sh -c "if [ ! -f node_modules/.yarn-integrity ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev --host 0.0.0.0"
+    command: sh -c "if [ ! -f node_modules/.yarn-integrity ] || [ ! -d node_modules/@devpablocristo/core-browser ] || [ ! -d node_modules/@devpablocristo/modules-ui-data-display ] || [ ! -d node_modules/@devpablocristo/modules-ui-filters ] || [ ! -d node_modules/@devpablocristo/modules-ui-forms ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev --host 0.0.0.0"
     ports:
       - "5173:5173"
     volumes:
       - ./ui:/app
       - ../../core:/app/.deps/core
+      - ../../modules:/app/.deps/modules
+      - ../../core:/core
+      - ../../modules:/modules
       - ui_node_modules:/app/node_modules
       - yarn_cache:/yarn-cache
     # Vite lee `./ui/.env` (montado). Evitar hardcodear infra acá.
