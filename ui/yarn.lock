@@ -217,16 +217,16 @@
   resolved "https://registry.npmjs.org/@csstools/css-tokenizer/-/css-tokenizer-3.0.4.tgz"
   integrity sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==
 
-"@devpablocristo/core-browser@file:../core/browser/ts":
+"@devpablocristo/core-browser@file:../../../core/browser/ts":
   version "0.1.0"
 
-"@devpablocristo/modules-ui-data-display@file:../modules/ui/data-display/ts":
+"@devpablocristo/modules-ui-data-display@file:../../../modules/ui/data-display/ts":
   version "0.1.0"
 
-"@devpablocristo/modules-ui-filters@file:../modules/ui/filters/ts":
+"@devpablocristo/modules-ui-filters@file:../../../modules/ui/filters/ts":
   version "0.1.0"
 
-"@devpablocristo/modules-ui-forms@file:../modules/ui/forms/ts":
+"@devpablocristo/modules-ui-forms@file:../../../modules/ui/forms/ts":
   version "0.1.0"
 
 "@emotion/is-prop-valid@^0.8.2":
