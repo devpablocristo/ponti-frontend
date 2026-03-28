@@ -26,6 +26,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: devpablocristo/modules
+          token: ${{ secrets.MODULES_REPO_READ_TOKEN || secrets.CORE_REPO_READ_TOKEN }}
+          ref: main
           path: modules-repo
 
       - name: Link shared repos for file dependencies
@@ -76,6 +78,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: devpablocristo/modules
+          token: ${{ secrets.MODULES_REPO_READ_TOKEN || secrets.CORE_REPO_READ_TOKEN }}
+          ref: main
           path: modules-repo
 
       - name: Link shared repos for file dependencies
