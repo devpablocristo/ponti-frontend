@@ -17,6 +17,7 @@ import {
   getValueByAliases,
   MAX_IMPORT_FILE_SIZE_MB,
 } from "./importUtils";
+import { SuccessResponse } from "@/api/types";
 
 const HEADER_ALIASES = {
   movementType: ["ingreso", "tipo_ingreso", "movement_type"],
@@ -119,6 +120,24 @@ type CampaignOption = {
   name: string;
   project_id?: number;
 };
+
+type ApiCollectionResponse<T> =
+  | T[]
+  | SuccessResponse<T[]>
+  | {
+      data?: T[] | SuccessResponse<T[]>;
+    };
+
+function extractCollection<T>(payload: ApiCollectionResponse<T> | undefined): T[] {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+
+  const firstLevel = payload.data;
+  if (Array.isArray(firstLevel)) return firstLevel;
+  if (firstLevel && Array.isArray(firstLevel.data)) return firstLevel.data;
+
+  return [];
+}
 
 
 export default function ImportSupplyMovements({
@@ -294,9 +313,9 @@ export default function ImportSupplyMovements({
         const projectsByCustomerId = new Map<number, ProjectOption[]>();
         const campaignsByCustomerAndProject = new Map<string, CampaignOption[]>();
 
-        const customersResponse = await apiClient.get<any>("/customers?limit=1000");
-        const customers: CustomerOption[] =
-          customersResponse?.data?.data ?? customersResponse?.data ?? [];
+        const customersResponse =
+          await apiClient.get<ApiCollectionResponse<CustomerOption>>("/customers?limit=1000");
+        const customers = extractCollection(customersResponse);
 
         customers.forEach((customer) => {
           if (customer?.id != null && customer?.name) {
@@ -331,22 +350,20 @@ export default function ImportSupplyMovements({
           const customer = customerByName.get(normalizedCustomerName);
           if (!customer) continue;
 
-          const projectsResponse = await apiClient.get<any>(
+          const projectsResponse = await apiClient.get<ApiCollectionResponse<ProjectOption>>(
             `/projects/customers/${customer.id}?limit=1000`
           );
-          const projects: ProjectOption[] =
-            projectsResponse?.data?.data ?? projectsResponse?.data ?? [];
+          const projects = extractCollection(projectsResponse);
           projectsByCustomerId.set(customer.id, projects);
 
           for (const project of projects) {
             if (!project?.name) continue;
-            const campaignsResponse = await apiClient.get<any>(
+            const campaignsResponse = await apiClient.get<ApiCollectionResponse<CampaignOption>>(
               `/campaigns?customer_id=${customer.id}&project_name=${encodeURIComponent(
                 project.name
               )}&limit=1000`
             );
-            const campaigns: CampaignOption[] =
-              campaignsResponse?.data?.data ?? campaignsResponse?.data ?? [];
+            const campaigns = extractCollection(campaignsResponse);
             campaignsByCustomerAndProject.set(
               `${customer.id}::${normalizeText(project.name)}`,
               campaigns

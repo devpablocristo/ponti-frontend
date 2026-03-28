@@ -3,12 +3,8 @@ FROM node:20.17.0 AS ui-builder
 
 WORKDIR /repo/ponti/ponti-frontend/ui
 
-COPY core-repo /repo/core
-COPY modules-repo /repo/modules
-
 COPY ui/package*.json ui/yarn.lock ./
-RUN yarn install --frozen-lockfile \
-    && ln -s /repo/ponti/ponti-frontend/ui/node_modules /repo/node_modules
+RUN yarn install --frozen-lockfile
 
 COPY ui/ ./
 RUN yarn build

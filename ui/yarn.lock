@@ -217,17 +217,39 @@
   resolved "https://registry.npmjs.org/@csstools/css-tokenizer/-/css-tokenizer-3.0.4.tgz"
   integrity sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==
 
-"@devpablocristo/core-browser@file:../../../core/browser/ts":
+"@devpablocristo/core-authn@^0.1.0":
   version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/core-authn/-/core-authn-0.1.0.tgz#b6d4a71fdb1447a8691802cd24603bb18324f390"
+  integrity sha512-yurWMYW/Ody32m3JGvi6+C1nPuGmOkNtwjdWclKVccg2I3vVQg5L+RDriCyv+QBjs5UVkT2KzkxVIcAkGWEubQ==
+  dependencies:
+    "@devpablocristo/core-browser" "^0.1.0"
+    "@devpablocristo/core-http" "^0.1.0"
+    axios "^1.8.1"
 
-"@devpablocristo/modules-ui-data-display@file:../../../modules/ui/data-display/ts":
+"@devpablocristo/core-browser@^0.1.0":
   version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/core-browser/-/core-browser-0.1.0.tgz#a639b403dfdbdbbe2b2c3e7166f8416f4e479025"
+  integrity sha512-OgBEBYopoNWAm9qiSWHq/9JZ3MApwxd6dEQGu9pH0QVYbB78iph438DZUinROUQeetVVOQZEVsNSdlRLt7Ct4Q==
 
-"@devpablocristo/modules-ui-filters@file:../../../modules/ui/filters/ts":
+"@devpablocristo/core-http@^0.1.0":
   version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/core-http/-/core-http-0.1.0.tgz#f539568b35cf53c2e682c1fd81be3cc759c0dee3"
+  integrity sha512-Rt7K756Zm2YO3lAj00TRIdgkWZPF0fRnqcSmokvGOfktkOJvv00KZtugRrlZTpjPWz+liYZwA1HmOs31a42wkA==
 
-"@devpablocristo/modules-ui-forms@file:../../../modules/ui/forms/ts":
+"@devpablocristo/modules-ui-data-display@^0.1.0":
   version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.1.0.tgz#912cb2fcd72ef445c0634d0e9e3ced5e358550c4"
+  integrity sha512-K3073huOmg/gB3NQO3ygiz1yPPZhCWD0Fs7/z4QyjCGDIv9GI8CsZ5n/gslJ1Te+WdNGDKeticx5hI9ibrhM0A==
+
+"@devpablocristo/modules-ui-filters@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-filters/-/modules-ui-filters-0.1.0.tgz#757734d149206b97625dd0c4bae676eade4edb41"
+  integrity sha512-qia9gu/R6DmVN63+Y3miK9tE2nPwhUbjhtETTEud6IDwciY37KnYG/nDGeyCkfBX9UwNbJIOsuivcVNDyM7HqQ==
+
+"@devpablocristo/modules-ui-forms@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-forms/-/modules-ui-forms-0.1.0.tgz#2433f3f4a4c84531cb0efa378044f1787a20c6ba"
+  integrity sha512-BLFvvJcsdl3x7Uc5U8L12YOkJntv7/px5b04/kJJLeUXv9dd8ltffUROOabhiYm2ZbczO1ec2rnrANlVNSQJXw==
 
 "@emotion/is-prop-valid@^0.8.2":
   version "0.8.8"

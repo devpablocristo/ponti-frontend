@@ -15,10 +15,12 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@devpablocristo/core-browser": "file:../../../core/browser/ts",
-    "@devpablocristo/modules-ui-data-display": "file:../../../modules/ui/data-display/ts",
-    "@devpablocristo/modules-ui-filters": "file:../../../modules/ui/filters/ts",
-    "@devpablocristo/modules-ui-forms": "file:../../../modules/ui/forms/ts",
+    "@devpablocristo/core-authn": "^0.1.0",
+    "@devpablocristo/core-browser": "^0.1.0",
+    "@devpablocristo/core-http": "^0.1.0",
+    "@devpablocristo/modules-ui-data-display": "^0.1.0",
+    "@devpablocristo/modules-ui-filters": "^0.1.0",
+    "@devpablocristo/modules-ui-forms": "^0.1.0",
     "@heroicons/react": "^2.2.0",
     "@material-tailwind/react": "^2.1.10",
     "axios": "^1.8.1",
@@ -56,5 +58,6 @@
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0",
     "vitest": "^3.2.4"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

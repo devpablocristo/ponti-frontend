@@ -5,6 +5,10 @@ on:
     branches: [develop, main]
   workflow_dispatch:
 
+concurrency:
+  group: ponti-frontend-ci-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -15,30 +19,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Checkout core
-        uses: actions/checkout@v4
-        with:
-          repository: devpablocristo/core
-          token: ${{ secrets.CORE_REPO_READ_TOKEN }}
-          path: core-repo
-
-      - name: Checkout modules
-        uses: actions/checkout@v4
-        with:
-          repository: devpablocristo/modules
-          token: ${{ secrets.MODULES_REPO_READ_TOKEN || secrets.CORE_REPO_READ_TOKEN }}
-          ref: main
-          path: modules-repo
-
-      - name: Link shared repos for file dependencies
-        run: |
-          EXPECTED_CORE_PATH="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/core"
-          EXPECTED_MODULES_PATH="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/modules"
-          mkdir -p "$(dirname "$EXPECTED_CORE_PATH")"
-          rm -rf "$EXPECTED_CORE_PATH" "$EXPECTED_MODULES_PATH"
-          ln -s "$GITHUB_WORKSPACE/core-repo" "$EXPECTED_CORE_PATH"
-          ln -s "$GITHUB_WORKSPACE/modules-repo" "$EXPECTED_MODULES_PATH"
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -51,12 +31,6 @@ jobs:
 
       - name: Install UI dependencies
         run: yarn --cwd ui install --frozen-lockfile
-
-      - name: Link workspace node_modules for shared packages
-        run: |
-          EXPECTED_SHARED_NODE_MODULES="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/node_modules"
-          rm -rf "$EXPECTED_SHARED_NODE_MODULES"
-          ln -s "$GITHUB_WORKSPACE/ui/node_modules" "$EXPECTED_SHARED_NODE_MODULES"
 
       - name: Lint UI
         run: yarn --cwd ui lint
@@ -67,30 +41,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Checkout core
-        uses: actions/checkout@v4
-        with:
-          repository: devpablocristo/core
-          token: ${{ secrets.CORE_REPO_READ_TOKEN }}
-          path: core-repo
-
-      - name: Checkout modules
-        uses: actions/checkout@v4
-        with:
-          repository: devpablocristo/modules
-          token: ${{ secrets.MODULES_REPO_READ_TOKEN || secrets.CORE_REPO_READ_TOKEN }}
-          ref: main
-          path: modules-repo
-
-      - name: Link shared repos for file dependencies
-        run: |
-          EXPECTED_CORE_PATH="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/core"
-          EXPECTED_MODULES_PATH="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/modules"
-          mkdir -p "$(dirname "$EXPECTED_CORE_PATH")"
-          rm -rf "$EXPECTED_CORE_PATH" "$EXPECTED_MODULES_PATH"
-          ln -s "$GITHUB_WORKSPACE/core-repo" "$EXPECTED_CORE_PATH"
-          ln -s "$GITHUB_WORKSPACE/modules-repo" "$EXPECTED_MODULES_PATH"
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -103,12 +53,6 @@ jobs:
 
       - name: Install UI dependencies
         run: yarn --cwd ui install --frozen-lockfile
-
-      - name: Link workspace node_modules for shared packages
-        run: |
-          EXPECTED_SHARED_NODE_MODULES="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/node_modules"
-          rm -rf "$EXPECTED_SHARED_NODE_MODULES"
-          ln -s "$GITHUB_WORKSPACE/ui/node_modules" "$EXPECTED_SHARED_NODE_MODULES"
 
       - name: Build UI
         run: yarn --cwd ui build

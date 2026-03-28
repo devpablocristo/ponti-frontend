@@ -48,13 +48,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Checkout core
-        uses: actions/checkout@v4
-        with:
-          repository: devpablocristo/core
-          token: ${{ secrets.CORE_REPO_READ_TOKEN }}
-          path: ui/.deps/core
-
       - name: Auth GCP (STAGING - pull Artifact)
         uses: google-github-actions/auth@v2
         with:

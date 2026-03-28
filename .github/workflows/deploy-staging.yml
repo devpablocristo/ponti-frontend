@@ -11,6 +11,10 @@ on:
         required: false
         default: "main"
 
+concurrency:
+  group: ponti-frontend-deploy-staging-${{ github.event.inputs.ref || github.ref }}
+  cancel-in-progress: true
+
 env:
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev
@@ -31,30 +35,6 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.ref_name }}
 
-      - name: Checkout core
-        uses: actions/checkout@v4
-        with:
-          repository: devpablocristo/core
-          token: ${{ secrets.CORE_REPO_READ_TOKEN }}
-          path: core-repo
-
-      - name: Checkout modules
-        uses: actions/checkout@v4
-        with:
-          repository: devpablocristo/modules
-          token: ${{ secrets.MODULES_REPO_READ_TOKEN || secrets.CORE_REPO_READ_TOKEN }}
-          ref: main
-          path: modules-repo
-
-      - name: Link shared repos for file dependencies
-        run: |
-          EXPECTED_CORE_PATH="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/core"
-          EXPECTED_MODULES_PATH="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/modules"
-          mkdir -p "$(dirname "$EXPECTED_CORE_PATH")"
-          rm -rf "$EXPECTED_CORE_PATH" "$EXPECTED_MODULES_PATH"
-          ln -s "$GITHUB_WORKSPACE/core-repo" "$EXPECTED_CORE_PATH"
-          ln -s "$GITHUB_WORKSPACE/modules-repo" "$EXPECTED_MODULES_PATH"
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -74,9 +54,6 @@ jobs:
         run: |
           corepack enable
           yarn --cwd ui install --frozen-lockfile
-          EXPECTED_SHARED_NODE_MODULES="$(cd "$GITHUB_WORKSPACE/../.." && pwd)/node_modules"
-          rm -rf "$EXPECTED_SHARED_NODE_MODULES"
-          ln -s "$GITHUB_WORKSPACE/ui/node_modules" "$EXPECTED_SHARED_NODE_MODULES"
           yarn --cwd ui build
 
       - name: Build Docker image

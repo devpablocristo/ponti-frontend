@@ -78,8 +78,11 @@ export default function ListTasks() {
   const [labor, setLabor] = useState<LaborInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const safeLabors = Array.isArray(labors) ? labors : [];
-  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
+  const safeCategories = useMemo(
+    () => (Array.isArray(categories) ? categories : []),
+    [categories]
+  );
 
   const { filters, projectId } = useWorkspaceFilters([
     "customer",

@@ -5,10 +5,7 @@ export default withMT({
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    "../../../core/authn/ts/src/**/*.{js,ts,jsx,tsx}",
-    "../../../core/browser/ts/src/**/*.{js,ts,jsx,tsx}",
-    "../../../core/http/ts/src/**/*.{js,ts,jsx,tsx}",
-    "../../../modules/**/ts/src/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@devpablocristo/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
