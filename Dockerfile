@@ -1,13 +1,16 @@
 # App
 FROM node:20.17.0 AS ui-builder
 
-WORKDIR /app
+WORKDIR /repo/ponti/ponti-frontend/ui
+
+COPY core-repo /repo/core
+COPY modules-repo /repo/modules
 
 COPY ui/package*.json ui/yarn.lock ./
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile \
+    && ln -s /repo/ponti/ponti-frontend/ui/node_modules /repo/node_modules
 
 COPY ui/ ./
-COPY ui/.deps/core /app/.deps/core
 RUN yarn build
 
 # Server
@@ -28,7 +31,7 @@ WORKDIR /app
 COPY --from=api-builder /server/dist ./dist
 COPY --from=api-builder /server/node_modules ./node_modules
 
-COPY --from=ui-builder /app/dist ./dist/public
+COPY --from=ui-builder /repo/ponti/ponti-frontend/ui/dist ./dist/public
 
 ENV NODE_ENV=development
 ENV PORT=3000
