@@ -1,50 +1,86 @@
-# React + TypeScript + Vite
+# Ponti Frontend UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicacion React + TypeScript + Vite para la consola de Ponti.
 
-Currently, two official plugins are available:
+## Modulos compartidos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+La UI consume paquetes publicados desde `core` y `modules`:
 
-## Expanding the ESLint configuration
+- `@devpablocristo/core-authn`
+- `@devpablocristo/core-browser`
+- `@devpablocristo/core-http`
+- `@devpablocristo/modules-ai-console`
+- `@devpablocristo/modules-ui-data-display`
+- `@devpablocristo/modules-ui-filters`
+- `@devpablocristo/modules-ui-forms`
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+No usa ya una copia local de `src/modules/ai-console`.
 
-- Configure the top-level `parserOptions` property like this:
+## Tipos OpenAPI de Ponti AI
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+Archivos relevantes:
+
+- `src/generated/ponti-ai.openapi.json`
+- `src/generated/ponti-ai.openapi.ts`
+- `src/types/ai.ts`
+
+Regeneracion:
+
+```bash
+node ./scripts/generate-ai-types.mjs
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+El script intenta primero descargar `http://localhost:8090/openapi.json`. Si el
+servicio no esta arriba, usa el export local desde `ponti-ai/scripts/export_openapi.py`.
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## Build local
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+yarn install
+yarn build
 ```
+
+En Docker, el flujo habitual usa `ponti-frontend/docker-compose.yml`.
+# Ponti Frontend UI
+
+Aplicación React + TypeScript + Vite para la consola de Ponti.
+
+## Módulos compartidos
+
+La UI consume paquetes publicados desde `core` y `modules`:
+
+- `@devpablocristo/core-authn`
+- `@devpablocristo/core-browser`
+- `@devpablocristo/core-http`
+- `@devpablocristo/modules-ai-console`
+- `@devpablocristo/modules-ui-data-display`
+- `@devpablocristo/modules-ui-filters`
+- `@devpablocristo/modules-ui-forms`
+
+No usa ya una copia local de `src/modules/ai-console`.
+
+## Tipos OpenAPI de Ponti AI
+
+Archivos relevantes:
+
+- `src/generated/ponti-ai.openapi.json`
+- `src/generated/ponti-ai.openapi.ts`
+- `src/types/ai.ts`
+
+Regeneración:
+
+```bash
+node ./scripts/generate-ai-types.mjs
+```
+
+El script intenta primero descargar `http://localhost:8090/openapi.json`. Si el
+servicio no está arriba, usa el export local desde `ponti-ai/scripts/export_openapi.py`.
+
+## Build local
+
+```bash
+yarn install
+yarn build
+```
+
+En Docker, el flujo habitual usa `ponti-frontend/docker-compose.yml`.
