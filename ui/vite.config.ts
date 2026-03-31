@@ -22,8 +22,11 @@ export default defineConfig(({ mode }: ConfigEnv) => {
   return {
     plugins: [react()],
     base: "/",
+    cacheDir: ".vite",
     resolve: {
-      alias: [{ find: /^@\/(.+)$/, replacement: `${srcPath}/$1` }],
+      alias: [
+        { find: /^@\/(.+)$/, replacement: `${srcPath}/$1` },
+      ],
     },
     server:
       mode === "development"
