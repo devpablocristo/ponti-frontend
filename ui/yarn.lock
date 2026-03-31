@@ -241,10 +241,10 @@
   resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ai-console/-/modules-ai-console-0.1.0.tgz#48786cac6730968f5cbb4b256701b9fe82e7761b"
   integrity sha512-qzKaTWev8vjKupXfv7KaW33ii5ZbX6vwHwhmYiHUeSdK9SZCLYa3iGHq9lLYsZDpx8f/Ivp9u+X2+2rhvYk2oA==
 
-"@devpablocristo/modules-ui-data-display@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.1.0.tgz#912cb2fcd72ef445c0634d0e9e3ced5e358550c4"
-  integrity sha512-K3073huOmg/gB3NQO3ygiz1yPPZhCWD0Fs7/z4QyjCGDIv9GI8CsZ5n/gslJ1Te+WdNGDKeticx5hI9ibrhM0A==
+"@devpablocristo/modules-ui-data-display@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.2.0.tgz#b330309f1e4f37de009b8ff0ac2738c1c712b8ec"
+  integrity sha512-IXIIRUOi2jhduaQ8h4aSbb8j4jxtqKAnRimEhcaaGBzQ+tew+wa7BJMInNI3+ln7EXMe+ueEBQP0gYSB2Jqvfg==
 
 "@devpablocristo/modules-ui-filters@^0.1.0":
   version "0.1.0"
