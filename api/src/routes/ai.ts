@@ -101,6 +101,63 @@ router.get("/insights/:entity_type/:entity_id", async (req: Request, res: Respon
   }
 });
 
+router.get("/copilot/insights/:insight_id/explain", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { insight_id } = req.params;
+    const { data } = await apiClient.get<any>(
+      `/ai/copilot/insights/${insight_id}/explain`,
+      headers
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.get("/copilot/insights/:insight_id/why", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { insight_id } = req.params;
+    const { data } = await apiClient.get<any>(
+      `/ai/copilot/insights/${insight_id}/why`,
+      headers
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.get("/copilot/insights/:insight_id/next-steps", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { insight_id } = req.params;
+    const { data } = await apiClient.get<any>(
+      `/ai/copilot/insights/${insight_id}/next-steps`,
+      headers
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
 router.post("/insights/:insight_id/actions", async (req: Request, res: Response) => {
   const userId = requireUser(req, res);
   if (!userId) return;

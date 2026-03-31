@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import {
+  InsightCardsList,
+  InsightSummaryCards,
+  type InsightListItem,
+} from "@devpablocristo/modules-ai-console";
 import Button from "../../../components/Button/Button";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
-import {
-  computeInsights,
-  getInsights,
-  getInsightsSummary,
-  InsightsSummary,
-  InsightItem,
-} from "@/api/aiClient";
+import { computeInsights, getInsights, getInsightsSummary } from "@/api/aiClient";
+import type { InsightItem, InsightsSummary } from "@/types/ai";
 
 const AIInsights = () => {
   const { filters, projectId } = useWorkspaceFilters([
@@ -33,6 +33,39 @@ const AIInsights = () => {
   const resolvedEntityType = entityType || "project";
   const resolvedEntityId =
     entityId || (projectId ? String(projectId) : "");
+
+  const formatImpact = (item: InsightItem): string | null => {
+    if (item.impact_min == null || item.impact_max == null) {
+      return null;
+    }
+
+    return `Impacto: ${item.impact_min.toFixed(2)}–${item.impact_max.toFixed(2)}${item.impact_unit ?? ""}`;
+  };
+
+  const buildInsightCardItem = (item: InsightItem): InsightListItem => ({
+    id: item.id,
+    title: item.title,
+    summary: item.summary,
+    badge: `${item.type} · ${item.severity}`,
+    impact: formatImpact(item),
+    ctaLabel: getCtaLabel(item),
+    metadata: [
+      `Confianza: ${item.confidence ?? "n/a"}`,
+      `Ventana: ${getWindowLabel(item)}`,
+      ...(item.cooldown_until ? [`Cooldown: ${item.cooldown_until}`] : []),
+      ...(item.rules_version ? [`Regla: ${item.rules_version}`] : []),
+    ],
+    action: (
+      <Link
+        className="text-sm text-blue-600 hover:underline"
+        to={`/admin/ai-copilot?insight_id=${encodeURIComponent(
+          item.id
+        )}&mode=explain&title=${encodeURIComponent(item.title)}`}
+      >
+        Abrir Copilot
+      </Link>
+    ),
+  });
 
   const getWindowLabel = (item: InsightItem): string => {
     const raw = item.evidence?.["window"];
@@ -87,7 +120,7 @@ const AIInsights = () => {
       }
       const result = await computeInsights(headers);
       setSuccess(
-        `Insights: ${result.computed} evaluados, ${result.insights_created} creados.`
+        `Insights: ${result.computed} evaluados, ${result.insights_created} creados. Req ${result.request_id}.`
       );
       await handleSummary();
     } catch (err) {
@@ -146,67 +179,22 @@ const AIInsights = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="border rounded-md p-4">
-          <div className="text-sm text-slate-500">Nuevos</div>
-          <div className="text-2xl font-semibold">
-            {summary?.new_count_total ?? "-"}
-          </div>
-        </div>
-        <div className="border rounded-md p-4">
-          <div className="text-sm text-slate-500">Alta severidad</div>
-          <div className="text-2xl font-semibold">
-            {summary?.new_count_high_severity ?? "-"}
-          </div>
-        </div>
-        <div className="border rounded-md p-4">
-          <div className="text-sm text-slate-500">Top Insights</div>
-          <div className="text-2xl font-semibold">
-            {summary?.top_insights?.length ?? "-"}
-          </div>
-        </div>
-      </div>
+      <InsightSummaryCards
+        cards={[
+          { label: "Nuevos", value: summary?.new_count_total ?? "-" },
+          {
+            label: "Alta severidad",
+            value: summary?.new_count_high_severity ?? "-",
+          },
+          { label: "Top Insights", value: summary?.top_insights?.length ?? "-" },
+        ]}
+      />
 
-      <div className="border rounded-md p-4">
-        <h3 className="font-semibold mb-2">Top Insights</h3>
-        {summary?.top_insights?.length ? (
-          <div className="grid grid-cols-1 gap-3">
-            {summary.top_insights.map((item) => (
-              <div key={item.id} className="rounded-md border p-3">
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold">{item.title}</div>
-                  <div className="text-xs text-slate-500">
-                    {item.type} · {item.severity}
-                  </div>
-                </div>
-                <div className="text-sm text-slate-600">{item.summary}</div>
-                {item.impact_min !== undefined && item.impact_max !== undefined && (
-                  <div className="mt-2 text-xs text-slate-500">
-                    Impacto: {item.impact_min?.toFixed(2)}–{item.impact_max?.toFixed(2)}
-                    {item.impact_unit ?? ""}
-                  </div>
-                )}
-                <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-                  <span>Confianza: {item.confidence ?? "n/a"}</span>
-                  <span>Ventana: {getWindowLabel(item)}</span>
-                </div>
-                <div className="mt-2">
-                  <Link
-                    className="text-sm text-blue-600 hover:underline"
-                    to={`/admin/ai-copilot?q=${encodeURIComponent(
-                      `Explicame el insight: ${item.title}`
-                    )}`}
-                  >
-                    Preguntar al Copilot
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-sm text-slate-500">Sin insights activos.</div>
-        )}
-      </div>
+      <InsightCardsList
+        title="Top Insights"
+        items={(summary?.top_insights ?? []).map((item) => buildInsightCardItem(item))}
+        emptyMessage="Sin insights activos."
+      />
 
       <div className="flex items-center gap-3">
         <Button
@@ -220,61 +208,14 @@ const AIInsights = () => {
         </Button>
       </div>
 
-      <div className="border rounded-md p-4">
-        <h3 className="font-semibold mb-2">Listado de Insights</h3>
-        {insights.length === 0 ? (
-          <div className="text-sm text-slate-500">Sin resultados.</div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {(showAll ? insights : insights.slice(0, 3)).map((item) => (
-              <div key={item.id} className="rounded-md border p-3">
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold">{item.title}</div>
-                  <div className="text-xs text-slate-500">
-                    {item.type} · {item.severity}
-                  </div>
-                </div>
-                <div className="text-sm text-slate-600">{item.summary}</div>
-                {getCtaLabel(item) && (
-                  <div className="mt-2 text-sm text-slate-700">
-                    CTA: {getCtaLabel(item)}
-                  </div>
-                )}
-                {item.impact_min !== undefined && item.impact_max !== undefined && (
-                  <div className="mt-2 text-xs text-slate-500">
-                    Impacto: {item.impact_min?.toFixed(2)}–{item.impact_max?.toFixed(2)}
-                    {item.impact_unit ?? ""}
-                  </div>
-                )}
-                <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-                  <span>Confianza: {item.confidence ?? "n/a"}</span>
-                  <span>Cooldown: {item.cooldown_until ?? "n/a"}</span>
-                  <span>Regla: {item.rules_version ?? "v1"}</span>
-                </div>
-                <div className="mt-2">
-                  <Link
-                    className="text-sm text-blue-600 hover:underline"
-                    to={`/admin/ai-copilot?q=${encodeURIComponent(
-                      `Necesito contexto sobre: ${item.title}`
-                    )}`}
-                  >
-                    Preguntar al Copilot
-                  </Link>
-                </div>
-              </div>
-            ))}
-            {insights.length > 3 && (
-              <button
-                type="button"
-                className="text-sm text-blue-600 hover:underline"
-                onClick={() => setShowAll((prev) => !prev)}
-              >
-                {showAll ? "Mostrar menos" : "Mostrar todos"}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      <InsightCardsList
+        title="Listado de Insights"
+        items={insights.map((item) => buildInsightCardItem(item))}
+        emptyMessage="Sin resultados."
+        collapsedCount={3}
+        expanded={showAll}
+        onToggleExpanded={() => setShowAll((prev) => !prev)}
+      />
     </div>
   );
 };
