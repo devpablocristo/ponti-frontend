@@ -1,6 +1,6 @@
 services:
   ponti-ui:
-    image: node:20.17.0
+    image: node:20.19.0
     user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app
     command: sh -c "if [ ! -f node_modules/.yarn-integrity ] || [ ! -d node_modules/@devpablocristo/core-authn ] || [ ! -d node_modules/@devpablocristo/core-browser ] || [ ! -d node_modules/@devpablocristo/core-http ] || [ ! -d node_modules/@devpablocristo/modules-ai-console ] || [ ! -d node_modules/@devpablocristo/modules-ui-data-display ] || [ ! -d node_modules/@devpablocristo/modules-ui-filters ] || [ ! -d node_modules/@devpablocristo/modules-ui-forms ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev --host 0.0.0.0"
@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
 
   ponti-bff:
-    image: node:20.17.0
+    image: node:20.19.0
     working_dir: /app
     command: sh -c "if [ ! -f node_modules/.yarn-integrity ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev"
     ports:

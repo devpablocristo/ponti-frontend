@@ -4,7 +4,7 @@ Aplicación React + TypeScript + Vite para la consola de Ponti.
 
 ## Tooling
 
-- Node fijado en `20.17.0` vía `.nvmrc`.
+- Node fijado en `20.19.0` vía `.nvmrc`.
 - Package manager: Yarn 1 (`yarn.lock` versionado).
 - El flujo habitual en contenedores usa `ponti-frontend/docker-compose.yml`.
 
@@ -46,7 +46,7 @@ yarn install
 yarn build
 ```
 
-Warnings conocidos hoy:
+Notas operativas:
 
-- `@material-tailwind/react@2.1.10` declara peer deps para React 18, mientras la app corre con React 19. El build actual funciona, pero conviene migrar o reemplazar esa librería en un paso aparte.
-- El chunk `vendor-export` sigue siendo pesado porque agrupa dependencias de exportación (`xlsx`, `jspdf`, `html2canvas`, etc.). El warning de Vite quedó mitigado con partición de vendors y un `chunkSizeWarningLimit` explícito.
+- `@material-tailwind/react` quedó actualizado a la línea beta que declara soporte para React `>=18`, alineado con React 19.
+- El chunk `vendor-export` sigue siendo pesado porque agrupa dependencias de exportación (`xlsx`, `jspdf`, `html2canvas`, etc.), pero ya no ensucia el build con warning porque quedó particionado y con `chunkSizeWarningLimit` explícito.

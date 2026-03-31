@@ -7,9 +7,9 @@ Incluye dos piezas:
 
 ## Tooling
 
-- `ui/` fija Node `20.17.0` vía `.nvmrc`.
+- `ui/` fija Node `20.19.0` vía `.nvmrc`.
 - `ui/` usa Yarn 1 con `yarn.lock` versionado.
-- `docker-compose.yml` usa imágenes `node:20.17.0` para UI y BFF, alineadas con el tooling local.
+- `docker-compose.yml` usa imágenes `node:20.19.0` para UI y BFF, alineadas con el tooling local.
 
 ## UI
 
