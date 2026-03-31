@@ -28,6 +28,50 @@ export default defineConfig(({ mode }: ConfigEnv) => {
         { find: /^@\/(.+)$/, replacement: `${srcPath}/$1` },
       ],
     },
+    build: {
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) {
+              return undefined;
+            }
+
+            if (
+              id.includes("/react/") ||
+              id.includes("/react-dom/") ||
+              id.includes("react-router-dom")
+            ) {
+              return "vendor-react";
+            }
+
+            if (
+              id.includes("@material-tailwind/") ||
+              id.includes("@heroicons/") ||
+              id.includes("flowbite") ||
+              id.includes("lucide-react")
+            ) {
+              return "vendor-ui";
+            }
+
+            if (
+              id.includes("xlsx") ||
+              id.includes("react-to-pdf") ||
+              id.includes("jspdf") ||
+              id.includes("html2canvas")
+            ) {
+              return "vendor-export";
+            }
+
+            if (id.includes("@devpablocristo/")) {
+              return "vendor-shared";
+            }
+
+            return undefined;
+          },
+        },
+      },
+    },
     server:
       mode === "development"
         ? {
