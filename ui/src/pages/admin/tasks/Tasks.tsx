@@ -361,14 +361,22 @@ export function Tasks() {
 
       const rowKey = `${item.workorder_id}:${item.investor_id}`;
       setUpdatingInvestorPaymentKey(rowKey);
-      await updateInvestorPaymentStatus({
+      const updated = await updateInvestorPaymentStatus({
         workorder_id: item.workorder_id,
         investor_id: item.investor_id,
         payment_status: nextStatus,
       });
+      if (updated) {
+        setResultInvoiceMessage("Se ha actualizado el pago por inversor con éxito!");
+        if (projectId) {
+          const query = buildFieldQuery();
+          getLaborGroups(projectId, query);
+          getMetrics(projectId, query);
+        }
+      }
       setUpdatingInvestorPaymentKey(null);
     },
-    [updateInvestorPaymentStatus]
+    [buildFieldQuery, getLaborGroups, getMetrics, projectId, updateInvestorPaymentStatus]
   );
 
   const columns: Column<LaborGroupData>[] = useMemo(

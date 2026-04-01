@@ -198,10 +198,6 @@ const useLabors = () => {
     async (payload: InvestorPaymentStatusData): Promise<boolean> => {
       setProcessingInvoice(true);
       setErrorInvoice(null);
-      dispatch({
-        type: actions.SET_RESULT_INVOICE,
-        payload: "",
-      });
 
       try {
         const response = await apiClient
@@ -209,10 +205,6 @@ const useLabors = () => {
           .patch<InvestorPaymentMutationResponse>(`/labors/payment-status`, payload);
 
         if (response.data.success) {
-          dispatch({
-            type: actions.SET_RESULT_INVOICE,
-            payload: "Se ha actualizado el pago por inversor con éxito!",
-          });
           return true;
         }
 
@@ -227,7 +219,7 @@ const useLabors = () => {
         setProcessingInvoice(false);
       }
     },
-    [dispatch]
+    []
   );
 
   const saveLabors = React.useCallback(
