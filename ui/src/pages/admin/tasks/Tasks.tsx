@@ -301,7 +301,6 @@ export function Tasks() {
     if (resultInvoice && projectId) {
       setResultInvoiceMessage(resultInvoice);
       const query = buildFieldQuery();
-      setCurrentPage(1);
       getLaborGroups(projectId, query);
       getMetrics(projectId, query);
     }
