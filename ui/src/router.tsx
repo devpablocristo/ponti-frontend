@@ -27,6 +27,7 @@ import ByFieldOrCropReport from "./pages/admin/reports/ByFieldOrCropReport.tsx";
 import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
 import InvestorContribution from "./pages/admin/reports/InvestorContributionReport.tsx";
 import AICopilot from "./pages/admin/ai-copilot/AICopilot";
+import AIAssistant from "./pages/admin/ai-assistant/AIAssistant";
 import AIInsights from "./pages/admin/ai-insights/AIInsights";
 
 export default [
@@ -63,6 +64,10 @@ export default [
       {
         path: "ai-copilot",
         element: <AICopilot />,
+      },
+      {
+        path: "ai-assistant",
+        element: <AIAssistant />,
       },
       {
         path: "ai-insights",

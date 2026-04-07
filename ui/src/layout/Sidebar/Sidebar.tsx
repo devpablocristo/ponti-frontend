@@ -75,6 +75,22 @@ const menuDatabase = {
 
 const menuAIItems: MenuItem[] = [
   {
+    name: "Asistente",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M8 2.66667C5.42267 2.66667 3.33333 4.756 3.33333 7.33333C3.33333 9.91067 5.42267 12 8 12C10.5773 12 12.6667 9.91067 12.6667 7.33333C12.6667 4.756 10.5773 2.66667 8 2.66667Z"
+          stroke={color}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path d="M5.33333 13.3333H10.6667" stroke={color} strokeLinecap="round" />
+        <path d="M6.66667 10.6667H9.33333" stroke={color} strokeLinecap="round" />
+      </svg>
+    ),
+    route: "/admin/ai-assistant",
+  },
+  {
     name: "Copilot",
     icon: (color: string) => (
       <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">

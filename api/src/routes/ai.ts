@@ -178,4 +178,57 @@ router.post("/insights/:insight_id/actions", async (req: Request, res: Response)
   }
 });
 
+// --- Asistente conversacional (proxy a ponti-backend → ponti-ai) ---
+
+router.post("/chat", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { data } = await apiClient.post<any>("/ai/chat", req.body, headers);
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.get("/chat/conversations", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const limitRaw = typeof req.query.limit === "string" ? req.query.limit.trim() : "";
+    const limit = limitRaw ? `?limit=${encodeURIComponent(limitRaw)}` : "";
+    const { data } = await apiClient.get<any>(`/ai/chat/conversations${limit}`, headers);
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.get("/chat/conversations/:conversation_id", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { conversation_id } = req.params;
+    const { data } = await apiClient.get<any>(
+      `/ai/chat/conversations/${encodeURIComponent(conversation_id)}`,
+      headers
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
 export default router;
