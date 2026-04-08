@@ -415,6 +415,14 @@ export function Tasks() {
         filterOptions: getFilterOptionsForColumn("field_name", laborGroups, taskFilters),
       },
       {
+        key: "lot_name",
+        header: "Lotes",
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("lot_name", laborGroups, taskFilters),
+      },
+
+      {
         key: "crop_name",
         header: "Cultivo",
         filterable: true,
@@ -424,9 +432,8 @@ export function Tasks() {
           const cropName = String(crop);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${
-                cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-              }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+                }`}
             >
               {cropName}
             </span>
@@ -450,9 +457,8 @@ export function Tasks() {
           const laborName = String(crop);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${
-                laborColors[laborName] || "bg-green-200 text-green-800"
-              }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-green-200 text-green-800"
+                }`}
             >
               {laborName}
             </span>
@@ -1044,11 +1050,11 @@ export function Tasks() {
           pagination={
             pageInfo
               ? {
-                  page: currentPage,
-                  perPage: itemsPerPage,
-                  total: filteredTasks.length,
-                  onPageChange: handlePageChange,
-                }
+                page: currentPage,
+                perPage: itemsPerPage,
+                total: filteredTasks.length,
+                onPageChange: handlePageChange,
+              }
               : undefined
           }
         />
