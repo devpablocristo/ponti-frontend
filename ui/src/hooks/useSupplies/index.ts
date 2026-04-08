@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 import useSupplyReducer from "./suppliesReducer";
 import * as actions from "./actions";
-import { SupplyCreatePayload, Supply, SupplyResponse } from "./types";
+import { SupplyCreatePayload, Supply, SupplyResponse, SuppliesMode } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
@@ -17,11 +17,14 @@ const useSupplies = () => {
   const [errorUpdate, setErrorUpdate] = useState<string | null>(null);
   const [resultUpdate, setResultUpdate] = useState<string | null>(null);
 
-  const getSupplies = React.useCallback(async (projectId: number) => {
+  const getSupplies = React.useCallback(async (
+    projectId: number,
+    mode: SuppliesMode = "all"
+  ) => {
     setProcessing(true);
     try {
       const response = await apiClient.get<SuccessResponse<SupplyResponse>>(
-        `/supplies/${projectId}`
+        `/supplies?project_id=${projectId}&mode=${mode}`
       );
 
       if (response.success) {
@@ -31,7 +34,8 @@ const useSupplies = () => {
         });
         return;
       }
-      setError("Ocurrio un error en la busqueda de lotes");
+
+      setError("Ocurrio un error en la busqueda de insumos");
     } catch (err) {
       if (extractErrorStatus(err) === 409) {
         setError("Ya existe un insumo con el mismo nombre.");
@@ -177,6 +181,51 @@ const useSupplies = () => {
     []
   );
 
+    const completePendingSupply = React.useCallback(
+    async (projectId: number, supply: Supply) => {
+      setProcessing(true);
+      setErrorUpdate(null);
+      setResultUpdate(null);
+
+      try {
+        const response = await apiClient.put<SupplyMutationResponse>(
+          `/supplies/pending/${supply.id}/complete`,
+          {
+            project_id: projectId,
+            name: supply.name,
+            price: supply.price,
+            unit_id: supply.unit_id,
+            category_id: supply.category_id,
+            type_id: supply.type_id,
+            is_partial_price: Boolean(supply.is_partial_price),
+          }
+        );
+
+        if (response.success) {
+          setResultUpdate("Se completó el insumo pendiente con éxito!");
+          return;
+        }
+
+        setErrorUpdate("Ocurrio un error al completar el insumo pendiente");
+      } catch (error) {
+        if (extractErrorStatus(error) === 404) {
+          setErrorUpdate("El insumo pendiente no existe.");
+          return;
+        }
+
+        setErrorUpdate(
+          extractErrorMessage(
+            error,
+            "Error desconocido al completar el insumo pendiente."
+          )
+        );
+      } finally {
+        setProcessing(false);
+      }
+    },
+    []
+  );
+
   return {
     supplies,
     getSupplies,
@@ -189,6 +238,7 @@ const useSupplies = () => {
     result,
     errorUpdate,
     resultUpdate,
+    completePendingSupply,
   };
 };
 

@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 import DataTable from "../../../components/Table/DataTable";
-import {Metrics, OrdersData, WorkorderData} from "../../../hooks/useWorkOrders/types";
+import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
 import FilterBar from "../../../layout/FilterBar/FilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -14,6 +14,7 @@ import UpdateOrder from "./UpdateOrder";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
+import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 
 const FILTER_HIERARCHY: Record<string, string[]> = {
@@ -45,6 +46,60 @@ function classifyConsumptionUnit(order: OrdersData): "liter" | "kilo" | null {
   if (KILO_SUPPLIES.some((k) => supplyName.includes(k))) return "kilo";
 
   return null;
+}
+
+function getStatusLabel(status: string) {
+  return status === "draft" ? "Abierta" : "Cerrada";
+}
+
+function isPendingSupplyPublishError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    (normalized.includes("insumo") ||
+      normalized.includes("supply") ||
+      normalized.includes("supplies")) &&
+    (normalized.includes("pendiente") ||
+      normalized.includes("pending") ||
+      normalized.includes("incompleto") ||
+      normalized.includes("complete"))
+  );
+}
+
+function translatePendingSupplyPublishError(message: string) {
+  const normalized = message.toLowerCase();
+  const englishPrefix = "cannot publish work order draft with pending supplies:";
+
+  if (normalized.startsWith(englishPrefix)) {
+    const pendingSupplies = message.slice(englishPrefix.length).trim();
+
+    return pendingSupplies
+      ? `No se puede publicar la orden porque tiene insumos pendientes de completar: ${pendingSupplies}`
+      : "No se puede publicar la orden porque tiene insumos pendientes de completar.";
+  }
+
+  return message;
+}
+
+function getStatusFilterOptionLabel(value: string) {
+  if (value === "draft") return "Abierta";
+  if (value === "published") return "Cerrada";
+  return value;
+}
+
+function mapStatusFilterLabelToApi(value: string) {
+  if (value === "Abierta") return "draft";
+  if (value === "Cerrada") return "published";
+  return value;
+}
+
+function getStatusBadgeClass(status: string) {
+  return status === "draft"
+    ? "bg-amber-100 text-amber-800 border border-amber-200"
+    : "bg-emerald-100 text-emerald-800 border border-emerald-200";
+}
+
+function isDigitalByNumber(order: OrdersData) {
+  return String(order.number).trim().toUpperCase().startsWith("D");
 }
 
 function OrdersHeader({
@@ -181,7 +236,12 @@ function OrdersIndicators({
 
 export function WorkOrders() {
   const navigate = useNavigate();
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const location = useLocation();
+  const [selectedOrderRow, setSelectedOrderRow] = useState<{
+    id: number;
+    isDigital: boolean;
+  } | null>(null);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerUpdateOpen, setDrawerUpdateOpen] = useState(false);
   const [orderToDuplicate, setOrderToDuplicate] =
@@ -190,6 +250,8 @@ export function WorkOrders() {
   const {
     getOrders,
     deleteOrder,
+    deleteDraftOrder,
+    publishDraftOrder,
     getMetrics,
     metrics,
     processingMetrics,
@@ -198,6 +260,7 @@ export function WorkOrders() {
     processing,
     error,
   } = useOrders();
+
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
@@ -217,11 +280,25 @@ export function WorkOrders() {
             return orderDate === normalizeDate(String(value));
           }
 
+          if (key === "status") {
+            const normalizedStatus = mapStatusFilterLabelToApi(String(order.status));
+
+            if (Array.isArray(value)) {
+              return value.some(
+                (v) => normalizedStatus === mapStatusFilterLabelToApi(String(v))
+              );
+            }
+
+            return normalizedStatus === mapStatusFilterLabelToApi(String(value));
+          }
+
           const orderValRaw = order[key as keyof OrdersData];
           const orderVal = String(orderValRaw ?? "").toLowerCase();
+
           if (Array.isArray(value)) {
             return value.some((v) => orderVal === String(v).toLowerCase());
           }
+
           return orderVal === String(value).toLowerCase();
         });
       });
@@ -264,14 +341,36 @@ export function WorkOrders() {
           <strong className="text-blue-700">
             <a
               onClick={() => {
-                setSelectedOrderId(data.id);
-                setDrawerUpdateOpen(true);
+                handleOpenOrder(data);
               }}
             >
               {value as string}
             </a>
           </strong>
         ),
+      },
+      {
+        key: "status",
+        header: "Estado",
+        filterable: true,
+        filterType: "select",
+        filterOptions: ["Abierta", "Cerrada"],
+        render: (value, data) => {
+          const shouldShowDigitalStatus = data.is_digital || isDigitalByNumber(data);
+
+          if (!shouldShowDigitalStatus) {
+            return <span className="text-slate-400 text-xs">-</span>;
+          }
+
+          const status = String(value);
+          return (
+            <span
+              className={`px-2 py-1 text-[12px] rounded-md font-medium ${getStatusBadgeClass(status)}`}
+            >
+              {getStatusLabel(status)}
+            </span>
+          );
+        },
       },
       {
         key: "project_name",
@@ -314,12 +413,12 @@ export function WorkOrders() {
         render: (crop) => {
           const cropName = String(crop);
           return (
-          <span
-            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-              }`}
-          >
-            {cropName}
-          </span>
+            <span
+              className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+                }`}
+            >
+              {cropName}
+            </span>
           );
         },
       },
@@ -332,12 +431,12 @@ export function WorkOrders() {
         render: (labor) => {
           const laborName = String(labor);
           return (
-          <span
-            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-              }`}
-          >
-            {laborName}
-          </span>
+            <span
+              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+                }`}
+            >
+              {laborName}
+            </span>
           );
         },
       },
@@ -428,8 +527,49 @@ export function WorkOrders() {
           return <span className="font-bold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
+      {
+        key: "__actions" as keyof OrdersData,
+        header: "Acción",
+        filterable: false,
+        sortable: false,
+        render: (_, data) => {
+          const isDraftDigital = data.is_digital && data.status === "draft";
+
+          if (!isDraftDigital) {
+            return <span className="text-slate-400 text-xs">-</span>;
+          }
+
+          return (
+            <div className="flex items-center gap-2 justify-end">
+              <Button
+                variant="primary"
+                size="xs"
+                onClick={() => {
+                  handlePrePublish(data);
+                }}
+              >
+                Publicar
+              </Button>
+              <Button
+                variant="primary"
+                size="xs"
+                onClick={() => {
+                  handlePreDeleteDraft(data);
+                }}
+              >
+                Eliminar
+              </Button>
+            </div>
+          );
+        },
+      },
     ];
-  }, [getFilterOptionsForColumn]);
+  }, [
+    getFilterOptionsForColumn,
+    handleOpenOrder,
+    handlePrePublish,
+    handlePreDeleteDraft,
+  ]);
 
   const allColumns = useMemo(
     () =>
@@ -450,12 +590,15 @@ export function WorkOrders() {
     latestAllColumnKeysRef.current = allColumnKeys;
   }, [allColumnKeys]);
 
-  const [columnsToShow, setColumnsToShow] = useState(columns);
   const [selectedColumns, setSelectedColumns] = useState<Array<keyof OrdersData>>(
     () => allColumnKeys
   );
   const [visibleColumns, setVisibleColumns] = useState<Array<keyof OrdersData>>(
     () => allColumnKeys
+  );
+  const columnsToShow = useMemo(
+    () => allColumns.filter((col) => visibleColumns.includes(col.key)),
+    [allColumns, visibleColumns]
   );
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -466,7 +609,6 @@ export function WorkOrders() {
     selectedProject,
     selectedField,
     selectedCustomer,
-    selectedCampaignId,
     filters,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
@@ -480,6 +622,155 @@ export function WorkOrders() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  function handleOpenOrder(order: OrdersData) {
+    setSelectedOrderRow({
+      id: order.id,
+      isDigital: order.is_digital,
+    });
+    setDrawerUpdateOpen(true);
+  }
+
+  const workOrdersQuery = useMemo(() => {
+    const params: Record<string, string> = {};
+
+    if (projectId) {
+      params.project_id = String(projectId);
+    }
+
+    if (selectedField && selectedField.id !== 0) {
+      params.field_id = String(selectedField.id);
+    }
+
+    return new URLSearchParams(params).toString();
+  }, [projectId, selectedField]);
+
+
+  const handleOrderCreated = useCallback(() => {
+    setCurrentPage(1);
+    getOrders(workOrdersQuery);
+    getMetrics(workOrdersQuery);
+  }, [getOrders, getMetrics, workOrdersQuery]);
+
+
+  async function handlePublishOrder(order: OrdersData) {
+    if (!order.is_digital || order.status !== "draft") return;
+
+    setIsProcessing(true);
+    setErrorMessage("");
+
+    try {
+      await publishDraftOrder(order.id);
+      handleOrderCreated();
+    } catch (error) {
+      const status = extractErrorStatus(error);
+      const rawMessage = extractErrorMessage(
+        error,
+        "No se pudo publicar la orden digital."
+      );
+      const message = translatePendingSupplyPublishError(rawMessage);
+
+      if (isPendingSupplyPublishError(message)) {
+        setErrorMessage(message);
+        setModalConfig({
+          title: "Insumos pendientes",
+          message:
+            `${message}\n\n` +
+            "Dirigirse a Base de Datos > Insumos > Pendientes para completar la información faltante.",
+          primaryButtonText: "Ir a Insumos",
+          secondaryButtonText: "Cerrar",
+          onConfirm: () => {
+            navigate("/admin/database/items/list");
+          },
+        });
+        setIsModalOpen(true);
+        return;
+      }
+
+      if (status === 409) {
+        setErrorMessage(message);
+        setModalConfig({
+          title: "No se pudo publicar",
+          message,
+          primaryButtonText: "Cerrar",
+          secondaryButtonText: "Cerrar",
+          onConfirm: () => {
+            setIsModalOpen(false);
+          },
+        });
+        setIsModalOpen(true);
+        return;
+      }
+
+      setErrorMessage(message);
+      setModalConfig({
+        title: "Error al publicar",
+        message,
+        primaryButtonText: "Cerrar",
+        secondaryButtonText: "Cerrar",
+        onConfirm: () => {
+          setIsModalOpen(false);
+        },
+      });
+      setIsModalOpen(true);
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  function handlePrePublish(order: OrdersData) {
+    setModalConfig({
+      title: "Confirmar publicación",
+            message:
+        `¿Está seguro que desea publicar la orden ${order.number}?\n\n` +
+        "Si la orden contiene insumos pendientes de completar, la publicación será bloqueada.",
+      primaryButtonText: "Sí, publicar",
+      secondaryButtonText: "Cancelar",
+      onConfirm: () => {
+        void handlePublishOrder(order);
+      },
+    });
+    setIsModalOpen(true);
+  }
+
+  async function handleDeleteDraft(order: OrdersData) {
+    if (!order.is_digital || order.status !== "draft") return;
+
+    setIsProcessing(true);
+    setErrorMessage("");
+
+    try {
+      await deleteDraftOrder(order.id);
+      handleOrderCreated();
+    } catch (error) {
+      const status = extractErrorStatus(error);
+
+      if (status === 404) {
+        setErrorMessage("No se encontró el borrador digital.");
+        return;
+      }
+
+      setErrorMessage(
+        extractErrorMessage(error, "No se pudo eliminar la orden digital.")
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  function handlePreDeleteDraft(order: OrdersData) {
+    setModalConfig({
+      title: "Confirmar eliminación",
+      message: `¿Está seguro que desea eliminar la orden ${order.number}?`,
+      primaryButtonText: "Sí, eliminar",
+      secondaryButtonText: "Cancelar",
+      onConfirm: () => {
+        void handleDeleteDraft(order);
+      },
+    });
+    setIsModalOpen(true);
+  }
+
   const [modalConfig, setModalConfig] = useState({
     title: "",
     message: "",
@@ -494,8 +785,15 @@ export function WorkOrders() {
   }, [error]);
 
   useEffect(() => {
-    setColumnsToShow(columns);
-  }, [columns]);
+    if (location.pathname === "/admin/work-orders") return;
+
+    setDrawerOpen(false);
+    setDrawerUpdateOpen(false);
+    setSelectedOrderRow(null);
+    setOrderToDuplicate(null);
+    setIsModalOpen(false);
+    setIsProcessing(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     Object.entries(FILTER_HIERARCHY).forEach(([parent, children]) => {
@@ -549,38 +847,29 @@ export function WorkOrders() {
     });
   }, [columnsFilters, orders]);
 
-  const buildQueryParams = useCallback(() => {
-    const params: Record<string, string> = {};
-    if (selectedCustomer && selectedCustomer.id !== 0) params.customer_id = String(selectedCustomer.id);
-    if (projectId) params.project_id = String(projectId);
-    if (selectedCampaignId) params.campaign_id = String(selectedCampaignId);
-    if (selectedField && selectedField.id !== 0) params.field_id = String(selectedField.id);
-    return new URLSearchParams(params).toString();
-  }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
+
 
   useEffect(() => {
     if (!projectId && !selectedField) {
       setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
       return;
     }
+
     setErrorMessage("");
     setVisibleColumns(latestAllColumnKeysRef.current);
-
-    const query = buildQueryParams();
     setCurrentPage(1);
-    getOrders(query);
-    getMetrics(query);
-  }, [projectId, selectedField, buildQueryParams, getOrders, getMetrics]);
-
-  const handleOrderCreated = useCallback(() => {
-    const query = buildQueryParams();
-    setCurrentPage(1);
-    getOrders(query);
-    getMetrics(query);
-  }, [buildQueryParams, getOrders, getMetrics]);
+    getOrders(workOrdersQuery);
+    getMetrics(workOrdersQuery);
+  }, [
+    projectId,
+    selectedField,
+    workOrdersQuery,
+    getOrders,
+    getMetrics,
+  ]);
 
   const handleOrderDuplicated = (order: WorkorderData) => {
-    setSelectedOrderId(null);
+    setSelectedOrderRow(null);
     setDrawerUpdateOpen(false);
     setDrawerOpen(true);
     setOrderToDuplicate(order);
@@ -631,12 +920,6 @@ export function WorkOrders() {
       setIsProcessing(false);
     }
   };
-
-  useEffect(() => {
-    setColumnsToShow(
-      allColumns.filter((col) => visibleColumns.includes(col.key))
-    );
-  }, [visibleColumns, allColumns]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -756,11 +1039,11 @@ export function WorkOrders() {
         </div>
       )}
       <div className="mt-4 relative">
-        {(processing || isProcessing) && (
-            <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-              <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-            </div>
-          )}
+        {isProcessing && (
+          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
+            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
+          </div>
+        )}
         {selectedProject && (
           <CreateOrder
             drawerOpen={drawerOpen}
@@ -771,9 +1054,10 @@ export function WorkOrders() {
             onOrderCreated={handleOrderCreated}
           />
         )}
-        {selectedOrderId && (
+        {selectedOrderRow && (
           <UpdateOrder
-            orderId={selectedOrderId}
+            orderId={selectedOrderRow.id}
+            isDigital={selectedOrderRow.isDigital}
             drawerOpen={drawerUpdateOpen}
             setDrawerOpen={setDrawerUpdateOpen}
             onOrderUpdated={handleOrderCreated}
@@ -781,13 +1065,25 @@ export function WorkOrders() {
           />
         )}
         <DataTable
-          key={`${projectId}-${selectedField?.id || 0}-${orders.length}`}
+          key={`${projectId}-${selectedField?.id || 0}`}
           data={filteredOrders}
           rowStyle="softZebra"
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           columns={columnsToShow}
-          onDelete={(item) => handlePreFinish(item.id)}
+          onDelete={(item) => {
+            if (item.is_digital && item.status === "draft") {
+              handlePreDeleteDraft(item);
+              return;
+            }
+
+            if (item.is_digital) {
+              setErrorMessage("No se puede eliminar una orden digital ya cerrada.");
+              return;
+            }
+
+            handlePreFinish(item.id);
+          }}
           enableFilters={true}
           headerComponent={
             <OrdersHeader

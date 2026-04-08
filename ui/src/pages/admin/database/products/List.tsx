@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
-
+import { useEffect, useMemo, useRef, useState } from "react";
 import FilterBar from "../../../../layout/FilterBar/FilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
 import DataTable from "../../../../components/Table/DataTable";
-import { Supply } from "../../../../hooks/useSupplies/types";
+import { Supply, SuppliesMode } from "../../../../hooks/useSupplies/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
@@ -31,6 +30,7 @@ export default function ListItems() {
     error,
     supplies,
     updateSupply,
+    completePendingSupply,
     deleteSupply,
     getWorkOrdersCount,
     result,
@@ -48,7 +48,10 @@ export default function ListItems() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [suppliesMode, setSuppliesMode] = useState<SuppliesMode>("all");
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
+  const lastHandledResultRef = useRef<string>("");
+  const lastHandledResultUpdateRef = useRef<string>("");
   const itemsPerPage = 10;
 
   const { filters, projectId } = useWorkspaceFilters([
@@ -59,27 +62,31 @@ export default function ListItems() {
 
   useEffect(() => {
     if (projectId) {
-      getSupplies(projectId);
+      getSupplies(projectId, suppliesMode);
       getCategories("");
       getTypes();
     }
-  }, [projectId, getSupplies, getCategories, getTypes]);
+  }, [projectId, suppliesMode, getSupplies, getCategories, getTypes]);
 
   useEffect(() => {
-    if (result && projectId) {
-      setSuccessMessage(result);
-      setErrorMessage("");
-      getSupplies(projectId);
-    }
-  }, [result, projectId, getSupplies]);
+    if (!result || !projectId) return;
+    if (lastHandledResultRef.current === result) return;
+
+    lastHandledResultRef.current = result;
+    setSuccessMessage(result);
+    setErrorMessage("");
+    getSupplies(projectId, suppliesMode);
+  }, [result, projectId, suppliesMode, getSupplies]);
 
   useEffect(() => {
-    if (resultUpdate && projectId) {
-      setSuccessMessage(resultUpdate);
-      setErrorMessage("");
-      getSupplies(projectId);
-    }
-  }, [resultUpdate, projectId, getSupplies]);
+    if (!resultUpdate || !projectId) return;
+    if (lastHandledResultUpdateRef.current === resultUpdate) return;
+
+    lastHandledResultUpdateRef.current = resultUpdate;
+    setSuccessMessage(resultUpdate);
+    setErrorMessage("");
+    getSupplies(projectId, suppliesMode);
+  }, [resultUpdate, projectId, suppliesMode, getSupplies]);
 
   useEffect(() => {
     if (error) {
@@ -250,13 +257,16 @@ export default function ListItems() {
 
   const handleSave = () => {
     if (processing) return;
-    if (item && projectId) {
+    if (!item || !projectId) return;
+
+    if (suppliesMode === "pending") {
+      completePendingSupply(projectId, item);
+    } else {
       updateSupply(projectId, item);
-      setModalOpen(false);
     }
+
+    setModalOpen(false);
   };
-
-
 
   const handleExport = async () => {
     if (!projectId) return;
@@ -285,18 +295,18 @@ export default function ListItems() {
   return (
     <div className="w-full mx-auto">
       <FilterBar filters={filters} actions={[
-          {
-            label: "Exportar Insumos",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            ,
-            variant: "primary",
-            isPrimary: true,
-            disabled: !projectId,
-            onClick: () => handleExport(),
-          }
-        ]}/>
+        {
+          label: "Exportar Insumos",
+          icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          ,
+          variant: "primary",
+          isPrimary: true,
+          disabled: !projectId,
+          onClick: () => handleExport(),
+        }
+      ]} />
       <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
         {errorMessage && (
           <div
@@ -415,10 +425,21 @@ export default function ListItems() {
               setModalOpen(false);
               setItem(null);
             }}
-            title={`Edicion de insumo ${item?.name || ""}`}
-            primaryButtonText="Guardar"
+            title={
+              suppliesMode === "pending"
+                ? `Completar insumo pendiente ${item?.name || ""}`
+                : `Edicion de insumo ${item?.name || ""}`
+            }
+            primaryButtonText={
+              suppliesMode === "pending" ? "Completar" : "Guardar"
+            }
             onPrimaryAction={handleSave}
-          >
+          >              {suppliesMode === "pending" && (
+            <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Este insumo fue creado desde la app con información incompleta.
+              Para que pueda usarse al publicar órdenes, completá los datos faltantes.
+            </div>
+          )}
             <div className="flex flex-col gap-1">
               <InputField
                 label="Nombre del insumo"
@@ -436,7 +457,7 @@ export default function ListItems() {
                   <SelectField
                     label="Unidad"
                     name={`unit-${item?.name || ""}`}
-                    value={item?.unit_id?.toString() || ""}
+                    value={item?.unit_id && item.unit_id > 0 ? item.unit_id.toString() : ""}
                     onChange={(e) => {
                       if (!item) return;
                       setItem({ ...item, unit_id: parseInt(e.target.value) });
@@ -455,7 +476,7 @@ export default function ListItems() {
                       if (!item) return;
                       const value = e.target.value.replace(/,/g, ".");
                       if (/^\d*\.?\d{0,3}$/.test(value)) {
-                        setItem({ ...item, price: value} );
+                        setItem({ ...item, price: value });
                       }
                     }}
                   />
@@ -476,7 +497,11 @@ export default function ListItems() {
               <SelectField
                 label="Rubro"
                 name={`category-${item?.name || ""}`}
-                value={item?.category_id?.toString() || ""}
+                value={
+                  item?.category_id && item.category_id > 0
+                    ? item.category_id.toString()
+                    : ""
+                }
                 onChange={(e) => {
                   if (!item) return;
                   const category = parseInt(e.target.value);
@@ -493,7 +518,7 @@ export default function ListItems() {
               <SelectField
                 label=""
                 name={`type`}
-                value={item?.type_id?.toString() || ""}
+                value={item?.type_id && item.type_id > 0 ? item.type_id.toString() : ""}
                 disabled
                 onChange={(e) => {
                   if (!item) return;
@@ -501,6 +526,7 @@ export default function ListItems() {
                 }}
                 options={types}
               />
+
             </div>
           </BaseModal>
           <BaseModal
@@ -519,6 +545,29 @@ export default function ListItems() {
             primaryButtonColor="bg-red-600 hover:bg-red-800 focus:ring-red-300"
             onPrimaryAction={confirmDelete}
           />
+          <div className="flex items-center gap-2 mb-4">
+            <Button
+              variant={suppliesMode === "all" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => {
+                setSuppliesMode("all");
+                setCurrentPage(1);
+              }}
+            >
+              Activos
+            </Button>
+            <Button
+              variant={suppliesMode === "pending" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => {
+                setSuppliesMode("pending");
+                setCurrentPage(1);
+              }}
+            >
+              Pendientes
+            </Button>
+          </div>
+
           <DataTable
             data={filteredSupplies}
             columns={columns}
