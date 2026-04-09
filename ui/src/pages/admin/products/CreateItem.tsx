@@ -351,49 +351,67 @@ export default function CreateItem({
     latestGetProvidersRef.current = getProviders;
   }, [items, supplies, projectId, onProductCreated, getStock, getProviders]);
 
-  useEffect(() => {
-    if (lastSubmittedRowIndexes.length === 0) return;
+useEffect(() => {
+  if (lastSubmittedRowIndexes.length === 0) return;
+  if (resultCreation.supply_movements.length === 0) return;
 
-    if (resultCreation.supply_movements.length > 0) {
-      const hasSavedMovements = resultCreation.supply_movements.some(
-        (movement) => movement.is_saved
+  const expectedCount = lastSubmittedRowIndexes.length;
+  const successfulMovements = resultCreation.supply_movements.filter(
+    (movement) => movement.is_saved
+  );
+  const allSaved =
+    resultCreation.supply_movements.length === expectedCount &&
+    successfulMovements.length === expectedCount;
+
+  const errors: string[] = [];
+  const nextItemErrors: Record<number, string> = {};
+
+  resultCreation.supply_movements.forEach((movement, responseIndex) => {
+    if (movement.error_detail !== "") {
+      const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
+      const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
+      const detailWithNames = replaceSupplyIdsWithNames(
+        detail,
+        latestSuppliesRef.current
       );
-      const errors: string[] = [];
-      const nextItemErrors: Record<number, string> = {};
-      resultCreation.supply_movements.forEach((movement, responseIndex) => {
-        if (movement.error_detail !== "") {
-          const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
-          const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
-          const detailWithNames = replaceSupplyIdsWithNames(detail, latestSuppliesRef.current);
-          errors.push(detailWithNames);
-          nextItemErrors[uiRowIndex] = detailWithNames;
-        }
-      });
+      errors.push(detailWithNames);
+      nextItemErrors[uiRowIndex] = detailWithNames;
+    }
+  });
 
-      if (errors.length > 0) {
-        setError(replaceSupplyIdsWithNames(errors.join("\n"), latestSuppliesRef.current));
-        setItemErrors(nextItemErrors);
-        setSuccessMessage(null);
-        if (hasSavedMovements) {
-          latestOnProductCreatedRef.current();
-          if (latestProjectIdRef.current) {
-            latestGetStockRef.current(latestProjectIdRef.current, "");
-          }
-          latestGetProvidersRef.current("");
-        }
-        return;
-      }
+  if (errors.length > 0 || !allSaved) {
+    const fallbackMessage =
+      errors.length > 0
+        ? errors.join("\n")
+        : "No se pudo guardar el movimiento. Revisá que no haya insumos duplicados u otros errores de validación.";
 
-      setItemErrors({});
-      setSuccessMessage("Movimiento guardado correctamente");
+    setError(replaceSupplyIdsWithNames(fallbackMessage, latestSuppliesRef.current));
+    setItemErrors(nextItemErrors);
+    setSuccessMessage(null);
+
+    if (successfulMovements.length > 0) {
       latestOnProductCreatedRef.current();
-      clearForm();
       if (latestProjectIdRef.current) {
         latestGetStockRef.current(latestProjectIdRef.current, "");
       }
       latestGetProvidersRef.current("");
     }
-  }, [resultCreation, lastSubmittedRowIndexes]);
+
+    return;
+  }
+
+  setError(null);
+  setItemErrors({});
+  setSuccessMessage("Movimiento guardado correctamente");
+  latestOnProductCreatedRef.current();
+  clearForm();
+
+  if (latestProjectIdRef.current) {
+    latestGetStockRef.current(latestProjectIdRef.current, "");
+  }
+  latestGetProvidersRef.current("");
+}, [resultCreation, lastSubmittedRowIndexes]);
+
 
   useEffect(() => {
     if (projectId) {

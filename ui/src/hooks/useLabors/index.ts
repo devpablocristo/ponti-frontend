@@ -18,7 +18,18 @@ type LaborGroupsResponse = SuccessResponse<PaginatedResponse<LaborGroupData>>;
 type LaborsResponse = SuccessResponse<LaborInfo[]>;
 type InvoiceMutationResponse = SuccessResponse<unknown>;
 type InvestorPaymentMutationResponse = SuccessResponse<unknown>;
-type LaborMutationResponse = SuccessResponse<unknown>;
+type CreatedLaborResult = {
+  labor_name: string;
+  labor_id: number;
+  is_saved: boolean;
+  error_detail: string;
+};
+
+type LaborMutationResponse = SuccessResponse<{
+  labors_ids?: CreatedLaborResult[];
+  message?: string;
+}>;
+
 type WorkOrdersCountResponse = SuccessResponse<{ count: number }>;
 
 const extractLaborsArray = (payload: unknown): LaborInfo[] => {
@@ -41,6 +52,16 @@ const extractLaborsArray = (payload: unknown): LaborInfo[] => {
   }
 
   return [];
+};
+
+const translateLaborError = (message: string): string => {
+  const normalized = message.trim();
+
+  if (normalized === "CONFLICT: labor already exists in this project") {
+    return "La labor ya existe en este proyecto.";
+  }
+
+  return message;
 };
 
 const useLabors = () => {
@@ -237,6 +258,21 @@ const useLabors = () => {
           laborsToSave
         );
 
+        const createdLabors = response.data?.labors_ids ?? [];
+        const failedLabors = createdLabors.filter(
+          (labor) => !labor.is_saved || !!labor.error_detail
+        );
+
+        if (failedLabors.length > 0) {
+          const message = failedLabors
+            .map((labor) => translateLaborError(labor.error_detail?.trim() || ""))
+            .filter(Boolean)
+            .join("\n");
+
+          setError(message || "Ocurrió un error en la creación de las labores.");
+          return false;
+        }
+
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
@@ -253,7 +289,9 @@ const useLabors = () => {
           return false;
         }
 
-        setError(extractErrorMessage(error, "Error desconocido en la creación de las labores."));
+        setError(
+          extractErrorMessage(error, "Error desconocido en la creación de las labores.")
+        );
         return false;
       } finally {
         setProcessing(false);
@@ -261,6 +299,7 @@ const useLabors = () => {
     },
     [dispatch]
   );
+
 
   const getLabors = React.useCallback(
     async (projectId: number) => {

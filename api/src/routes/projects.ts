@@ -724,20 +724,18 @@ router.post("/:id/labors", async (req: Request, res: Response) => {
     };
 
 
-    await apiClient.post<any>(
-      `/projects/${projectId}/labors`,
-      requestData,
-      headers
-    );
+const { data: backendResponse } = await apiClient.post<any>(
+  `/projects/${projectId}/labors`,
+  requestData,
+  headers
+);
 
-    setImmediate(() => cache.flushAll());
+setImmediate(() => cache.flushAll());
 
-    const data = {
-      success: true,
-      message: "Labores actualizados exitosamente",
-    };
-
-    res.status(200).json(data);
+res.status(207).json({
+  success: true,
+  data: backendResponse,
+});
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
