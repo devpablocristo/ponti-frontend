@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -7,7 +7,7 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {
   getPontiChatConversation,
   listPontiChatConversations,
-  pontiAssistantChat,
+  pontiAssistantChatStream,
 } from "@/api/aiClient";
 import type {
   PontiConversationMessage,
@@ -17,7 +17,7 @@ import type {
 
 const ROUTE_OPTIONS: { value: PontiRouteHint | ""; label: string }[] = [
   { value: "", label: "Automático (todos los módulos)" },
-  { value: "general", label: "General" },
+  { value: "general", label: "Asesor de proyecto" },
   { value: "dashboard", label: "Tablero / insights" },
   { value: "labors", label: "Labores" },
   { value: "supplies", label: "Insumos" },
@@ -50,6 +50,17 @@ const AIAssistant = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [meta, setMeta] = useState<{ routed?: string; source?: string }>({});
+  /** Respuesta en curso (SSE); al llegar `done` se vuelca a `messages`. */
+  const [streamDraft, setStreamDraft] = useState<{ text: string; activity: string[] } | null>(
+    null
+  );
+  const streamAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      streamAbortRef.current?.abort();
+    };
+  }, []);
 
   const refreshList = useCallback(async () => {
     if (!headers) return;
@@ -67,6 +78,9 @@ const AIAssistant = () => {
 
   const loadConversation = async (id: string) => {
     if (!headers) return;
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setStreamDraft(null);
     setLoading(true);
     setError("");
     try {
@@ -83,6 +97,9 @@ const AIAssistant = () => {
   };
 
   const handleNewChat = () => {
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = null;
+    setStreamDraft(null);
     setActiveId(null);
     setMessages([]);
     setMeta({});
@@ -94,34 +111,116 @@ const AIAssistant = () => {
     const text = input.trim();
     if (!text) return;
 
+    streamAbortRef.current?.abort();
+    streamAbortRef.current = new AbortController();
+    const { signal } = streamAbortRef.current;
+
     setLoading(true);
     setError("");
     const prevInput = text;
     setInput("");
+    setStreamDraft({ text: "", activity: [] });
+    setMessages((prev) => [...prev, { role: "user", content: prevInput }]);
+
+    let sawDone = false;
 
     try {
-      const res = await pontiAssistantChat(
+      await pontiAssistantChatStream(
         {
           message: prevInput,
           chat_id: activeId,
           route_hint: routeHint || undefined,
           preferred_language: "es",
         },
-        headers
+        headers,
+        (ev) => {
+          if (ev.event === "start") {
+            const cid = ev.data.chat_id;
+            if (typeof cid === "string" && cid) {
+              setActiveId(cid);
+            }
+            const routed = ev.data.routed_agent;
+            const source = ev.data.routing_source;
+            if (typeof routed === "string" && typeof source === "string") {
+              setMeta({ routed, source });
+            }
+            return;
+          }
+          if (ev.event === "text" && typeof ev.data.content === "string") {
+            const chunk = ev.data.content;
+            setStreamDraft((d) => (d ? { ...d, text: d.text + chunk } : d));
+            return;
+          }
+          if (ev.event === "tool_call") {
+            const tool = typeof ev.data.tool === "string" ? ev.data.tool : "?";
+            setStreamDraft((d) =>
+              d ? { ...d, activity: [...d.activity, `Consultando: ${tool}…`] } : d
+            );
+            return;
+          }
+          if (ev.event === "tool_result") {
+            const tool = typeof ev.data.tool === "string" ? ev.data.tool : "?";
+            setStreamDraft((d) =>
+              d ? { ...d, activity: [...d.activity, `Listo: ${tool}`] } : d
+            );
+            return;
+          }
+          if (ev.event === "done") {
+            sawDone = true;
+            const reply = typeof ev.data.reply === "string" ? ev.data.reply : "";
+            const rawTools = ev.data.tool_calls;
+            const toolCalls = Array.isArray(rawTools)
+              ? rawTools.filter((t): t is string => typeof t === "string")
+              : [];
+            const routed = ev.data.routed_agent;
+            const source = ev.data.routing_source;
+            if (typeof routed === "string" && typeof source === "string") {
+              setMeta({ routed, source });
+            }
+            const cid = ev.data.chat_id;
+            if (typeof cid === "string" && cid) {
+              setActiveId(cid);
+            }
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: reply,
+                tool_calls: toolCalls.length > 0 ? toolCalls : undefined,
+              },
+            ]);
+            setStreamDraft(null);
+            void refreshList();
+            return;
+          }
+          if (ev.event === "error") {
+            const msg =
+              typeof ev.data.message === "string"
+                ? ev.data.message
+                : "Error en el stream del asistente";
+            setError(msg);
+            setStreamDraft(null);
+          }
+        },
+        signal
       );
 
-      setActiveId(res.chat_id);
-      setMeta({ routed: res.routed_agent, source: res.routing_source });
-      setMessages((prev) => [
-        ...prev,
-        { role: "user", content: prevInput },
-        { role: "assistant", content: res.reply },
-      ]);
-      await refreshList();
+      if (!sawDone && !signal.aborted) {
+        setError("La respuesta del asistente se cortó antes de terminar.");
+        setStreamDraft(null);
+      }
     } catch (err) {
+      const aborted =
+        signal.aborted || (err instanceof Error && err.name === "AbortError");
+      if (aborted) {
+        setStreamDraft(null);
+        return;
+      }
       const message = err instanceof Error ? err.message : "Error al enviar el mensaje";
       setError(message);
       setInput(prevInput);
+      setMessages((prev) => prev.slice(0, -1));
+      setStreamDraft(null);
     } finally {
       setLoading(false);
     }
@@ -133,9 +232,9 @@ const AIAssistant = () => {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Asistente Ponti</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Asesor de proyecto Ponti</h1>
           <p className="text-sm text-gray-600">
-            Un solo chat para tablero, labores, insumos, campañas, lotes, stock e informes.{" "}
+            Un solo chat con contexto del proyecto para tablero, labores, insumos, campañas, lotes, stock e informes.{" "}
             <Link className="text-blue-600 hover:underline" to="/admin/ai-copilot">
               Copilot por insight
             </Link>
@@ -228,6 +327,23 @@ const AIAssistant = () => {
                 )}
               </div>
             ))}
+            {streamDraft && (
+              <div className="mr-auto max-w-[90%] rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800">
+                {streamDraft.activity.length > 0 && (
+                  <ul className="mb-2 list-inside list-disc text-xs text-gray-600">
+                    {streamDraft.activity.map((line, i) => (
+                      <li key={`${i}-${line}`}>{line}</li>
+                    ))}
+                  </ul>
+                )}
+                <div className="whitespace-pre-wrap">
+                  {streamDraft.text}
+                  {loading && (
+                    <span className="ml-0.5 inline-block h-3 w-1 animate-pulse bg-gray-400 align-middle" />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="border-t border-gray-100 p-3">

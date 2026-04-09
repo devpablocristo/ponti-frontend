@@ -59,3 +59,9 @@ export type PontiConversationDetail = {
   created_at: string;
   updated_at: string;
 };
+
+/** Evento SSE de POST .../chat/stream (misma forma que emite sse-starlette / ponti-ai). */
+export type PontiChatStreamSseEvent = {
+  event: string;
+  data: Record<string, unknown>;
+};

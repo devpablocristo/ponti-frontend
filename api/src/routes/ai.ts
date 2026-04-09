@@ -1,3 +1,4 @@
+import axios from "axios";
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
@@ -190,6 +191,42 @@ router.post("/chat", async (req: Request, res: Response) => {
     const headers = buildHeaders(userId, projectId);
     const { data } = await apiClient.post<any>("/ai/chat", req.body, headers);
     res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.post("/chat/stream", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const response = await axios.post(
+      `${configService.baseManagerApi}/ai/chat/stream`,
+      req.body,
+      {
+        headers: {
+          ...buildHeaders(userId, projectId),
+          "Content-Type": "application/json",
+        },
+        responseType: "stream",
+        timeout: 0,
+        validateStatus: () => true,
+      }
+    );
+    const ct = response.headers["content-type"];
+    if (ct) {
+      res.setHeader("Content-Type", ct);
+    } else {
+      res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    }
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.status(response.status);
+    response.data.pipe(res);
   } catch (error) {
     handleError(res, error);
   }
