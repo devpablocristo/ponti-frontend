@@ -3,6 +3,7 @@ export interface LaborGroupData {
   workorder_number: string;
   date: string;
   field_name: string;
+  lot_name: string;
   crop_name: string;
   contractor: string;
   labor_name: string;
