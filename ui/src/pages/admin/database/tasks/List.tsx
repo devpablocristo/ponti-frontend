@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import * as XLSX from "xlsx";
 
-import FilterBar from "../../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import DataTable from "../../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
@@ -25,12 +25,12 @@ import {
 const columns: Column<LaborInfo>[] = [
   {
     key: "name",
-    header: "Nombre",
+    header: "Labor",
     render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
   },
   {
     key: "category_name",
-    header: "Categoría",
+    header: "Rubro",
     render: (value) => String(value ?? ""),
   },
   {
@@ -78,8 +78,11 @@ export default function ListTasks() {
   const [labor, setLabor] = useState<LaborInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const safeLabors = Array.isArray(labors) ? labors : [];
-  const safeCategories = Array.isArray(categories) ? categories : [];
+  const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
+  const safeCategories = useMemo(
+    () => (Array.isArray(categories) ? categories : []),
+    [categories]
+  );
 
   const { filters, projectId } = useWorkspaceFilters([
     "customer",

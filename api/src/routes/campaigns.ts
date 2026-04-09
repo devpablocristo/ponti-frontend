@@ -32,16 +32,18 @@ router.get("", async (req: Request, res: Response) => {
     }
 
     const { data: campaigns } = await apiClient.get<any>(url, headers);
+    const raw = campaigns;
+    const items = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
 
     const data = {
       success: true,
       data: {
-        data: campaigns,
-        total: campaigns.length,
+        data: items,
+        total: items.length,
       },
     };
 
-    if (campaigns.length > 0) {
+    if (items.length > 0) {
       cache.set(url, data);
     }
 

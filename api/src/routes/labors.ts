@@ -63,7 +63,7 @@ router.post("/invoice", async (req: Request, res: Response) => {
     const { data: invoice } = await apiClient.post<any>(
       `/invoices/${req.body.workorder_id}`,
       requestData,
-      headers
+      headers,
     );
 
     setImmediate(() => cache.flushAll());
@@ -145,7 +145,7 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
     await apiClient.put<any>(
       `/invoices/${req.body.workorder_id}`,
       requestData,
-      headers
+      headers,
     );
 
     setImmediate(() => cache.flushAll());
@@ -156,6 +156,65 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
     };
 
     res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.patch("/payment-status", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const workOrderId = Number(req.body.workorder_id);
+    const investorId = Number(req.body.investor_id);
+    const paymentStatus = String(req.body.payment_status || "").trim();
+
+    if (!workOrderId) {
+      res.status(400).json({ message: "El id de la orden es obligatorio" });
+      return;
+    }
+
+    if (!investorId) {
+      res.status(400).json({ message: "El id del inversor es obligatorio" });
+      return;
+    }
+
+    if (!paymentStatus) {
+      res.status(400).json({ message: "El estado de pago es obligatorio" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    await apiClient.patch(
+      `/work-orders/${workOrderId}/investors/${investorId}/payment-status`,
+      { payment_status: paymentStatus },
+      headers,
+    );
+
+    setImmediate(() => cache.flushAll());
+
+    res.status(200).json({
+      success: true,
+      message: "Estado de pago actualizado exitosamente",
+    });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
     if ("error" in err) {
@@ -201,7 +260,7 @@ router.get("/metrics/:id", async (req: Request, res: Response) => {
 
     const { data: metrics } = await apiClient.get<any>(
       `/labors/metrics${query}`,
-      headers
+      headers,
     );
 
     const data = {
@@ -246,13 +305,13 @@ router.get("/export/:id", async (req, res) => {
 
     const response = await apiClient.get<any>(
       `/labors/export/${project_id}?usd_month=${new Date().getMonth() + 1}`,
-      { headers, responseType: "arraybuffer" }
+      { headers, responseType: "arraybuffer" },
     );
 
     res.setHeader("Content-Disposition", 'attachment; filename="labores.xlsx"');
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     res.send(response.data);
@@ -290,13 +349,16 @@ router.get("/database-export/:id", async (req, res) => {
 
     const response = await apiClient.get<any>(
       `/labors/export/all?project_id=${project_id}&usd_month=${new Date().getMonth() + 1}`,
-      { headers, responseType: "arraybuffer" }
+      { headers, responseType: "arraybuffer" },
     );
 
-    res.setHeader("Content-Disposition", 'attachment; filename="laboresdb.xlsx"');
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="laboresdb.xlsx"',
+    );
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     res.send(response.data);
@@ -313,45 +375,48 @@ router.get("/database-export/:id", async (req, res) => {
   }
 });
 
-router.get("/workorders-count/:project_id/:labor_id", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
+router.get(
+  "/workorders-count/:project_id/:labor_id",
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.userID;
+      if (!userId) {
+        res.status(401).json({ message: "Usuario no autenticado" });
+        return;
+      }
+
+      const project_id = parseInt(req.params.project_id as string) || 0;
+      const labor_id = parseInt(req.params.labor_id as string) || 0;
+
+      if (project_id === 0 || labor_id === 0) {
+        res.status(400).json({ message: "Proyecto y labor obligatorios" });
+        return;
+      }
+
+      const headers = {
+        "X-API-KEY": configService.apiKey,
+        "X-User-Id": userId,
+      };
+
+      const { data } = await apiClient.get<any>(
+        `/projects/${project_id}/labors/${labor_id}/workorders-count`,
+        headers,
+      );
+
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      const err = error as ApiResponse<null>;
+      if ("error" in err) {
+        res.status(err.error?.status || 500).json(err);
+        return;
+      }
+      res.status(500).json({
+        success: false,
+        error: { status: 500, details: "Error al obtener conteo" },
+      });
     }
-
-    const project_id = parseInt(req.params.project_id as string) || 0;
-    const labor_id = parseInt(req.params.labor_id as string) || 0;
-
-    if (project_id === 0 || labor_id === 0) {
-      res.status(400).json({ message: "Proyecto y labor obligatorios" });
-      return;
-    }
-
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-
-    const { data } = await apiClient.get<any>(
-      `/projects/${project_id}/labors/${labor_id}/workorders-count`,
-      headers
-    );
-
-    res.status(200).json({ success: true, data });
-  } catch (error: any) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-    res.status(500).json({
-      success: false,
-      error: { status: 500, details: "Error al obtener conteo" },
-    });
-  }
-});
+  },
+);
 
 router.get("/:id", async (req: Request, res: Response) => {
   try {
@@ -378,7 +443,7 @@ router.get("/:id", async (req: Request, res: Response) => {
     }
 
     const cachedLabors = cache.get(
-      `labors:project:${project_id}:query:${query}`
+      `labors:project:${project_id}:query:${query}`,
     );
     if (cachedLabors) {
       res.status(200).json(cachedLabors);
@@ -392,7 +457,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     const { data: labors } = await apiClient.get<any>(
       `/labors/group/${project_id}${query}`,
-      headers
+      headers,
     );
 
     const data = {
@@ -404,7 +469,7 @@ router.get("/:id", async (req: Request, res: Response) => {
     };
 
     setImmediate(() =>
-      cache.set(`labors:project:${project_id}:query:${query}`, data)
+      cache.set(`labors:project:${project_id}:query:${query}`, data),
     );
 
     res.status(200).json(data);
@@ -436,10 +501,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.delete<any>(
-      `/labors/${req.params.id}`,
-      headers
-    );
+    await apiClient.delete<any>(`/labors/${req.params.id}`, headers);
 
     const data = {
       success: true,
@@ -489,7 +551,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
     await apiClient.put<any>(
       `projects/${req.params.project_id}/labors/${req.params.id}`,
       requestData,
-      headers
+      headers,
     );
 
     setImmediate(() => cache.flushAll());

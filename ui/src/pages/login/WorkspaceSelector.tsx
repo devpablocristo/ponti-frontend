@@ -183,6 +183,9 @@ function WorkspaceSelector() {
 
       setProjectSuggestions(filtered);
     } else {
+      if (!customer) {
+        return;
+      }
       await getProjectsDropdown(customer.id);
     }
     setShowProjectSuggestions(true);

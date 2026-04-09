@@ -36,10 +36,13 @@ const typeOptions = [
   { id: 1, name: "Stock" },
   { id: 2, name: "Movimiento interno" },
   { id: 3, name: "Remito oficial" },
+  { id: 4, name: "Devolución" },
 ];
 
 const formatAvailableQty = (value: number) =>
   value.toFixed(2).replace(/\.?0+$/, "");
+
+const DEVOLUTION_TYPE_ID = 4;
 
 export default function CreateItem({
   drawerOpen,
@@ -348,53 +351,67 @@ export default function CreateItem({
     latestGetProvidersRef.current = getProviders;
   }, [items, supplies, projectId, onProductCreated, getStock, getProviders]);
 
-  useEffect(() => {
-    if (lastSubmittedRowIndexes.length === 0) return;
+useEffect(() => {
+  if (lastSubmittedRowIndexes.length === 0) return;
+  if (resultCreation.supply_movements.length === 0) return;
 
-    if (resultCreation.supply_movements.length > 0) {
-      const hasSavedMovements = resultCreation.supply_movements.some(
-        (movement) => movement.is_saved
+  const expectedCount = lastSubmittedRowIndexes.length;
+  const successfulMovements = resultCreation.supply_movements.filter(
+    (movement) => movement.is_saved
+  );
+  const allSaved =
+    resultCreation.supply_movements.length === expectedCount &&
+    successfulMovements.length === expectedCount;
+
+  const errors: string[] = [];
+  const nextItemErrors: Record<number, string> = {};
+
+  resultCreation.supply_movements.forEach((movement, responseIndex) => {
+    if (movement.error_detail !== "") {
+      const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
+      const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
+      const detailWithNames = replaceSupplyIdsWithNames(
+        detail,
+        latestSuppliesRef.current
       );
-      const errors: string[] = [];
-      const nextItemErrors: Record<number, string> = {};
-      resultCreation.supply_movements.forEach((movement, responseIndex) => {
-        if (movement.error_detail !== "") {
-          const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
-          const selectedSupplyId = Number(latestItemsRef.current[uiRowIndex]?.item || 0);
-          const selectedSupplyName =
-            latestSuppliesRef.current.find((s) => s.id === selectedSupplyId)?.name ||
-            `fila ${uiRowIndex + 1}`;
-          const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
-          const message = `${selectedSupplyName}: ${detail}`;
-          errors.push(message);
-          nextItemErrors[uiRowIndex] = detail;
-        }
-      });
+      errors.push(detailWithNames);
+      nextItemErrors[uiRowIndex] = detailWithNames;
+    }
+  });
 
-      if (errors.length > 0) {
-        setError(errors.join("\n"));
-        setItemErrors(nextItemErrors);
-        setSuccessMessage(null);
-        if (hasSavedMovements) {
-          latestOnProductCreatedRef.current();
-          if (latestProjectIdRef.current) {
-            latestGetStockRef.current(latestProjectIdRef.current, "");
-          }
-          latestGetProvidersRef.current("");
-        }
-        return;
-      }
+  if (errors.length > 0 || !allSaved) {
+    const fallbackMessage =
+      errors.length > 0
+        ? errors.join("\n")
+        : "No se pudo guardar el movimiento. Revisá que no haya insumos duplicados u otros errores de validación.";
 
-      setItemErrors({});
-      setSuccessMessage("Movimiento guardado correctamente");
+    setError(replaceSupplyIdsWithNames(fallbackMessage, latestSuppliesRef.current));
+    setItemErrors(nextItemErrors);
+    setSuccessMessage(null);
+
+    if (successfulMovements.length > 0) {
       latestOnProductCreatedRef.current();
-      clearForm();
       if (latestProjectIdRef.current) {
         latestGetStockRef.current(latestProjectIdRef.current, "");
       }
       latestGetProvidersRef.current("");
     }
-  }, [resultCreation, lastSubmittedRowIndexes]);
+
+    return;
+  }
+
+  setError(null);
+  setItemErrors({});
+  setSuccessMessage("Movimiento guardado correctamente");
+  latestOnProductCreatedRef.current();
+  clearForm();
+
+  if (latestProjectIdRef.current) {
+    latestGetStockRef.current(latestProjectIdRef.current, "");
+  }
+  latestGetProvidersRef.current("");
+}, [resultCreation, lastSubmittedRowIndexes]);
+
 
   useEffect(() => {
     if (projectId) {
@@ -418,17 +435,20 @@ export default function CreateItem({
 
   const availableSupplies = useMemo(() => {
     const stockBySupply = new Map<string, number>();
+
     for (const s of stock || []) {
       const current = stockBySupply.get(s.supply_name) || 0;
       stockBySupply.set(s.supply_name, current + Number(s.stock_units));
     }
 
-    // Movimiento interno: solo insumos con stock > 0
-    // Remito oficial / Stock: todos los insumos del catálogo
-    const isInternalTransfer = type?.id === 2;
+    const requiresAvailableStock = type?.id === 2 || type?.id === DEVOLUTION_TYPE_ID;
 
     return supplies
-      .filter((s) => !isInternalTransfer || Number(stockBySupply.get(s.name) || 0) > 0)
+      .filter(
+        (s) =>
+          !requiresAvailableStock ||
+          Number(stockBySupply.get(s.name) || 0) > 0
+      )
       .map((s) => ({
         id: s.id,
         name: s.name,
@@ -446,77 +466,77 @@ export default function CreateItem({
     );
   }, [selectedProject]);
 
-  useEffect(() => {
-    if (!drawerOpen) return;
+useEffect(() => {
+  if (!drawerOpen) return;
+  if (editingMovement) return;
 
-    if (!editingMovement) {
-      clearForm();
-      return;
+  clearForm();
+}, [drawerOpen, editingMovement]);
+
+useEffect(() => {
+  if (!drawerOpen || !editingMovement) return;
+
+  setError(null);
+  setSuccessMessage(null);
+  setItemErrors({});
+
+  const matchedType =
+    typeOptions.find((t) => t.name === editingMovement.entry_type) || null;
+  setType(matchedType);
+
+  const isInternalMovement = matchedType?.id === 2;
+
+  setCustomer(null);
+  setProject(null);
+  setCampaign(null);
+  setSelectedProjectDestination(null);
+
+  if (isInternalMovement) {
+    if (editingMovement.destination_project_id) {
+      setSelectedProjectDestination(editingMovement.destination_project_id);
     }
 
-
-    setError(null);
-    setSuccessMessage(null);
-    setItemErrors({});
-
-    const matchedType =
-      typeOptions.find((t) => t.name === editingMovement.entry_type) || null;
-    setType(matchedType);
-
-    const isInternalMovement = matchedType?.id === 2;
-
-    // Reset de destino para no arrastrar valores viejos
-    setCustomer(null);
-    setProject(null);
-    setCampaign(null);
-    setSelectedProjectDestination(null);
-
-    if (isInternalMovement) {
-      if (editingMovement.destination_project_id) {
-        setSelectedProjectDestination(editingMovement.destination_project_id);
-      }
-
-      if (editingMovement.destination_customer_name) {
-        const matchedCustomer = customers.find(
-          (c) => c.name === editingMovement.destination_customer_name
-        );
-        if (matchedCustomer) setCustomer(matchedCustomer);
-      }
+    if (editingMovement.destination_customer_name) {
+      const matchedCustomer = customers.find(
+        (c) => c.name === editingMovement.destination_customer_name
+      );
+      if (matchedCustomer) setCustomer(matchedCustomer);
     }
+  }
 
+  setOrderNumber(editingMovement.reference_number || "");
+  setDate(String(editingMovement.entry_date || "").slice(0, 10));
 
-    setOrderNumber(editingMovement.reference_number || "");
-    setDate(String(editingMovement.entry_date || "").slice(0, 10));
+  const matchedProvider = (providers || []).find(
+    (p) => p.name === editingMovement.provider_name
+  );
+  setProvider(matchedProvider);
+  setQueryProvider(editingMovement.provider_name || "");
 
-    const matchedProvider = (providers || []).find(
-      (p) => p.name === editingMovement.provider_name
-    );
-    setProvider(matchedProvider);
-    setQueryProvider(editingMovement.provider_name || "");
+  const matchedInvestor = investors.find(
+    (i) => i.name === editingMovement.investor_name
+  );
+  setInvestor(matchedInvestor || null);
 
-    const matchedInvestor = investors.find(
-      (i) => i.name === editingMovement.investor_name
-    );
-    setInvestor(matchedInvestor || null);
+  const matchedSupply = supplies.find(
+    (s) => s.name === editingMovement.supply_name
+  );
 
-    const matchedSupply = supplies.find(
-      (s) => s.name === editingMovement.supply_name
-    );
+  const firstItem = {
+    item: matchedSupply ? String(matchedSupply.id) : "",
+    quantity: String(editingMovement.quantity ?? "")
+      .replace(/[^\d.,]/g, "")
+      .replace(",", "."),
+  };
 
-    const firstItem = {
-      item: matchedSupply ? String(matchedSupply.id) : "",
-      quantity: String(editingMovement.quantity ?? "")
-        .replace(/[^\d.,]/g, "")
-        .replace(",", "."),
-    };
+  const nextItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
+    item: "",
+    quantity: "",
+  }));
+  nextItems[0] = firstItem;
+  setItems(nextItems);
+}, [drawerOpen, editingMovement, providers, investors, supplies, customers]);
 
-    const nextItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
-      item: "",
-      quantity: "",
-    }));
-    nextItems[0] = firstItem;
-    setItems(nextItems);
-  }, [drawerOpen, editingMovement, providers, investors, supplies, customers]);
 
   useEffect(() => {
     if (!drawerOpen || !editingMovement) return;
@@ -630,10 +650,55 @@ export default function CreateItem({
       return;
     }
 
+    itemsWithAnyValue.forEach(({ item, index }) => {
+      const requestedQty = Number(item.quantity);
+      if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
+        errors.push(`La cantidad de la fila ${index + 1} debe ser mayor a 0.`);
+      }
+    });
+
+    if (type?.id === DEVOLUTION_TYPE_ID) {
+      const stockBySupply = new Map<string, number>();
+      const seenSupplyIds = new Set<number>();
+
+      for (const s of stock || []) {
+        const current = stockBySupply.get(s.supply_name) || 0;
+        stockBySupply.set(s.supply_name, current + Number(s.stock_units));
+      }
+
+      itemsWithAnyValue.forEach(({ item }) => {
+        const supplyId = Number(item.item);
+        const selectedSupply = supplies.find((s) => s.id === supplyId);
+        const requestedQty = Number(item.quantity) || 0;
+        const availableQty = selectedSupply
+          ? Number(stockBySupply.get(selectedSupply.name) || 0)
+          : 0;
+
+        if (seenSupplyIds.has(supplyId)) {
+          const remitoLabel = orderNumber.trim()
+            ? `El remito de devolución ${orderNumber.trim()}`
+            : "Este remito de devolución";
+          errors.push(
+            `${remitoLabel} ya contiene el insumo ${selectedSupply?.name || "seleccionado"} dentro del request.`
+          );
+          return;
+        }
+
+        seenSupplyIds.add(supplyId);
+
+        if (requestedQty > availableQty) {
+          errors.push(
+            `La devolución de ${selectedSupply?.name || "insumo"} no puede superar el stock disponible (${formatAvailableQty(availableQty)} ${selectedSupply ? getUnitName(selectedSupply.unit_id) : ""}).`
+          );
+        }
+      });
+    }
+
     if (errors.length > 0) {
       setError(errors.join("\n"));
       return;
     }
+
 
     setLastSubmittedRowIndexes(itemsWithAnyValue.map(({ index }) => index));
     setItemErrors({});

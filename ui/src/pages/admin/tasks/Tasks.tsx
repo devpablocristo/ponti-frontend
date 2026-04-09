@@ -1,18 +1,12 @@
 import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
-import {
-  LoaderCircle,
-  ClockIcon,
-  CheckIcon,
-  FileTextIcon,
-  FileXIcon,
-} from "lucide-react";
+import { LoaderCircle, ClockIcon, CheckIcon, FileTextIcon, FileXIcon } from "lucide-react";
 import * as XLSX from "xlsx";
 
 import useLabors from "../../../hooks/useLabors";
 import useCategories from "../../../hooks/useCategories";
-import DataTable from "../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { BaseModal } from "../../../components/Modal/BaseModal";
@@ -94,10 +88,7 @@ function normalizeSpreadsheetRow(row: Record<string, unknown>) {
   return normalized;
 }
 
-function getValueByAliases(
-  row: Record<string, string>,
-  aliases: readonly string[]
-) {
+function getValueByAliases(row: Record<string, string>, aliases: readonly string[]) {
   for (const alias of aliases) {
     const normalizedAlias = normalizeText(alias);
     if (row[normalizedAlias] !== undefined) {
@@ -126,12 +117,17 @@ const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
   },
 };
 
-const emptyStatus = "NoFacturada";
+const invoiceEmptyStatus = "NoFacturada";
 
-const statusOptions = [
+const invoiceStatusOptions = [
   { id: 1, name: "Pendiente" },
   { id: 2, name: "Pagada" },
   { id: 3, name: "Facturada" },
+];
+
+const investorPaymentStatusOptions = [
+  { id: 1, name: "Pendiente" },
+  { id: 2, name: "Pagada" },
 ];
 
 function TaskHeader({
@@ -204,9 +200,7 @@ function TaskHeader({
                   if (e.target.checked) {
                     setSelectedColumns([...selectedColumns, col.key]);
                   } else {
-                    setSelectedColumns(
-                      selectedColumns.filter((k) => k !== col.key)
-                    );
+                    setSelectedColumns(selectedColumns.filter((k) => k !== col.key));
                   }
                 }}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -220,13 +214,7 @@ function TaskHeader({
   );
 }
 
-function TasksIndicators({
-  metrics,
-  processing,
-}: {
-  metrics: Metrics;
-  processing: boolean;
-}) {
+function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing: boolean }) {
   return (
     <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
       {processing ? (
@@ -267,6 +255,7 @@ export function Tasks() {
     errorMetrics,
     pageInfo,
     updateInvoice,
+    updateInvestorPaymentStatus,
     createInvoice,
     processingInvoice,
     errorInvoice,
@@ -290,16 +279,11 @@ export function Tasks() {
     invoice_status: "",
   });
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [resultInvoiceMessage, setResultInvoiceMessage] = useState<
-    string | null
-  >(null);
+  const [updatingInvestorPaymentKey, setUpdatingInvestorPaymentKey] = useState<string | null>(null);
+  const [resultInvoiceMessage, setResultInvoiceMessage] = useState<string | null>(null);
   const itemsPerPage = 10;
-  const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(
-    null
-  );
-  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
-    null
-  );
+  const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
 
   const { filters, projectId, selectedField } = useWorkspaceFilters([
     "customer",
@@ -317,7 +301,6 @@ export function Tasks() {
     if (resultInvoice && projectId) {
       setResultInvoiceMessage(resultInvoice);
       const query = buildFieldQuery();
-      setCurrentPage(1);
       getLaborGroups(projectId, query);
       getMetrics(projectId, query);
     }
@@ -331,11 +314,7 @@ export function Tasks() {
   }, [errorInvoice]);
 
   const getFilterOptionsForColumn = useCallback(
-    (
-      key: keyof LaborGroupData,
-      data: LaborGroupData[],
-      filters: Record<string, unknown>
-    ) => {
+    (key: keyof LaborGroupData, data: LaborGroupData[], filters: Record<string, unknown>) => {
       const otherFilters = { ...filters };
       delete otherFilters[key];
 
@@ -362,11 +341,41 @@ export function Tasks() {
         })
       );
 
-      return [...new Set(filtered.map((t) => String(t[key] ?? "")))]
-        .filter(Boolean)
-        .sort();
+      return [...new Set(filtered.map((t) => String(t[key] ?? "")))].filter(Boolean).sort();
     },
     []
+  );
+
+  const handleInvestorPaymentStatusChange = useCallback(
+    async (item: LaborGroupData, nextStatus: string) => {
+      if (!item.investor_payment_enabled || !item.investor_id || !nextStatus) {
+        return;
+      }
+      if (nextStatus === item.investor_payment_status) {
+        return;
+      }
+
+      setResultInvoiceMessage(null);
+      setErrorInvoiceMessage(null);
+
+      const rowKey = `${item.workorder_id}:${item.investor_id}`;
+      setUpdatingInvestorPaymentKey(rowKey);
+      const updated = await updateInvestorPaymentStatus({
+        workorder_id: item.workorder_id,
+        investor_id: item.investor_id,
+        payment_status: nextStatus,
+      });
+      if (updated) {
+        setResultInvoiceMessage("Se ha actualizado el pago por inversor con éxito!");
+        if (projectId) {
+          const query = buildFieldQuery();
+          getLaborGroups(projectId, query);
+          getMetrics(projectId, query);
+        }
+      }
+      setUpdatingInvestorPaymentKey(null);
+    },
+    [buildFieldQuery, getLaborGroups, getMetrics, projectId, updateInvestorPaymentStatus]
   );
 
   const columns: Column<LaborGroupData>[] = useMemo(
@@ -406,6 +415,14 @@ export function Tasks() {
         filterOptions: getFilterOptionsForColumn("field_name", laborGroups, taskFilters),
       },
       {
+        key: "lot_name",
+        header: "Lotes",
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("lot_name", laborGroups, taskFilters),
+      },
+
+      {
         key: "crop_name",
         header: "Cultivo",
         filterable: true,
@@ -414,12 +431,12 @@ export function Tasks() {
         render: (crop) => {
           const cropName = String(crop);
           return (
-          <span
-            className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-              }`}
-          >
-            {cropName}
-          </span>
+            <span
+              className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+                }`}
+            >
+              {cropName}
+            </span>
           );
         },
       },
@@ -439,12 +456,12 @@ export function Tasks() {
         render: (crop) => {
           const laborName = String(crop);
           return (
-          <span
-            className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-green-200 text-green-800"
-              }`}
-          >
-            {laborName}
-          </span>
+            <span
+              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-green-200 text-green-800"
+                }`}
+            >
+              {laborName}
+            </span>
           );
         },
       },
@@ -454,7 +471,10 @@ export function Tasks() {
         filterable: true,
         filterOptions: getFilterOptionsForColumn("surface_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-emerald-700">
+            {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}{" "}
+            <span className="text-emerald-400 font-normal text-xs">Has</span>
+          </span>
         ),
       },
       {
@@ -462,14 +482,20 @@ export function Tasks() {
         header: "Costo $/Ha",
         filterable: true,
         filterOptions: getFilterOptionsForColumn("cost_ha", laborGroups, taskFilters),
-        render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
+        render: (value) => (
+          <span className="font-semibold text-rose-600">
+            $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
+          </span>
+        ),
       },
       {
         key: "net_total",
         header: "Total $ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
+          <span className="font-bold text-rose-600">
+            $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
+          </span>
         ),
       },
       {
@@ -477,7 +503,9 @@ export function Tasks() {
         header: "Total $ IVA",
         filterable: false,
         render: (value) => (
-          <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
+          <span className="font-semibold text-rose-600">
+            $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
+          </span>
         ),
       },
       {
@@ -488,11 +516,50 @@ export function Tasks() {
         filterOptions: getFilterOptionsForColumn("investor_name", laborGroups, taskFilters),
       },
       {
+        key: "investor_payment_status",
+        header: "Pago inversor",
+        filterable: true,
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn(
+          "investor_payment_status",
+          laborGroups,
+          taskFilters
+        ),
+        render: (value, item) => {
+          if (!item.investor_payment_enabled || !item.investor_id) {
+            return <span className="text-xs text-gray-400">No aplica</span>;
+          }
+
+          const rowKey = `${item.workorder_id}:${item.investor_id}`;
+          const currentStatus = typeof value === "string" && value ? value : "Pendiente";
+
+          return (
+            <select
+              className="block w-full min-w-[120px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-white text-sm disabled:opacity-50"
+              value={currentStatus}
+              disabled={processingInvoice && updatingInvestorPaymentKey === rowKey}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) => {
+                void handleInvestorPaymentStatusChange(item, event.target.value);
+              }}
+            >
+              {investorPaymentStatusOptions.map((option) => (
+                <option key={`${rowKey}-${option.name}`} value={option.name}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+          );
+        },
+      },
+      {
         key: "usd_avg_value",
         header: "u$ Prom",
         filterable: false,
         render: (value) => (
-          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
+          <span className="font-semibold text-emerald-700">
+            u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
+          </span>
         ),
       },
       {
@@ -502,7 +569,9 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("usd_cost_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
+          <span className="font-semibold text-emerald-700">
+            u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
+          </span>
         ),
       },
       {
@@ -510,7 +579,9 @@ export function Tasks() {
         header: "Total u$ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>
+          <span className="font-bold text-emerald-700">
+            u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
+          </span>
         ),
       },
       {
@@ -550,14 +621,11 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("invoice_date", laborGroups, taskFilters),
         render: (dateString) => {
-          const rawDate = typeof dateString === "string" || typeof dateString === "number"
-            ? String(dateString)
-            : "";
-          if (
-            !rawDate ||
-            rawDate === "0001-01-01T00:00:00Z" ||
-            rawDate.startsWith("0001-01-01")
-          ) {
+          const rawDate =
+            typeof dateString === "string" || typeof dateString === "number"
+              ? String(dateString)
+              : "";
+          if (!rawDate || rawDate === "0001-01-01T00:00:00Z" || rawDate.startsWith("0001-01-01")) {
             return (
               <input
                 type="text"
@@ -576,13 +644,13 @@ export function Tasks() {
       },
       {
         key: "invoice_status",
-        header: "Estado",
+        header: "Estado factura",
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("invoice_status", laborGroups, taskFilters),
         render: (status) => {
           const normalizedStatus =
-            typeof status === "string" && status ? status : emptyStatus;
+            typeof status === "string" && status ? status : invoiceEmptyStatus;
 
           const config = statusConfig[normalizedStatus] || {
             classes: "bg-gray-100 text-gray-700",
@@ -600,7 +668,14 @@ export function Tasks() {
         },
       },
     ],
-    [laborGroups, taskFilters, getFilterOptionsForColumn]
+    [
+      laborGroups,
+      taskFilters,
+      getFilterOptionsForColumn,
+      handleInvestorPaymentStatusChange,
+      processingInvoice,
+      updatingInvestorPaymentKey,
+    ]
   );
 
   const allColumns = useMemo(() => {
@@ -610,10 +685,7 @@ export function Tasks() {
     });
     return Array.from(map.values());
   }, [columns]);
-  const allColumnKeys = useMemo(
-    () => allColumns.map((col) => col.key),
-    [allColumns]
-  );
+  const allColumnKeys = useMemo(() => allColumns.map((col) => col.key), [allColumns]);
   const latestAllColumnKeysRef = useRef(allColumnKeys);
 
   useEffect(() => {
@@ -653,7 +725,7 @@ export function Tasks() {
         }
 
         if (key === "invoice_status") {
-          const taskStatus = task.invoice_status || emptyStatus;
+          const taskStatus = task.invoice_status || invoiceEmptyStatus;
           if (Array.isArray(value)) return value.includes(taskStatus);
           return taskStatus === value;
         }
@@ -678,15 +750,9 @@ export function Tasks() {
       };
     }
 
-    const surface = filteredTasks.reduce(
-      (sum, t) => sum + Number(t.surface_ha || 0),
-      0
-    );
+    const surface = filteredTasks.reduce((sum, t) => sum + Number(t.surface_ha || 0), 0);
 
-    const totalCost = filteredTasks.reduce(
-      (sum, t) => sum + Number(t.net_total || 0),
-      0
-    );
+    const totalCost = filteredTasks.reduce((sum, t) => sum + Number(t.net_total || 0), 0);
 
     const avgCost = surface > 0 ? totalCost / surface : 0;
 
@@ -697,15 +763,12 @@ export function Tasks() {
     };
   }, [filteredTasks]);
 
-
   useEffect(() => {
     setColumnsToShow(columns);
   }, [columns]);
 
   useEffect(() => {
-    setColumnsToShow(
-      allColumns.filter((col) => visibleColumns.includes(col.key))
-    );
+    setColumnsToShow(allColumns.filter((col) => visibleColumns.includes(col.key)));
   }, [visibleColumns, allColumns]);
 
   const handlePageChange = (newPage: number) => {
@@ -714,15 +777,12 @@ export function Tasks() {
 
   const isValidDate = (dateString: string) => {
     if (!dateString) return false;
-    if (/^(00|0000)[/-](00|00)[/-](0000|00)$/.test(dateString))
-      return false;
+    if (/^(00|0000)[/-](00|00)[/-](0000|00)$/.test(dateString)) return false;
     const date = new Date(dateString);
     return date instanceof Date && !isNaN(date.getTime());
   };
 
-  const handleImportLaborsFromFile = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImportLaborsFromFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -754,10 +814,9 @@ export function Tasks() {
         const workbook = XLSX.read(buffer, { type: "array" });
         const firstSheetName = workbook.SheetNames[0];
         const firstSheet = workbook.Sheets[firstSheetName];
-        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-          firstSheet,
-          { defval: "" }
-        );
+        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, {
+          defval: "",
+        });
         parsedRows = jsonRows.map(normalizeSpreadsheetRow);
       }
 
@@ -766,9 +825,7 @@ export function Tasks() {
         return;
       }
 
-      const categoryByName = new Map(
-        categories.map((c) => [normalizeText(c.name), c])
-      );
+      const categoryByName = new Map(categories.map((c) => [normalizeText(c.name), c]));
 
       const laborsToSave: LaborToSave[] = [];
       const importErrors: string[] = [];
@@ -791,8 +848,7 @@ export function Tasks() {
           importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
         if (!priceRaw || Number.isNaN(priceValue) || priceValue <= 0)
           importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
-        if (!contractor)
-          importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
+        if (!contractor) importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
 
         if (
           name &&
@@ -847,11 +903,9 @@ export function Tasks() {
 
     try {
       setExportErrorMessage(null);
-      const response = await apiClient.get<Blob>(
-        `/labors/export/${projectId}`,
-        undefined,
-        { responseType: "blob" }
-      );
+      const response = await apiClient.get<Blob>(`/labors/export/${projectId}`, undefined, {
+        responseType: "blob",
+      });
 
       const url = window.URL.createObjectURL(response);
 
@@ -887,10 +941,23 @@ export function Tasks() {
         actions={[
           {
             label: "Exportar Labores",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            ,
+            icon: (
+              <svg
+                width="14"
+                height="13"
+                viewBox="0 0 14 13"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ),
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
@@ -900,9 +967,24 @@ export function Tasks() {
       />
       <div className="my-4">
         {errorMetrics ? (
-          <div className="flex items-center gap-3 p-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
-            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-            <div><span className="font-semibold">Error:</span> {errorMetrics}</div>
+          <div
+            className="flex items-center gap-3 p-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
+            role="alert"
+          >
+            <svg
+              className="w-5 h-5 text-red-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <span className="font-semibold">Error:</span> {errorMetrics}
+            </div>
           </div>
         ) : (
           <TasksIndicators metrics={derivedMetrics} processing={processing} />
@@ -942,7 +1024,7 @@ export function Tasks() {
               return;
             }
 
-            const statusOption = statusOptions.find(
+            const statusOption = invoiceStatusOptions.find(
               (opt) => opt.name === item.invoice_status
             );
 
@@ -951,9 +1033,7 @@ export function Tasks() {
               invoice_id: item.invoice_id,
               invoice_number: item.invoice_number,
               invoice_company: item.invoice_company,
-              invoice_date: item.invoice_date
-                ? (item.invoice_date ?? "").split("T")[0]
-                : "",
+              invoice_date: item.invoice_date ? (item.invoice_date ?? "").split("T")[0] : "",
               invoice_status: statusOption ? statusOption.id.toString() : "",
             });
             setShowInvoiceModal(true);
@@ -987,7 +1067,7 @@ export function Tasks() {
           onPrimaryAction={() => {
             if (processingInvoice) return;
 
-            const statusText = statusOptions.find(
+            const statusText = invoiceStatusOptions.find(
               (opt) => opt.id.toString() === invoice.invoice_status
             )?.name;
             if (!statusText) return;
@@ -1019,18 +1099,14 @@ export function Tasks() {
           secondaryButtonText="Cancelar"
         >
           <div className="flex gap-2 mt-2">
-            {processingInvoice && (
-              <LoaderCircle className="w-5 h-5 text-blue-600 animate-spin" />
-            )}
+            {processingInvoice && <LoaderCircle className="w-5 h-5 text-blue-600 animate-spin" />}
             <InputField
               label="Ingrese N° Factura"
               placeholder="N°"
               name="invoiceNumber"
               value={invoice.invoice_number}
               disabled={processingInvoice}
-              onChange={(e) =>
-                setInvoice({ ...invoice, invoice_number: e.target.value })
-              }
+              onChange={(e) => setInvoice({ ...invoice, invoice_number: e.target.value })}
             />
             <InputField
               label="Fecha"
@@ -1039,9 +1115,7 @@ export function Tasks() {
               name="invoiceDate"
               disabled={processingInvoice}
               value={invoice.invoice_date}
-              onChange={(e) =>
-                setInvoice({ ...invoice, invoice_date: e.target.value })
-              }
+              onChange={(e) => setInvoice({ ...invoice, invoice_date: e.target.value })}
             />
           </div>
           <div className="flex gap-2 mt-2">
@@ -1051,17 +1125,15 @@ export function Tasks() {
               name="companyName"
               disabled={processingInvoice}
               value={invoice.invoice_company}
-              onChange={(e) =>
-                setInvoice({ ...invoice, invoice_company: e.target.value })
-              }
+              onChange={(e) => setInvoice({ ...invoice, invoice_company: e.target.value })}
             />
             <SelectField
-              label="Estado"
-              placeholder="Estado"
+              label="Estado factura"
+              placeholder="Estado factura"
               name="status"
               disabled={processingInvoice}
               value={invoice.invoice_status}
-              options={statusOptions}
+              options={invoiceStatusOptions}
               onChange={(e) => {
                 setInvoice({
                   ...invoice,
@@ -1071,28 +1143,131 @@ export function Tasks() {
             />
           </div>
           {errorInvoiceMessage && (
-            <div className="flex items-center gap-3 p-3 mt-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
-              <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-              <div><span className="font-semibold">Error:</span> {errorInvoiceMessage}</div>
+            <div
+              className="flex items-center gap-3 p-3 mt-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
+              role="alert"
+            >
+              <svg
+                className="w-4 h-4 text-red-500 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div>
+                <span className="font-semibold">Error:</span> {errorInvoiceMessage}
+              </div>
             </div>
           )}
           {resultInvoiceMessage && (
-            <div className="flex items-center gap-3 p-3 mt-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200" role="alert">
-              <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
-              <div><span className="font-semibold">{resultInvoiceMessage}</span></div>
+            <div
+              className="flex items-center gap-3 p-3 mt-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200"
+              role="alert"
+            >
+              <svg
+                className="w-4 h-4 text-emerald-500 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              <div>
+                <span className="font-semibold">{resultInvoiceMessage}</span>
+              </div>
             </div>
           )}
         </BaseModal>
         {importMessage && (
-          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200" role="alert">
-            <svg className="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
-            <div><span className="font-semibold">{importMessage}</span></div>
+          <div
+            className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200"
+            role="alert"
+          >
+            <svg
+              className="w-5 h-5 text-emerald-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <span className="font-semibold">{importMessage}</span>
+            </div>
+          </div>
+        )}
+        {!showInvoiceModal && resultInvoiceMessage && (
+          <div
+            className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200"
+            role="alert"
+          >
+            <svg
+              className="w-5 h-5 text-emerald-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <span className="font-semibold">{resultInvoiceMessage}</span>
+            </div>
+          </div>
+        )}
+        {!showInvoiceModal && errorInvoiceMessage && (
+          <div
+            className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
+            role="alert"
+          >
+            <svg
+              className="w-5 h-5 text-red-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <span className="font-semibold">Error:</span> {errorInvoiceMessage}
+            </div>
           </div>
         )}
         {(error || exportErrorMessage || importError) && (
-          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
-            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-            <div><span className="font-semibold">Error:</span> {importError || exportErrorMessage || error}</div>
+          <div
+            className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
+            role="alert"
+          >
+            <svg
+              className="w-5 h-5 text-red-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <span className="font-semibold">Error:</span>{" "}
+              {importError || exportErrorMessage || error}
+            </div>
           </div>
         )}
       </div>

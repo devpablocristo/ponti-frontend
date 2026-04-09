@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 
-import DataTable from "../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ProjectData } from "../../../hooks/useDatabase/projects/types";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useNavigate } from "react-router-dom";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../hooks/useDatabase/projects";

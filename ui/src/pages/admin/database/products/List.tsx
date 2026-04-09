@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-import FilterBar from "../../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
-import DataTable from "../../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { Supply } from "../../../../hooks/useSupplies/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
@@ -32,6 +32,7 @@ export default function ListItems() {
     supplies,
     updateSupply,
     deleteSupply,
+    archiveSupply,
     getWorkOrdersCount,
     result,
     processing,
@@ -45,17 +46,18 @@ export default function ListItems() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: number;
+    name: string;
+    count: number;
+  } | null>(null);
+  const [deleteMode, setDeleteMode] = useState<"delete" | "archive">("delete");
   const [item, setItem] = useState<Supply | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const itemsPerPage = 10;
 
-  const { filters, projectId } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-  ]);
+  const { filters, projectId } = useWorkspaceFilters(["customer", "project", "campaign"]);
 
   useEffect(() => {
     if (projectId) {
@@ -220,27 +222,47 @@ export default function ListItems() {
   const handleDelete = async (supplyItem: Supply) => {
     const count = await getWorkOrdersCount(supplyItem.id);
     setDeleteTarget({ id: supplyItem.id, name: supplyItem.name, count });
+    setDeleteMode("delete");
     setDeleteModalOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    setErrorMessage("");
-    setSuccessMessage(null);
-    deleteSupply(deleteTarget.id);
-    setDeleteModalOpen(false);
-    setDeleteTarget(null);
-
+  const adjustPageAfterRemoval = (currentTotal: number) => {
     setTimeout(() => {
-      const totalAfterDelete = supplies.length - 1;
-      const lastPage = Math.max(
-        1,
-        Math.ceil(totalAfterDelete / itemsPerPage)
-      );
+      const totalAfterDelete = Math.max(0, currentTotal - 1);
+      const lastPage = Math.max(1, Math.ceil(totalAfterDelete / itemsPerPage));
       if (currentPage > lastPage) {
         setCurrentPage(lastPage);
       }
     }, 200);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setErrorMessage("");
+    setSuccessMessage(null);
+
+    if (deleteMode === "delete") {
+      const deleteResult = await deleteSupply(deleteTarget.id);
+      if (deleteResult === "deleted") {
+        setDeleteModalOpen(false);
+        setDeleteTarget(null);
+        adjustPageAfterRemoval(supplies.length);
+        return;
+      }
+      if (deleteResult === "conflict") {
+        setDeleteMode("archive");
+      }
+      return;
+    }
+
+    const archived = await archiveSupply(deleteTarget.id);
+    if (!archived) {
+      return;
+    }
+    setDeleteModalOpen(false);
+    setDeleteTarget(null);
+    setDeleteMode("delete");
+    adjustPageAfterRemoval(supplies.length);
   };
 
   const handleEdit = (item: Supply) => {
@@ -255,8 +277,6 @@ export default function ListItems() {
       setModalOpen(false);
     }
   };
-
-
 
   const handleExport = async () => {
     if (!projectId) return;
@@ -284,19 +304,35 @@ export default function ListItems() {
 
   return (
     <div className="w-full mx-auto">
-      <FilterBar filters={filters} actions={[
+      <FilterBar
+        filters={filters}
+        actions={[
           {
             label: "Exportar Insumos",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            ,
+            icon: (
+              <svg
+                width="14"
+                height="13"
+                viewBox="0 0 14 13"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ),
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
             onClick: () => handleExport(),
-          }
-        ]}/>
+          },
+        ]}
+      />
       <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
         {errorMessage && (
           <div
@@ -455,7 +491,7 @@ export default function ListItems() {
                       if (!item) return;
                       const value = e.target.value.replace(/,/g, ".");
                       if (/^\d*\.?\d{0,3}$/.test(value)) {
-                        setItem({ ...item, price: value} );
+                        setItem({ ...item, price: value });
                       }
                     }}
                   />
@@ -508,14 +544,17 @@ export default function ListItems() {
             onClose={() => {
               setDeleteModalOpen(false);
               setDeleteTarget(null);
+              setDeleteMode("delete");
             }}
-            title="Archivar insumo"
+            title={deleteMode === "delete" ? "Eliminar insumo" : "Archivar insumo"}
             message={
-              deleteTarget && deleteTarget.count > 0
-                ? `El insumo "${deleteTarget.name}" está en ${deleteTarget.count} orden${deleteTarget.count > 1 ? "es" : ""} de trabajo activa${deleteTarget.count > 1 ? "s" : ""}. Se archivará del catálogo pero las órdenes no se verán afectadas. ¿Continuar?`
-                : `¿Está seguro que desea archivar el insumo "${deleteTarget?.name}"?`
+              deleteMode === "delete"
+                ? `¿Está seguro que desea eliminar el insumo "${deleteTarget?.name}"? Si tiene referencias históricas, se ofrecerá archivarlo en el siguiente paso.`
+                : deleteTarget && deleteTarget.count > 0
+                  ? `El insumo "${deleteTarget.name}" tiene referencias históricas y aparece en ${deleteTarget.count} orden${deleteTarget.count > 1 ? "es" : ""} de trabajo activa${deleteTarget.count > 1 ? "s" : ""}. Se archivará del catálogo pero las órdenes no se verán afectadas. ¿Continuar?`
+                  : `El insumo "${deleteTarget?.name}" tiene referencias históricas y no puede eliminarse definitivamente. ¿Desea archivarlo del catálogo?`
             }
-            primaryButtonText="Archivar"
+            primaryButtonText={deleteMode === "delete" ? "Eliminar" : "Archivar"}
             primaryButtonColor="bg-red-600 hover:bg-red-800 focus:ring-red-300"
             onPrimaryAction={confirmDelete}
           />

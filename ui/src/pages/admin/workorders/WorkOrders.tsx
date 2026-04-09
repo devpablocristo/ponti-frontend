@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
-import DataTable from "../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import {Metrics, OrdersData, WorkorderData} from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import CreateOrder from "./CreateOrder";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { CopilotResponsePanel } from "@devpablocristo/modules-ai-console";
 import Button from "../../../components/Button/Button";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
-import { askAICopilot, AskResponse } from "@/api/aiClient";
+import { askAICopilot } from "@/api/aiClient";
+import type { CopilotMode, PontiCopilotResponse } from "@/types/ai";
 
 const AICopilot: React.FC = () => {
   const { filters, projectId } = useWorkspaceFilters([
@@ -13,51 +15,50 @@ const AICopilot: React.FC = () => {
     "campaign",
     "field",
   ]);
-  const suggestedQuestions = [
-    "Cuanto se gasto en costos directos del proyecto?",
-    "Cual es el costo directo por hectarea?",
-    "Cuanto se uso de insumos en total?",
-    "Cuantos workorders tiene el proyecto?",
-    "Cuantas ordenes se hicieron en los ultimos 30 dias?",
-    "Cual es la variacion de stock real vs inicial?",
-    "Cuantas hectareas totales tiene el proyecto?",
-    "Hectareas por lote del proyecto",
-    "Indicadores operativos de la campana activa",
-    "Insumos por categoria del proyecto",
-  ];
-  const [question, setQuestion] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [insightId, setInsightId] = useState("");
+  const [insightTitle, setInsightTitle] = useState("");
+  const [mode, setMode] = useState<CopilotMode>("explain");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [response, setResponse] = useState<AskResponse | null>(null);
+  const [response, setResponse] = useState<PontiCopilotResponse | null>(null);
   const location = useLocation();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const preset = params.get("q");
-    if (preset) {
-      setQuestion(preset);
+    const presetInsightId = params.get("insight_id");
+    const presetTitle = params.get("title");
+    const presetMode = params.get("mode");
+
+    if (presetInsightId) {
+      setInsightId(presetInsightId);
+    }
+    setInsightTitle(presetTitle ?? "");
+
+    if (
+      presetMode === "explain" ||
+      presetMode === "why" ||
+      presetMode === "next-steps"
+    ) {
+      setMode(presetMode);
     }
   }, [location.search]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (nextMode: CopilotMode = mode) => {
     setError("");
     setResponse(null);
     setLoading(true);
+    setMode(nextMode);
 
     try {
-      const payload = {
-        question,
-        context: {
-          date_from: dateFrom || undefined,
-          date_to: dateTo || undefined,
-        },
-      };
       if (!projectId) {
         throw new Error("Proyecto obligatorio");
       }
-      const res = await askAICopilot(payload, { projectId: String(projectId) });
+      if (!insightId) {
+        throw new Error("Insight obligatorio");
+      }
+      const res = await askAICopilot(insightId, nextMode, {
+        projectId: String(projectId),
+      });
       setResponse(res);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error inesperado";
@@ -70,117 +71,100 @@ const AICopilot: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 px-6 py-4">
       <FilterBar filters={filters} />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-2 md:col-span-2">
-          <label className="text-sm font-medium">Pregunta</label>
+      <div className="grid grid-cols-1 gap-4">
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium">Insight</label>
           <input
             className="border rounded-md px-3 py-2"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Necesito el resumen del proyecto"
+            value={insightTitle || insightId}
+            readOnly
+            placeholder="Abrí Copilot desde un insight concreto"
           />
-          <div className="flex flex-wrap gap-2 pt-2">
-            {suggestedQuestions.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className="rounded-full border px-3 py-1 text-xs text-slate-600 hover:bg-slate-50"
-                onClick={() => setQuestion(item)}
-              >
-                {item}
-              </button>
-            ))}
+          <div className="text-xs text-slate-500">
+            {insightId
+              ? `ID del insight: ${insightId}`
+              : "Seleccioná un insight desde AI Insights para pedir explicación, motivo o siguientes pasos."}
           </div>
         </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Fecha desde</label>
-          <input
-            className="border rounded-md px-3 py-2"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            placeholder="YYYY-MM-DD"
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium">Fecha hasta</label>
-          <input
-            className="border rounded-md px-3 py-2"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            placeholder="YYYY-MM-DD"
-          />
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant={mode === "explain" ? "primary" : "secondary"}
+            disabled={loading || !insightId}
+            onClick={() => handleSubmit("explain")}
+          >
+            {loading && mode === "explain" ? "Consultando..." : "Explicacion"}
+          </Button>
+          <Button
+            size="sm"
+            variant={mode === "why" ? "primary" : "secondary"}
+            disabled={loading || !insightId}
+            onClick={() => handleSubmit("why")}
+          >
+            {loading && mode === "why" ? "Consultando..." : "Por que importa"}
+          </Button>
+          <Button
+            size="sm"
+            variant={mode === "next-steps" ? "primary" : "secondary"}
+            disabled={loading || !insightId}
+            onClick={() => handleSubmit("next-steps")}
+          >
+            {loading && mode === "next-steps"
+              ? "Consultando..."
+              : "Siguientes pasos"}
+          </Button>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        <Button
-          size="sm"
-          variant="primary"
-          className="px-6"
-          disabled={loading}
-          onClick={handleSubmit}
-        >
-          {loading ? "Consultando..." : "Consultar"}
-        </Button>
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
 
       {response && (
-        <div className="grid grid-cols-1 gap-4">
-          <div className="border rounded-md p-4">
-            <h3 className="font-semibold">Respuesta</h3>
-            <p className="text-sm text-slate-700">{response.answer}</p>
-          </div>
-          <div className="border rounded-md p-4">
-            <h3 className="font-semibold">Datos</h3>
-            <pre className="text-xs text-slate-700 whitespace-pre-wrap">
-              {JSON.stringify(response.data, null, 2)}
-            </pre>
-          </div>
-          <div className="border rounded-md p-4">
-            <h3 className="font-semibold">Fuentes</h3>
-            <pre className="text-xs text-slate-700 whitespace-pre-wrap">
-              {JSON.stringify(response.sources, null, 2)}
-            </pre>
-          </div>
-          <div className="border rounded-md p-4">
-            <h3 className="font-semibold">Advertencias</h3>
-            <pre className="text-xs text-slate-700 whitespace-pre-wrap">
-              {JSON.stringify(response.warnings, null, 2)}
-            </pre>
-          </div>
-          <div className="border rounded-md p-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Insights Relacionados</h3>
+        <CopilotResponsePanel
+          answer={response.explanation.human_readable}
+          data={{
+            request_id: response.request_id,
+            insight_id: response.insight_id,
+            mode: response.mode,
+            output_kind: response.output_kind,
+            routed_agent: response.routed_agent,
+            routing_source: response.routing_source,
+            proposal: response.proposal,
+          }}
+          sources={{
+            audit_focused: response.explanation.audit_focused,
+            what_to_watch_next: response.explanation.what_to_watch_next,
+          }}
+          warnings={[]}
+          relatedInsightsCount={1}
+          relatedInsights={[
+            {
+              id: response.insight_id,
+              title: insightTitle || response.insight_id,
+            },
+          ]}
+          relatedInsightsAction={
+            <Link
+              className="text-sm text-blue-600 hover:underline"
+              to="/admin/ai-insights"
+            >
+              Ver insights
+            </Link>
+          }
+          emptyRelatedInsightsMessage="No hay insight cargado."
+          renderRelatedInsight={(item) => {
+            return (
               <Link
-                className="text-sm text-blue-600 hover:underline"
+                key={item.id}
+                className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
                 to="/admin/ai-insights"
               >
-                Ver insights
+                {item.title}
               </Link>
-            </div>
-            <div className="mt-2 text-sm text-slate-700">
-              Relacionados: {response.related_insights_count}
-            </div>
-            {response.related_insights.length === 0 ? (
-              <div className="mt-2 text-sm text-slate-500">
-                No hay insights activos para este proyecto.
-              </div>
-            ) : (
-              <div className="mt-3 grid grid-cols-1 gap-2">
-                {response.related_insights.map((item) => (
-                  <Link
-                    key={item.id}
-                    className="rounded-md border px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
-                    to={`/admin/ai-insights?entity_type=${item.entity_type}&entity_id=${item.entity_id}`}
-                  >
-                    {item.title}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+            );
+          }}
+        />
       )}
     </div>
   );

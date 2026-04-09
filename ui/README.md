@@ -1,50 +1,52 @@
-# React + TypeScript + Vite
+# Ponti Frontend UI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación React + TypeScript + Vite para la consola de Ponti.
 
-Currently, two official plugins are available:
+## Tooling
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Node fijado en `20.19.0` vía `.nvmrc`.
+- Package manager: Yarn 1 (`yarn.lock` versionado).
+- El flujo habitual en contenedores usa `ponti-frontend/docker-compose.yml`.
 
-## Expanding the ESLint configuration
+## Módulos compartidos
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+La UI consume paquetes publicados desde `core` y `modules`:
 
-- Configure the top-level `parserOptions` property like this:
+- `@devpablocristo/core-authn`
+- `@devpablocristo/core-browser`
+- `@devpablocristo/core-http`
+- `@devpablocristo/modules-ai-console`
+- `@devpablocristo/modules-ui-data-display`
+- `@devpablocristo/modules-ui-filters`
+- `@devpablocristo/modules-ui-forms`
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+No usa ya una copia local de `src/modules/ai-console`.
+
+## Tipos OpenAPI de Ponti AI
+
+Archivos relevantes:
+
+- `src/generated/ponti-ai.openapi.json`
+- `src/generated/ponti-ai.openapi.ts`
+- `src/types/ai.ts`
+
+Regeneración:
+
+```bash
+node ./scripts/generate-ai-types.mjs
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+El script intenta primero descargar `http://localhost:8090/openapi.json`. Si el
+servicio no está arriba, usa el export local desde `ponti-ai/scripts/export_openapi.py`.
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## Build local
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+yarn install
+yarn build
 ```
+
+Notas operativas:
+
+- `@material-tailwind/react` quedó actualizado a la línea beta que declara soporte para React `>=18`, alineado con React 19.
+- El chunk `vendor-export` sigue siendo pesado porque agrupa dependencias de exportación (`xlsx`, `jspdf`, `html2canvas`, etc.), pero ya no ensucia el build con warning porque quedó particionado y con `chunkSizeWarningLimit` explícito.
