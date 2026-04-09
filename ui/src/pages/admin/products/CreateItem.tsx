@@ -448,77 +448,77 @@ export default function CreateItem({
     );
   }, [selectedProject]);
 
-  useEffect(() => {
-    if (!drawerOpen) return;
+useEffect(() => {
+  if (!drawerOpen) return;
+  if (editingMovement) return;
 
-    if (!editingMovement) {
-      clearForm();
-      return;
+  clearForm();
+}, [drawerOpen, editingMovement]);
+
+useEffect(() => {
+  if (!drawerOpen || !editingMovement) return;
+
+  setError(null);
+  setSuccessMessage(null);
+  setItemErrors({});
+
+  const matchedType =
+    typeOptions.find((t) => t.name === editingMovement.entry_type) || null;
+  setType(matchedType);
+
+  const isInternalMovement = matchedType?.id === 2;
+
+  setCustomer(null);
+  setProject(null);
+  setCampaign(null);
+  setSelectedProjectDestination(null);
+
+  if (isInternalMovement) {
+    if (editingMovement.destination_project_id) {
+      setSelectedProjectDestination(editingMovement.destination_project_id);
     }
 
-
-    setError(null);
-    setSuccessMessage(null);
-    setItemErrors({});
-
-    const matchedType =
-      typeOptions.find((t) => t.name === editingMovement.entry_type) || null;
-    setType(matchedType);
-
-    const isInternalMovement = matchedType?.id === 2;
-
-    // Reset de destino para no arrastrar valores viejos
-    setCustomer(null);
-    setProject(null);
-    setCampaign(null);
-    setSelectedProjectDestination(null);
-
-    if (isInternalMovement) {
-      if (editingMovement.destination_project_id) {
-        setSelectedProjectDestination(editingMovement.destination_project_id);
-      }
-
-      if (editingMovement.destination_customer_name) {
-        const matchedCustomer = customers.find(
-          (c) => c.name === editingMovement.destination_customer_name
-        );
-        if (matchedCustomer) setCustomer(matchedCustomer);
-      }
+    if (editingMovement.destination_customer_name) {
+      const matchedCustomer = customers.find(
+        (c) => c.name === editingMovement.destination_customer_name
+      );
+      if (matchedCustomer) setCustomer(matchedCustomer);
     }
+  }
 
+  setOrderNumber(editingMovement.reference_number || "");
+  setDate(String(editingMovement.entry_date || "").slice(0, 10));
 
-    setOrderNumber(editingMovement.reference_number || "");
-    setDate(String(editingMovement.entry_date || "").slice(0, 10));
+  const matchedProvider = (providers || []).find(
+    (p) => p.name === editingMovement.provider_name
+  );
+  setProvider(matchedProvider);
+  setQueryProvider(editingMovement.provider_name || "");
 
-    const matchedProvider = (providers || []).find(
-      (p) => p.name === editingMovement.provider_name
-    );
-    setProvider(matchedProvider);
-    setQueryProvider(editingMovement.provider_name || "");
+  const matchedInvestor = investors.find(
+    (i) => i.name === editingMovement.investor_name
+  );
+  setInvestor(matchedInvestor || null);
 
-    const matchedInvestor = investors.find(
-      (i) => i.name === editingMovement.investor_name
-    );
-    setInvestor(matchedInvestor || null);
+  const matchedSupply = supplies.find(
+    (s) => s.name === editingMovement.supply_name
+  );
 
-    const matchedSupply = supplies.find(
-      (s) => s.name === editingMovement.supply_name
-    );
+  const firstItem = {
+    item: matchedSupply ? String(matchedSupply.id) : "",
+    quantity: String(editingMovement.quantity ?? "")
+      .replace(/[^\d.,]/g, "")
+      .replace(",", "."),
+  };
 
-    const firstItem = {
-      item: matchedSupply ? String(matchedSupply.id) : "",
-      quantity: String(editingMovement.quantity ?? "")
-        .replace(/[^\d.,]/g, "")
-        .replace(",", "."),
-    };
+  const nextItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
+    item: "",
+    quantity: "",
+  }));
+  nextItems[0] = firstItem;
+  setItems(nextItems);
+}, [drawerOpen, editingMovement, providers, investors, supplies, customers]);
 
-    const nextItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
-      item: "",
-      quantity: "",
-    }));
-    nextItems[0] = firstItem;
-    setItems(nextItems);
-  }, [drawerOpen, editingMovement, providers, investors, supplies, customers]);
 
   useEffect(() => {
     if (!drawerOpen || !editingMovement) return;
