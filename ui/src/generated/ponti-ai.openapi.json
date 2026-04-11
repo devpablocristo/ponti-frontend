@@ -462,10 +462,10 @@
         }
       }
     },
-    "/v1/copilot/insights/{insight_id}/explain": {
+    "/v1/insight-chat/insights/{insight_id}/explain": {
       "get": {
-        "summary": "Copilot Explain",
-        "operationId": "copilot_explain_v1_copilot_insights__insight_id__explain_get",
+        "summary": "Insight Chat Explain",
+        "operationId": "insight_chat_explain_v1_insight_chat_insights__insight_id__explain_get",
         "parameters": [
           {
             "name": "insight_id",
@@ -549,10 +549,10 @@
         }
       }
     },
-    "/v1/copilot/insights/{insight_id}/why": {
+    "/v1/insight-chat/insights/{insight_id}/why": {
       "get": {
-        "summary": "Copilot Why",
-        "operationId": "copilot_why_v1_copilot_insights__insight_id__why_get",
+        "summary": "Insight Chat Why",
+        "operationId": "insight_chat_why_v1_insight_chat_insights__insight_id__why_get",
         "parameters": [
           {
             "name": "insight_id",
@@ -636,10 +636,10 @@
         }
       }
     },
-    "/v1/copilot/insights/{insight_id}/next-steps": {
+    "/v1/insight-chat/insights/{insight_id}/next-steps": {
       "get": {
-        "summary": "Copilot Next Steps",
-        "operationId": "copilot_next_steps_v1_copilot_insights__insight_id__next_steps_get",
+        "summary": "Insight Chat Next Steps",
+        "operationId": "insight_chat_next_steps_v1_insight_chat_insights__insight_id__next_steps_get",
         "parameters": [
           {
             "name": "insight_id",
@@ -799,7 +799,7 @@
         ],
         "title": "ComputeInsightsResponse"
       },
-      "CopilotExplanation": {
+      "InsightChatExplanation": {
         "properties": {
           "human_readable": {
             "type": "string",
@@ -820,7 +820,7 @@
           "audit_focused",
           "what_to_watch_next"
         ],
-        "title": "CopilotExplanation"
+        "title": "InsightChatExplanation"
       },
       "ExplainInsightResponse": {
         "properties": {
@@ -830,21 +830,21 @@
           },
           "output_kind": {
             "type": "string",
-            "const": "copilot_explanation",
+            "const": "insight_chat_explanation",
             "title": "Output Kind",
-            "default": "copilot_explanation"
+            "default": "insight_chat_explanation"
           },
           "routed_agent": {
             "type": "string",
-            "const": "copilot",
+            "const": "insight_chat",
             "title": "Routed Agent",
-            "default": "copilot"
+            "default": "insight_chat"
           },
           "routing_source": {
             "type": "string",
-            "const": "copilot_agent",
+            "const": "insight_chat_agent",
             "title": "Routing Source",
-            "default": "copilot_agent"
+            "default": "insight_chat_agent"
           },
           "insight_id": {
             "type": "string",
@@ -860,7 +860,7 @@
             "title": "Mode"
           },
           "explanation": {
-            "$ref": "#/components/schemas/CopilotExplanation"
+            "$ref": "#/components/schemas/InsightChatExplanation"
           },
           "proposal": {
             "anyOf": [

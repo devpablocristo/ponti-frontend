@@ -1,6 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -9,6 +7,12 @@ import {
   listPontiChatConversations,
   pontiAssistantChatStream,
 } from "@/api/aiClient";
+import {
+  NOTIFICATION_CHAT_HANDOFF_KEY,
+  buildChatRequestHandoff,
+  buildHandoffUserMessage,
+} from "@/lib/notificationChatHandoff";
+import type { NotificationChatHandoff } from "@/lib/notificationChatHandoff";
 import type {
   PontiConversationMessage,
   PontiConversationSummary,
@@ -25,7 +29,7 @@ const ROUTE_OPTIONS: { value: PontiRouteHint | ""; label: string }[] = [
   { value: "lots", label: "Lotes" },
   { value: "stock", label: "Stock" },
   { value: "reports", label: "Informes" },
-  { value: "copilot", label: "Copilot (handoff)" },
+  { value: "insight_chat", label: "Análisis de insight" },
 ];
 
 function labelForRoute(mode: string): string {
@@ -40,7 +44,10 @@ const AIAssistant = () => {
     "campaign",
     "field",
   ]);
-  const headers = projectId ? { projectId: String(projectId) } : null;
+  const headers = useMemo(
+    () => (projectId ? { projectId: String(projectId) } : null),
+    [projectId]
+  );
 
   const [conversations, setConversations] = useState<PontiConversationSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -56,11 +63,87 @@ const AIAssistant = () => {
   );
   const streamAbortRef = useRef<AbortController | null>(null);
 
+  const handoffProcessedRef = useRef(false);
+
   useEffect(() => {
     return () => {
       streamAbortRef.current?.abort();
     };
   }, []);
+
+  // --- Fase 7: consumir handoff desde notificaciones ---
+  useEffect(() => {
+    if (handoffProcessedRef.current || !headers) return;
+    const raw = sessionStorage.getItem(NOTIFICATION_CHAT_HANDOFF_KEY);
+    if (!raw) return;
+    handoffProcessedRef.current = true;
+    sessionStorage.removeItem(NOTIFICATION_CHAT_HANDOFF_KEY);
+
+    let handoff: NotificationChatHandoff;
+    try {
+      handoff = JSON.parse(raw) as NotificationChatHandoff;
+    } catch {
+      return;
+    }
+
+    const text = buildHandoffUserMessage(handoff);
+    const handoffPayload = buildChatRequestHandoff(handoff);
+
+    // Resetear estado del chat
+    setActiveId(null);
+    setMessages([{ role: "user", content: text }]);
+    setRouteHint("insight_chat");
+    setError("");
+    setStreamDraft({ text: "", activity: [] });
+    setLoading(true);
+
+    const abort = new AbortController();
+    streamAbortRef.current = abort;
+
+    pontiAssistantChatStream(
+      {
+        message: text,
+        handoff: handoffPayload,
+        route_hint: "insight_chat",
+        preferred_language: "es",
+      },
+      headers,
+      (ev) => {
+        if (ev.event === "start") {
+          const cid = ev.data.chat_id;
+          if (typeof cid === "string" && cid) setActiveId(cid);
+          return;
+        }
+        if (ev.event === "text" && typeof ev.data.content === "string") {
+          setStreamDraft((d) => (d ? { ...d, text: d.text + ev.data.content } : d));
+          return;
+        }
+        if (ev.event === "tool_call") {
+          const tool = typeof ev.data.tool === "string" ? ev.data.tool : "?";
+          setStreamDraft((d) => d ? { ...d, activity: [...d.activity, `Consultando: ${tool}…`] } : d);
+          return;
+        }
+        if (ev.event === "done") {
+          const reply = typeof ev.data.reply === "string" ? ev.data.reply : "";
+          const cid = ev.data.chat_id;
+          if (typeof cid === "string" && cid) setActiveId(cid);
+          setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+          setStreamDraft(null);
+          setLoading(false);
+          return;
+        }
+        if (ev.event === "error") {
+          setError(typeof ev.data.message === "string" ? ev.data.message : "Error en handoff");
+          setStreamDraft(null);
+          setLoading(false);
+        }
+      },
+      abort.signal,
+    ).catch(() => {
+      setStreamDraft(null);
+      setLoading(false);
+    });
+  }, [headers]);
 
   const refreshList = useCallback(async () => {
     if (!headers) return;
@@ -234,11 +317,7 @@ const AIAssistant = () => {
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Asesor de proyecto Ponti</h1>
           <p className="text-sm text-gray-600">
-            Un solo chat con contexto del proyecto para tablero, labores, insumos, campañas, lotes, stock e informes.{" "}
-            <Link className="text-blue-600 hover:underline" to="/admin/ai-copilot">
-              Copilot por insight
-            </Link>
-            .
+            Un solo chat con contexto del proyecto para tablero, labores, insumos, campañas, lotes, stock e informes.
           </p>
         </div>
         <Button size="sm" variant="secondary" className="px-4" onClick={handleNewChat}>
@@ -354,6 +433,12 @@ const AIAssistant = () => {
               value={input}
               disabled={!headers || loading}
               onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (input.trim() && !loading) void handleSend();
+                }
+              }}
             />
             <Button
               size="sm"

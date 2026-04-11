@@ -174,15 +174,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/copilot/insights/{insight_id}/explain": {
+    "/v1/insight-chat/insights/{insight_id}/explain": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Copilot Explain */
-        get: operations["copilot_explain_v1_copilot_insights__insight_id__explain_get"];
+        /** Insight Chat Explain */
+        get: operations["insight_chat_explain_v1_insight_chat_insights__insight_id__explain_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -191,15 +191,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/copilot/insights/{insight_id}/why": {
+    "/v1/insight-chat/insights/{insight_id}/why": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Copilot Why */
-        get: operations["copilot_why_v1_copilot_insights__insight_id__why_get"];
+        /** Insight Chat Why */
+        get: operations["insight_chat_why_v1_insight_chat_insights__insight_id__why_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -208,15 +208,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/copilot/insights/{insight_id}/next-steps": {
+    "/v1/insight-chat/insights/{insight_id}/next-steps": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Copilot Next Steps */
-        get: operations["copilot_next_steps_v1_copilot_insights__insight_id__next_steps_get"];
+        /** Insight Chat Next Steps */
+        get: operations["insight_chat_next_steps_v1_insight_chat_insights__insight_id__next_steps_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -264,8 +264,8 @@ export interface components {
             /** Insights Created */
             insights_created: number;
         };
-        /** CopilotExplanation */
-        CopilotExplanation: {
+        /** InsightChatExplanation */
+        InsightChatExplanation: {
             /** Human Readable */
             human_readable: string;
             /** Audit Focused */
@@ -279,22 +279,22 @@ export interface components {
             request_id: string;
             /**
              * Output Kind
-             * @default copilot_explanation
+             * @default insight_chat_explanation
              * @constant
              */
-            output_kind: "copilot_explanation";
+            output_kind: "insight_chat_explanation";
             /**
              * Routed Agent
-             * @default copilot
+             * @default insight_chat
              * @constant
              */
-            routed_agent: "copilot";
+            routed_agent: "insight_chat";
             /**
              * Routing Source
-             * @default copilot_agent
+             * @default insight_chat_agent
              * @constant
              */
-            routing_source: "copilot_agent";
+            routing_source: "insight_chat_agent";
             /** Insight Id */
             insight_id: string;
             /**
@@ -302,7 +302,7 @@ export interface components {
              * @enum {string}
              */
             mode: "explain" | "why" | "next-steps";
-            explanation: components["schemas"]["CopilotExplanation"];
+            explanation: components["schemas"]["InsightChatExplanation"];
             /** Proposal */
             proposal?: {
                 [key: string]: unknown;
@@ -729,7 +729,7 @@ export interface operations {
             };
         };
     };
-    copilot_explain_v1_copilot_insights__insight_id__explain_get: {
+    insight_chat_explain_v1_insight_chat_insights__insight_id__explain_get: {
         parameters: {
             query?: never;
             header?: {
@@ -764,7 +764,7 @@ export interface operations {
             };
         };
     };
-    copilot_why_v1_copilot_insights__insight_id__why_get: {
+    insight_chat_why_v1_insight_chat_insights__insight_id__why_get: {
         parameters: {
             query?: never;
             header?: {
@@ -799,7 +799,7 @@ export interface operations {
             };
         };
     };
-    copilot_next_steps_v1_copilot_insights__insight_id__next_steps_get: {
+    insight_chat_next_steps_v1_insight_chat_insights__insight_id__next_steps_get: {
         parameters: {
             query?: never;
             header?: {

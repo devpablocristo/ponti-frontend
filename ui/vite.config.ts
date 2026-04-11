@@ -80,6 +80,9 @@ export default defineConfig(({ mode }: ConfigEnv) => {
                 // Proxy 1:1 hacia el BFF. No reescribir el path.
                 target: bffTarget,
                 changeOrigin: true,
+                // SSE / chat stream: timeouts por defecto cortan con ECONNRESET en el navegador.
+                timeout: 3_600_000,
+                proxyTimeout: 3_600_000,
               },
             },
           }

@@ -73,9 +73,9 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
   return (
     <div className="relative flex items-center gap-3">
       <Link
-        to="/admin/ai-insights"
+        to="/admin/notifications"
         className="flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 hover:bg-slate-100"
-        title={`${insightsCount} insight${insightsCount !== 1 ? "s" : ""} nuevo${insightsCount !== 1 ? "s" : ""}`}
+        title={`${insightsCount} notificación${insightsCount !== 1 ? "es" : ""} nueva${insightsCount !== 1 ? "s" : ""}`}
       >
         <span className="text-[11px] font-medium" style={{ color: "#64748B" }}>IA</span>
         <span

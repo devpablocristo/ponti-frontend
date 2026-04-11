@@ -29,7 +29,8 @@ COPY --from=api-builder /server/node_modules ./node_modules
 
 COPY --from=ui-builder /repo/ponti/ponti-frontend/ui/dist ./dist/public
 
-ENV NODE_ENV=development
+# Imagen de ejecución: producción; verbose de errores va por BFF_VERBOSE_ERRORS en Cloud Run.
+ENV NODE_ENV=production
 ENV PORT=3000
 
 EXPOSE 3000

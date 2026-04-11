@@ -1,10 +1,38 @@
-import axios from "axios";
+import axios, { isAxiosError } from "axios";
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
+import { proxyManagerChatStreamPost } from "../lib/managerChatStreamProxy";
+import { requestContext } from "../requestContext";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
+
+/** Resumen seguro para logs / JSON con verbose (sin headers, body ni API keys). */
+const summarizeProxyError = (error: unknown): Record<string, string | number | undefined> => {
+  if (isAxiosError(error)) {
+    return {
+      kind: "axios",
+      message: error.message,
+      code: error.code,
+      responseStatus: error.response?.status,
+    };
+  }
+  if (error instanceof Error) {
+    return {
+      kind: "error",
+      name: error.name,
+      message: error.message,
+      code: (error as NodeJS.ErrnoException).code,
+    };
+  }
+  return { kind: "unknown", message: String(error) };
+};
+
+type HandleErrorOptions = {
+  /** Texto extra solo si configService.bffVerboseErrors (BFF_VERBOSE_ERRORS); nunca secretos. */
+  devDetails?: string;
+};
 
 const getProjectId = (req: Request): string | null => {
   const header = req.headers["x-project-id"];
@@ -38,35 +66,24 @@ const requireProject = (req: Request, res: Response): string | null => {
   return projectId;
 };
 
-const handleError = (res: Response, error: any) => {
+const handleError = (res: Response, error: unknown, opts?: HandleErrorOptions) => {
   const err = error as ApiResponse<null>;
-  if ("error" in err) {
+  if (err && typeof err === "object" && "error" in err) {
     res.status(err.error?.status || 500).json(err);
     return;
   }
+  const details =
+    opts?.devDetails && configService.bffVerboseErrors
+      ? opts.devDetails
+      : "No se pudo procesar la solicitud";
   res.status(500).json({
     success: false,
     message: "Error inesperado",
-    error: { status: 500, details: "No se pudo procesar la solicitud" },
+    error: { status: 500, details },
   });
 };
 
-// --- Insights endpoints ---
-
-router.post("/insights/compute", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { data } = await apiClient.post<any>("/ai/insights/compute", {}, headers);
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
+// --- Insights summary (badge polling) ---
 
 router.get("/insights/summary", async (req: Request, res: Response) => {
   const userId = requireUser(req, res);
@@ -77,102 +94,6 @@ router.get("/insights/summary", async (req: Request, res: Response) => {
   try {
     const headers = buildHeaders(userId, projectId);
     const { data } = await apiClient.get<any>("/ai/insights/summary", headers);
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
-router.get("/insights/:entity_type/:entity_id", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { entity_type, entity_id } = req.params;
-    const { data } = await apiClient.get<any>(
-      `/ai/insights/${entity_type}/${entity_id}`,
-      headers
-    );
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
-router.get("/copilot/insights/:insight_id/explain", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { insight_id } = req.params;
-    const { data } = await apiClient.get<any>(
-      `/ai/copilot/insights/${insight_id}/explain`,
-      headers
-    );
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
-router.get("/copilot/insights/:insight_id/why", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { insight_id } = req.params;
-    const { data } = await apiClient.get<any>(
-      `/ai/copilot/insights/${insight_id}/why`,
-      headers
-    );
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
-router.get("/copilot/insights/:insight_id/next-steps", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { insight_id } = req.params;
-    const { data } = await apiClient.get<any>(
-      `/ai/copilot/insights/${insight_id}/next-steps`,
-      headers
-    );
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
-router.post("/insights/:insight_id/actions", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { insight_id } = req.params;
-    const { data } = await apiClient.post<any>(
-      `/ai/insights/${insight_id}/actions`,
-      req.body,
-      headers
-    );
     res.status(200).json(data);
   } catch (error) {
     handleError(res, error);
@@ -203,32 +124,27 @@ router.post("/chat/stream", async (req: Request, res: Response) => {
   if (!projectId) return;
 
   try {
-    const response = await axios.post(
-      `${configService.baseManagerApi}/ai/chat/stream`,
-      req.body,
-      {
-        headers: {
-          ...buildHeaders(userId, projectId),
-          "Content-Type": "application/json",
-        },
-        responseType: "stream",
-        timeout: 0,
-        validateStatus: () => true,
-      }
-    );
-    const ct = response.headers["content-type"];
-    if (ct) {
-      res.setHeader("Content-Type", ct);
+    await proxyManagerChatStreamPost(req, res, {
+      managerBaseUrl: configService.baseManagerApi,
+      path: "/ai/chat/stream",
+      apiKey: configService.apiKey,
+      userId,
+      projectId,
+      jsonBody: req.body,
+      authorization: requestContext.getAuthorization(),
+    });
+  } catch (error: unknown) {
+    const summary = summarizeProxyError(error);
+    console.error("[BFF] POST ai/chat/stream proxy failed", summary);
+    if (!res.headersSent) {
+      handleError(res, error, { devDetails: JSON.stringify(summary) });
     } else {
-      res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+      try {
+        res.destroy(error instanceof Error ? error : undefined);
+      } catch {
+        /* noop */
+      }
     }
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-    res.status(response.status);
-    response.data.pipe(res);
-  } catch (error) {
-    handleError(res, error);
   }
 });
 

@@ -91,23 +91,14 @@ const menuAIItems: MenuItem[] = [
     route: "/admin/ai-assistant",
   },
   {
-    name: "Copilot",
+    name: "Notificaciones",
     icon: (color: string) => (
       <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 2V5.33333M8 10.6667V14M2 8H5.33333M10.6667 8H14M4 4L5.66667 5.66667M10.3333 10.3333L12 12M10.3333 5.66667L12 4M4 12L5.66667 10.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M8 1.33334C5.42267 1.33334 3.33333 3.42267 3.33333 6.00001V8.66667L2 10.6667H14L12.6667 8.66667V6.00001C12.6667 3.42267 10.5773 1.33334 8 1.33334Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M6 12C6 13.1046 6.89543 14 8 14C9.10457 14 10 13.1046 10 12" stroke={color} strokeLinecap="round" />
       </svg>
     ),
-    route: "/admin/ai-copilot",
-  },
-  {
-    name: "Insights",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M8 2.66675C6.15905 2.66675 4.66667 4.15913 4.66667 6.00008C4.66667 7.01753 5.11813 7.92952 5.83333 8.54095V10.0001C5.83333 10.3683 6.13181 10.6667 6.5 10.6667H9.5C9.86819 10.6667 10.1667 10.3683 10.1667 10.0001V8.54095C10.8819 7.92952 11.3333 7.01753 11.3333 6.00008C11.3333 4.15913 9.84095 2.66675 8 2.66675Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M6.66667 12.0001H9.33333" stroke={color} strokeLinecap="round" />
-      </svg>
-    ),
-    route: "/admin/ai-insights",
+    route: "/admin/notifications",
   },
 ];
 

@@ -2,18 +2,27 @@
 
 export type PontiRouteHint =
   | "general"
+  | "insight_chat"
   | "dashboard"
   | "labors"
   | "supplies"
   | "campaigns"
   | "lots"
   | "stock"
-  | "reports"
-  | "copilot";
+  | "reports";
+
+export type PontiChatHandoff = {
+  source: "in_app_notification" | "direct";
+  notification_id?: string | null;
+  insight_id?: string | null;
+  insight_scope?: string | null;
+  period?: string | null;
+};
 
 export type PontiChatRequest = {
   message: string;
   chat_id?: string | null;
+  handoff?: PontiChatHandoff | null;
   route_hint?: PontiRouteHint | null;
   preferred_language?: "es" | "en";
   confirmed_actions?: string[];

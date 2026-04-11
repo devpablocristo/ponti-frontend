@@ -1,11 +1,7 @@
 import { request } from "@devpablocristo/core-http/fetch";
 import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 import type {
-  ComputeInsightsResult,
-  CopilotMode,
-  PontiInsightListResponse,
   InsightsSummary,
-  PontiCopilotResponse,
 } from "@/types/ai";
 import type {
   PontiChatRequest,
@@ -37,58 +33,14 @@ const buildHeaders = (projectId: string): Record<string, string> => {
 };
 
 export type {
-  ComputeInsightsResult,
-  CopilotMode,
-  InsightItem,
-  PontiCopilotOutputKind,
-  PontiInsightListResponse,
-  PontiInsightServiceKind,
-  PontiRoutedAgent,
-  PontiRoutingSource,
-  PontiSummaryOutputKind,
   InsightsSummary,
-  PontiCopilotResponse,
 } from "@/types/ai";
-
-export const askAICopilot = async (
-  insightId: string,
-  mode: CopilotMode,
-  headers: AskHeaders
-): Promise<PontiCopilotResponse> => {
-  return request<PontiCopilotResponse>(`/copilot/insights/${insightId}/${mode}`, {
-    method: "GET",
-    headers: buildHeaders(headers.projectId),
-    baseURLs: [getBaseUrl()],
-  });
-};
 
 export const getInsightsSummary = async (
   headers: AskHeaders
 ): Promise<InsightsSummary> => {
   return request<InsightsSummary>("/insights/summary", {
     method: "GET",
-    headers: buildHeaders(headers.projectId),
-    baseURLs: [getBaseUrl()],
-  });
-};
-
-export const getInsights = async (
-  headers: AskHeaders,
-  entityType: string,
-  entityId: string
-): Promise<PontiInsightListResponse> => {
-  return request<PontiInsightListResponse>(`/insights/${entityType}/${entityId}`, {
-    method: "GET",
-    headers: buildHeaders(headers.projectId),
-    baseURLs: [getBaseUrl()],
-  });
-};
-
-export const computeInsights = async (
-  headers: AskHeaders
-): Promise<ComputeInsightsResult> => {
-  return request<ComputeInsightsResult>("/insights/compute", {
-    method: "POST",
     headers: buildHeaders(headers.projectId),
     baseURLs: [getBaseUrl()],
   });
