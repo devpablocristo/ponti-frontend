@@ -125,11 +125,6 @@ const invoiceStatusOptions = [
   { id: 3, name: "Facturada" },
 ];
 
-const investorPaymentStatusOptions = [
-  { id: 1, name: "Pendiente" },
-  { id: 2, name: "Pagada" },
-];
-
 function TaskHeader({
   taskAmount,
   selectedColumns,
@@ -255,7 +250,6 @@ export function Tasks() {
     errorMetrics,
     pageInfo,
     updateInvoice,
-    updateInvestorPaymentStatus,
     createInvoice,
     processingInvoice,
     errorInvoice,
@@ -279,7 +273,6 @@ export function Tasks() {
     invoice_status: "",
   });
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-  const [updatingInvestorPaymentKey, setUpdatingInvestorPaymentKey] = useState<string | null>(null);
   const [resultInvoiceMessage, setResultInvoiceMessage] = useState<string | null>(null);
   const itemsPerPage = 10;
   const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
@@ -344,38 +337,6 @@ export function Tasks() {
       return [...new Set(filtered.map((t) => String(t[key] ?? "")))].filter(Boolean).sort();
     },
     []
-  );
-
-  const handleInvestorPaymentStatusChange = useCallback(
-    async (item: LaborGroupData, nextStatus: string) => {
-      if (!item.investor_payment_enabled || !item.investor_id || !nextStatus) {
-        return;
-      }
-      if (nextStatus === item.investor_payment_status) {
-        return;
-      }
-
-      setResultInvoiceMessage(null);
-      setErrorInvoiceMessage(null);
-
-      const rowKey = `${item.workorder_id}:${item.investor_id}`;
-      setUpdatingInvestorPaymentKey(rowKey);
-      const updated = await updateInvestorPaymentStatus({
-        workorder_id: item.workorder_id,
-        investor_id: item.investor_id,
-        payment_status: nextStatus,
-      });
-      if (updated) {
-        setResultInvoiceMessage("Se ha actualizado el pago por inversor con éxito!");
-        if (projectId) {
-          const query = buildFieldQuery();
-          getLaborGroups(projectId, query);
-          getMetrics(projectId, query);
-        }
-      }
-      setUpdatingInvestorPaymentKey(null);
-    },
-    [buildFieldQuery, getLaborGroups, getMetrics, projectId, updateInvestorPaymentStatus]
   );
 
   const columns: Column<LaborGroupData>[] = useMemo(
@@ -516,43 +477,6 @@ export function Tasks() {
         filterOptions: getFilterOptionsForColumn("investor_name", laborGroups, taskFilters),
       },
       {
-        key: "investor_payment_status",
-        header: "Pago inversor",
-        filterable: true,
-        filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "investor_payment_status",
-          laborGroups,
-          taskFilters
-        ),
-        render: (value, item) => {
-          if (!item.investor_payment_enabled || !item.investor_id) {
-            return <span className="text-xs text-gray-400">No aplica</span>;
-          }
-
-          const rowKey = `${item.workorder_id}:${item.investor_id}`;
-          const currentStatus = typeof value === "string" && value ? value : "Pendiente";
-
-          return (
-            <select
-              className="block w-full min-w-[120px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-white text-sm disabled:opacity-50"
-              value={currentStatus}
-              disabled={processingInvoice && updatingInvestorPaymentKey === rowKey}
-              onClick={(event) => event.stopPropagation()}
-              onChange={(event) => {
-                void handleInvestorPaymentStatusChange(item, event.target.value);
-              }}
-            >
-              {investorPaymentStatusOptions.map((option) => (
-                <option key={`${rowKey}-${option.name}`} value={option.name}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
-          );
-        },
-      },
-      {
         key: "usd_avg_value",
         header: "u$ Prom",
         filterable: false,
@@ -672,9 +596,6 @@ export function Tasks() {
       laborGroups,
       taskFilters,
       getFilterOptionsForColumn,
-      handleInvestorPaymentStatusChange,
-      processingInvoice,
-      updatingInvestorPaymentKey,
     ]
   );
 

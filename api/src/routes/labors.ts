@@ -171,65 +171,6 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.patch("/payment-status", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-
-    const workOrderId = Number(req.body.workorder_id);
-    const investorId = Number(req.body.investor_id);
-    const paymentStatus = String(req.body.payment_status || "").trim();
-
-    if (!workOrderId) {
-      res.status(400).json({ message: "El id de la orden es obligatorio" });
-      return;
-    }
-
-    if (!investorId) {
-      res.status(400).json({ message: "El id del inversor es obligatorio" });
-      return;
-    }
-
-    if (!paymentStatus) {
-      res.status(400).json({ message: "El estado de pago es obligatorio" });
-      return;
-    }
-
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-
-    await apiClient.patch(
-      `/work-orders/${workOrderId}/investors/${investorId}/payment-status`,
-      { payment_status: paymentStatus },
-      headers,
-    );
-
-    setImmediate(() => cache.flushAll());
-
-    res.status(200).json({
-      success: true,
-      message: "Estado de pago actualizado exitosamente",
-    });
-  } catch (error: any) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
 router.get("/metrics/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;

@@ -4,7 +4,6 @@ import useLaborReducer from "./laborsReducer";
 import * as actions from "./actions";
 import {
   InvoiceData,
-  InvestorPaymentStatusData,
   Metrics,
   LaborGroupData,
   LaborInfo,
@@ -17,7 +16,6 @@ import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall"
 type LaborGroupsResponse = SuccessResponse<PaginatedResponse<LaborGroupData>>;
 type LaborsResponse = SuccessResponse<LaborInfo[]>;
 type InvoiceMutationResponse = SuccessResponse<unknown>;
-type InvestorPaymentMutationResponse = SuccessResponse<unknown>;
 type CreatedLaborResult = {
   labor_name: string;
   labor_id: number;
@@ -215,34 +213,6 @@ const useLabors = () => {
     [dispatch]
   );
 
-  const updateInvestorPaymentStatus = React.useCallback(
-    async (payload: InvestorPaymentStatusData): Promise<boolean> => {
-      setProcessingInvoice(true);
-      setErrorInvoice(null);
-
-      try {
-        const response = await apiClient
-          .raw()
-          .patch<InvestorPaymentMutationResponse>(`/labors/payment-status`, payload);
-
-        if (response.data.success) {
-          return true;
-        }
-
-        setErrorInvoice("Ocurrio un error en la actualización del pago por inversor");
-        return false;
-      } catch (error) {
-        setErrorInvoice(
-          extractErrorMessage(error, "Error desconocido en la actualización del pago por inversor.")
-        );
-        return false;
-      } finally {
-        setProcessingInvoice(false);
-      }
-    },
-    []
-  );
-
   const saveLabors = React.useCallback(
     async (laborsToSave: LaborToSave[], projectId: number) => {
       setProcessing(true);
@@ -424,7 +394,6 @@ const useLabors = () => {
     getWorkOrdersCount,
     saveLabors,
     updateInvoice,
-    updateInvestorPaymentStatus,
     createInvoice,
     result,
     resultUpdate,

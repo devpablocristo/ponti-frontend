@@ -11,9 +11,6 @@ export interface LaborGroupData {
   surface_ha: string;
   cost_ha: number;
   investor_name: string;
-  investor_id: number;
-  investor_payment_status: string;
-  investor_payment_enabled: boolean;
 
   usd_avg_value: number;
   net_total: number;
@@ -35,12 +32,6 @@ export interface InvoiceData {
   invoice_company: string;
   invoice_date: string;
   invoice_status: string;
-}
-
-export interface InvestorPaymentStatusData {
-  workorder_id: number;
-  investor_id: number;
-  payment_status: string;
 }
 
 export interface LaborToSave {
