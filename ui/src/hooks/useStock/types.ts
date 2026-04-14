@@ -23,7 +23,7 @@ export interface GetStockItems {
   investor_name: string;
   stock_units: number;
   real_stock_units: number;
-  stock_difference: number;
+  stock_difference: number | null;
   total_usd: number;
   class_type: string;
   close_date: string;
