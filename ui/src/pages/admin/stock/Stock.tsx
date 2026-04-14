@@ -482,11 +482,8 @@ export function Stock() {
           columnsFilters
         ),
         header: "Diferencia",
-        render: (diff, item) => {
-          const apiDiff = normalizeNumber(diff);
-          const systemStock = normalizeNumber(item.stock_units);
-
-          const value = !Number.isNaN(apiDiff) ? apiDiff : systemStock;
+        render: (diff) => {
+          const value = normalizeNumber(diff);
 
           const isPositive = value > 0;
           const isNegative = value < 0;
