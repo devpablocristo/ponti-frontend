@@ -231,34 +231,34 @@
   resolved "https://registry.npmjs.org/@csstools/css-tokenizer/-/css-tokenizer-3.0.4.tgz"
   integrity sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==
 
-"@devpablocristo/core-authn@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@devpablocristo/core-authn/-/core-authn-0.1.0.tgz#b6d4a71fdb1447a8691802cd24603bb18324f390"
-  integrity sha512-yurWMYW/Ody32m3JGvi6+C1nPuGmOkNtwjdWclKVccg2I3vVQg5L+RDriCyv+QBjs5UVkT2KzkxVIcAkGWEubQ==
+"@devpablocristo/core-authn@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/core-authn/-/core-authn-0.3.0.tgz#bc147519edf66814c2ecaa6febd090369e22481e"
+  integrity sha512-9Yz1xxNP8G/LxPKtQ19MvdcJchVyLtW8a9zCGb11uZoCucl2M/umgtzj+SGUPuWGzPg9GMIM4t0dmGM5QUWd6g==
   dependencies:
-    "@devpablocristo/core-browser" "^0.1.0"
-    "@devpablocristo/core-http" "^0.1.0"
+    "@devpablocristo/core-browser" "^0.4.0"
+    "@devpablocristo/core-http" "^0.2.0"
     axios "^1.8.1"
 
-"@devpablocristo/core-browser@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@devpablocristo/core-browser/-/core-browser-0.1.0.tgz#a639b403dfdbdbbe2b2c3e7166f8416f4e479025"
-  integrity sha512-OgBEBYopoNWAm9qiSWHq/9JZ3MApwxd6dEQGu9pH0QVYbB78iph438DZUinROUQeetVVOQZEVsNSdlRLt7Ct4Q==
+"@devpablocristo/core-browser@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/core-browser/-/core-browser-0.4.0.tgz#58336c849f70ea8e62b57b56caa70da5b5bd5523"
+  integrity sha512-VVwjzTT0vm1GbuAlVmC82St5wdfHzKtnDy1Ks6+tUq9QdDRqZfKwJV6dapk0sLODJ8he3nsMvSd7GONB4bllMw==
 
-"@devpablocristo/core-http@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@devpablocristo/core-http/-/core-http-0.1.0.tgz#f539568b35cf53c2e682c1fd81be3cc759c0dee3"
-  integrity sha512-Rt7K756Zm2YO3lAj00TRIdgkWZPF0fRnqcSmokvGOfktkOJvv00KZtugRrlZTpjPWz+liYZwA1HmOs31a42wkA==
+"@devpablocristo/core-http@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/core-http/-/core-http-0.2.0.tgz#a9a7620dc6f33ca2d602b476d539c1433fa64fe8"
+  integrity sha512-SY7F2Q5WlMb01mQtRq68oIe2InIvdcBH+sL8/akA7Y+/uhe9GHXDTkpvqzVvCo/qC/alkmOUR6ptElB0fzbzHg==
 
 "@devpablocristo/modules-ai-console@^0.1.0":
   version "0.1.0"
   resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ai-console/-/modules-ai-console-0.1.0.tgz#48786cac6730968f5cbb4b256701b9fe82e7761b"
   integrity sha512-qzKaTWev8vjKupXfv7KaW33ii5ZbX6vwHwhmYiHUeSdK9SZCLYa3iGHq9lLYsZDpx8f/Ivp9u+X2+2rhvYk2oA==
 
-"@devpablocristo/modules-ui-data-display@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.2.0.tgz#b330309f1e4f37de009b8ff0ac2738c1c712b8ec"
-  integrity sha512-IXIIRUOi2jhduaQ8h4aSbb8j4jxtqKAnRimEhcaaGBzQ+tew+wa7BJMInNI3+ln7EXMe+ueEBQP0gYSB2Jqvfg==
+"@devpablocristo/modules-ui-data-display@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.3.0.tgz#501728ba7d4ef345a4c9c1b771a3b16ceb4733ea"
+  integrity sha512-cxOQ9rDlNj/PWaybHk3R0P/+pRiMLT4v1PULG+I84TEkVliTQpxPBQuOe7e2OywOXWB4Z0Wll7F+7ncd/Svctw==
 
 "@devpablocristo/modules-ui-filters@^0.1.0":
   version "0.1.0"

@@ -16,11 +16,11 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@devpablocristo/core-authn": "^0.1.0",
-    "@devpablocristo/core-browser": "^0.1.0",
-    "@devpablocristo/core-http": "^0.1.0",
+    "@devpablocristo/core-authn": "^0.3.0",
+    "@devpablocristo/core-browser": "^0.4.0",
+    "@devpablocristo/core-http": "^0.2.0",
     "@devpablocristo/modules-ai-console": "^0.1.0",
-    "@devpablocristo/modules-ui-data-display": "^0.2.0",
+    "@devpablocristo/modules-ui-data-display": "^0.3.0",
     "@devpablocristo/modules-ui-filters": "^0.1.0",
     "@devpablocristo/modules-ui-forms": "^0.1.0",
     "@heroicons/react": "^2.2.0",
