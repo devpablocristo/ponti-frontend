@@ -73,7 +73,6 @@ const AIAssistant = () => {
   const [routeHint, setRouteHint] = useState<PontiRouteHint | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [meta, setMeta] = useState<{ routed?: string; source?: string }>({});
   /** Respuesta en curso (SSE); al llegar `done` se vuelca a `messages`. */
   const [streamDraft, setStreamDraft] = useState<{ text: string; activity: string[] } | null>(
     null
@@ -189,7 +188,6 @@ const AIAssistant = () => {
       const d = await getPontiChatConversation(id, headers);
       setActiveId(d.id);
       setMessages(d.messages);
-      setMeta({});
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo cargar la conversación";
       setError(message);
@@ -204,7 +202,6 @@ const AIAssistant = () => {
     setStreamDraft(null);
     setActiveId(null);
     setMessages([]);
-    setMeta({});
     setError("");
   };
 
@@ -242,11 +239,6 @@ const AIAssistant = () => {
             if (typeof cid === "string" && cid) {
               setActiveId(cid);
             }
-            const routed = ev.data.routed_agent;
-            const source = ev.data.routing_source;
-            if (typeof routed === "string" && typeof source === "string") {
-              setMeta({ routed, source });
-            }
             return;
           }
           if (ev.event === "text" && typeof ev.data.content === "string") {
@@ -275,11 +267,6 @@ const AIAssistant = () => {
             const toolCalls = Array.isArray(rawTools)
               ? rawTools.filter((t): t is string => typeof t === "string")
               : [];
-            const routed = ev.data.routed_agent;
-            const source = ev.data.routing_source;
-            if (typeof routed === "string" && typeof source === "string") {
-              setMeta({ routed, source });
-            }
             const cid = ev.data.chat_id;
             if (typeof cid === "string" && cid) {
               setActiveId(cid);
