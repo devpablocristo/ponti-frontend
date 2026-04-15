@@ -2,7 +2,6 @@
 
 export type PontiRouteHint =
   | "general"
-  | "insight_chat"
   | "dashboard"
   | "labors"
   | "supplies"
@@ -11,21 +10,24 @@ export type PontiRouteHint =
   | "stock"
   | "reports";
 
-export type PontiChatHandoff = {
-  source: "in_app_notification" | "direct";
-  notification_id?: string | null;
-  insight_id?: string | null;
-  insight_scope?: string | null;
-  period?: string | null;
+export type PontiWorkspaceContext = {
+  customer_id?: number | null;
+  customer_name?: string | null;
+  project_id?: number | null;
+  project_name?: string | null;
+  campaign_id?: number | null;
+  campaign_name?: string | null;
+  field_id?: number | null;
+  field_name?: string | null;
 };
 
 export type PontiChatRequest = {
   message: string;
   chat_id?: string | null;
-  handoff?: PontiChatHandoff | null;
   route_hint?: PontiRouteHint | null;
   preferred_language?: "es" | "en";
   confirmed_actions?: string[];
+  workspace?: PontiWorkspaceContext | null;
 };
 
 export type PontiChatTextBlock = { type: "text"; text: string };
