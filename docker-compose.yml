@@ -35,6 +35,8 @@ services:
       - ./api/.env
     environment:
       - NODE_ENV=development
+      # Detalle seguro en JSON de errores BFF (p. ej. /ai/chat/stream); no usar en prod expuesto.
+      - BFF_VERBOSE_ERRORS=true
       - YARN_CACHE_FOLDER=/yarn-cache
       # El backend (Go) corre en el host. Desde contenedor, usar host.docker.internal.
       # Si tu backend está en otro host/puerto, ajustarlo acá o en ./api/.env.
