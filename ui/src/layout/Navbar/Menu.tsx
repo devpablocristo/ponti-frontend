@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSelection } from "../../pages/login/context/useSelection";
-import { getInsightsSummary } from "@/api/aiClient";
+import { listInsights } from "@/api/insightsClient";
+
+const HIGH_SEVERITY = new Set(["critical", "high"]);
+const ACTIVE_STATUS = new Set(["new", "notified", "pending"]);
 
 const POLL_INTERVAL_MS = 60_000;
 
@@ -54,11 +57,10 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
 
     const fetchSummary = async () => {
       try {
-        const summary = await getInsightsSummary({
-          projectId: String(projectId),
-        });
-        setInsightsCount(summary.new_count_total ?? 0);
-        setHighSeverityCount(summary.new_count_high_severity ?? 0);
+        const { items } = await listInsights(String(projectId));
+        const unread = items.filter((i) => !i.read_at && ACTIVE_STATUS.has(i.status));
+        setInsightsCount(unread.length);
+        setHighSeverityCount(unread.filter((i) => HIGH_SEVERITY.has(i.severity.toLowerCase())).length);
       } catch {
         // Silencioso: si falla el polling no afecta la UI
       }
@@ -77,7 +79,6 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
         className="flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 hover:bg-slate-100"
         title={`${insightsCount} notificación${insightsCount !== 1 ? "es" : ""} nueva${insightsCount !== 1 ? "s" : ""}`}
       >
-        <span className="text-[11px] font-medium" style={{ color: "#64748B" }}>IA</span>
         <span
           className="text-[11px] font-semibold rounded-full px-2 py-0.5"
           style={{

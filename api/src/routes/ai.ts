@@ -83,23 +83,6 @@ const handleError = (res: Response, error: unknown, opts?: HandleErrorOptions) =
   });
 };
 
-// --- Insights summary (badge polling) ---
-
-router.get("/insights/summary", async (req: Request, res: Response) => {
-  const userId = requireUser(req, res);
-  if (!userId) return;
-  const projectId = requireProject(req, res);
-  if (!projectId) return;
-
-  try {
-    const headers = buildHeaders(userId, projectId);
-    const { data } = await apiClient.get<any>("/ai/insights/summary", headers);
-    res.status(200).json(data);
-  } catch (error) {
-    handleError(res, error);
-  }
-});
-
 // --- Asistente conversacional (proxy a ponti-backend → ponti-ai) ---
 
 router.post("/chat", async (req: Request, res: Response) => {

@@ -1,9 +1,6 @@
 import { request } from "@devpablocristo/core-http/fetch";
 import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 import type {
-  InsightsSummary,
-} from "@/types/ai";
-import type {
   PontiChatRequest,
   PontiChatResponse,
   PontiChatStreamSseEvent,
@@ -30,20 +27,6 @@ const buildHeaders = (projectId: string): Record<string, string> => {
     headers.Authorization = `Bearer ${token}`;
   }
   return headers;
-};
-
-export type {
-  InsightsSummary,
-} from "@/types/ai";
-
-export const getInsightsSummary = async (
-  headers: AskHeaders
-): Promise<InsightsSummary> => {
-  return request<InsightsSummary>("/insights/summary", {
-    method: "GET",
-    headers: buildHeaders(headers.projectId),
-    baseURLs: [getBaseUrl()],
-  });
 };
 
 export async function pontiAssistantChat(
