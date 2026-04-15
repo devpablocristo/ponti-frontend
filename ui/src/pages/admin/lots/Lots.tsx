@@ -496,14 +496,14 @@ export function Lots() {
         filterOptions: getFilterOptionsForColumn("variety"),
         render: (value) => <b>{String(value ?? "")}</b>,
       },
-      { 
-        key: "hectares", 
-        header: "Sup. total", 
+      {
+        key: "hectares",
+        header: "Sup. total",
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("hectares"),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <b>{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="font-normal text-xs">Has</span></b>
         ),
       },
       {
@@ -529,20 +529,20 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("cost_usd_per_ha"),
-        render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
+        render: (value) => <b>u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</b>,
       },
     ];
 
     const harvest: Column<LotsData>[] = [
       ...baseColumns,
-      { 
+      {
         key: "harvested_area",
         header: "Sup. Cosechada",
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("harvested_area"),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <b>{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="font-normal text-xs">Has</span></b>
         ),
       },
       {
