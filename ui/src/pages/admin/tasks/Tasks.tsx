@@ -266,6 +266,7 @@ export function Tasks() {
   const [taskFilters, setTaskFilters] = useState<Record<string, unknown>>({});
   const [invoice, setInvoice] = useState<InvoiceData>({
     workorder_id: 0,
+    investor_id: 0,
     invoice_id: 0,
     invoice_number: "",
     invoice_company: "",
@@ -932,9 +933,10 @@ export function Tasks() {
             setResultInvoiceMessage(null);
             setErrorInvoiceMessage(null);
 
-            if (item.invoice_id === 0) {
+                        if (item.invoice_id === 0) {
               setInvoice({
                 workorder_id: item.workorder_id,
+                investor_id: item.investor_id,
                 invoice_id: 0,
                 invoice_number: "",
                 invoice_company: "",
@@ -949,8 +951,9 @@ export function Tasks() {
               (opt) => opt.name === item.invoice_status
             );
 
-            setInvoice({
+                        setInvoice({
               workorder_id: item.workorder_id,
+              investor_id: item.investor_id,
               invoice_id: item.invoice_id,
               invoice_number: item.invoice_number,
               invoice_company: item.invoice_company,
