@@ -592,12 +592,12 @@ export function Lots() {
         filterOptions: getFilterOptionsForColumn("net_income"),
         render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
-      { 
-        key: "rent", 
+      {
+        key: "rent_per_ha",
         header: "Arriendo",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("rent"),
+        filterOptions: getFilterOptionsForColumn("rent_per_ha"),
         render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
@@ -609,19 +609,19 @@ export function Lots() {
         render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
-        key: "total_assets",
+        key: "active_total_per_ha",
         header: "Activo Total",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("total_assets"),
+        filterOptions: getFilterOptionsForColumn("active_total_per_ha"),
         render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
-        key: "operating_result",
+        key: "operating_result_per_ha",
         header: "Resultado Operativo",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("operating_result"),
+        filterOptions: getFilterOptionsForColumn("operating_result_per_ha"),
         render: (value) => <span className="font-bold text-rose-700">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
     ];
