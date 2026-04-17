@@ -712,6 +712,7 @@ export default function UpdateOrder({
                   name="date"
                   type="date"
                   value={date || ""}
+                  max={new Date().toISOString().split("T")[0]}
                   onChange={(e) => {
                     const inputValue = e.target.value;
                     if (inputValue) {
