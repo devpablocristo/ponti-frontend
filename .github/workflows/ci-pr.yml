@@ -2,8 +2,12 @@ name: CI PR Frontend
 
 on:
   pull_request:
-    branches: [main]
+    branches: [develop, main]
   workflow_dispatch:
+
+concurrency:
+  group: ponti-frontend-ci-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -18,7 +22,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.19.0
           cache: yarn
           cache-dependency-path: ui/yarn.lock
 
@@ -40,7 +44,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 20.19.0
           cache: yarn
           cache-dependency-path: ui/yarn.lock
 

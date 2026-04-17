@@ -38,7 +38,7 @@ export class ApiClient {
 
     this.axiosInstance.interceptors.response.use(
       (response) => response,
-      this.handleErrorResponse
+      this.handleErrorResponse,
     );
   }
 
@@ -73,7 +73,7 @@ export class ApiClient {
             .map((movement, index) =>
               movement?.error_detail
                 ? `Fila ${index + 2}: ${movement.error_detail}`
-                : null
+                : null,
             )
             .filter(Boolean)
             .join("\n")
@@ -93,7 +93,9 @@ export class ApiClient {
       message: data?.message || "Error en la solicitud",
       error: {
         status:
-          typeof error.response?.status === "number" ? error.response.status : 500,
+          typeof error.response?.status === "number"
+            ? error.response.status
+            : 500,
         type: data?.type,
         code: data?.code,
         message: data?.message,
@@ -109,7 +111,7 @@ export class ApiClient {
   }
 
   private withForwardedAuth(
-    config: AxiosRequestConfig = {}
+    config: AxiosRequestConfig = {},
   ): AxiosRequestConfig {
     const auth = requestContext.getAuthorization();
     if (!auth) {
@@ -120,15 +122,15 @@ export class ApiClient {
       headers: {
         ...(config.headers || {}),
         Authorization:
-          (config.headers as Record<string, string | undefined>)?.Authorization ||
-          auth,
+          (config.headers as Record<string, string | undefined>)
+            ?.Authorization || auth,
       },
     };
   }
 
   public async get<T>(
     url: string,
-    options?: Record<string, string | undefined> | AxiosRequestConfig
+    options?: Record<string, string | undefined> | AxiosRequestConfig,
   ): Promise<ApiResponse<T>> {
     try {
       let config: AxiosRequestConfig = {};
@@ -143,7 +145,7 @@ export class ApiClient {
 
       const response = await this.axiosInstance.get<T>(
         url,
-        this.withForwardedAuth(config)
+        this.withForwardedAuth(config),
       );
       return {
         success: true,
@@ -157,13 +159,13 @@ export class ApiClient {
 
   public async delete<T>(
     url: string,
-    headers?: Record<string, string | undefined>
+    headers?: Record<string, string | undefined>,
   ): Promise<ApiResponse<T>> {
     try {
       const config: AxiosRequestConfig = headers ? { headers } : {};
       const response = await this.axiosInstance.delete<T>(
         url,
-        this.withForwardedAuth(config)
+        this.withForwardedAuth(config),
       );
       return {
         success: true,
@@ -178,14 +180,14 @@ export class ApiClient {
   public async post<T>(
     url: string,
     data: any,
-    headers?: Record<string, string | undefined>
+    headers?: Record<string, string | undefined>,
   ): Promise<ApiResponse<T>> {
     try {
       const config: AxiosRequestConfig = headers ? { headers } : {};
       const response = await this.axiosInstance.post<T>(
         url,
         data,
-        this.withForwardedAuth(config)
+        this.withForwardedAuth(config),
       );
       return {
         success: true,
@@ -200,14 +202,36 @@ export class ApiClient {
   public async put<T>(
     url: string,
     data: any,
-    headers?: Record<string, string | undefined>
+    headers?: Record<string, string | undefined>,
   ): Promise<ApiResponse<T>> {
     try {
       const config: AxiosRequestConfig = headers ? { headers } : {};
       const response = await this.axiosInstance.put<T>(
         url,
         data,
-        this.withForwardedAuth(config)
+        this.withForwardedAuth(config),
+      );
+      return {
+        success: true,
+        message: "Operación exitosa",
+        data: response.data,
+      };
+    } catch (error) {
+      throw error as ApiResponse<null>;
+    }
+  }
+
+  public async patch<T>(
+    url: string,
+    data: any,
+    headers?: Record<string, string | undefined>,
+  ): Promise<ApiResponse<T>> {
+    try {
+      const config: AxiosRequestConfig = headers ? { headers } : {};
+      const response = await this.axiosInstance.patch<T>(
+        url,
+        data,
+        this.withForwardedAuth(config),
       );
       return {
         success: true,

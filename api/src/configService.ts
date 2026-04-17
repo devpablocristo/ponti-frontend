@@ -2,6 +2,15 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+/** true, 1, yes, on (case-insensitive) — resto = false. */
+function isTruthyEnvString(value: string | undefined): boolean {
+  if (!value || value.trim() === "") {
+    return false;
+  }
+  const v = value.trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value || value.trim() === "") {
@@ -19,6 +28,8 @@ class ConfigService {
   public readonly identityApiKey = process.env.IDENTITY_PLATFORM_API_KEY || "";
   public readonly identityProjectId =
     process.env.IDENTITY_PLATFORM_PROJECT_ID || "";
+  /** Errores genéricos del BFF incluyen detalle seguro en JSON (p. ej. proxy chat/stream). */
+  public readonly bffVerboseErrors = isTruthyEnvString(process.env.BFF_VERBOSE_ERRORS);
 }
 
 export const configService = new ConfigService();

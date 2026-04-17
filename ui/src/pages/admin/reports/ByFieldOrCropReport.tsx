@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import SelectField from "../../../components/Input/SelectField";
 import { ByFieldOrCropTable } from "./ByFieldOrCropTable.tsx";

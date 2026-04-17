@@ -122,7 +122,7 @@ jobs:
             --region="${{ env.REGION }}" \
             --image="${IMAGE}" \
             --service-account="${CLOUD_RUN_SERVICE_ACCOUNT_PROD}" \
-            --min-instances=1 \
+            --min-instances=2 \
             --allow-unauthenticated \
             --port=3000 \
             --set-env-vars="NODE_ENV=prod,BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"

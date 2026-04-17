@@ -1,32 +1,12 @@
+import { request } from "@devpablocristo/core-http/fetch";
 import { getAccessToken } from "@/pages/login/context/useLocalStorage";
-
-export type AskRequest = {
-  question: string;
-  context?: {
-    date_from?: string;
-    date_to?: string;
-  };
-};
-
-export type AskResponse = {
-  request_id: string;
-  intent: string;
-  query_id: string | null;
-  params: Record<string, unknown>;
-  data: Record<string, unknown>[];
-  answer: string;
-  sources: Array<Record<string, unknown>>;
-  warnings: string[];
-  related_insights_count: number;
-  related_insights: RelatedInsight[];
-};
-
-export type RelatedInsight = {
-  id: string;
-  entity_type: string;
-  entity_id: string;
-  title: string;
-};
+import type {
+  PontiChatRequest,
+  PontiChatResponse,
+  PontiChatStreamSseEvent,
+  PontiConversationDetail,
+  PontiConversationSummary,
+} from "@/types/aiChat";
 
 type AskHeaders = {
   projectId: string;
@@ -34,7 +14,7 @@ type AskHeaders = {
 
 const getBaseUrl = (): string => {
   const url = import.meta.env.VITE_AI_PROXY_URL as string | undefined;
-  return url && url.length > 0 ? url : "/api/ai";
+  return url && url.length > 0 ? url : "/api/v1/ai";
 };
 
 const buildHeaders = (projectId: string): Record<string, string> => {
@@ -49,112 +29,123 @@ const buildHeaders = (projectId: string): Record<string, string> => {
   return headers;
 };
 
-export const askAICopilot = async (
-  payload: AskRequest,
+export async function pontiAssistantChat(
+  payload: PontiChatRequest,
   headers: AskHeaders
-): Promise<AskResponse> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}/ask`, {
+): Promise<PontiChatResponse> {
+  return request<PontiChatResponse>("/chat", {
     method: "POST",
+    body: payload,
     headers: buildHeaders(headers.projectId),
-    body: JSON.stringify(payload),
+    baseURLs: [getBaseUrl()],
   });
+}
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al consultar el AI Copilot Service");
+function parseSseBlocks(buffer: string): { events: PontiChatStreamSseEvent[]; rest: string } {
+  const events: PontiChatStreamSseEvent[] = [];
+  const lastSep = buffer.lastIndexOf("\n\n");
+  if (lastSep === -1) {
+    return { events, rest: buffer };
   }
-
-  return (await response.json()) as AskResponse;
-};
-
-export type InsightItem = {
-  id: string;
-  project_id: string;
-  entity_type: string;
-  entity_id: string;
-  type: string;
-  severity: number;
-  priority: number;
-  title: string;
-  summary: string;
-  evidence: Record<string, unknown>;
-  explanations: Record<string, unknown>;
-  action: Record<string, unknown>;
-  model_version: string;
-  features_version: string;
-  computed_at: string;
-  valid_until: string;
-  status: string;
-  impact_min?: number | null;
-  impact_max?: number | null;
-  impact_unit?: string | null;
-  confidence?: string | null;
-  dedupe_key?: string | null;
-  cooldown_until?: string | null;
-  computed_by?: string | null;
-  job_run_id?: string | null;
-  rules_version?: string | null;
-};
-
-export type InsightsSummary = {
-  new_count_total: number;
-  new_count_high_severity: number;
-  top_insights: InsightItem[];
-};
-
-export const getInsightsSummary = async (
-  headers: AskHeaders
-): Promise<InsightsSummary> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}/insights/summary`, {
-    method: "GET",
-    headers: buildHeaders(headers.projectId),
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al consultar summary de insights");
+  const complete = buffer.slice(0, lastSep);
+  const rest = buffer.slice(lastSep + 2);
+  for (const block of complete.split("\n\n")) {
+    if (!block.trim()) continue;
+    let ev = "message";
+    const dataParts: string[] = [];
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event:")) {
+        ev = line.slice(6).trim();
+      } else if (line.startsWith("data:")) {
+        dataParts.push(line.slice(5).trimStart());
+      }
+    }
+    const raw = dataParts.join("\n");
+    try {
+      const data = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+      events.push({ event: ev, data });
+    } catch {
+      events.push({ event: "error", data: { message: "sse_parse_error", detail: raw } });
+    }
   }
-  return (await response.json()) as InsightsSummary;
-};
+  return { events, rest };
+}
 
-export const getInsights = async (
+/**
+ * Chat con streaming SSE vía BFF (`/chat/stream`).
+ * `onEvent` recibe cada evento parseado (`start`, `text`, `tool_call`, `tool_result`, `done`, `error`).
+ */
+export async function pontiAssistantChatStream(
+  payload: PontiChatRequest,
   headers: AskHeaders,
-  entityType: string,
-  entityId: string
-): Promise<{ insights: InsightItem[] }> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(
-    `${baseUrl}/insights/${entityType}/${entityId}`,
+  onEvent: (ev: PontiChatStreamSseEvent) => void,
+  signal?: AbortSignal
+): Promise<void> {
+  const token = getAccessToken();
+  const h: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "text/event-stream",
+    "X-PROJECT-ID": headers.projectId,
+  };
+  if (token) {
+    h.Authorization = `Bearer ${token}`;
+  }
+  const base = getBaseUrl().replace(/\/$/, "");
+  const res = await fetch(`${base}/chat/stream`, {
+    method: "POST",
+    headers: h,
+    body: JSON.stringify(payload),
+    signal,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `chat stream failed: ${res.status}`);
+  }
+  const reader = res.body?.getReader();
+  if (!reader) {
+    throw new Error("chat stream: no body");
+  }
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const { events, rest } = parseSseBlocks(buf);
+    buf = rest;
+    for (const e of events) {
+      onEvent(e);
+    }
+  }
+  if (buf.trim()) {
+    const { events } = parseSseBlocks(buf + "\n\n");
+    for (const e of events) {
+      onEvent(e);
+    }
+  }
+}
+
+export async function listPontiChatConversations(
+  headers: AskHeaders,
+  limit = 50
+): Promise<{ items: PontiConversationSummary[] }> {
+  return request<{ items: PontiConversationSummary[] }>(
+    `/chat/conversations?limit=${limit}`,
     {
       method: "GET",
       headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
     }
   );
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al consultar insights");
-  }
-  return (await response.json()) as { insights: InsightItem[] };
-};
+}
 
-export type ComputeInsightsResult = {
-  request_id: string;
-  computed: number;
-  insights_created: number;
-};
-
-export const computeInsights = async (
+export async function getPontiChatConversation(
+  conversationId: string,
   headers: AskHeaders
-): Promise<ComputeInsightsResult> => {
-  const baseUrl = getBaseUrl();
-  const response = await fetch(`${baseUrl}/insights/compute`, {
-    method: "POST",
+): Promise<PontiConversationDetail> {
+  return request<PontiConversationDetail>(`/chat/conversations/${conversationId}`, {
+    method: "GET",
     headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
   });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || "Error al recomputar insights");
-  }
-  return (await response.json()) as ComputeInsightsResult;
-};
+}

@@ -1,34 +1,11 @@
-import { TokenResponse } from "../types";
+import {
+  createBrowserTokenStorage,
+  type TokenPair,
+} from "@devpablocristo/core-authn/browser/storage";
 
-function prefix() {
-  // Prevent DEV/STG tabs from overwriting each other's session.
-  // Example key: ponti:stg---ponti-frontend-...a.run.app:access_token
-  return `ponti:${window.location.host}:`;
-}
-
-function key(name: string) {
-  return `${prefix()}${name}`;
-}
-
-export const getAccessToken = (): string | null => {
-  return localStorage.getItem(key("access_token"));
-};
-
-export const setAccessToken = (token: string) => {
-  localStorage.setItem(key("access_token"), token);
-};
-
-export const setRefreshToken = (token: string) => {
-  localStorage.setItem(key("refresh_token"), token);
-};
-
-export const getRefreshToken = (): string | null => {
-  return localStorage.getItem(key("refresh_token"));
-};
-
-export const clearLocalStorage = () => {
-  // Clear only our app keys for this hostname and legacy keys (older builds).
-  const legacyKeys = [
+export const authTokenStorage = createBrowserTokenStorage({
+  namespace: "ponti",
+  legacyKeys: [
     "access_token",
     "refresh_token",
     "customer",
@@ -36,19 +13,29 @@ export const clearLocalStorage = () => {
     "project_id",
     "campaign",
     "field",
-  ];
-  for (const k of legacyKeys) localStorage.removeItem(k);
+  ],
+});
 
-  const hostPrefix = prefix();
-  const toRemove: string[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k && k.startsWith(hostPrefix)) toRemove.push(k);
-  }
-  toRemove.forEach((k) => localStorage.removeItem(k));
+export const getAccessToken = (): string | null => {
+  return authTokenStorage.getAccessToken();
 };
 
-export const setLocalStorage = (token: TokenResponse) => {
-  localStorage.setItem(key("access_token"), token.access_token);
-  localStorage.setItem(key("refresh_token"), token.refresh_token);
+export const setAccessToken = (token: string) => {
+  authTokenStorage.setAccessToken(token);
+};
+
+export const setRefreshToken = (token: string) => {
+  authTokenStorage.setRefreshToken(token);
+};
+
+export const getRefreshToken = (): string | null => {
+  return authTokenStorage.getRefreshToken();
+};
+
+export const clearLocalStorage = () => {
+  authTokenStorage.clear();
+};
+
+export const setLocalStorage = (token: TokenPair) => {
+  authTokenStorage.setTokens(token);
 };

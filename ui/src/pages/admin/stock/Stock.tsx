@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
 
-import DataTable from "../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import useStock from "../../../hooks/useStock";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
@@ -155,13 +155,13 @@ function CloseStockDate({
           Cerrar stock a fecha
         </label>
         <div className="flex items-center gap-3">
-        <input
-          type="date"
-          disabled={disabledCloseStock}
-          value={internalDate}
-          onChange={(e) => setInternalDate(e.target.value)}
-          className="px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-custom-btn/30 focus:border-custom-btn disabled:bg-gray-100 disabled:text-gray-400"
-        />
+          <input
+            type="date"
+            disabled={disabledCloseStock}
+            value={internalDate}
+            onChange={(e) => setInternalDate(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-custom-btn/30 focus:border-custom-btn disabled:bg-gray-100 disabled:text-gray-400"
+          />
           <label className={`inline-flex items-center gap-2 cursor-pointer ${disabledCloseStock ? "opacity-50 cursor-not-allowed" : ""}`}>
             <input
               type="checkbox"
@@ -482,32 +482,28 @@ export function Stock() {
           columnsFilters
         ),
         header: "Diferencia",
-        render: (diff, item) => {
-          const parsedDiff = normalizeNumber(diff);
-          const systemStock = normalizeNumber(item.stock_units);
-          const fieldStock = normalizeNumber(item.real_stock_units);
-
-          const calculatedDiff =
-            !Number.isNaN(fieldStock) && !Number.isNaN(systemStock)
-              ? fieldStock - systemStock
-              : Number.NaN;
-
-          const value = !Number.isNaN(parsedDiff)
-            ? parsedDiff
-            : !Number.isNaN(calculatedDiff)
-              ? calculatedDiff
-              : Number.NaN;
+        render: (diff) => {
+          const value = normalizeNumber(diff);
 
           const isPositive = value > 0;
           const isNegative = value < 0;
 
           if (Number.isNaN(value)) {
-            return <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">-</span>;
+            return (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">
+                -
+              </span>
+            );
           }
 
           if (!isPositive && !isNegative) {
-            return <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">0</span>;
+            return (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">
+                0
+              </span>
+            );
           }
+
           if (isPositive) {
             return (
               <span
@@ -523,6 +519,7 @@ export function Stock() {
               </span>
             );
           }
+
           return (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-full bg-red-50 text-red-700 border border-red-200">
               <AlertCircle className="w-3.5 h-3.5" />

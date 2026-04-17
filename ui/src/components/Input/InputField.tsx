@@ -13,6 +13,8 @@ type InputFieldProps = {
   disabled?: boolean;
   placeholder?: string;
   step?: string;
+  min?: string | number;
+  max?: string | number;
   required?: boolean;
   fullWidth?: boolean;
   inputClassName?: string;
@@ -35,6 +37,8 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
       disabled = false,
       placeholder,
       step,
+      min,
+      max,
       required = false,
       fullWidth = false,
       inputClassName = "",
@@ -72,6 +76,8 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
           onPaste={onPaste}
           placeholder={placeholder}
           step={step}
+          min={min}
+          max={max}
           className={`input-base block ${
             disabled
               ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200"

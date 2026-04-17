@@ -615,7 +615,7 @@ router.get("/:id/dollar-values", async (req: Request, res: Response) => {
       data: dollar,
     };
 
-    if (dollar.length > 0) {
+    if (Array.isArray(dollar) && dollar.length > 0) {
       setImmediate(() => cache.set(`dollar:${projectId}`, data));
     }
 
@@ -724,20 +724,18 @@ router.post("/:id/labors", async (req: Request, res: Response) => {
     };
 
 
-    await apiClient.post<any>(
-      `/projects/${projectId}/labors`,
-      requestData,
-      headers
-    );
+const { data: backendResponse } = await apiClient.post<any>(
+  `/projects/${projectId}/labors`,
+  requestData,
+  headers
+);
 
-    setImmediate(() => cache.flushAll());
+setImmediate(() => cache.flushAll());
 
-    const data = {
-      success: true,
-      message: "Labores actualizados exitosamente",
-    };
-
-    res.status(200).json(data);
+res.status(207).json({
+  success: true,
+  data: backendResponse,
+});
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -846,7 +844,7 @@ router.get("/:id/commercializations", async (req: Request, res: Response) => {
       data: commerce,
     };
 
-    if (commerce.length > 0) {
+    if (Array.isArray(commerce) && commerce.length > 0) {
       setImmediate(() => cache.set(`commerce:${projectId}`, data));
     }
 

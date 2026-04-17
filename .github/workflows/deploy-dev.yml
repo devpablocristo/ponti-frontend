@@ -6,6 +6,10 @@ on:
       - develop
   workflow_dispatch:
 
+concurrency:
+  group: ponti-frontend-deploy-dev-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev

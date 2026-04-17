@@ -16,7 +16,18 @@ import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall"
 type LaborGroupsResponse = SuccessResponse<PaginatedResponse<LaborGroupData>>;
 type LaborsResponse = SuccessResponse<LaborInfo[]>;
 type InvoiceMutationResponse = SuccessResponse<unknown>;
-type LaborMutationResponse = SuccessResponse<unknown>;
+type CreatedLaborResult = {
+  labor_name: string;
+  labor_id: number;
+  is_saved: boolean;
+  error_detail: string;
+};
+
+type LaborMutationResponse = SuccessResponse<{
+  labors_ids?: CreatedLaborResult[];
+  message?: string;
+}>;
+
 type WorkOrdersCountResponse = SuccessResponse<{ count: number }>;
 
 const extractLaborsArray = (payload: unknown): LaborInfo[] => {
@@ -41,11 +52,19 @@ const extractLaborsArray = (payload: unknown): LaborInfo[] => {
   return [];
 };
 
+const translateLaborError = (message: string): string => {
+  const normalized = message.trim();
+
+  if (normalized === "CONFLICT: labor already exists in this project") {
+    return "La labor ya existe en este proyecto.";
+  }
+
+  return message;
+};
+
 const useLabors = () => {
-  const [
-    { laborGroups, labors, result, pageInfo, resultInvoice, metrics },
-    dispatch,
-  ] = useLaborReducer();
+  const [{ laborGroups, labors, result, pageInfo, resultInvoice, metrics }, dispatch] =
+    useLaborReducer();
   const [processing, setProcessing] = useState(false);
   const [processingInvoice, setProcessingInvoice] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,9 +108,7 @@ const useLabors = () => {
 
         setError("Ocurrio un error en la busqueda de labores");
       } catch (error) {
-        setError(
-          extractErrorMessage(error, "Error desconocido en la busqueda de labores.")
-        );
+        setError(extractErrorMessage(error, "Error desconocido en la busqueda de labores."));
       } finally {
         setProcessing(false);
       }
@@ -129,34 +146,37 @@ const useLabors = () => {
     [dispatch]
   );
 
-  const createInvoice = React.useCallback(async (invoice: InvoiceData) => {
-    setProcessingInvoice(true);
-    setErrorInvoice(null);
-    dispatch({
-      type: actions.SET_RESULT_INVOICE,
-      payload: "",
-    });
+  const createInvoice = React.useCallback(
+    async (invoice: InvoiceData) => {
+      setProcessingInvoice(true);
+      setErrorInvoice(null);
+      dispatch({
+        type: actions.SET_RESULT_INVOICE,
+        payload: "",
+      });
 
-    try {
-      const response = await apiClient.post<InvoiceMutationResponse>(`/labors/invoice`, invoice);
+      try {
+        const response = await apiClient.post<InvoiceMutationResponse>(`/labors/invoice`, invoice);
 
-      if (response.success) {
-        dispatch({
-          type: actions.SET_RESULT_INVOICE,
-          payload: "Se ha creado la factura con éxito!",
-        });
-        return;
+        if (response.success) {
+          dispatch({
+            type: actions.SET_RESULT_INVOICE,
+            payload: "Se ha creado la factura con éxito!",
+          });
+          return;
+        }
+
+        setErrorInvoice("Ocurrio un error en la creación de la factura");
+      } catch (error) {
+        setErrorInvoice(
+          extractErrorMessage(error, "Error desconocido en la creación de la factura.")
+        );
+      } finally {
+        setProcessingInvoice(false);
       }
-
-      setErrorInvoice("Ocurrio un error en la creación de la factura");
-    } catch (error) {
-      setErrorInvoice(
-        extractErrorMessage(error, "Error desconocido en la creación de la factura.")
-      );
-    } finally {
-      setProcessingInvoice(false);
-    }
-  }, [dispatch]);
+    },
+    [dispatch]
+  );
 
   const updateInvoice = React.useCallback(
     async (id: number, invoice: InvoiceData) => {
@@ -184,10 +204,7 @@ const useLabors = () => {
         setErrorInvoice("Ocurrio un error en la actualización de la factura");
       } catch (error) {
         setErrorInvoice(
-          extractErrorMessage(
-            error,
-            "Error desconocido en la actualización de la factura."
-          )
+          extractErrorMessage(error, "Error desconocido en la actualización de la factura.")
         );
       } finally {
         setProcessingInvoice(false);
@@ -211,6 +228,21 @@ const useLabors = () => {
           laborsToSave
         );
 
+        const createdLabors = response.data?.labors_ids ?? [];
+        const failedLabors = createdLabors.filter(
+          (labor) => !labor.is_saved || !!labor.error_detail
+        );
+
+        if (failedLabors.length > 0) {
+          const message = failedLabors
+            .map((labor) => translateLaborError(labor.error_detail?.trim() || ""))
+            .filter(Boolean)
+            .join("\n");
+
+          setError(message || "Ocurrió un error en la creación de las labores.");
+          return false;
+        }
+
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
@@ -228,10 +260,7 @@ const useLabors = () => {
         }
 
         setError(
-          extractErrorMessage(
-            error,
-            "Error desconocido en la creación de las labores."
-          )
+          extractErrorMessage(error, "Error desconocido en la creación de las labores.")
         );
         return false;
       } finally {
@@ -241,69 +270,72 @@ const useLabors = () => {
     [dispatch]
   );
 
-  const getLabors = React.useCallback(async (projectId: number) => {
-    setProcessing(true);
-    setError(null);
-    dispatch({
-      type: actions.SET_RESULT,
-      payload: "",
-    });
 
-    try {
-      const response = await apiClient.get<LaborsResponse>(`/projects/${projectId}/labors`);
+  const getLabors = React.useCallback(
+    async (projectId: number) => {
+      setProcessing(true);
+      setError(null);
+      dispatch({
+        type: actions.SET_RESULT,
+        payload: "",
+      });
 
-      if (response.success) {
-        const normalizedLabors = extractLaborsArray(response.data);
-        dispatch({
-          type: actions.SET_LABORS,
-          payload: normalizedLabors,
-        });
-        return;
+      try {
+        const response = await apiClient.get<LaborsResponse>(`/projects/${projectId}/labors`);
+
+        if (response.success) {
+          const normalizedLabors = extractLaborsArray(response.data);
+          dispatch({
+            type: actions.SET_LABORS,
+            payload: normalizedLabors,
+          });
+          return;
+        }
+
+        setError("Ocurrio un error en la busqueda de labores");
+      } catch (error) {
+        setError(extractErrorMessage(error, "Error desconocido en la busqueda de labores."));
+      } finally {
+        setProcessing(false);
       }
+    },
+    [dispatch]
+  );
 
-      setError("Ocurrio un error en la busqueda de labores");
-    } catch (error) {
-      setError(
-        extractErrorMessage(error, "Error desconocido en la busqueda de labores.")
-      );
-    } finally {
-      setProcessing(false);
-    }
-  }, [dispatch]);
+  const deleteLabor = React.useCallback(
+    async (id: number) => {
+      setProcessing(true);
+      setError(null);
+      dispatch({
+        type: actions.SET_RESULT,
+        payload: "",
+      });
 
-  const deleteLabor = React.useCallback(async (id: number) => {
-    setProcessing(true);
-    setError(null);
-    dispatch({
-      type: actions.SET_RESULT,
-      payload: "",
-    });
+      try {
+        const response = await apiClient.delete<LaborMutationResponse>(`/labors/${id}`);
 
-    try {
-      const response = await apiClient.delete<LaborMutationResponse>(`/labors/${id}`);
+        if (response.success) {
+          dispatch({
+            type: actions.SET_RESULT,
+            payload: "Se ha eliminado el labor con éxito!",
+          });
+          return;
+        }
 
-      if (response.success) {
-        dispatch({
-          type: actions.SET_RESULT,
-          payload: "Se ha eliminado el labor con éxito!",
-        });
-        return;
+        setError("Ocurrio un error en la eliminación del labor");
+      } catch (error) {
+        if (extractErrorStatus(error) === 409) {
+          setError("La labor esta siendo usada en una orden de trabajo.");
+          return;
+        }
+
+        setError(extractErrorMessage(error, "Error desconocido en la eliminación de la labor."));
+      } finally {
+        setProcessing(false);
       }
-
-      setError("Ocurrio un error en la eliminación del labor");
-    } catch (error) {
-      if (extractErrorStatus(error) === 409) {
-        setError("La labor esta siendo usada en una orden de trabajo.");
-        return;
-      }
-
-      setError(
-        extractErrorMessage(error, "Error desconocido en la eliminación de la labor.")
-      );
-    } finally {
-      setProcessing(false);
-    }
-  }, [dispatch]);
+    },
+    [dispatch]
+  );
 
   const getWorkOrdersCount = React.useCallback(
     async (projectId: number, laborId: number): Promise<number> => {
@@ -322,39 +354,34 @@ const useLabors = () => {
     []
   );
 
-  const updateLabor = React.useCallback(
-    async (projectId: number, labor: LaborInfo) => {
-      setProcessing(true);
-      setErrorUpdate(null);
-      setResultUpdate(null);
+  const updateLabor = React.useCallback(async (projectId: number, labor: LaborInfo) => {
+    setProcessing(true);
+    setErrorUpdate(null);
+    setResultUpdate(null);
 
-      try {
-        const response = await apiClient.put<LaborMutationResponse>(
-          `/labors/projects/${projectId}/${labor.id}`,
-          labor
-        );
+    try {
+      const response = await apiClient.put<LaborMutationResponse>(
+        `/labors/projects/${projectId}/${labor.id}`,
+        labor
+      );
 
-        if (response.success) {
-          setResultUpdate("Se editado el labor con éxito!");
-          return;
-        }
-
-        setErrorUpdate("Ocurrio un error en la edicion del labor");
-      } catch (error) {
-        if (extractErrorStatus(error) === 404) {
-          setErrorUpdate("La labor no existe.");
-          return;
-        }
-
-        setErrorUpdate(
-          extractErrorMessage(error, "Error desconocido en la edición de la labor.")
-        );
-      } finally {
-        setProcessing(false);
+      if (response.success) {
+        setResultUpdate("Se editado el labor con éxito!");
+        return;
       }
-    },
-    []
-  );
+
+      setErrorUpdate("Ocurrio un error en la edicion del labor");
+    } catch (error) {
+      if (extractErrorStatus(error) === 404) {
+        setErrorUpdate("La labor no existe.");
+        return;
+      }
+
+      setErrorUpdate(extractErrorMessage(error, "Error desconocido en la edición de la labor."));
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
 
   return {
     laborGroups,

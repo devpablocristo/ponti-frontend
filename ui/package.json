@@ -4,8 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "vite --configLoader runner",
+    "build": "tsc -b && vite build --configLoader runner",
+    "generate:ai-types": "node ./scripts/generate-ai-types.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
@@ -15,16 +16,25 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@devpablocristo/core-authn": "^0.3.0",
+    "@devpablocristo/core-browser": "^0.4.0",
+    "@devpablocristo/core-http": "^0.2.0",
+    "@devpablocristo/modules-ai-console": "^0.1.0",
+    "@devpablocristo/modules-ui-data-display": "^0.3.0",
+    "@devpablocristo/modules-ui-filters": "^0.1.0",
+    "@devpablocristo/modules-ui-forms": "^0.1.0",
     "@heroicons/react": "^2.2.0",
-    "@material-tailwind/react": "^2.1.10",
+    "@material-tailwind/react": "^3.0.0-beta.24",
     "axios": "^1.8.1",
     "flowbite": "^3.1.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.477.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.2.0",
     "react-to-pdf": "^2.0.1",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "use-debounce": "^10.0.4",
     "xlsx": "^0.18.5",
@@ -32,8 +42,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@tailwindcss/typography": "^0.5.19",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.7.0",
     "@testing-library/react": "^16.2.0",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
@@ -51,5 +64,6 @@
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0",
     "vitest": "^3.2.4"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

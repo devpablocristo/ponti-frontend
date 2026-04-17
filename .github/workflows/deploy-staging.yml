@@ -11,6 +11,10 @@ on:
         required: false
         default: "main"
 
+concurrency:
+  group: ponti-frontend-deploy-staging-${{ github.event.inputs.ref || github.ref }}
+  cancel-in-progress: true
+
 env:
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { parseListItemsFromResponse } from "@devpablocristo/core-browser/crud";
 import Header from "../../../components/Header/Header";
 import Button from "../../../components/Button/Button";
 import { apiClient } from "@/api/client";
@@ -14,43 +15,12 @@ type UserRow = {
   role: string;
 };
 
-type NestedListBody<T> = {
-  data?: NestedListBody<T> | T[];
-  items?: T[];
-};
-
 type CreateUserResponse = {
   data?: {
     reset_link?: string;
   };
   reset_link?: string;
 };
-
-function isNestedListBody<T>(value: unknown): value is NestedListBody<T> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function unwrapList<T>(body: unknown): T[] {
-  // BFF routes wrap backend responses (and sometimes wrap their own wrappers).
-  // Normalize to a plain array so the UI doesn't explode on map().
-  const source = body;
-  const level1 = isNestedListBody<T>(source) ? source.data : undefined;
-  const level2 = isNestedListBody<T>(level1) ? level1.data : undefined;
-  const level3 = isNestedListBody<T>(level2) ? level2.data : undefined;
-  const candidates = [
-    source,
-    level1,
-    level2,
-    level3,
-    isNestedListBody<T>(source) ? source.items : undefined,
-    isNestedListBody<T>(level1) ? level1.items : undefined,
-    isNestedListBody<T>(level2) ? level2.items : undefined,
-  ];
-  for (const c of candidates) {
-    if (Array.isArray(c)) return c as T[];
-  }
-  return [];
-}
 
 function getErrorMessage(error: unknown): string {
   const err = error as {
@@ -83,10 +53,10 @@ export default function Access() {
     setError("");
     try {
       const tenantsBody = await apiClient.get<unknown>("/admin/tenants");
-      setTenants(unwrapList<Tenant>(tenantsBody));
+      setTenants(parseListItemsFromResponse<Tenant>(tenantsBody));
 
       const usersBody = await apiClient.get<unknown>("/admin/users");
-      setUsers(unwrapList<UserRow>(usersBody));
+      setUsers(parseListItemsFromResponse<UserRow>(usersBody));
     } catch (error) {
       setError(getErrorMessage(error) || "No se pudo cargar la informacion");
     } finally {

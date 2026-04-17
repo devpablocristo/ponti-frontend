@@ -1,8 +1,13 @@
 /** @type {import('tailwindcss').Config} */
-const withMT = require("@material-tailwind/react/utils/withMT");
+const { mtConfig } = require("@material-tailwind/react");
+const typography = require("@tailwindcss/typography");
 
-export default withMT({
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@devpablocristo/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
@@ -60,5 +65,5 @@ export default withMT({
       ],
     },
   },
-  plugins: [],
-});
+  plugins: [mtConfig(), typography],
+};

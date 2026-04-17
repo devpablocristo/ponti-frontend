@@ -1,18 +1,17 @@
 import { createContext } from "react";
 import { Entity } from "../../../hooks/useDatabase/options/types";
-import { ProjectData } from "../../../hooks/useDatabase/projects/types";
 import { Data } from "../../../hooks/useFields/types";
 
 export type SelectionContextType = {
-  customer: Entity;
+  customer: Entity | undefined;
   setCustomer: (c: Entity | undefined) => void;
-  project: ProjectData;
+  project: Entity | undefined;
   setProject: (p: Entity | undefined) => void;
-  projectId: number | null;
+  projectId: number | null | undefined;
   setProjectId: (p: number | undefined) => void;
-  campaign: Entity;
+  campaign: Entity | undefined;
   setCampaign: (c: Entity | undefined) => void;
-  field: Data;
+  field: Data | undefined;
   setField: (f: Data | undefined) => void;
   seasons: { name: string; id: number }[];
 };

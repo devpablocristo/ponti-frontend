@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle, Pencil } from "lucide-react";
-import DataTable from "../../../components/Table/DataTable";
+import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import { LotKPIs, LotsData, LotsDataUpdate } from "../../../hooks/useLots/types";
 import useLots from "../../../hooks/useLots";
-import FilterBar from "../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import InputField from "../../../components/Input/InputField";
@@ -496,14 +496,14 @@ export function Lots() {
         filterOptions: getFilterOptionsForColumn("variety"),
         render: (value) => <b>{String(value ?? "")}</b>,
       },
-      { 
-        key: "hectares", 
-        header: "Sup. total", 
+      {
+        key: "hectares",
+        header: "Sup. total",
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("hectares"),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <b>{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="font-normal text-xs">Has</span></b>
         ),
       },
       {
@@ -529,20 +529,20 @@ export function Lots() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("cost_usd_per_ha"),
-        render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
+        render: (value) => <b>u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</b>,
       },
     ];
 
     const harvest: Column<LotsData>[] = [
       ...baseColumns,
-      { 
+      {
         key: "harvested_area",
         header: "Sup. Cosechada",
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("harvested_area"),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <b>{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="font-normal text-xs">Has</span></b>
         ),
       },
       {
@@ -592,12 +592,12 @@ export function Lots() {
         filterOptions: getFilterOptionsForColumn("net_income"),
         render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
-      { 
-        key: "rent", 
+      {
+        key: "rent_per_ha",
         header: "Arriendo",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("rent"),
+        filterOptions: getFilterOptionsForColumn("rent_per_ha"),
         render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
@@ -609,19 +609,19 @@ export function Lots() {
         render: (value) => <span className="font-medium text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
-        key: "total_assets",
+        key: "active_total_per_ha",
         header: "Activo Total",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("total_assets"),
+        filterOptions: getFilterOptionsForColumn("active_total_per_ha"),
         render: (value) => <span className="font-semibold text-rose-600">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
-        key: "operating_result",
+        key: "operating_result_per_ha",
         header: "Resultado Operativo",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("operating_result"),
+        filterOptions: getFilterOptionsForColumn("operating_result_per_ha"),
         render: (value) => <span className="font-bold text-rose-700">$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
     ];
