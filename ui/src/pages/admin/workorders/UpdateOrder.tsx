@@ -381,60 +381,53 @@ export default function UpdateOrder({
   }, [selectedProject, selectedOrder]);
 
   useEffect(() => {
-    if (
-      selectedOrder &&
-      investors.length > 0 &&
-      labors.length > 0 &&
-      lots.length > 0
-    ) {
-      setOrderNumber(selectedOrder.number);
-      setSurface(selectedOrder.effective_area.toString());
+    if (!selectedOrder) return;
 
-      const isoDate = selectedOrder.date; // "2025-08-06T00:00:00Z"
-      const formattedDate = isoDate.split("T")[0]; // "2025-08-06"
-      setDate(formattedDate);
+    setOrderNumber(selectedOrder.number);
+    setSurface(selectedOrder.effective_area.toString());
 
-      const apiSplits = selectedOrder.investor_splits ?? [];
-      if (apiSplits.length > 1) {
-        setSplitByInvestor(true);
-        setInvestorSplits(
-          apiSplits.map((s) => ({
-            investorId: s.investor_id,
-            percentage: String(s.percentage),
-          }))
-        );
-        // Dejar el dropdown simple sincronizado con el primer split.
-        const firstInvestor = investors.find((i) => i.id === apiSplits[0].investor_id);
-        setInvestor(firstInvestor || null);
-      } else {
-        const investorObj = investors.find((i) => i.id === selectedOrder.investor_id);
-        setInvestor(investorObj || null);
-        setSplitByInvestor(false);
-        setInvestorSplits([{ investorId: selectedOrder.investor_id, percentage: "100" }]);
-      }
+    const formattedDate = selectedOrder.date.split("T")[0];
+    setDate(formattedDate);
 
-      const laborObj = labors.find((l) => l.id === selectedOrder.labor_id);
-      setLabor(laborObj || null);
-
-      const lotObj = lots.find((l) => l.id === selectedOrder.lot_id);
-      setLot(lotObj || null);
-
-      setContractor(selectedOrder.contractor);
-      setObservations(selectedOrder.observations);
-
-      const loadedItems = selectedOrder.items.map((item) => ({
-        item: item.supply_id.toString(),
-        totalUsed: item.total_used.toString(),
-        dose: item.final_dose.toString(),
-      }));
-
-      while (loadedItems.length < 7) {
-        loadedItems.push({ item: "", totalUsed: "", dose: "" });
-      }
-
-      setItems(loadedItems);
-      setPreciseDoseByRow({});
+    const apiSplits = selectedOrder.investor_splits ?? [];
+    if (apiSplits.length > 1) {
+      setSplitByInvestor(true);
+      setInvestorSplits(
+        apiSplits.map((s) => ({
+          investorId: s.investor_id,
+          percentage: String(s.percentage),
+        }))
+      );
+      const firstInvestor = investors.find((i) => i.id === apiSplits[0].investor_id);
+      setInvestor(firstInvestor || null);
+    } else {
+      const investorObj = investors.find((i) => i.id === selectedOrder.investor_id);
+      setInvestor(investorObj || null);
+      setSplitByInvestor(false);
+      setInvestorSplits([{ investorId: selectedOrder.investor_id, percentage: "100" }]);
     }
+
+    const laborObj = labors.find((l) => l.id === selectedOrder.labor_id);
+    setLabor(laborObj || null);
+
+    const lotObj = lots.find((l) => l.id === selectedOrder.lot_id);
+    setLot(lotObj || null);
+
+    setContractor(selectedOrder.contractor);
+    setObservations(selectedOrder.observations);
+
+    const loadedItems = selectedOrder.items.map((item) => ({
+      item: item.supply_id.toString(),
+      totalUsed: item.total_used.toString(),
+      dose: item.final_dose.toString(),
+    }));
+
+    while (loadedItems.length < 7) {
+      loadedItems.push({ item: "", totalUsed: "", dose: "" });
+    }
+
+    setItems(loadedItems);
+    setPreciseDoseByRow({});
   }, [selectedOrder, investors, labors, lots]);
 
   const getValidInvestorSplits = () => {

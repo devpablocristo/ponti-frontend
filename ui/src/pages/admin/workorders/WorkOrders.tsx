@@ -80,12 +80,6 @@ function translatePendingSupplyPublishError(message: string) {
   return message;
 }
 
-function getStatusFilterOptionLabel(value: string) {
-  if (value === "draft") return "Abierta";
-  if (value === "published") return "Cerrada";
-  return value;
-}
-
 function mapStatusFilterLabelToApi(value: string) {
   if (value === "Abierta") return "draft";
   if (value === "Cerrada") return "published";
@@ -100,6 +94,10 @@ function getStatusBadgeClass(status: string) {
 
 function isDigitalByNumber(order: OrdersData) {
   return String(order.number).trim().toUpperCase().startsWith("D");
+}
+
+function isDigitalOrder(order: OrdersData) {
+  return order.is_digital || isDigitalByNumber(order);
 }
 
 function OrdersHeader({
@@ -356,7 +354,7 @@ export function WorkOrders() {
         filterType: "select",
         filterOptions: ["Abierta", "Cerrada"],
         render: (value, data) => {
-          const shouldShowDigitalStatus = data.is_digital || isDigitalByNumber(data);
+          const shouldShowDigitalStatus = isDigitalOrder(data);
 
           if (!shouldShowDigitalStatus) {
             return <span className="text-slate-400 text-xs">-</span>;
@@ -533,7 +531,7 @@ export function WorkOrders() {
         filterable: false,
         sortable: false,
         render: (_, data) => {
-          const isDraftDigital = data.is_digital && data.status === "draft";
+          const isDraftDigital = isDigitalOrder(data) && data.status === "draft";
 
           if (!isDraftDigital) {
             return <span className="text-slate-400 text-xs">-</span>;
@@ -609,6 +607,7 @@ export function WorkOrders() {
     selectedProject,
     selectedField,
     selectedCustomer,
+    selectedCampaignId,
     filters,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
@@ -626,7 +625,7 @@ export function WorkOrders() {
   function handleOpenOrder(order: OrdersData) {
     setSelectedOrderRow({
       id: order.id,
-      isDigital: order.is_digital,
+      isDigital: isDigitalOrder(order),
     });
     setDrawerUpdateOpen(true);
   }
@@ -634,8 +633,16 @@ export function WorkOrders() {
   const workOrdersQuery = useMemo(() => {
     const params: Record<string, string> = {};
 
+    if (selectedCustomer && selectedCustomer.id !== 0) {
+      params.customer_id = String(selectedCustomer.id);
+    }
+
     if (projectId) {
       params.project_id = String(projectId);
+    }
+
+    if (selectedCampaignId) {
+      params.campaign_id = String(selectedCampaignId);
     }
 
     if (selectedField && selectedField.id !== 0) {
@@ -643,7 +650,7 @@ export function WorkOrders() {
     }
 
     return new URLSearchParams(params).toString();
-  }, [projectId, selectedField]);
+  }, [projectId, selectedCampaignId, selectedCustomer, selectedField]);
 
 
   const handleOrderCreated = useCallback(() => {
@@ -654,7 +661,7 @@ export function WorkOrders() {
 
 
   async function handlePublishOrder(order: OrdersData) {
-    if (!order.is_digital || order.status !== "draft") return;
+    if (!isDigitalOrder(order) || order.status !== "draft") return;
 
     setIsProcessing(true);
     setErrorMessage("");
@@ -734,7 +741,7 @@ export function WorkOrders() {
   }
 
   async function handleDeleteDraft(order: OrdersData) {
-    if (!order.is_digital || order.status !== "draft") return;
+    if (!isDigitalOrder(order) || order.status !== "draft") return;
 
     setIsProcessing(true);
     setErrorMessage("");
@@ -937,6 +944,17 @@ export function WorkOrders() {
           }
           return orderDate === normalizeDate(String(value));
         }
+
+        if (key === "status") {
+          const normalizedStatus = mapStatusFilterLabelToApi(String(order.status));
+          if (Array.isArray(value)) {
+            return value.some(
+              (v) => normalizedStatus === mapStatusFilterLabelToApi(String(v))
+            );
+          }
+          return normalizedStatus === mapStatusFilterLabelToApi(String(value));
+        }
+
         const orderValRaw = order[key as keyof OrdersData];
         const orderVal = String(orderValRaw ?? "").toLowerCase();
         if (Array.isArray(value)) {
@@ -1072,12 +1090,12 @@ export function WorkOrders() {
           onFilterChange={handleFilterChange}
           columns={columnsToShow}
           onDelete={(item) => {
-            if (item.is_digital && item.status === "draft") {
+            if (isDigitalOrder(item) && item.status === "draft") {
               handlePreDeleteDraft(item);
               return;
             }
 
-            if (item.is_digital) {
+            if (isDigitalOrder(item)) {
               setErrorMessage("No se puede eliminar una orden digital ya cerrada.");
               return;
             }

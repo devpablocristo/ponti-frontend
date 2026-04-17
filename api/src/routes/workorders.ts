@@ -67,6 +67,8 @@ router.get("", async (req: Request, res: Response) => {
 
     const field_id = parseInt(req.query.field_id as string) || 0;
     const project_id = parseInt(req.query.project_id as string) || 0;
+    const customer_id = parseInt(req.query.customer_id as string) || 0;
+    const campaign_id = parseInt(req.query.campaign_id as string) || 0;
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 1000;
     const isDigital = req.query.is_digital as string | undefined;
@@ -89,6 +91,14 @@ router.get("", async (req: Request, res: Response) => {
 
     if (typeof isDigital === "string" && isDigital !== "") {
       params.set("is_digital", isDigital);
+    }
+
+    if (customer_id > 0) {
+      params.set("customer_id", String(customer_id));
+    }
+
+    if (campaign_id > 0) {
+      params.set("campaign_id", String(campaign_id));
     }
 
     if (typeof status === "string" && status !== "") {
@@ -148,18 +158,30 @@ router.get("/metrics", async (req: Request, res: Response) => {
 
     const field_id = parseInt(req.query.field_id as string) || 0;
     const project_id = parseInt(req.query.project_id as string) || 0;
+    const customer_id = parseInt(req.query.customer_id as string) || 0;
+    const campaign_id = parseInt(req.query.campaign_id as string) || 0;
 
     if (field_id === 0 && project_id === 0) {
       res.status(400).json({ message: "Campo o proyecto obligatorio" });
       return;
     }
 
-    let query = "";
+    const params = new URLSearchParams();
     if (field_id > 0) {
-      query = `?field_id=${field_id}`;
+      params.set("field_id", String(field_id));
     } else if (project_id > 0) {
-      query = `?project_id=${project_id}`;
+      params.set("project_id", String(project_id));
     }
+
+    if (customer_id > 0) {
+      params.set("customer_id", String(customer_id));
+    }
+
+    if (campaign_id > 0) {
+      params.set("campaign_id", String(campaign_id));
+    }
+
+    const query = params.size > 0 ? `?${params.toString()}` : "";
 
     const { data: metrics } = await apiClient.get<any>(
       `/work-orders/metrics${query}`,

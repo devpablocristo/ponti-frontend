@@ -52,6 +52,7 @@ export default function ListItems() {
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const lastHandledResultRef = useRef<string>("");
   const lastHandledResultUpdateRef = useRef<string>("");
+  const closeModalOnNextUpdateRef = useRef(false);
   const itemsPerPage = 10;
 
   const { filters, projectId } = useWorkspaceFilters([
@@ -83,6 +84,11 @@ export default function ListItems() {
     if (lastHandledResultUpdateRef.current === resultUpdate) return;
 
     lastHandledResultUpdateRef.current = resultUpdate;
+    if (closeModalOnNextUpdateRef.current) {
+      setModalOpen(false);
+      setItem(null);
+      closeModalOnNextUpdateRef.current = false;
+    }
     setSuccessMessage(resultUpdate);
     setErrorMessage("");
     getSupplies(projectId, suppliesMode);
@@ -97,6 +103,7 @@ export default function ListItems() {
 
   useEffect(() => {
     if (errorUpdate) {
+      closeModalOnNextUpdateRef.current = false;
       setErrorMessage(errorUpdate);
       setSuccessMessage(null);
     }
@@ -259,13 +266,13 @@ export default function ListItems() {
     if (processing) return;
     if (!item || !projectId) return;
 
+    closeModalOnNextUpdateRef.current = true;
+
     if (suppliesMode === "pending") {
       completePendingSupply(projectId, item);
     } else {
       updateSupply(projectId, item);
     }
-
-    setModalOpen(false);
   };
 
   const handleExport = async () => {
