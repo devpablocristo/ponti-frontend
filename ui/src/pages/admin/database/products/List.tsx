@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import FilterBar from "../../../../layout/FilterBar/FilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
 import DataTable from "../../../../components/Table/DataTable";
