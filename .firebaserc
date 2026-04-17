@@ -1,0 +1,11 @@
+{
+  "targets": {
+    "new-ponti-stg": {
+      "hosting": {
+        "frontend": [
+          "ponti-frontend-stg"
+        ]
+      }
+    }
+  }
+}

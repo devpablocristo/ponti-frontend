@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import routes from "./routes";
+import fs from "fs";
 import path from "path";
 import { requestContext } from "./requestContext";
 
@@ -9,6 +10,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 const canonicalHost = (process.env.CANONICAL_HOST || "").trim().toLowerCase();
+const frontendPath = path.join(__dirname, "public");
+const frontendIndex = path.join(frontendPath, "index.html");
+const hasFrontendBundle = fs.existsSync(frontendIndex);
 
 app.set("trust proxy", true);
 
@@ -30,8 +34,9 @@ if (canonicalHost) {
   });
 }
 
-const frontendPath = path.join(__dirname, "public");
-app.use(express.static(frontendPath));
+if (hasFrontendBundle) {
+  app.use(express.static(frontendPath));
+}
 
 app.use(express.json({ limit: "150mb" }));
 app.use(express.urlencoded({ extended: true, limit: "150mb" }));
@@ -51,11 +56,17 @@ app.use((req, _res, next) => {
 // Este servicio siempre debe proxy-ear al backend real.
 console.log("Backend real (mocks desactivados).");
 
+app.get("/health", (_req, res) => {
+  res.status(200).json({ ok: true });
+});
+
 app.use("/api/v1", routes);
 
-app.get("/*", (_, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"));
-});
+if (hasFrontendBundle) {
+  app.get("/*", (_, res) => {
+    res.sendFile(frontendIndex);
+  });
+}
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
