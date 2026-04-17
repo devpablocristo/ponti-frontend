@@ -1,4 +1,4 @@
-name: Deploy Frontend PROD (promote STAGING artifact)
+name: Deploy Frontend PROD (Cloud Run + Hosting)
 
 on:
   workflow_dispatch:
@@ -24,29 +24,29 @@ env:
   REGISTRY: us-central1-docker.pkg.dev
   REPOSITORY: ponti-frontend-registry
   REQUIRE_AUTH_SMOKE: "0"
+  HOSTING_SITE_ID: ${{ vars.FIREBASE_HOSTING_SITE_PROD || 'ponti-frontend-prod' }}
 
 jobs:
   promote-and-deploy:
     runs-on: ubuntu-latest
     env:
-      # STAGING (source image)
       GCP_PROJECT_ID_STG: ${{ vars.GCP_PROJECT_ID_STG }}
       WIF_PROVIDER_STG: ${{ vars.WIF_PROVIDER_STG }}
       WIF_SERVICE_ACCOUNT_STG: ${{ vars.WIF_SERVICE_ACCOUNT_STG }}
       SERVICE_NAME_STG: ${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}
 
-      # PROD (target deploy)
       GCP_PROJECT_ID_PROD: ${{ vars.GCP_PROJECT_ID_PROD }}
       WIF_PROVIDER_PROD: ${{ vars.WIF_PROVIDER_PROD }}
       WIF_SERVICE_ACCOUNT_PROD: ${{ vars.WIF_SERVICE_ACCOUNT_PROD }}
       CLOUD_RUN_SERVICE_ACCOUNT_PROD: ${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_PROD }}
       SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_FRONTEND_PROD }}
-
       BACKEND_SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_BACKEND_PROD }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.staging_sha }}
 
       - name: Auth GCP (STAGING - pull Artifact)
         uses: google-github-actions/auth@v2
@@ -58,6 +58,13 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.GCP_PROJECT_ID_STG }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
 
       - name: Configure Docker for Artifact Registry (STAGING)
         run: gcloud auth configure-docker "${{ env.REGISTRY }}" --quiet
@@ -96,6 +103,12 @@ jobs:
           docker push "$dst_prod"
           echo "IMAGE=$dst_prod" >> "$GITHUB_ENV"
 
+      - name: Build frontend
+        run: |
+          corepack enable
+          yarn --cwd ui install --frozen-lockfile
+          yarn --cwd ui build
+
       - name: Resolve canonical backend API URL (PROD)
         id: backend
         run: |
@@ -115,7 +128,7 @@ jobs:
           fi
           echo "BASE_MANAGER_API=$base_manager_api" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy to Cloud Run (PROD)
+      - name: Deploy API to Cloud Run (PROD)
         run: |
           gcloud run deploy "${SERVICE_NAME_PROD}" \
             --project="${GCP_PROJECT_ID_PROD}" \
@@ -155,7 +168,7 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve service URL (PROD)
+      - name: Resolve API URL (PROD)
         run: |
           service_url="$(gcloud run services describe "${SERVICE_NAME_PROD}" \
             --project="${GCP_PROJECT_ID_PROD}" \
@@ -166,6 +179,17 @@ jobs:
             exit 1
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: Deploy UI to Firebase Hosting (PROD)
+        run: |
+          npx -y firebase-tools deploy \
+            --only hosting:frontend \
+            --project "${GCP_PROJECT_ID_PROD}" \
+            --non-interactive
+
+      - name: Resolve Hosting URL (PROD)
+        run: |
+          echo "HOSTING_URL=https://${HOSTING_SITE_ID}.web.app" >> "$GITHUB_ENV"
 
       - name: Resolve auth token for functional smoke (PROD)
         run: |
@@ -179,9 +203,18 @@ jobs:
         env:
           SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_PROD }}
 
+      - name: Smoke API health (PROD)
+        run: |
+          curl -fsS "$SERVICE_URL/health" >/dev/null
+
       - name: Smoke release checks (PROD)
         run: |
-          bash ./scripts/smoke_release.sh "$SERVICE_URL"
+          bash ./scripts/smoke_release.sh "$HOSTING_URL"
         env:
           AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
+
+      - name: Show deployment URLs (PROD)
+        run: |
+          echo "✅ Cloud Run PROD API: $SERVICE_URL"
+          echo "✅ Firebase Hosting PROD: $HOSTING_URL"

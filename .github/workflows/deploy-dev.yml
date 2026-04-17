@@ -1,4 +1,4 @@
-name: Deploy Frontend to Cloud Run
+name: Deploy Frontend DEV (Cloud Run + Hosting)
 
 on:
   push:
@@ -15,6 +15,7 @@ env:
   REGISTRY: us-central1-docker.pkg.dev
   REPOSITORY: ponti-frontend-registry
   REQUIRE_AUTH_SMOKE: "0"
+  HOSTING_SITE_ID: ${{ vars.FIREBASE_HOSTING_SITE_DEV || 'ponti-frontend-dev' }}
 
 jobs:
   deploy:
@@ -51,6 +52,13 @@ jobs:
         with:
           project_id: ${{ steps.env.outputs.PROJECT_ID }}
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
+
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker "${{ env.REGISTRY }}" --quiet
@@ -61,10 +69,10 @@ jobs:
           yarn --cwd ui install --frozen-lockfile
           yarn --cwd ui build
 
-      - name: Build Docker image
+      - name: Build Docker image (API only)
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
-          docker build -t "$IMAGE" .
+          docker build -f Dockerfile.api -t "$IMAGE" .
           docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
 
       - name: Resolve canonical backend API URL
@@ -90,7 +98,7 @@ jobs:
           docker push "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
           docker push "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
 
-      - name: Deploy to Cloud Run
+      - name: Deploy API to Cloud Run
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
           gcloud run deploy "${{ steps.env.outputs.SERVICE_NAME }}" \
@@ -130,7 +138,7 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve service URL
+      - name: Resolve API URL
         run: |
           service_url="$(gcloud run services describe "${{ steps.env.outputs.SERVICE_NAME }}" \
             --project="${{ steps.env.outputs.PROJECT_ID }}" \
@@ -141,6 +149,17 @@ jobs:
             exit 1
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: Deploy UI to Firebase Hosting
+        run: |
+          npx -y firebase-tools deploy \
+            --only hosting:frontend \
+            --project "${{ steps.env.outputs.PROJECT_ID }}" \
+            --non-interactive
+
+      - name: Resolve Hosting URL
+        run: |
+          echo "HOSTING_URL=https://${HOSTING_SITE_ID}.web.app" >> "$GITHUB_ENV"
 
       - name: Resolve auth token for functional smoke
         run: |
@@ -154,13 +173,18 @@ jobs:
         env:
           SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_DEV }}
 
+      - name: Smoke API health
+        run: |
+          curl -fsS "$SERVICE_URL/health" >/dev/null
+
       - name: Smoke release checks
         run: |
-          bash ./scripts/smoke_release.sh "$SERVICE_URL"
+          bash ./scripts/smoke_release.sh "$HOSTING_URL"
         env:
           AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
 
-      - name: Show deployment URL
+      - name: Show deployment URLs
         run: |
-          echo "✅ Deployed service: ${{ steps.env.outputs.SERVICE_NAME }}"
+          echo "✅ Cloud Run DEV API: $SERVICE_URL"
+          echo "✅ Firebase Hosting DEV: $HOSTING_URL"

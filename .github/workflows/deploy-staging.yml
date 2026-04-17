@@ -1,4 +1,4 @@
-name: Deploy Frontend STAGING (Cloud Run)
+name: Deploy Frontend STAGING (Cloud Run + Hosting)
 
 on:
   push:
@@ -20,6 +20,7 @@ env:
   REGISTRY: us-central1-docker.pkg.dev
   REPOSITORY: ponti-frontend-registry
   REQUIRE_AUTH_SMOKE: "0"
+  HOSTING_SITE_ID: ${{ vars.FIREBASE_HOSTING_SITE_STG || 'ponti-frontend-stg' }}
 
 jobs:
   deploy:
@@ -46,6 +47,13 @@ jobs:
         with:
           project_id: ${{ vars.GCP_PROJECT_ID_STG }}
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
+
       - name: Configure Docker for Artifact Registry
         run: |
           gcloud auth configure-docker "${{ env.REGISTRY }}" --quiet
@@ -56,10 +64,10 @@ jobs:
           yarn --cwd ui install --frozen-lockfile
           yarn --cwd ui build
 
-      - name: Build Docker image
+      - name: Build Docker image (API only)
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
-          docker build -t "$IMAGE" .
+          docker build -f Dockerfile.api -t "$IMAGE" .
           docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
 
       - name: Resolve canonical backend API URL (STAGING)
@@ -86,7 +94,7 @@ jobs:
           docker push "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
           docker push "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
 
-      - name: Deploy to Cloud Run (STAGING)
+      - name: Deploy API to Cloud Run (STAGING)
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
           gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" \
@@ -126,7 +134,7 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve service URL (STAGING)
+      - name: Resolve API URL (STAGING)
         run: |
           service_url="$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" \
             --project="${{ vars.GCP_PROJECT_ID_STG }}" \
@@ -137,6 +145,17 @@ jobs:
             exit 1
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: Deploy UI to Firebase Hosting (STAGING)
+        run: |
+          npx -y firebase-tools deploy \
+            --only hosting:frontend \
+            --project "${{ vars.GCP_PROJECT_ID_STG }}" \
+            --non-interactive
+
+      - name: Resolve Hosting URL (STAGING)
+        run: |
+          echo "HOSTING_URL=https://${HOSTING_SITE_ID}.web.app" >> "$GITHUB_ENV"
 
       - name: Resolve auth token for functional smoke (STAGING)
         run: |
@@ -150,9 +169,18 @@ jobs:
         env:
           SMOKE_AUTH_BEARER_TOKEN: ${{ secrets.SMOKE_AUTH_BEARER_TOKEN_STG }}
 
+      - name: Smoke API health (STAGING)
+        run: |
+          curl -fsS "$SERVICE_URL/health" >/dev/null
+
       - name: Smoke release checks (STAGING)
         run: |
-          bash ./scripts/smoke_release.sh "$SERVICE_URL"
+          bash ./scripts/smoke_release.sh "$HOSTING_URL"
         env:
           AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
+
+      - name: Show deployment URLs (STAGING)
+        run: |
+          echo "✅ Cloud Run STAGING API: $SERVICE_URL"
+          echo "✅ Firebase Hosting STAGING: $HOSTING_URL"
