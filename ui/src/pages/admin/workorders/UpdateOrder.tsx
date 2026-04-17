@@ -33,12 +33,14 @@ type InvestorSplit = {
 
 export default function UpdateOrder({
   orderId,
+  isDigital,
   drawerOpen,
   setDrawerOpen,
   onOrderUpdated,
   onOrderDuplicated,
 }: {
   orderId: number;
+  isDigital: boolean;
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
   onOrderUpdated: () => void;
@@ -46,7 +48,9 @@ export default function UpdateOrder({
 }) {
   const {
     updateOrder,
+    updateDraftOrder,
     getWorkorder,
+    getDraftWorkorder,
     selectedOrder,
     resultCreation,
     errorCreation,
@@ -291,10 +295,15 @@ export default function UpdateOrder({
   }, []);
 
   useEffect(() => {
-    if (orderId) {
-      getWorkorder(orderId);
+    if (!orderId) return;
+
+    if (isDigital) {
+      getDraftWorkorder(orderId);
+      return;
     }
-  }, [orderId, getWorkorder]);
+
+    getWorkorder(orderId);
+  }, [orderId, isDigital, getDraftWorkorder, getWorkorder]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -372,60 +381,53 @@ export default function UpdateOrder({
   }, [selectedProject, selectedOrder]);
 
   useEffect(() => {
-    if (
-      selectedOrder &&
-      investors.length > 0 &&
-      labors.length > 0 &&
-      lots.length > 0
-    ) {
-      setOrderNumber(selectedOrder.number);
-      setSurface(selectedOrder.effective_area.toString());
+    if (!selectedOrder) return;
 
-      const isoDate = selectedOrder.date; // "2025-08-06T00:00:00Z"
-      const formattedDate = isoDate.split("T")[0]; // "2025-08-06"
-      setDate(formattedDate);
+    setOrderNumber(selectedOrder.number);
+    setSurface(selectedOrder.effective_area.toString());
 
-      const apiSplits = selectedOrder.investor_splits ?? [];
-      if (apiSplits.length > 1) {
-        setSplitByInvestor(true);
-        setInvestorSplits(
-          apiSplits.map((s) => ({
-            investorId: s.investor_id,
-            percentage: String(s.percentage),
-          }))
-        );
-        // Dejar el dropdown simple sincronizado con el primer split.
-        const firstInvestor = investors.find((i) => i.id === apiSplits[0].investor_id);
-        setInvestor(firstInvestor || null);
-      } else {
-        const investorObj = investors.find((i) => i.id === selectedOrder.investor_id);
-        setInvestor(investorObj || null);
-        setSplitByInvestor(false);
-        setInvestorSplits([{ investorId: selectedOrder.investor_id, percentage: "100" }]);
-      }
+    const formattedDate = selectedOrder.date.split("T")[0];
+    setDate(formattedDate);
 
-      const laborObj = labors.find((l) => l.id === selectedOrder.labor_id);
-      setLabor(laborObj || null);
-
-      const lotObj = lots.find((l) => l.id === selectedOrder.lot_id);
-      setLot(lotObj || null);
-
-      setContractor(selectedOrder.contractor);
-      setObservations(selectedOrder.observations);
-
-      const loadedItems = selectedOrder.items.map((item) => ({
-        item: item.supply_id.toString(),
-        totalUsed: item.total_used.toString(),
-        dose: item.final_dose.toString(),
-      }));
-
-      while (loadedItems.length < 7) {
-        loadedItems.push({ item: "", totalUsed: "", dose: "" });
-      }
-
-      setItems(loadedItems);
-      setPreciseDoseByRow({});
+    const apiSplits = selectedOrder.investor_splits ?? [];
+    if (apiSplits.length > 1) {
+      setSplitByInvestor(true);
+      setInvestorSplits(
+        apiSplits.map((s) => ({
+          investorId: s.investor_id,
+          percentage: String(s.percentage),
+        }))
+      );
+      const firstInvestor = investors.find((i) => i.id === apiSplits[0].investor_id);
+      setInvestor(firstInvestor || null);
+    } else {
+      const investorObj = investors.find((i) => i.id === selectedOrder.investor_id);
+      setInvestor(investorObj || null);
+      setSplitByInvestor(false);
+      setInvestorSplits([{ investorId: selectedOrder.investor_id, percentage: "100" }]);
     }
+
+    const laborObj = labors.find((l) => l.id === selectedOrder.labor_id);
+    setLabor(laborObj || null);
+
+    const lotObj = lots.find((l) => l.id === selectedOrder.lot_id);
+    setLot(lotObj || null);
+
+    setContractor(selectedOrder.contractor);
+    setObservations(selectedOrder.observations);
+
+    const loadedItems = selectedOrder.items.map((item) => ({
+      item: item.supply_id.toString(),
+      totalUsed: item.total_used.toString(),
+      dose: item.final_dose.toString(),
+    }));
+
+    while (loadedItems.length < 7) {
+      loadedItems.push({ item: "", totalUsed: "", dose: "" });
+    }
+
+    setItems(loadedItems);
+    setPreciseDoseByRow({});
   }, [selectedOrder, investors, labors, lots]);
 
   const getValidInvestorSplits = () => {
@@ -588,6 +590,10 @@ export default function UpdateOrder({
   const handleSaveOrder = () => {
     setError(null);
     setSuccessMessage(null);
+        if (isDigital && selectedOrder?.status === "published") {
+      setError("El borrador ya fue publicado y no se puede editar.");
+      return;
+    }
     if (
       !selectedOrder ||
       !lot ||
@@ -637,10 +643,16 @@ export default function UpdateOrder({
     };
 
     if (!splitByInvestor) {
-      updateOrder(orderId, {
+      const payload = {
         ...baseOrder,
         investor_id: investor!.id,
-      });
+      };
+
+      if (isDigital) {
+        updateDraftOrder(orderId, payload);
+      } else {
+        updateOrder(orderId, payload);
+      }
       return;
     }
 
@@ -651,19 +663,28 @@ export default function UpdateOrder({
     }
 
     if (splits.length === 1) {
-      updateOrder(orderId, {
+      const payload = {
         ...baseOrder,
         investor_id: splits[0].investorId,
-      });
+      };
+
+      if (isDigital) {
+        updateDraftOrder(orderId, payload);
+      } else {
+        updateOrder(orderId, payload);
+      }
       return;
     }
 
     (async () => {
       try {
         setProcessingSplit(true);
-        // Importante: NO duplicar órdenes. Persistimos 1 workorder y actualizamos
-        // la división como investor_splits.
-        await apiClient.put(`/work-orders/${orderId}`, {
+
+        const endpoint = isDigital
+          ? `/work-orders/drafts/${Math.abs(orderId)}`
+          : `/work-orders/${orderId}`;
+
+        await apiClient.put(endpoint, {
           ...baseOrder,
           investor_id: splits[0].investorId,
           investor_splits: splits.map((s) => ({
@@ -672,11 +693,22 @@ export default function UpdateOrder({
           })),
         });
 
-        setSuccessMessage("Orden actualizada con división por inversor.");
+        setSuccessMessage(
+          isDigital
+            ? "Borrador actualizado con división por inversor."
+            : "Orden actualizada con división por inversor."
+        );
         onOrderUpdated();
         refreshStock();
       } catch (err) {
-        setError(extractErrorMessage(err, "Error al dividir la orden por inversor."));
+        setError(
+          extractErrorMessage(
+            err,
+            isDigital
+              ? "Error al dividir el borrador por inversor."
+              : "Error al dividir la orden por inversor."
+          )
+        );
       } finally {
         setProcessingSplit(false);
       }
@@ -687,7 +719,7 @@ export default function UpdateOrder({
     <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <div className="flex flex-col h-full">
         <h2 className="text-lg font-semibold mb-2">
-          Edición de Orden de Trabajo:{" "}
+          {isDigital ? "Edición de Borrador Digital:" : "Edición de Orden de Trabajo:"}{" "}
           <span className="text-gray-700">{selectedProject?.name}</span>
         </h2>
         {processing || processingCreation || processingSplit ? (
@@ -1367,7 +1399,7 @@ export default function UpdateOrder({
               )}
             </form>
             <div className="flex justify-between gap-2 mt-auto pt-6 pb-2 bg-white">
-              {selectedOrder && (
+              {selectedOrder && !isDigital && (
                 <Button
                   onClick={() => onOrderDuplicated(selectedOrder)}
                   variant="primary"
