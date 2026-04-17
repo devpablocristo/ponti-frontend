@@ -35,8 +35,11 @@ const menuReports = {
   children: [
     { name: "Integridad de Datos", route: "/admin/database/data-integrity" },
     { name: "Aportes por Inversor", route: "/admin/informes/aportes" },
+    { name: "Aportes por Inversor (V2)", route: "/admin/informes/aportes-v2" },
     { name: "Por Campo o Cultivo", route: "/admin/informes/campo" },
+    { name: "Por Campo o Cultivo (V2)", route: "/admin/informes/campo-v2" },
     { name: "Resumen de Resultados", route: "/admin/informes/resumen" },
+    { name: "Resumen de Resultados (V2)", route: "/admin/informes/resumen-v2" },
   ],
 };
 
@@ -148,6 +151,16 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     route: "/admin/dashboard",
+  },
+  {
+    name: "Dashboard V2",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4.08863 13.9999C3.30329 13.9999 2.66663 13.3466 2.66663 12.5399V6.67194C2.66663 6.22861 2.86329 5.80861 3.19996 5.53194L7.11129 2.31994C7.3612 2.113 7.67549 1.99976 7.99996 1.99976C8.32443 1.99976 8.63872 2.113 8.88863 2.31994L12.7993 5.53194C13.1366 5.80861 13.3333 6.22861 13.3333 6.67194V12.5399C13.3333 13.3466 12.6966 13.9999 11.9113 13.9999H4.08863Z" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M6 10.6666C6.56667 11.0866 7.25667 11.3333 8 11.3333C8.74333 11.3333 9.43333 11.0866 10 10.6666M6.33333 7.66659V7.33325M9.66667 7.66659V7.33325" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    route: "/admin/dashboard-v2",
   },
   {
     name: "Clientes y Sociedades",
