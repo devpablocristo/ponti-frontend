@@ -6,6 +6,13 @@
           "ponti-frontend-stg"
         ]
       }
+    },
+    "new-ponti-prod": {
+      "hosting": {
+        "frontend": [
+          "ponti-frontend-prod"
+        ]
+      }
     }
   }
 }
