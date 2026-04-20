@@ -39,6 +39,19 @@ const typeOptions = [
   { id: 4, name: "Devolución" },
 ];
 
+const getMovementTypeValue = (typeId?: number | null) => {
+  if (typeId === 1) return "Stock";
+  return typeOptions.find((option) => option.id === typeId)?.name || "";
+};
+
+const getTypeOptionFromEntryType = (entryType?: string | null) => {
+  if (entryType === "Stock") {
+    return typeOptions.find((option) => option.id === 1) || null;
+  }
+
+  return typeOptions.find((option) => option.name === entryType) || null;
+};
+
 const formatAvailableQty = (value: number) =>
   value.toFixed(2).replace(/\.?0+$/, "");
 
@@ -480,8 +493,7 @@ useEffect(() => {
   setSuccessMessage(null);
   setItemErrors({});
 
-  const matchedType =
-    typeOptions.find((t) => t.name === editingMovement.entry_type) || null;
+  const matchedType = getTypeOptionFromEntryType(editingMovement.entry_type);
   setType(matchedType);
 
   const isInternalMovement = matchedType?.id === 2;
@@ -708,7 +720,7 @@ useEffect(() => {
       const payload: UpdateSupplyMovementRequest = {
         supply_id: Number(editItem.item),
         quantity: Number(editItem.quantity),
-        movement_type: type?.name || "",
+        movement_type: getMovementTypeValue(type?.id),
         movement_date: new Date(date),
         reference_number: orderNumber,
         project_destination_id: selectedProjectDestination || 0,
@@ -734,7 +746,7 @@ useEffect(() => {
       items: itemsWithAnyValue.map(({ item }) => ({
         supply_id: Number(item.item),
         quantity: Number(item.quantity),
-        movement_type: type?.name || "",
+        movement_type: getMovementTypeValue(type?.id),
         movement_date: new Date(date),
         reference_number: orderNumber,
         project_destination_id: selectedProjectDestination || 0,
