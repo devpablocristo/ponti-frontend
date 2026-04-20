@@ -702,7 +702,7 @@ export function Stock() {
             onClick: () => handleExport(),
           },
           {
-            label: "+ Ingreso de Stock",
+            label: "+ Ingreso de Stock de Campo",
             variant: "primary",
             isPrimary: true,
             disabled: !projectId || disabledCloseStock,
@@ -756,7 +756,6 @@ export function Stock() {
         )}
         {projectId && customers && (
           <CreateStockItem
-            customers={customers}
             drawerOpen={drawerOpen}
             setDrawerOpen={setDrawerOpen}
             projectId={projectId}

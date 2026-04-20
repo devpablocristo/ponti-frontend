@@ -5,16 +5,7 @@ import SelectField from "../../../components/Input/SelectField";
 import useSupplies from "../../../hooks/useSupplies";
 import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
-import { Entity } from "../../../hooks/useDatabase/options/types";
-import useProviders from "../../../hooks/useProviders";
 import useStockMovement from "../../../hooks/useStockMovement";
-import useStock from "../../../hooks/useStock";
-import {
-  Campaign,
-  Customer,
-  Project,
-} from "../../../hooks/useWorkspaceFilters";
-import useCampaigns from "../../../hooks/useCampaigns";
 import Drawer from "../../../components/Drawer/Drawer";
 
 const emptyItems = [
@@ -24,23 +15,17 @@ const emptyItems = [
   { item: "", quantity: "" },
 ];
 
-const typeOptions = [
-  { id: 1, name: "Stock" },
-  { id: 2, name: "Movimiento interno" },
-  { id: 3, name: "Remito oficial" },
-];
+const STOCK_MOVEMENT_TYPE = "Stock";
 
 export default function CreateStockItem({
   drawerOpen,
   setDrawerOpen,
   projectId,
-  customers,
   onStockCreated,
 }: {
   drawerOpen: boolean;
   setDrawerOpen: (open: boolean) => void;
   projectId: number;
-  customers: Customer[];
   onStockCreated: () => void;
 }) {
   const {
@@ -50,24 +35,12 @@ export default function CreateStockItem({
     saveStockMovement,
   } = useStockMovement();
   const { getProject, selectedProject, processing } = useProjects();
-  const { getProviders, providers } = useProviders();
 
   const [error, setError] = useState<string | null>(null);
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const [customer, setCustomer] = useState<Customer | null>(null);
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [project, setProject] = useState<Project | null>(null);
-
-  const [selectedProjectDestination, setSelectedProjectDestination] = useState<
-    number | null
-  >(null);
-
   const { getSupplies, supplies } = useSupplies();
-  const { projectsDropdown, getProjectsDropdown } = useProjects();
-  const { campaigns, getCampaigns } = useCampaigns();
-  const { getStock, stock } = useStock();
 
   const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState("");
@@ -77,16 +50,7 @@ export default function CreateStockItem({
   const [investors, setInvestors] = useState<{ id: number; name: string }[]>(
     []
   );
-
-  const [queryProvider, setQueryProvider] = useState<string>("");
-  const [provider, setProvider] = useState<Entity>();
   const latestOnStockCreatedRef = useRef(onStockCreated);
-
-  // Default "Stock": evita que el primer render muestre "Seleccionar..." y campos extra.
-  const [type, setType] = useState<{ id: number; name: string } | null>(
-    typeOptions[0] || null
-  );
-  const isStockIngreso = type?.id === 1;
 
   const [items, setItems] = useState<
     { item: string; quantity: string }[]
@@ -95,8 +59,6 @@ export default function CreateStockItem({
   const clearForm = () => {
     setError(null);
     setErrorMessages([]);
-    setProvider(undefined);
-    setQueryProvider("");
     setInvestor(null);
     setItems(emptyItems);
     setOrderNumber("");
@@ -107,29 +69,7 @@ export default function CreateStockItem({
     setSuccessMessage(null);
     setError(null);
     setErrorMessages([]);
-
-    // Al abrir el drawer, arrancamos en "Stock" para que no aparezcan proveedor/inversor.
-    if (drawerOpen) {
-      setType(typeOptions[0] || null);
-    }
   }, [drawerOpen]);
-
-  useEffect(() => {
-    getProviders("");
-  }, [getProviders]);
-
-  useEffect(() => {
-    if (!customer) return;
-    getProjectsDropdown(customer.id);
-  }, [customer, getProjectsDropdown]);
-
-  useEffect(() => {
-    if (customer && project) {
-      getCampaigns(
-        `customer_id=${customer.id}&project_name=${project.name}&limit=100`
-      );
-    }
-  }, [customer, project, getCampaigns]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -171,12 +111,6 @@ export default function CreateStockItem({
   }, [projectId, getProject, getSupplies]);
 
   useEffect(() => {
-    if (type?.id === 2 && projectId) {
-      getStock(projectId, "");
-    }
-  }, [type?.id, projectId, getStock]);
-
-  useEffect(() => {
     if (!selectedProject) return;
     setInvestors(
       selectedProject.investors
@@ -185,23 +119,11 @@ export default function CreateStockItem({
     );
   }, [selectedProject]);
 
-  // Para "Stock" no queremos pedir inversor/proveedor al usuario.
-  // Elegimos defaults para mantener el flujo actual del backend (FKs).
   useEffect(() => {
-    if (!isStockIngreso) return;
-
-    // En modo Stock el proveedor siempre debe volver a "Stock",
-    // aunque el usuario venga de otro tipo con un proveedor previo.
-    if (queryProvider !== "Stock" || provider?.name !== "Stock" || provider?.id !== 0) {
-      setQueryProvider("Stock");
-      setProvider({ id: 0, name: "Stock" });
-    }
-
-    // Default: primer inversor del proyecto (si existe).
     if (!investor && investors.length > 0) {
       setInvestor(investors[0]);
     }
-  }, [isStockIngreso, queryProvider, provider, investor, investors]);
+  }, [investor, investors]);
 
   const handleItemChange = (i: number, field: string, value: string) => {
     setItems((prev) =>
@@ -209,35 +131,9 @@ export default function CreateStockItem({
     );
   };
 
-  const stockBySupplyId = (() => {
-    if (type?.id !== 2 || !stock.length) return new Map<number, number>();
-    const map = new Map<number, number>();
-    for (const s of stock) {
-      const supply = supplies.find((sp) => sp.name === s.supply_name);
-      if (supply) {
-        const units =
-          typeof s.real_stock_units === "number"
-            ? s.real_stock_units
-            : Number(s.real_stock_units) || 0;
-        const current = map.get(supply.id) ?? 0;
-        map.set(supply.id, current + units);
-      }
-    }
-    return map;
-  })();
-
-  const suppliesForDropdown =
-    type?.id === 2
-      ? supplies.filter((s) => (stockBySupplyId.get(s.id) ?? 0) > 0)
-      : supplies;
-
   const handlePreSave = () => {
     const errors: string[] = [];
     setErrorMessages(errors);
-
-    if (!type) {
-      errors.push("Debe seleccionar un tipo.");
-    }
 
     if (!orderNumber) {
       errors.push("Debe seleccionar un número de orden.");
@@ -245,10 +141,6 @@ export default function CreateStockItem({
 
     if (!date) {
       errors.push("Debe seleccionar una fecha.");
-    }
-
-    if (type && type.id === 2 && !selectedProjectDestination) {
-      errors.push("Debe seleccionar un proyecto destino.");
     }
 
     const itemsWithAnyValue = items.filter(
@@ -277,30 +169,9 @@ export default function CreateStockItem({
     const movementDateStr = date;
     const referenceNumber = orderNumber;
 
-    // Para stock elegimos defaults "transparentes" (no se piden en UI).
-    const effectiveProvider =
-      provider ||
-      (queryProvider.trim()
-        ? { id: 0, name: queryProvider.trim() || "Stock" }
-        : undefined);
-    const effectiveProviderName =
-      effectiveProvider?.name || (isStockIngreso ? "Stock" : "");
-    const effectiveInvestorId = isStockIngreso
-      ? investor?.id || investors[0]?.id || 0
-      : investor?.id || 0;
+    const effectiveInvestorId = investor?.id || investors[0]?.id || 0;
 
-    if (!isStockIngreso) {
-      if (!effectiveProvider) {
-        errors.push("Debe seleccionar o ingresar un proveedor.");
-      }
-      if (!investor) {
-        errors.push("Debe seleccionar un inversor.");
-      }
-      if (errors.length > 0) {
-        setErrorMessages(errors);
-        return;
-      }
-    } else if (effectiveInvestorId === 0) {
+    if (effectiveInvestorId === 0) {
       errors.push("No hay inversores disponibles para el proyecto.");
       setErrorMessages(errors);
       return;
@@ -310,14 +181,14 @@ export default function CreateStockItem({
       items: itemsWithAnyValue.map((item) => ({
         supply_id: Number(item.item),
         quantity: Number(item.quantity),
-        movement_type: type?.name || "",
+        movement_type: STOCK_MOVEMENT_TYPE,
         movement_date: new Date(movementDateStr),
         reference_number: referenceNumber,
-        project_destination_id: selectedProjectDestination || 0,
+        project_destination_id: 0,
         investor_id: effectiveInvestorId,
         provider: {
-          id: effectiveProvider?.id || 0,
-          name: effectiveProviderName,
+          id: 0,
+          name: STOCK_MOVEMENT_TYPE,
         },
       })),
     });
@@ -335,18 +206,13 @@ export default function CreateStockItem({
           <>
             <form className="space-y-4 flex-1">
               <div className="grid grid-cols-3 gap-4">
-                <SelectField
+                <InputField
                   label="Tipo de ingreso"
-                  name="type"
-                  options={typeOptions}
-                  value={type?.id?.toString() || ""}
-                  onChange={(e) => {
-                    const selectedType = typeOptions.find(
-                      (t) => t.id === Number(e.target.value)
-                    );
-                    if (selectedType) setType(selectedType);
-                  }}
-                  disabled={processing}
+                  name="movementType"
+                  type="text"
+                  value="Stock actual"
+                  onChange={() => {}}
+                  disabled
                   size="sm"
                 />
                 <InputField
@@ -391,104 +257,7 @@ export default function CreateStockItem({
                   disabled
                   size="sm"
                 />
-                {!isStockIngreso && (
-                  <>
-                    <div className="space-y-2">
-                      <SelectField
-                        label="Proveedor existente"
-                        placeholder="Seleccionar proveedor"
-                        name="provider"
-                        options={providers || []}
-                        value={provider?.id?.toString() || ""}
-                        onChange={(e) => {
-                          const selectedProvider = providers?.find(
-                            (p) => p.id === Number(e.target.value)
-                          );
-                          setProvider(selectedProvider);
-                          setQueryProvider(selectedProvider?.name || "");
-                        }}
-                        size="sm"
-                      />
-                      <InputField
-                        label="O escribir proveedor nuevo"
-                        placeholder="Nombre del proveedor"
-                        name="providerName"
-                        type="text"
-                        value={queryProvider}
-                        onChange={(e) => {
-                          setQueryProvider(e.target.value);
-                          setProvider(undefined);
-                        }}
-                        size="sm"
-                      />
-                    </div>
-                    <SelectField
-                      label="Inversor"
-                      placeholder="Selecciona el inversor"
-                      name="investor"
-                      options={investors}
-                      value={investor?.id?.toString() || ""}
-                      onChange={(e) => {
-                        const selectedInvestor = investors.find(
-                          (i) => i.id === Number(e.target.value)
-                        );
-                        if (selectedInvestor) setInvestor(selectedInvestor);
-                      }}
-                      size="sm"
-                    />
-                  </>
-                )}
               </div>
-
-              {type?.id === 2 && (
-                <div className="grid grid-cols-3 gap-4">
-                  <SelectField
-                    label="Cliente destino"
-                    name="customer"
-                    options={customers}
-                    value={customer?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedCustomer = customers.find(
-                        (c) => c.id === Number(e.target.value)
-                      );
-                      if (selectedCustomer) setCustomer(selectedCustomer);
-                    }}
-                    size="sm"
-                  />
-                  <SelectField
-                    label="Proyecto destino"
-                    name="projectDestination"
-                    options={projectsDropdown}
-                    value={project?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedProject = projectsDropdown.find(
-                        (p) => p.id === Number(e.target.value)
-                      );
-                      if (selectedProject) setProject(selectedProject);
-                    }}
-                    disabled={processing || !customers}
-                    size="sm"
-                  />
-                  <SelectField
-                    label="Campaña"
-                    name="campaign"
-                    options={campaigns}
-                    value={campaign?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedCampaign = campaigns.find(
-                        (c) => c.id === Number(e.target.value)
-                      );
-                      if (selectedCampaign) {
-                        setCampaign(selectedCampaign);
-                        setSelectedProjectDestination(
-                          selectedCampaign.project_id
-                        );
-                      }
-                    }}
-                    size="sm"
-                  />
-                </div>
-              )}
               <div>
                 <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
                   <span className="font-sm text-gray-900">Insumo</span>
@@ -506,7 +275,7 @@ export default function CreateStockItem({
                         <SelectField
                           label=""
                           name={`item-${i}`}
-                          options={suppliesForDropdown}
+                          options={supplies}
                           value={item.item}
                           onChange={(e) =>
                             handleItemChange(i, "item", e.target.value)
