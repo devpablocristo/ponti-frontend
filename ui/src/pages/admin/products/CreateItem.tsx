@@ -33,7 +33,7 @@ const emptyItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
 }));
 
 const typeOptions = [
-  { id: 1, name: "Stock" },
+  { id: 1, name: "Stock inicial" },
   { id: 2, name: "Movimiento interno" },
   { id: 3, name: "Remito oficial" },
   { id: 4, name: "Devolución" },
