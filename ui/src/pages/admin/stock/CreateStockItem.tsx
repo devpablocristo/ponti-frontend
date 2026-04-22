@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { LoaderCircle, Trash } from "lucide-react";
+
 import Button from "../../../components/Button/Button";
+import Drawer from "../../../components/Drawer/Drawer";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
-import useSupplies from "../../../hooks/useSupplies";
-import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
-import useStockMovement from "../../../hooks/useStockMovement";
-import Drawer from "../../../components/Drawer/Drawer";
+import useStockCount from "../../../hooks/useStockCount";
+import useSupplies from "../../../hooks/useSupplies";
 
 const emptyItems = [
   { item: "", quantity: "" },
@@ -14,8 +15,6 @@ const emptyItems = [
   { item: "", quantity: "" },
   { item: "", quantity: "" },
 ];
-
-const STOCK_MOVEMENT_TYPE = "Stock";
 
 export default function CreateStockItem({
   drawerOpen,
@@ -28,80 +27,34 @@ export default function CreateStockItem({
   projectId: number;
   onStockCreated: () => void;
 }) {
-  const {
-    resultCreation,
-    errorCreation,
-    processingCreation,
-    saveStockMovement,
-  } = useStockMovement();
+  const { createStockCounts, errorCreation, processingCreation, resultCreation } =
+    useStockCount();
   const { getProject, selectedProject, processing } = useProjects();
-
-  const [error, setError] = useState<string | null>(null);
-  const [errorMessages, setErrorMessages] = useState<string[]>([]);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
   const { getSupplies, supplies } = useSupplies();
 
-  const [orderNumber, setOrderNumber] = useState("");
+  const [errorMessages, setErrorMessages] = useState<string[]>([]);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [note, setNote] = useState("");
   const [date, setDate] = useState("");
-  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
-    null
-  );
-  const [investors, setInvestors] = useState<{ id: number; name: string }[]>(
-    []
-  );
+  const [items, setItems] = useState<{ item: string; quantity: string }[]>(emptyItems);
+
   const latestOnStockCreatedRef = useRef(onStockCreated);
 
-  const [items, setItems] = useState<
-    { item: string; quantity: string }[]
-  >(emptyItems);
-
   const clearForm = () => {
-    setError(null);
     setErrorMessages([]);
-    setInvestor(null);
     setItems(emptyItems);
-    setOrderNumber("");
+    setNote("");
     setDate("");
   };
-
-  useEffect(() => {
-    setSuccessMessage(null);
-    setError(null);
-    setErrorMessages([]);
-  }, [drawerOpen]);
-
-  useEffect(() => {
-    if (errorCreation) {
-      setError(errorCreation);
-      setSuccessMessage(null);
-    }
-  }, [errorCreation]);
 
   useEffect(() => {
     latestOnStockCreatedRef.current = onStockCreated;
   }, [onStockCreated]);
 
   useEffect(() => {
-    if (resultCreation.supply_movements.length > 0) {
-      const errors: string[] = [];
-      resultCreation.supply_movements.forEach((movement) => {
-        if (movement.error_detail !== "") {
-          errors.push(movement.error_detail.replace("VALIDATION_ERROR: ", ""));
-        }
-      });
-
-      if (errors.length > 0) {
-        setError(errors.join("\n"));
-        setSuccessMessage(null);
-        return;
-      }
-
-      setSuccessMessage("Movimiento guardado correctamente");
-      latestOnStockCreatedRef.current();
-      clearForm();
-    }
-  }, [resultCreation]);
+    setSuccessMessage(null);
+    setErrorMessages([]);
+  }, [drawerOpen]);
 
   useEffect(() => {
     if (projectId) {
@@ -111,54 +64,62 @@ export default function CreateStockItem({
   }, [projectId, getProject, getSupplies]);
 
   useEffect(() => {
-    if (!selectedProject) return;
-    setInvestors(
-      selectedProject.investors
-        .filter((i) => i.id !== null)
-        .map((i) => ({ id: i.id!, name: i.name }))
-    );
-  }, [selectedProject]);
+    if (errorCreation) {
+      setErrorMessages([errorCreation]);
+      setSuccessMessage(null);
+    }
+  }, [errorCreation]);
 
   useEffect(() => {
-    if (!investor && investors.length > 0) {
-      setInvestor(investors[0]);
+    if (resultCreation.length === 0) {
+      return;
     }
-  }, [investor, investors]);
 
-  const handleItemChange = (i: number, field: string, value: string) => {
+    const errors = resultCreation
+      .filter((item) => !item.is_saved && item.error_detail)
+      .map((item) => item.error_detail);
+
+    if (errors.length > 0) {
+      setErrorMessages(errors);
+      setSuccessMessage(null);
+      return;
+    }
+
+    setSuccessMessage("Conteos físicos registrados correctamente");
+    latestOnStockCreatedRef.current();
+    clearForm();
+  }, [resultCreation]);
+
+  const handleItemChange = (index: number, field: string, value: string) => {
     setItems((prev) =>
-      prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
+      prev.map((item, idx) => (idx === index ? { ...item, [field]: value } : item))
     );
   };
 
-  const handlePreSave = () => {
-    const errors: string[] = [];
-    setErrorMessages(errors);
+  const removeItem = (index: number) => {
+    setItems((prev) => prev.filter((_, idx) => idx !== index));
+  };
 
-    if (!orderNumber) {
-      errors.push("Debe seleccionar un número de orden.");
-    }
+  const addRow = () => {
+    setItems((prev) => [...prev, { item: "", quantity: "" }]);
+  };
+
+  const handleSubmit = async () => {
+    const errors: string[] = [];
+    const itemsWithAnyValue = items.filter((item) => item.item || item.quantity);
 
     if (!date) {
       errors.push("Debe seleccionar una fecha.");
     }
 
-    const itemsWithAnyValue = items.filter(
-      (item) => item.item || item.quantity
-    );
-
     if (itemsWithAnyValue.length === 0) {
-      errors.push("Debe cargar al menos un insumo");
-      return;
+      errors.push("Debe cargar al menos un insumo.");
     }
 
-    const hasPartial = itemsWithAnyValue.some(
-      (item) => !item.item || !item.quantity
-    );
-
-    if (hasPartial) {
-      errors.push("No se completaron todos los campos de los items cargados");
-      return;
+    if (
+      itemsWithAnyValue.some((item) => !item.item || item.quantity === "" || Number(item.quantity) < 0)
+    ) {
+      errors.push("Todos los conteos deben tener insumo y cantidad válida.");
     }
 
     if (errors.length > 0) {
@@ -166,38 +127,21 @@ export default function CreateStockItem({
       return;
     }
 
-    const movementDateStr = date;
-    const referenceNumber = orderNumber;
-
-    const effectiveInvestorId = investor?.id || investors[0]?.id || 0;
-
-    if (effectiveInvestorId === 0) {
-      errors.push("No hay inversores disponibles para el proyecto.");
-      setErrorMessages(errors);
-      return;
-    }
-
-    saveStockMovement(projectId, {
-      items: itemsWithAnyValue.map((item) => ({
+    await createStockCounts(
+      projectId,
+      itemsWithAnyValue.map((item) => ({
         supply_id: Number(item.item),
-        quantity: Number(item.quantity),
-        movement_type: STOCK_MOVEMENT_TYPE,
-        movement_date: new Date(movementDateStr),
-        reference_number: referenceNumber,
-        project_destination_id: 0,
-        investor_id: effectiveInvestorId,
-        provider: {
-          id: 0,
-          name: STOCK_MOVEMENT_TYPE,
-        },
-      })),
-    });
+        counted_units: Number(item.quantity),
+        counted_at: new Date(date),
+        note: note || undefined,
+      }))
+    );
   };
 
   return (
     <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">Ingreso de Stock</h2>
+        <h2 className="text-lg font-semibold mb-2">Registrar conteo físico</h2>
         {processing || processingCreation ? (
           <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
@@ -205,49 +149,27 @@ export default function CreateStockItem({
         ) : (
           <>
             <form className="space-y-4 flex-1">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <InputField
-                  label="Tipo de ingreso"
-                  name="movementType"
-                  type="text"
-                  value="Stock actual"
-                  onChange={() => {}}
-                  disabled
-                  size="sm"
-                />
-                <InputField
-                  label="Fecha"
+                  label="Fecha del conteo"
                   name="date"
                   type="date"
-                  value={date || ""}
-                  onChange={(e) => {
-                    const inputValue = e.target.value;
-                    if (inputValue) {
-                      const dateParts = inputValue.split("-");
-                      if (dateParts[0] && dateParts[0].length > 4) {
-                        dateParts[0] = dateParts[0].slice(0, 4);
-                        setDate(dateParts.join("-"));
-                      } else {
-                        setDate(inputValue);
-                      }
-                    } else {
-                      setDate("");
-                    }
-                  }}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                   size="sm"
                 />
                 <InputField
-                  label="Numero / Nombre"
-                  placeholder="Numero / Nombre"
-                  name="nroName"
+                  label="Nota"
+                  placeholder="Referencia opcional"
+                  name="note"
                   type="text"
-                  value={orderNumber || ""}
-                  onChange={(e) => setOrderNumber(e.target.value)}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
                   size="sm"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <InputField
                   label="Proyecto"
                   name="project"
@@ -258,208 +180,80 @@ export default function CreateStockItem({
                   size="sm"
                 />
               </div>
-              <div>
-                <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
-                  <span className="font-sm text-gray-900">Insumo</span>
-                  <span className="font-sm text-gray-900">Cantidad</span>
-                  <div></div>
-                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
-                  {items.map((item, i) => (
-                    <div
-                      key={i}
-                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+              <div className="space-y-3">
+                {items.map((item, index) => (
+                  <div key={index} className="grid grid-cols-[2fr_1fr_auto] gap-3 items-end">
+                    <SelectField
+                      label={index === 0 ? "Insumo" : ""}
+                      name={`item-${index}`}
+                      value={item.item}
+                      size="sm"
+                      onChange={(e) => handleItemChange(index, "item", e.target.value)}
+                      options={supplies.map((supply) => ({
+                        id: supply.id,
+                        name: supply.name,
+                      }))}
+                    />
+                    <InputField
+                      label={index === 0 ? "Conteo físico" : ""}
+                      name={`quantity-${index}`}
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => handleItemChange(index, "quantity", e.target.value)}
+                      size="sm"
+                    />
+                    <button
+                      type="button"
+                      className="mb-1 p-2 rounded-md hover:bg-gray-100 text-gray-500"
+                      onClick={() => removeItem(index)}
+                      aria-label="Eliminar fila"
                     >
-                      <div className="sm:col-span-1">
-                        <SelectField
-                          label=""
-                          name={`item-${i}`}
-                          options={supplies}
-                          value={item.item}
-                          onChange={(e) =>
-                            handleItemChange(i, "item", e.target.value)
-                          }
-                          size="sm"
-                        />
-                      </div>
-                      <div className="sm:col-span-1">
-                        <InputField
-                          label=""
-                          placeholder="Lt/Kg/Bolsas"
-                          name={`quantity${i}`}
-                          type="text"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, ".");
-                            if (/^\d*\.?\d{0,3}$/.test(value)) {
-                              handleItemChange(i, "quantity", value);
-                            }
-                          }}
-                          size="sm"
-                        />
-                      </div>
-                      <div>
-                        <Button
-                          variant="primary"
-                          size="xs"
-                          onClick={() => {
-                            const newItems = [...items];
-                            newItems.splice(i, 1);
-                            setItems(newItems);
-                          }}
-                          className="text-blue-500 hover:underline max-w-fit"
-                        >
-                          <Trash size={12} />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => {
-                      setItems([...items, { item: "", quantity: "" }]);
-                    }}
-                    className="max-w-fit"
-                  >
-                    Agregar insumo +
-                  </Button>
-                </div>
+                      <Trash className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
+
+              <Button
+                type="button"
+                onClick={addRow}
+                className="mt-2"
+              >
+                + Agregar fila
+              </Button>
+
               {errorMessages.length > 0 && (
-                <div
-                  id="alert-2"
-                  className="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50"
-                  role="alert"
-                >
-                  <div>
-                    <ul className="mt-1.5 list-disc list-inside">
-                      {errorMessages.map((msg, index) => (
-                        <li key={index}>{msg}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <button
-                    type="button"
-                    className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                    data-dismiss-target="#alert-2"
-                    aria-label="Close"
-                    onClick={() => setErrorMessages([])}
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg
-                      className="w-3 h-3"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 space-y-1">
+                  {errorMessages.map((message, index) => (
+                    <p key={index}>{message}</p>
+                  ))}
                 </div>
               )}
-              {error && error !== "" && (
-                <div
-                  className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-                  role="alert"
-                >
-                  <span className="font-medium">Error!</span> {error}
-                  <button
-                    type="button"
-                    className="ms-auto -mx-1 -my-1 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                    aria-label="Close"
-                    onClick={() => setError("")}
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg
-                      className="w-2 h-2"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-              {successMessage && successMessage !== "" && (
-                <div
-                  className="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
-                  role="alert"
-                >
-                  <svg
-                    className="shrink-0 inline w-4 h-4 me-3"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z" />
-                  </svg>
-                  <span className="sr-only">Info</span>
-                  <div>
-                    <span className="font-medium">{successMessage}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
-                    data-dismiss-target="#alert-3"
-                    aria-label="Close"
-                    onClick={() => setSuccessMessage("")}
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg
-                      className="w-3 h-3"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
+
+              {successMessage && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                  {successMessage}
                 </div>
               )}
             </form>
-            <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={handlePreSave}
-                  disabled={processing || processingCreation}
-                >
-                  Guardar
-                </Button>
-              </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setDrawerOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  void handleSubmit();
+                }}
+              >
+                Guardar conteos
+              </Button>
             </div>
           </>
         )}

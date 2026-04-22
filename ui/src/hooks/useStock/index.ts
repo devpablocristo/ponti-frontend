@@ -18,14 +18,6 @@ const useStock = () => {
   const [errorStock, setErrorStock] = useState<string | null>(null);
   const [resultStock, setResultStock] = useState<string | null>(null);
 
-  const [processingCloseStock, setProcessingCloseStock] = useState(false);
-  const [errorCloseStock, setErrorCloseStock] = useState<string | null>(null);
-  const [resultCloseStock, setResultCloseStock] = useState<string | null>(null);
-
-  const [processingPeriods, setProcessingPeriods] = useState(false);
-  const [errorPeriods, setErrorPeriods] = useState<string | null>(null);
-  const [periods, setPeriods] = useState<string[] | null>(null);
-
   const getStock = React.useCallback(
     async (projectId: number, cutOffDate: string): Promise<void> => {
       setProcessing(true);
@@ -64,88 +56,36 @@ const useStock = () => {
     [dispatch]
   );
 
-  const getPeriods = React.useCallback(
-    async (projectId: number): Promise<void> => {
-      setProcessingPeriods(true);
-      setErrorPeriods(null);
-
-      try {
-        const response = await apiClient.get<SuccessResponse<string[]>>(
-          `/stock/periods/${projectId}`
-        );
-
-        if (response.success) {
-          setPeriods(response.data);
-          return;
-        }
-        setErrorPeriods("Ocurrio un error en la busqueda de PERIODOS");
-      } catch (error) {
-        setErrorPeriods(
-          extractErrorMessage(error, "Error desconocido en la busqueda de periodos.")
-        );
-      } finally {
-        setProcessingPeriods(false);
-      }
-    },
-    []
-  );
-
   const updateStock = React.useCallback(
-    async (projectId: number, id: number, realStock: number) => {
+    async (projectId: number, supplyId: number, realStock: number) => {
       setProcessingStock(true);
       setErrorStock(null);
       setResultStock(null);
 
       try {
-        const response = await apiClient.put<StockMutationResponse>(
-          `/stock/${projectId}/${id}`,
-          { real_stock_units: realStock }
+        const response = await apiClient.post<StockMutationResponse>(
+          `/stock/${projectId}/supplies/${supplyId}/counts`,
+          {
+            counted_units: realStock,
+            counted_at: new Date().toISOString(),
+          }
         );
 
         if (response.success) {
-          setResultStock("Se han actualizado el stock con éxito");
+          setResultStock("Se registró el conteo físico con éxito");
           return;
         }
 
-        setErrorStock("Ocurrio un error en la modificacion del stock");
+        setErrorStock("Ocurrio un error al registrar el conteo físico");
       } catch (error) {
         setErrorStock(
           extractErrorMessage(
             error,
-            "Error desconocido en la modificacion del stock."
+            "Error desconocido al registrar el conteo físico."
           )
         );
       } finally {
         setProcessingStock(false);
-      }
-    },
-    []
-  );
-
-  const closeStock = React.useCallback(
-    async (projectId: number, closeDate: string) => {
-      setProcessingCloseStock(true);
-      setErrorCloseStock(null);
-      setResultCloseStock(null);
-
-      try {
-        const response = await apiClient.put<StockMutationResponse>(
-          `/stock/close/${projectId}`,
-          { close_date: closeDate }
-        );
-
-        if (response.success) {
-          setResultCloseStock("Se ha cerrado el stock con éxito");
-          return;
-        }
-
-        setErrorCloseStock("Ocurrio un error en el cierre del stock");
-      } catch (error) {
-        setErrorCloseStock(
-          extractErrorMessage(error, "Error desconocido en el cierre del stock.")
-        );
-      } finally {
-        setProcessingCloseStock(false);
       }
     },
     []
@@ -162,14 +102,6 @@ const useStock = () => {
     processingStock,
     errorStock,
     resultStock,
-    closeStock,
-    processingCloseStock,
-    errorCloseStock,
-    resultCloseStock,
-    getPeriods,
-    processingPeriods,
-    errorPeriods,
-    periods,
   };
 };
 
