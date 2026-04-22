@@ -36,26 +36,35 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
     return `u$ ${formatNumberAr(value)}`;
   };
 
+  const tableGridColumns = "minmax(140px,1.15fr) repeat(3,minmax(110px,1fr))";
+  const headerChipClassName =
+    "h-[43px] w-full rounded px-2 text-center text-sm flex items-center justify-center";
+  const valueCellClassName =
+    "h-[45px] w-full text-center flex items-center justify-center";
+
   return (
     <div className="bg-white rounded-xl border p-4 w-full">
       <h3 className="font-medium text-[#020617] font-sans mb-4 text-xl">
         Balance de Gestión
       </h3>
 
-      <div className="grid grid-cols-4 text-sm font-semibold mb-1">
+      <div
+        className="grid gap-x-3 text-sm font-semibold mb-1 items-center"
+        style={{ gridTemplateColumns: tableGridColumns }}
+      >
         <div></div>
-        <div className="ml-[16px]">
-          <span className="bg-[#F98080] text-gray-900 py-2 px-2 rounded h-[43px] w-[111px] text-center flex justify-center items-center text-sm">
+        <div className="flex items-center justify-center">
+          <span className={`${headerChipClassName} bg-[#F98080] text-gray-900`}>
             Ejecutados
           </span>
         </div>
-        <div className="ml-[16px]">
-          <span className="bg-[#FBD5D5] text-gray-900 py-2 px-2 rounded text-sm h-[43px] w-[111px] text-center flex justify-center items-center">
+        <div className="flex items-center justify-center">
+          <span className={`${headerChipClassName} bg-[#FBD5D5] text-gray-900`}>
             Aportado
           </span>
         </div>
-        <div className="ml-[16px]">
-          <span className="bg-[#E5E7EB] text-gray-900 py-2 px-2 rounded text-sm h-[43px] w-[111px] text-center flex justify-center items-center">
+        <div className="flex items-center justify-center">
+          <span className={`${headerChipClassName} bg-[#E5E7EB] text-gray-900`}>
             Diferencias
           </span>
         </div>
@@ -66,34 +75,38 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
         .map((item, idx) => (
           <div
             key={idx}
-            className="grid grid-cols-4 text-sm pl-2 text-gray-800 h-[45px] border-b border-[#F3F4F6]"
+            className="grid gap-x-3 text-sm text-gray-800 min-h-[45px] border-b border-[#F3F4F6] items-center"
+            style={{ gridTemplateColumns: tableGridColumns }}
           >
-            <div className="flex items-center">{item.label}</div>
-            <div className="text-black text-center flex items-center justify-center ml-2">
+            <div className="flex items-center min-w-0 pr-2">{item.label}</div>
+            <div className={`${valueCellClassName} text-black`}>
               {formatCurrency(item.executed_usd)}
             </div>
-            <div className="text-black bg-[#FDF2F2] h-[45px] w-[111px] text-center flex items-center justify-center ml-[13px]">
+            <div className={`${valueCellClassName} text-black bg-[#FDF2F2]`}>
               {formatCurrency(item.invested_usd)}
             </div>
-            <div className="text-center bg-[#F9FAFB] flex items-center justify-center ml-[14px]">
+            <div className={`${valueCellClassName} bg-[#F9FAFB]`}>
               {formatCurrency(item.stock_usd)}
             </div>
           </div>
         ))}
 
-      <div className="grid grid-cols-4 text-sm px-2 bg-gray-100 font-semibold text-gray-900 h-[45px] rounded-lg mb-0.5 mt-2">
-        <div className="flex items-center">Costos directos</div>
-        <div className="text-black bg-[#F98080] rounded text-center flex items-center justify-center w-[111px] ml-[12px]">
+      <div
+        className="grid gap-x-3 text-sm bg-gray-100 font-semibold text-gray-900 min-h-[45px] rounded-lg mb-0.5 mt-2 items-center"
+        style={{ gridTemplateColumns: tableGridColumns }}
+      >
+        <div className="flex items-center min-w-0 px-2">Costos directos</div>
+        <div className={`${valueCellClassName} text-black bg-[#F98080] rounded`}>
           {formatCurrency(
             directCostItems.reduce((sum, item) => sum + parseFloat(item.executed_usd || "0"), 0).toString()
           )}
         </div>
-        <div className="text-[#F05252] text-center flex items-center justify-center w-[111px] bg-[#FBD5D5] rounded ml-[17px]">
+        <div className={`${valueCellClassName} text-[#F05252] bg-[#FBD5D5] rounded`}>
           {formatCurrency(
             directCostItems.reduce((sum, item) => sum + parseFloat(item.invested_usd || "0"), 0).toString()
           )}
         </div>
-        <div className="text-center flex items-center justify-center w-[112px] bg-[#E5E7EB] rounded ml-[20px]">
+        <div className={`${valueCellClassName} bg-[#E5E7EB] rounded`}>
           {formatCurrency(
             directCostItems.reduce((sum, item) => sum + parseFloat(item.stock_usd || "0"), 0).toString()
           )}
@@ -105,16 +118,17 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
         .map((item, idx) => (
           <div
             key={idx}
-            className="grid grid-cols-4 text-sm px-2 bg-gray-100 font-semibold text-gray-900 h-[45px] rounded-lg mb-0.5"
+            className="grid gap-x-3 text-sm bg-gray-100 font-semibold text-gray-900 min-h-[45px] rounded-lg mb-0.5 items-center"
+            style={{ gridTemplateColumns: tableGridColumns }}
           >
-            <div className="flex items-center">{item.label}</div>
-            <div className="text-black text-center flex items-center justify-center h-[45px] w-[111px] ml-2">
+            <div className="flex items-center min-w-0 px-2">{item.label}</div>
+            <div className={`${valueCellClassName} text-black`}>
               {formatCurrency(item.executed_usd)}
             </div>
-            <div className="text-[#F05252] text-center flex items-center justify-center ml-5">
+            <div className={`${valueCellClassName} text-[#F05252]`}>
               {formatCurrency(item.invested_usd)}
             </div>
-            <div className="text-center flex items-center justify-center ml-5">
+            <div className={valueCellClassName}>
               {formatCurrency(item.stock_usd)}
             </div>
           </div>

@@ -147,7 +147,7 @@ const rowsToRender: RowToRender[] = [
       crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
     },
     classNameRows: "text-black bg-[#E5E7EB] font-bold",
-    classNameHeader: "text-black bg-gray-[#E5E7EB] font-bold",
+    classNameHeader: "text-black bg-[#E5E7EB] font-bold",
   },
   {
     label: "Total Costos Directos",
