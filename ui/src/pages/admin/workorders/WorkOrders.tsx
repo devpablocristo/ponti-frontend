@@ -362,7 +362,7 @@ export function WorkOrders() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("surface_ha"),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-emerald-400 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-normal text-xs">Has</span></span>
         ),
       },
       {
@@ -378,7 +378,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("consumption"),
-        render: (value) => <span className="font-semibold text-blue-700">{String(value)}</span>,
+        render: (value) => <span className="font-bold text-gray-900">{String(value)}</span>,
       },
       {
         key: "category_name",
@@ -393,7 +393,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("dose"),
-        render: (value) => <span className="font-semibold text-blue-700">{String(value)}</span>
+        render: (value) => <span className="font-bold text-gray-900">{String(value)}</span>
       },
       {
         key: "cost_per_ha",
@@ -403,7 +403,7 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("cost_per_ha"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -414,7 +414,7 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("unit_price"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -425,7 +425,7 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("total_cost"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
     ];

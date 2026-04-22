@@ -81,7 +81,7 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
               .join(" - ")
             : "N/A"
         }
-        color="purple"
+        color="rose"
       />
 
       <IndicatorCard
@@ -89,7 +89,7 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
         value={`${metrics.operating_result.margin_pct}%`}
         subtext={`u$${formatNumberAr(metrics.operating_result.result_usd)} / u$${formatNumberAr(metrics.operating_result.total_costs_usd)}`}
         icon={<Wallet className="w-4 h-4" />}
-        color="red"
+        color="black"
       />
     </div>
   );
@@ -130,7 +130,7 @@ function DashboardContent({
         <DashboardIndicators dashboard={dashboard} />
       </div>
 
-      <div className="w-full p-4">
+      <div className="w-full py-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="w-full md:w-1/2">
             <ManagementBalanceTable dashboard={dashboard} />

@@ -5,7 +5,9 @@ type ColorOption =
   | "default"
   | "blue"
   | "amber"
-  | "purple";
+  | "purple"
+  | "rose"
+  | "black";
 
 interface IndicatorCardProps {
   title: string;
@@ -69,6 +71,8 @@ const barColors: Record<string, string> = {
   blue: "#1e3a8a",
   amber: "#b45309",
   purple: "#5b21b6",
+  rose: "#f05252",
+  black: "#111827",
 };
 
 const barGradients: Record<string, string> = {
@@ -79,4 +83,6 @@ const barGradients: Record<string, string> = {
   blue: "linear-gradient(90deg, #1e3a8a, #60a5fa)",
   amber: "linear-gradient(90deg, #b45309, #fbbf24)",
   purple: "linear-gradient(90deg, #5b21b6, #a78bfa)",
+  rose: "linear-gradient(90deg, #f8b4b4, #fbd5d5)",
+  black: "linear-gradient(90deg, #111827, #374151)",
 };

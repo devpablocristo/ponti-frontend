@@ -249,7 +249,7 @@ export function Products() {
           columnsFilters
         ),
         render: (value) => (
-          <span className="font-semibold text-blue-700">{String(value ?? "")}</span>
+          <span className="font-bold text-gray-900">{String(value ?? "")}</span>
         ),
       },
       {
@@ -297,7 +297,7 @@ export function Products() {
         ),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-semibold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -312,7 +312,7 @@ export function Products() {
         ),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-emerald-700">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
     ],
