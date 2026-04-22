@@ -23,6 +23,7 @@ const COLLAPSIBLE_KEYS = [
 ];
 
 const ROUNDED_ROW_KEYS = new Set([
+  "net_income",
   "labors_cost",
   "supplies_cost",
   "total_direct_costs",
@@ -156,7 +157,8 @@ export const ByFieldOrCropTable = ({
     isToggleRow: boolean = false
   ) {
     const shouldRoundRow = ROUNDED_ROW_KEYS.has(key);
-    const shouldInsertSpacerBefore = key === "gross_margin";
+    const spacerBeforeHeight =
+      key === "gross_margin" ? "h-1" : key === "total_invested" ? "h-4" : null;
 
     const rowContent = (
       <tr key={key} className={classNameHeader}>
@@ -248,14 +250,14 @@ export const ByFieldOrCropTable = ({
       </tr>
     );
 
-    if (!shouldInsertSpacerBefore) {
+    if (!spacerBeforeHeight) {
       return rowContent;
     }
 
     return (
       <>
         <tr aria-hidden="true">
-          <td colSpan={data!.columns.length * 2 + 1} className="h-3 bg-white"></td>
+          <td colSpan={data!.columns.length * 2 + 1} className={`${spacerBeforeHeight} bg-white`}></td>
         </tr>
         {rowContent}
       </>
