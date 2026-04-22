@@ -35,14 +35,8 @@ export default function OperationalIndicators({dashboard}: OperationalIndicators
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
-
     try {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        const [year, month, day] = dateString.split("-").map(Number);
-        return new Date(year, month - 1, day).toLocaleDateString("es-AR");
-      }
-
-      return new Date(dateString).toLocaleDateString("es-AR");
+      return new Date(dateString).toLocaleDateString('es-ES');
     } catch {
       return dateString;
     }
