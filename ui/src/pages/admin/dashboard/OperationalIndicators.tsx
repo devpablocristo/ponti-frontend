@@ -33,8 +33,8 @@ export default function OperationalIndicators({dashboard}: OperationalIndicators
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "N/A";
+  const formatDate = (dateString: string | null, type: string) => {
+    if (!dateString) return type === "campaign_closing" ? "" : "N/A";
 
     try {
       if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
@@ -65,7 +65,7 @@ export default function OperationalIndicators({dashboard}: OperationalIndicators
           <div className="my-4">{getIconForType(item.type)}</div>
           <div className={`flex items-center text-xs text-[#6B7280] gap-2 mt-1 ${item.type == "campaign_closing" && "border rounded-lg py-2 px-3 mr-10"}`}>
             <Calendar className="w-4 h-4" />
-            <span>{formatDate(item.date)}</span>
+            <span>{formatDate(item.date, item.type)}</span>
             {getCodeDisplay(item) && <span>- {getCodeDisplay(item)}</span>}
           </div>
         </div>
