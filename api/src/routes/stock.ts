@@ -51,62 +51,6 @@ router.get("/export/:id", async (req, res) => {
   }
 });
 
-router.get("/periods/:id", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-
-    const projectId = parseInt(req.params.id) || 0;
-    if (projectId === 0) {
-      res.status(400).json({ message: "Proyecto obligatorio" });
-      return;
-    }
-
-    const cachedStock = cache.get(`stock:periods:${projectId}`);
-    if (cachedStock) {
-      res.status(200).json(cachedStock);
-      return;
-    }
-
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-
-    const { data: periods } = await apiClient.get<any>(
-      `/projects/${projectId}/stocks/periods`,
-      headers
-    );
-
-    const data = {
-      success: true,
-      data: periods,
-    };
-
-    if (Array.isArray(periods) && periods.length > 0) {
-      setImmediate(() => cache.set(`stock:periods:${projectId}`, data));
-    }
-
-    res.status(200).json(data);
-  } catch (error: any) {
-    const err = error as ApiResponse<null>;
-
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -169,58 +113,7 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.put("/close/:id", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-
-    const date = new Date(req.body.close_date);
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-
-    const requestData = {
-      close_date: date.toISOString(),
-    };
-
-    await apiClient.put<any>(
-      `/projects/${req.params.id}/stocks/close-date?month_period=${month}&year_period=${year}`,
-      requestData,
-      headers
-    );
-
-    setImmediate(() => cache.flushAll());
-
-    const data = {
-      success: true,
-      message: "Stock actualizado exitosamente",
-    };
-
-    res.status(200).json(data);
-  } catch (error: any) {
-    const err = error as ApiResponse<null>;
-
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.put("/:id/:idStock", async (req: Request, res: Response) => {
+router.put("/:id/:supplyId", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
@@ -234,11 +127,13 @@ router.put("/:id/:idStock", async (req: Request, res: Response) => {
     };
 
     const requestData = {
-      real_stock_units: req.body.real_stock_units,
+      counted_units: req.body.real_stock_units,
+      counted_at: new Date().toISOString(),
+      note: "Conteo registrado desde pantalla de stock",
     };
 
-    await apiClient.put<any>(
-      `/projects/${req.params.id}/stocks/real-stock/${req.params.idStock}`,
+    await apiClient.post<any>(
+      `/projects/${req.params.id}/supplies/${req.params.supplyId}/stock-counts`,
       requestData,
       headers
     );

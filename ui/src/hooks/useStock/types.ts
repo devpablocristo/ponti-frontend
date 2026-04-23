@@ -18,18 +18,18 @@ export interface GetStocksResponse {
 }
 
 export interface GetStockItems {
-  id: number;
+  supply_id: number;
   supply_name: string;
-  investor_name: string;
   stock_units: number;
   real_stock_units: number;
   stock_difference: number | null;
   total_usd: number;
   class_type: string;
-  close_date: string;
   supply_unit_id: number;
   supply_unit_price: number;
   entry_stock: number;
   out_stock: number;
   consumed: number;
+  last_count_at: string | null;
+  has_real_stock_count: boolean;
 }

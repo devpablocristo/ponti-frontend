@@ -8,12 +8,9 @@ import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
 import { Summary } from "@/api/types";
-import { BaseModal } from "../../../components/Modal/BaseModal";
 import { Column } from "../types";
-import SelectField from "../../../components/Input/SelectField";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeNumber } from "../utils";
-import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
 
 const EditableCell = ({
@@ -33,7 +30,7 @@ const EditableCell = ({
 
   useEffect(() => {
     setEditValue(value ?? "");
-  }, [value, item.id]);
+  }, [value, item.supply_id]);
 
   const save = async () => {
     if (editValue === "") {
@@ -43,7 +40,7 @@ const EditableCell = ({
       alert("Error al guardar");
       return;
     }
-    updateStock(projectId, item.id, Number(editValue));
+    updateStock(projectId, item.supply_id, Number(editValue));
   };
 
   useEffect(() => {
@@ -128,77 +125,10 @@ const EditableCell = ({
   );
 };
 
-function CloseStockDate({
-  date,
-  onDateChange,
-  enabledCloseStock,
-  setEnabledCloseStock,
-  disabledCloseStock,
-}: {
-  date: string;
-  onDateChange: (date: string) => void;
-  enabledCloseStock: boolean;
-  setEnabledCloseStock: (enabled: boolean) => void;
-  disabledCloseStock: boolean;
-}) {
-  const [internalDate, setInternalDate] = useState(date);
-
-  useEffect(() => {
-    setInternalDate(date);
-  }, [date]);
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="h-1.5 w-full bg-gray-900" />
-      <div className="px-4 py-3">
-        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
-          Cerrar stock a fecha
-        </label>
-        <div className="flex items-center gap-3">
-          <input
-            type="date"
-            disabled={disabledCloseStock}
-            value={internalDate}
-            onChange={(e) => setInternalDate(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-custom-btn/30 focus:border-custom-btn disabled:bg-gray-100 disabled:text-gray-400"
-          />
-          <label className={`inline-flex items-center gap-2 cursor-pointer ${disabledCloseStock ? "opacity-50 cursor-not-allowed" : ""}`}>
-            <input
-              type="checkbox"
-              checked={enabledCloseStock}
-              onChange={() => {
-                if (!enabledCloseStock && internalDate) {
-                  setEnabledCloseStock(true);
-                  onDateChange(internalDate);
-                } else {
-                  setEnabledCloseStock(false);
-                }
-              }}
-              className="w-4 h-4 text-custom-btn border-gray-300 rounded focus:ring-custom-btn/30"
-              disabled={disabledCloseStock}
-            />
-            <span className="text-xs font-semibold text-gray-600">Cerrar stock</span>
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function ItemsIndicators({
   summary,
-  selectedDate,
-  onDateChange,
-  enabledCloseStock,
-  setEnabledCloseStock,
-  disabledCloseStock,
 }: {
   summary: Summary;
-  selectedDate: string;
-  onDateChange: (date: string) => void;
-  enabledCloseStock: boolean;
-  setEnabledCloseStock: (enabled: boolean) => void;
-  disabledCloseStock: boolean;
 }) {
   return (
     <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
@@ -218,13 +148,6 @@ function ItemsIndicators({
           value={"u$ " + formatNumberAr(summary.total_usd)}
           color="red"
         />
-        <CloseStockDate
-          date={selectedDate}
-          onDateChange={onDateChange}
-          enabledCloseStock={enabledCloseStock}
-          setEnabledCloseStock={setEnabledCloseStock}
-          disabledCloseStock={disabledCloseStock}
-        />
       </div>
     </div>
   );
@@ -234,26 +157,12 @@ export function Stock() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>("");
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
-  const [disabledCloseStock, setDisabledCloseStock] = useState(false);
-  const [enabledCloseStock, setEnabledCloseStock] = useState(false);
-  const [stockPeriods, setStockPeriods] = useState<
-    {
-      id: number;
-      name: string;
-    }[]
-  >([{ id: 0, name: "Activo" }]);
 
-  const [period, setPeriod] = useState("0");
-
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const { projectId, filters, selectedCustomer, selectedCampaignId, customers } =
+  const { projectId, filters, selectedCustomer, selectedCampaignId } =
     useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const {
@@ -261,28 +170,12 @@ export function Stock() {
     stock,
     processing,
     error,
-    closeStock,
-    processingCloseStock,
-    errorCloseStock,
-    resultCloseStock,
-    getPeriods,
-    errorPeriods,
-    periods,
   } = useStock();
 
   const refreshStock = useCallback(() => {
     if (!projectId) return;
-    getStock(
-      projectId,
-      period === "0" ? "" : stockPeriods[Number(period)]?.name || ""
-    );
-  }, [getStock, period, projectId, stockPeriods]);
-
-  const handleStockCreated = () => {
-    if (!projectId) return;
-    setCurrentPage(1);
-    refreshStock();
-  };
+    getStock(projectId, "");
+  }, [getStock, projectId]);
 
   const filteredStock = useMemo(() => {
     return (Array.isArray(stock) ? stock : []).filter((item) => {
@@ -393,19 +286,6 @@ export function Stock() {
         ),
       },
       {
-        key: "investor_name",
-        header: "Inversor",
-        filterable: true,
-        padding: "xs",
-        headerPadding: "xs",
-        filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "investor_name",
-          stock,
-          columnsFilters
-        ),
-      },
-      {
         key: "entry_stock",
         padding: "xs",
         filterable: true,
@@ -471,6 +351,25 @@ export function Stock() {
         ),
       },
       {
+        key: "last_count_at",
+        filterable: true,
+        filterType: "select",
+        padding: "xs",
+        headerPadding: "xs",
+        filterOptions: getFilterOptionsForColumn(
+          "last_count_at",
+          stock,
+          columnsFilters
+        ),
+        header: "Último conteo",
+        render: (dateString) => {
+          if (!dateString) return " - ";
+          const date = new Date(String(dateString));
+          if (Number.isNaN(date.getTime())) return " - ";
+          return <strong>{date.toLocaleDateString("es-AR")}</strong>;
+        },
+      },
+      {
         key: "stock_difference",
         filterable: true,
         filterType: "select",
@@ -529,27 +428,6 @@ export function Stock() {
         },
       },
       {
-        key: "close_date",
-        filterable: true,
-        filterType: "select",
-        padding: "xs",
-        headerPadding: "xs",
-        filterOptions: getFilterOptionsForColumn(
-          "close_date",
-          stock,
-          columnsFilters
-        ),
-        header: "Fecha de cierre",
-        render: (dateString) => {
-          if (!dateString) return " - ";
-          const datePart = String(dateString).split("T")[0];
-          const [year, month, day] = datePart.split("-").map(Number);
-          const dayStr = String(day).padStart(2, "0");
-          const monthStr = String(month).padStart(2, "0");
-          return <strong>{`${dayStr}/${monthStr}/${year}`}</strong>;
-        },
-      },
-      {
         key: "supply_unit_price",
         header: "Precio U.",
         padding: "xs",
@@ -581,78 +459,12 @@ export function Stock() {
       return;
     }
 
-    setCurrentPage(1); // 👈 RESET PAGINACIÓN
-
+    setCurrentPage(1);
     getStock(projectId, "");
-    getPeriods(projectId);
-    setDisabledCloseStock(false);
-    setSelectedDate("");
-  }, [getStock, getPeriods, projectId, selectedCustomer, selectedCampaignId]);
-
-  useEffect(() => {
-    if (periods && periods.length > 0) {
-      setStockPeriods((prev) => [
-        ...prev,
-        ...periods
-          .filter((p) => !prev.some((item) => item.name === p))
-          .map((p, idx) => ({
-            id: prev.length + idx,
-            name: p,
-          })),
-      ]);
-    }
-  }, [periods]);
-
-  useEffect(() => {
-    if (!projectId) return;
-
-    setCurrentPage(1); // 👈 RESET PAGINACIÓN
-
-    const periodNumber = Number(period);
-    if (periodNumber === 0) {
-      getStock(projectId, "");
-      setDisabledCloseStock(false);
-      setSelectedDate("");
-      return;
-    }
-
-    getStock(projectId, stockPeriods[periodNumber]?.name || "");
-    setSelectedDate(stockPeriods[periodNumber]?.name || "");
-    setDisabledCloseStock(true);
-  }, [period, stockPeriods, getStock, projectId]);
-
-  useEffect(() => {
-    if (errorCloseStock) {
-      alert(errorCloseStock);
-    }
-  }, [errorCloseStock]);
-
-  useEffect(() => {
-    if (resultCloseStock && projectId) {
-      alert(resultCloseStock);
-      getStock(projectId, "");
-      getPeriods(projectId);
-      setEnabledCloseStock(false);
-      setDisabledCloseStock(false);
-      setSelectedDate("");
-    }
-  }, [resultCloseStock, projectId, getStock, getPeriods]);
+  }, [getStock, projectId, selectedCustomer, selectedCampaignId]);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-  };
-
-  const handleDateChange = (date: string) => {
-    setSelectedDate(date);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseStock = () => {
-    if (projectId === null) {
-      return;
-    }
-    closeStock(projectId, selectedDate);
-    setIsModalOpen(false);
   };
 
   const handleExport = async () => {
@@ -701,25 +513,11 @@ export function Stock() {
             disabled: !projectId,
             onClick: () => handleExport(),
           },
-          {
-            label: "+ Ingreso de Stock de Campo",
-            variant: "primary",
-            isPrimary: true,
-            disabled: !projectId || disabledCloseStock,
-            onClick: () => setDrawerOpen(true),
-          },
         ]}
       />
       {!error && projectId && selectedCustomer && selectedCampaignId && (
         <div className="my-4">
-          <ItemsIndicators
-            summary={derivedSummary}
-            selectedDate={selectedDate}
-            disabledCloseStock={disabledCloseStock}
-            onDateChange={handleDateChange}
-            enabledCloseStock={enabledCloseStock}
-            setEnabledCloseStock={setEnabledCloseStock}
-          />
+          <ItemsIndicators summary={derivedSummary} />
         </div>
       )}
       <div className="mt-4 relative">
@@ -734,33 +532,6 @@ export function Stock() {
             <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
             <div><span className="font-semibold">Error:</span> {exportErrorMessage || error}</div>
           </div>
-        )}
-        {stockPeriods && stockPeriods.length > 0 && (
-          <div className="mb-4">
-            <SelectField
-              label="Periodo (fecha de cierre)"
-              name="period"
-              options={stockPeriods}
-              className="max-w-64"
-              value={period}
-              size="sm"
-              onChange={(e) => setPeriod(e.target.value)}
-            />
-          </div>
-        )}
-        {errorPeriods && (
-          <div className="flex items-center gap-2 p-3 mb-3 text-sm text-amber-800 rounded-xl bg-amber-50 border border-amber-200">
-            <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-            <span>{errorPeriods}</span>
-          </div>
-        )}
-        {projectId && customers && (
-          <CreateStockItem
-            drawerOpen={drawerOpen}
-            setDrawerOpen={setDrawerOpen}
-            projectId={projectId}
-            onStockCreated={handleStockCreated}
-          />
         )}
         {projectId && selectedCustomer && selectedCampaignId && (
           <DataTable
@@ -778,35 +549,6 @@ export function Stock() {
             }}
           />
         )}
-        <BaseModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false);
-            setEnabledCloseStock(false);
-          }}
-          isSaving={processingCloseStock}
-          title={"Se va a cerrar el stock"}
-          message={`¿Está seguro que desea cerrar el stock a la fecha ${selectedDate
-            .split("-")
-            .reverse()
-            .join("/")}?`}
-          primaryButtonText={"Sí, cerrar"}
-          secondaryButtonText={"Cancelar"}
-          onPrimaryAction={() => {
-            handleCloseStock();
-          }}
-          onSecondaryAction={() => {
-            setIsModalOpen(false);
-            setEnabledCloseStock(false);
-          }}
-        >
-          <div className="flex flex-col items-center gap-2">
-            <p>{`¿Está seguro que desea cerrar el stock a la fecha ${selectedDate
-              .split("-")
-              .reverse()
-              .join("/")}?`}</p>
-          </div>
-        </BaseModal>
       </div>
     </div>
   );
