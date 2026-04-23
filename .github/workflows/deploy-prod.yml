@@ -47,23 +47,23 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.staging_sha }}
 
       - name: Auth GCP (STAGING - pull Artifact)
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER_STG }}
           service_account: ${{ env.WIF_SERVICE_ACCOUNT_STG }}
 
       - name: Setup gcloud (STAGING)
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID_STG }}
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20.19.0
           cache: yarn
@@ -81,13 +81,13 @@ jobs:
           docker pull "$src_image"
 
       - name: Auth GCP (PROD - push + deploy)
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER_PROD }}
           service_account: ${{ env.WIF_SERVICE_ACCOUNT_PROD }}
 
       - name: Setup gcloud (PROD)
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID_PROD }}
 
