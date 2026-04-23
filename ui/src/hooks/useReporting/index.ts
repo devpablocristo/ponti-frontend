@@ -17,6 +17,16 @@ const useReporting = () => {
   const [error, setError] = useState<string | null>(null);
 
   const getFieldCropReportingData = React.useCallback(async (queryString: string) => {
+    if (queryString.trim() === "") {
+      dispatch({
+        type: actions.SET_FIELD_CROP_REPORTING,
+        payload: null,
+      });
+      setError(null);
+      setProcessing(false);
+      return;
+    }
+
     setProcessing(true);
     setError(null);
     let queryParams = "";
@@ -50,6 +60,16 @@ const useReporting = () => {
   }, [dispatch]);
 
   const getInvestorContributionReportingData = React.useCallback(async (queryString: string) => {
+    if (queryString.trim() === "") {
+      dispatch({
+        type: actions.SET_INVESTOR_CONTRIBUTION_REPORTING,
+        payload: null,
+      });
+      setError(null);
+      setProcessing(false);
+      return;
+    }
+
     setProcessing(true);
     setError(null);
     let queryParams = "";
@@ -83,6 +103,16 @@ const useReporting = () => {
   }, [dispatch]);
 
   const getSummaryResultsReportingData = React.useCallback(async (queryString: string) => {
+    if (queryString.trim() === "") {
+      dispatch({
+        type: actions.SET_SUMMARY_RESULTS_REPORTING,
+        payload: null,
+      });
+      setError(null);
+      setProcessing(false);
+      return;
+    }
+
     setProcessing(true);
     setError(null);
     let queryParams = "";

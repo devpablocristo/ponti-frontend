@@ -19,7 +19,7 @@ type IntegrityReportResponse = {
 };
 
 export default function Integrity() {
-  const { filters, projectId, selectedProject } = useWorkspaceFilters([
+  const { filters, projectId, workspaceReady } = useWorkspaceFilters([
     "customer",
     "project",
   ]);
@@ -28,9 +28,8 @@ export default function Integrity() {
   const [error, setError] = useState<string | null>(null);
 
   const handleRun = async () => {
-    const resolvedProjectId = projectId ?? selectedProject?.id ?? null;
-    if (!resolvedProjectId) {
-      setError("Seleccioná un proyecto para ejecutar los controles.");
+    if (!workspaceReady || !projectId) {
+      setError("Seleccioná cliente, proyecto y campaña para ejecutar los controles.");
       setChecks([]);
       return;
     }
@@ -39,7 +38,7 @@ export default function Integrity() {
     setError(null);
 
     try {
-      const params = { project_id: resolvedProjectId };
+      const params = { project_id: projectId };
       const response = await apiClient.get<IntegrityReportResponse>(
         "data-integrity/costs-check",
         params
@@ -102,7 +101,7 @@ export default function Integrity() {
           Se muestran {checks.length} controles.
         </span>
         <span className="text-sm text-gray-600">
-          Requiere proyecto seleccionado.
+          Requiere cliente, proyecto y campaña seleccionados.
         </span>
       </div>
       <DataTable
