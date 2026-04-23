@@ -162,11 +162,15 @@ export default [
       },
       {
         path: "informes/aportes",
+        element: <InvestorContributionV2 />,
+      },
+      {
+        path: "informes/aportes-v1",
         element: <InvestorContribution />,
       },
       {
         path: "informes/aportes-v2",
-        element: <InvestorContributionV2 />,
+        element: <Navigate to="/admin/informes/aportes" replace />,
       },
       {
         path: "informes/resumen",

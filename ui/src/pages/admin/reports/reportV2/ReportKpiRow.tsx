@@ -1,57 +1,49 @@
-import { Layers, Tractor, Settings, Users } from "lucide-react";
-import { ReportKpiCard } from "./ReportKpiCard";
+import { type ReactNode } from "react";
 import { formatNumberAr } from "../../utils";
 
 interface Props {
   totalInvested: number;
   perHa: number;
-  totalInputs: number;
-  inputsPct: number;
-  totalLabors: number;
-  laborsPct: number;
-  adminStructure: number;
-  adminPct: number;
-  investorsCount: number;
-  agreedUsd: number;
+  icon?: ReactNode;
 }
 
-export function ReportKpiRow(p: Props) {
+export function ReportKpiRow({ totalInvested, perHa, icon }: Props) {
   return (
-    <div className="flex flex-wrap gap-3">
-      <ReportKpiCard
-        variant="hero"
-        label="Total invertido"
-        value={`u$s ${formatNumberAr(p.totalInvested)}`}
-        meta={`${formatNumberAr(p.perHa)} u$s/ha`}
+    <section className="relative h-full overflow-hidden rounded-xl bg-[#0F1D4F] px-3 py-3 text-white xl:w-[170px] xl:shrink-0">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -bottom-10 h-32 w-32 rounded-full border border-white/10"
       />
-      <ReportKpiCard
-        variant="mint"
-        label="Total insumos"
-        value={`u$s ${formatNumberAr(p.totalInputs)}`}
-        meta={`${p.inputsPct.toFixed(1)}% del total`}
-        icon={<Layers className="h-5 w-5" />}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute right-3 top-8 h-2.5 w-2.5 rounded-full bg-white/10"
       />
-      <ReportKpiCard
-        variant="sky"
-        label="Total labores"
-        value={`u$s ${formatNumberAr(p.totalLabors)}`}
-        meta={`${p.laborsPct.toFixed(1)}% del total`}
-        icon={<Tractor className="h-5 w-5" />}
-      />
-      <ReportKpiCard
-        variant="stone"
-        label="Admin. y estructura"
-        value={`u$s ${formatNumberAr(p.adminStructure)}`}
-        meta={`${p.adminPct.toFixed(1)}% del total`}
-        icon={<Settings className="h-5 w-5" />}
-      />
-      <ReportKpiCard
-        variant="lavender"
-        label="Inversores"
-        value={String(p.investorsCount)}
-        meta={`Aporte acordado: u$s ${formatNumberAr(p.agreedUsd)}`}
-        icon={<Users className="h-5 w-5" />}
-      />
-    </div>
+
+      <div className="flex items-start gap-2.5">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-white/90">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <div className="text-[10px] font-medium uppercase tracking-wide text-white/60">
+            Total invertido
+          </div>
+          <div className="mt-1 text-[0.9rem] leading-snug text-white/75">
+            Inversión acumulada y costo por hectárea
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="text-[10px] font-medium uppercase tracking-wide text-white/60">
+          Monto total
+        </div>
+          <div className="mt-2 text-[1.55rem] font-semibold leading-none tabular-nums">
+            u$s {formatNumberAr(totalInvested)}
+          </div>
+        <div className="mt-2.5 text-[0.95rem] font-semibold tabular-nums text-white/85">
+          {formatNumberAr(perHa)} u$s/ha
+        </div>
+      </div>
+    </section>
   );
 }

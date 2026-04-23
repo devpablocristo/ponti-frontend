@@ -33,21 +33,16 @@ export function CostCompositionDonut({ slices, total }: Props) {
   });
 
   return (
-    <div
-      className="rounded-2xl bg-white border border-slate-200/80 p-5"
-      style={{ boxShadow: "var(--shadow-sm)" }}
-    >
+    <div className="rounded-xl border bg-white p-4">
       <header className="flex items-center gap-2 mb-4">
         <PieChart className="h-4 w-4 text-slate-500" />
-        <h3
-          className="text-base font-semibold text-slate-900"
-          style={{ fontFamily: "Sora, ui-sans-serif, system-ui, sans-serif" }}
-        >
-          Composición del costo
-        </h3>
+        <div>
+          <h3 className="text-xl font-medium text-[#020617]">Composición de los Aportes</h3>
+          <p className="text-[11px] text-slate-500">% sobre el total invertido</p>
+        </div>
       </header>
 
-      <div className="flex items-center gap-5 flex-wrap">
+      <div className="flex items-center gap-6 flex-wrap">
         <div className="relative shrink-0" style={{ width: size, height: size }}>
           <svg
             width={size}
@@ -80,18 +75,13 @@ export function CostCompositionDonut({ slices, total }: Props) {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="text-[10px] font-medium text-slate-500">u$s</span>
-            <span
-              className="text-xl font-bold text-slate-900 tabular-nums"
-              style={{ fontFamily: "Sora, ui-sans-serif, system-ui, sans-serif" }}
-            >
-              {formatNumberAr(total)}
-            </span>
+            <span className="text-3xl font-semibold text-slate-900 tabular-nums">{formatNumberAr(total)}</span>
           </div>
         </div>
 
         <ul className="flex-1 space-y-2.5 min-w-[180px]">
           {segments.map((s, i) => (
-            <li key={i} className="flex items-center gap-3">
+            <li key={i} className="flex items-center gap-3 rounded-lg border px-3 py-2">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ background: s.color }}
@@ -100,14 +90,11 @@ export function CostCompositionDonut({ slices, total }: Props) {
                 <div className="text-xs font-medium text-slate-600 truncate">
                   {s.label}
                 </div>
-                <div
-                  className="text-sm font-bold text-slate-900 tabular-nums"
-                  style={{ fontFamily: "Sora, ui-sans-serif, system-ui, sans-serif" }}
-                >
+                <div className="text-sm font-semibold text-slate-900 tabular-nums">
                   u$s {formatNumberAr(s.value)}
                 </div>
               </div>
-              <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">
+              <span className="shrink-0 rounded-md bg-[#F3F4F6] px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">
                 {(s.frac * 100).toFixed(1)}%
               </span>
             </li>

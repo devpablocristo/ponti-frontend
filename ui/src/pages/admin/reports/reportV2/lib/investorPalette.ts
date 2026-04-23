@@ -1,10 +1,10 @@
 const PALETTE = [
-  "#3B82F6",
-  "#10B981",
+  "#60A5FA",
+  "#31C48D",
   "#8B5CF6",
-  "#F59E0B",
-  "#EC4899",
-  "#06B6D4",
+  "#9CA3AF",
+  "#F98080",
+  "#7DD3C0",
 ];
 
 export function investorColor(index: number): string {

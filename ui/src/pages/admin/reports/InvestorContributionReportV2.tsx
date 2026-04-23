@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { LoaderCircle, SquareArrowOutUpRight, Layers, Tractor, Home, Settings } from "lucide-react";
+import {
+  FlaskConical,
+  House,
+  Leaf,
+  LoaderCircle,
+  Settings,
+  Sprout,
+  SquareArrowOutUpRight,
+  Tractor,
+  Wallet,
+} from "lucide-react";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { usePDF } from "react-to-pdf";
 
@@ -26,14 +36,52 @@ import {
 } from "./reportV2/HarvestPaymentStrip";
 import { investorColorMap } from "./reportV2/lib/investorPalette";
 
-const CAT_COLORS = {
-  inputs: "#10B981",
-  labors: "#3B82F6",
-  admin: "#9CA3AF",
-  lease: "#8B5CF6",
-};
+const CATEGORY_CONFIG = [
+  {
+    key: "agro-inputs",
+    label: "Agroquímicos / Fertilizantes",
+    keys: ["agrochemicals", "fertilizers"],
+    color: "#2563EB",
+    icon: <FlaskConical className="h-3.5 w-3.5" />,
+  },
+  {
+    key: "seeds",
+    label: "Semilla",
+    keys: ["seeds"],
+    color: "#10B981",
+    icon: <Leaf className="h-3.5 w-3.5" />,
+  },
+  {
+    key: "sowing",
+    label: "Siembra",
+    keys: ["sowing"],
+    color: "#9CA3AF",
+    icon: <Sprout className="h-3.5 w-3.5" />,
+  },
+  {
+    key: "general-labors",
+    label: "Labores grales.",
+    keys: ["general_labors", "irrigation"],
+    color: "#34D399",
+    icon: <Tractor className="h-3.5 w-3.5" />,
+  },
+  {
+    key: "admin",
+    label: "Administración y estructura",
+    keys: ["administration_structure"],
+    color: "#8B5CF6",
+    icon: <Settings className="h-3.5 w-3.5" />,
+  },
+  {
+    key: "lease",
+    label: "Arriendo",
+    keys: ["capitalizable_lease"],
+    color: "#7C3AED",
+    icon: <House className="h-3.5 w-3.5" />,
+  },
+] as const;
 
-function sumContributionKeys(data: InvestorContributionReportData, keys: string[]) {
+function sumContributionKeys(data: InvestorContributionReportData, keys: readonly string[]) {
   return data.contributions
     .filter((c) => keys.includes(c.key))
     .reduce((sum, c) => sum + (Number(c.total_usd) || 0), 0);
@@ -41,7 +89,7 @@ function sumContributionKeys(data: InvestorContributionReportData, keys: string[
 
 function aggregateInvestorAmounts(
   data: InvestorContributionReportData,
-  keys: string[],
+  keys: readonly string[],
 ): Map<number, number> {
   const result = new Map<number, number>();
   data.contributions
@@ -56,10 +104,14 @@ function aggregateInvestorAmounts(
 }
 
 export function InvestorContributionReportV2() {
-  const { filters, projectId, selectedCampaignId, loading } = useWorkspaceFilters([
-    "project",
-    "campaign",
-  ]);
+  const {
+    filters,
+    projectId,
+    selectedCampaignId,
+    selectedCustomer,
+    workspaceReady,
+    loading,
+  } = useWorkspaceFilters(["project", "campaign"]);
 
   const {
     investorContributionReportingData: data,
@@ -70,14 +122,19 @@ export function InvestorContributionReportV2() {
 
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
+    if (selectedCustomer?.id) params.customer_id = String(selectedCustomer.id);
     if (projectId) params.project_id = String(projectId);
     if (selectedCampaignId) params.campaign_id = String(selectedCampaignId);
     return new URLSearchParams(params).toString();
-  }, [projectId, selectedCampaignId]);
+  }, [projectId, selectedCampaignId, selectedCustomer]);
 
   useEffect(() => {
+    if (!workspaceReady) {
+      getInvestorContributionReportingData("");
+      return;
+    }
     getInvestorContributionReportingData(buildQueryParams());
-  }, [buildQueryParams, getInvestorContributionReportingData]);
+  }, [buildQueryParams, getInvestorContributionReportingData, workspaceReady]);
 
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
   const { toPDF, targetRef } = usePDF({
@@ -94,21 +151,6 @@ export function InvestorContributionReportV2() {
 
     const totalInvested = data.pre_harvest.total_usd;
     const perHa = data.pre_harvest.total_us_ha;
-
-    const totalInputs = sumContributionKeys(data, [
-      "agrochemicals",
-      "fertilizers",
-      "seeds",
-    ]);
-    const totalLabors = sumContributionKeys(data, [
-      "general_labors",
-      "sowing",
-      "irrigation",
-    ]);
-    const totalAdmin = sumContributionKeys(data, ["administration_structure"]);
-    const totalLease = sumContributionKeys(data, ["capitalizable_lease"]);
-
-    const pct = (v: number) => (totalInvested > 0 ? (v / totalInvested) * 100 : 0);
 
     const agreedUsd = data.comparison.reduce(
       (sum, c) => sum + (Number(c.agreed_usd) || 0),
@@ -132,18 +174,7 @@ export function InvestorContributionReportV2() {
       },
     );
 
-    const donutSlices: DonutSlice[] = [
-      { label: "Insumos", value: totalInputs, color: CAT_COLORS.inputs },
-      { label: "Labores", value: totalLabors, color: CAT_COLORS.labors },
-      {
-        label: "Administración y estructura",
-        value: totalAdmin,
-        color: CAT_COLORS.admin,
-      },
-      { label: "Arriendo", value: totalLease, color: CAT_COLORS.lease },
-    ].filter((s) => s.value > 0);
-
-    const buildSlices = (keys: string[]) => {
+    const buildSlices = (keys: readonly string[]) => {
       const map = aggregateInvestorAmounts(data, keys);
       return data.investor_headers.map((h) => ({
         investor_id: h.investor_id,
@@ -153,36 +184,20 @@ export function InvestorContributionReportV2() {
       }));
     };
 
-    const categories: DistributionCategory[] = [
-      {
-        key: "inputs",
-        label: "Insumos",
-        icon: <Layers className="h-3.5 w-3.5" />,
-        total: totalInputs,
-        slices: buildSlices(["agrochemicals", "fertilizers", "seeds"]),
-      },
-      {
-        key: "labors",
-        label: "Labores",
-        icon: <Tractor className="h-3.5 w-3.5" />,
-        total: totalLabors,
-        slices: buildSlices(["general_labors", "sowing", "irrigation"]),
-      },
-      {
-        key: "admin",
-        label: "Admin. y estructura",
-        icon: <Settings className="h-3.5 w-3.5" />,
-        total: totalAdmin,
-        slices: buildSlices(["administration_structure"]),
-      },
-      {
-        key: "lease",
-        label: "Arriendo",
-        icon: <Home className="h-3.5 w-3.5" />,
-        total: totalLease,
-        slices: buildSlices(["capitalizable_lease"]),
-      },
-    ].filter((c) => c.total > 0);
+    const categories: DistributionCategory[] = CATEGORY_CONFIG.map((category) => ({
+      key: category.key,
+      label: category.label,
+      icon: category.icon,
+      total: sumContributionKeys(data, [...category.keys]),
+      color: category.color,
+      slices: buildSlices(category.keys),
+    })).filter((category) => category.total > 0);
+
+    const donutSlices: DonutSlice[] = categories.map((category) => ({
+      label: category.label,
+      value: category.total,
+      color: category.color,
+    }));
 
     const legend: LegendItem[] = data.investor_headers.map((h) => ({
       investor_id: h.investor_id,
@@ -227,15 +242,9 @@ export function InvestorContributionReportV2() {
       kpi: {
         totalInvested,
         perHa,
-        totalInputs,
-        inputsPct: pct(totalInputs),
-        totalLabors,
-        laborsPct: pct(totalLabors),
-        adminStructure: totalAdmin,
-        adminPct: pct(totalAdmin),
-        investorsCount: data.investor_headers.length,
         agreedUsd,
       },
+      general: data.general,
       investorShareItems,
       donutSlices,
       donutTotal: totalInvested,
@@ -265,7 +274,7 @@ export function InvestorContributionReportV2() {
           {
             label: "Generar Informe",
             variant: "primary",
-            disabled: processing,
+            disabled: processing || !workspaceReady,
             onClick: () => getInvestorContributionReportingData(buildQueryParams()),
           },
           {
@@ -289,37 +298,23 @@ export function InvestorContributionReportV2() {
 
       {!error && dashboard && (
         <div ref={targetRef} className="space-y-4">
-          {data?.general && (
-            <div className="flex items-center justify-between flex-wrap gap-3 text-xs text-slate-500">
-              <span>
-                Superficie:{" "}
-                <span className="font-semibold text-slate-700 tabular-nums">
-                  {formatNumberAr(data.general.surface_total_ha)} Ha
-                </span>
-              </span>
-              <span>
-                Admin. proyecto / Ha:{" "}
-                <span className="font-semibold text-slate-700 tabular-nums">
-                  u$s {formatNumberAr(data.general.admin_per_ha_usd)}
-                </span>
-              </span>
-            </div>
-          )}
-
-          <ReportKpiRow {...dashboard.kpi} />
-
-          <InvestorShareRow investors={dashboard.investorShareItems} />
-
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_minmax(0,0.9fr)]">
-            <CostCompositionDonut
-              slices={dashboard.donutSlices}
-              total={dashboard.donutTotal}
+          <div className="flex flex-col gap-2 xl:h-[300px] xl:flex-row xl:items-stretch">
+            <ReportKpiRow
+              totalInvested={dashboard.kpi.totalInvested}
+              perHa={dashboard.kpi.perHa}
+              icon={<Wallet className="h-5 w-5" />}
             />
-            <InvestorDistributionBars
-              categories={dashboard.categories}
-              legend={dashboard.legend}
+            <InvestorShareRow
+              investors={dashboard.investorShareItems}
+              surfaceTotalHa={dashboard.general.surface_total_ha}
+              adminPerHaUsd={dashboard.general.admin_per_ha_usd}
             />
             <ContributionAdjustmentsList items={dashboard.adjustments} />
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.45fr)]">
+            <CostCompositionDonut slices={dashboard.donutSlices} total={dashboard.donutTotal} />
+            <InvestorDistributionBars categories={dashboard.categories} legend={dashboard.legend} />
           </div>
 
           <HarvestPaymentStrip
