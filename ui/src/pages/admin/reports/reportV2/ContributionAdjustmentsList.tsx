@@ -10,51 +10,40 @@ export interface AdjustmentItem {
 
 export function ContributionAdjustmentsList({ items }: { items: AdjustmentItem[] }) {
   return (
-    <div
-      className="rounded-2xl bg-white border border-slate-200/80 p-5"
-      style={{ boxShadow: "var(--shadow-sm)" }}
-    >
-      <header className="mb-3">
+    <div className="flex h-full w-full flex-col rounded-xl border bg-white p-2 xl:w-[218px] xl:shrink-0">
+      <header className="mb-2">
         <div className="flex items-center gap-2">
-          <Scale className="h-4 w-4 text-slate-500" />
-          <h3
-            className="text-base font-semibold text-slate-900"
-            style={{ fontFamily: "Sora, ui-sans-serif, system-ui, sans-serif" }}
-          >
-            Ajustes de aporte
-          </h3>
+          <Scale className="h-3.5 w-3.5 text-slate-500" />
+          <h3 className="text-[1.15rem] font-medium text-[#020617]">Ajustes de aporte</h3>
         </div>
-        <p className="mt-0.5 text-[11px] text-slate-500">
+        <p className="mt-0.5 max-w-[180px] text-[10px] leading-snug text-slate-500">
           Diferencia entre lo acordado y el cálculo según participación.
         </p>
       </header>
 
-      <ul className="space-y-2">
+      <ul className="flex flex-1 flex-col gap-1.5">
         {items.map((it) => {
           const positive = it.amount >= 0;
-          const bg = positive ? "bg-emerald-50" : "bg-red-50";
-          const fg = positive ? "text-emerald-700" : "text-red-700";
+          const bg = positive ? "bg-[#F3FAF7]" : "bg-[#FDF2F2]";
+          const fg = positive ? "text-[#0E9F6E]" : "text-[#F05252]";
           const sign = positive ? "" : "-";
           return (
             <li
               key={it.investor_id}
-              className={`flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 ${bg}`}
+              className={`flex flex-1 items-center justify-between gap-1.5 rounded-lg border px-1.5 py-1.5 ${bg}`}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
                 <span
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                  className="inline-flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-md border"
                   style={{ background: `${it.color}22`, color: it.color }}
                 >
-                  <Building2 className="h-3.5 w-3.5" strokeWidth={2.25} />
+                  <Building2 className="h-2.5 w-2.5" strokeWidth={2.25} />
                 </span>
-                <span className="text-sm font-semibold text-slate-800 truncate">
+                <span className="text-[0.84rem] font-semibold text-slate-800 truncate">
                   {it.name}
                 </span>
               </div>
-              <span
-                className={`text-sm font-bold tabular-nums ${fg}`}
-                style={{ fontFamily: "Sora, ui-sans-serif, system-ui, sans-serif" }}
-              >
+              <span className={`text-[0.84rem] font-semibold tabular-nums ${fg}`}>
                 {sign}u$s {formatNumberAr(Math.abs(it.amount))}
               </span>
             </li>
