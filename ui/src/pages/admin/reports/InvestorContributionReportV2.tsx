@@ -16,8 +16,6 @@ import { usePDF } from "react-to-pdf";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useReporting from "../../../hooks/useReporting";
 import { InvestorContributionReportData } from "../../../hooks/useReporting/types.ts";
-import { formatNumberAr } from "../utils";
-
 import { ReportKpiRow } from "./reportV2/ReportKpiRow";
 import { InvestorShareRow, type InvestorShareItem } from "./reportV2/InvestorShareRow";
 import { CostCompositionDonut, type DonutSlice } from "./reportV2/CostCompositionDonut";
