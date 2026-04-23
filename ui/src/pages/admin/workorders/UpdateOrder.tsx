@@ -16,6 +16,11 @@ import { getUnitName, units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Drawer from "../../../components/Drawer/Drawer";
+import {
+  getDisplayedWorkOrderNumber,
+  isOfficialWorkOrderNumber,
+  trimWorkOrderNumber,
+} from "./workOrderNumber";
 
 const emptyItems = Array.from({ length: 7 }, () => ({
   item: "",
@@ -381,31 +386,35 @@ export default function UpdateOrder({
   }, [selectedProject, selectedOrder]);
 
   useEffect(() => {
-    if (!selectedOrder) return;
+    if (
+      selectedOrder &&
+      investors.length > 0 &&
+      labors.length > 0 &&
+      lots.length > 0
+    ) {
+      setOrderNumber(getDisplayedWorkOrderNumber(selectedOrder));
+      setSurface(selectedOrder.effective_area.toString());
 
-    setOrderNumber(selectedOrder.number);
-    setSurface(selectedOrder.effective_area.toString());
+      const formattedDate = selectedOrder.date.split("T")[0];
+      setDate(formattedDate);
 
-    const formattedDate = selectedOrder.date.split("T")[0];
-    setDate(formattedDate);
-
-    const apiSplits = selectedOrder.investor_splits ?? [];
-    if (apiSplits.length > 1) {
-      setSplitByInvestor(true);
-      setInvestorSplits(
-        apiSplits.map((s) => ({
-          investorId: s.investor_id,
-          percentage: String(s.percentage),
-        }))
-      );
-      const firstInvestor = investors.find((i) => i.id === apiSplits[0].investor_id);
-      setInvestor(firstInvestor || null);
-    } else {
-      const investorObj = investors.find((i) => i.id === selectedOrder.investor_id);
-      setInvestor(investorObj || null);
-      setSplitByInvestor(false);
-      setInvestorSplits([{ investorId: selectedOrder.investor_id, percentage: "100" }]);
-    }
+      const apiSplits = selectedOrder.investor_splits ?? [];
+      if (apiSplits.length > 1) {
+        setSplitByInvestor(true);
+        setInvestorSplits(
+          apiSplits.map((s) => ({
+            investorId: s.investor_id,
+            percentage: String(s.percentage),
+          }))
+        );
+        const firstInvestor = investors.find((i) => i.id === apiSplits[0].investor_id);
+        setInvestor(firstInvestor || null);
+      } else {
+        const investorObj = investors.find((i) => i.id === selectedOrder.investor_id);
+        setInvestor(investorObj || null);
+        setSplitByInvestor(false);
+        setInvestorSplits([{ investorId: selectedOrder.investor_id, percentage: "100" }]);
+      }
 
     const laborObj = labors.find((l) => l.id === selectedOrder.labor_id);
     setLabor(laborObj || null);
@@ -428,6 +437,7 @@ export default function UpdateOrder({
 
     setItems(loadedItems);
     setPreciseDoseByRow({});
+    }
   }, [selectedOrder, investors, labors, lots]);
 
   const getValidInvestorSplits = () => {
@@ -624,8 +634,22 @@ export default function UpdateOrder({
       }
     }
 
+    const nextOrderNumber =
+      selectedOrder.official_number &&
+      trimWorkOrderNumber(orderNumber) === getDisplayedWorkOrderNumber(selectedOrder)
+        ? trimWorkOrderNumber(selectedOrder.official_number)
+        : trimWorkOrderNumber(orderNumber);
+
+    if (
+      nextOrderNumber !== trimWorkOrderNumber(selectedOrder.number) &&
+      !isOfficialWorkOrderNumber(nextOrderNumber)
+    ) {
+      setError("El número de orden debe contener solo dígitos");
+      return;
+    }
+
     const baseOrder = {
-      number: orderNumber,
+      number: nextOrderNumber,
       date,
       project_id: selectedOrder.project_id,
       field_id: selectedOrder.field_id,
@@ -732,7 +756,7 @@ export default function UpdateOrder({
               <div className="grid grid-cols-4 gap-4">
                 <InputField
                   label="Nro. Orden"
-                  placeholder="000-001"
+                  placeholder="1862"
                   name="order"
                   type="text"
                   value={orderNumber || ""}

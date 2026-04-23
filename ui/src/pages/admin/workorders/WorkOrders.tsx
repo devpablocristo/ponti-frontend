@@ -16,6 +16,7 @@ import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
+import { compareWorkOrderNumbers } from "./workOrderNumber";
 
 const FILTER_HIERARCHY: Record<string, string[]> = {
   project_name: ["field_name", "lot_name"],
@@ -334,7 +335,9 @@ export function WorkOrders() {
         header: "N°",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn("number", (a, b) => Number(a) - Number(b)),
+        filterOptions: getFilterOptionsForColumn("number", (a, b) =>
+          compareWorkOrderNumbers(String(a), String(b))
+        ),
         render: (value, data) => (
           <strong className="text-blue-700">
             <a

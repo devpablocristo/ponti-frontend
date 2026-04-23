@@ -17,6 +17,11 @@ import { getUnitName, units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Drawer from "../../../components/Drawer/Drawer";
+import {
+  isOfficialWorkOrderNumber,
+  normalizeOfficialWorkOrderNumber,
+  trimWorkOrderNumber,
+} from "./workOrderNumber";
 
 type WorkOrderItem = {
   itemId: number | null;
@@ -631,6 +636,11 @@ export default function CreateOrder({
       return;
     }
 
+    if (!isOfficialWorkOrderNumber(orderNumber)) {
+      setError("El número de orden debe contener solo dígitos");
+      return;
+    }
+
     const itemsWithAnyValue = items.filter(
       (item) => item.itemId !== null || item.totalUsed || item.dose
     );
@@ -654,7 +664,7 @@ export default function CreateOrder({
     }));
 
     const baseOrder = {
-      number: orderNumber,
+      number: trimWorkOrderNumber(orderNumber),
       date,
       project_id: projectId,
       field_id: field.id,
@@ -732,11 +742,13 @@ export default function CreateOrder({
               <div className="grid grid-cols-4 gap-4">
                 <InputField
                   label="Nro. Orden"
-                  placeholder="000-001"
+                  placeholder="1862"
                   name="order"
                   type="text"
                   value={orderNumber || ""}
-                  onChange={(e) => setOrderNumber(e.target.value)}
+                  onChange={(e) =>
+                    setOrderNumber(normalizeOfficialWorkOrderNumber(e.target.value))
+                  }
                   size="sm"
                 />
                 <InputField
