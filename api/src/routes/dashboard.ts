@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -45,12 +44,6 @@ router.get("", async (req: Request, res: Response) => {
 
     const url = `dashboard?${queryParams}`;
 
-    const cachedCampaigns = cache.get(url);
-    if (cachedCampaigns) {
-      res.status(200).json(cachedCampaigns);
-      return;
-    }
-
     const { data: dashboard } = await apiClient.get<any>(url, headers);
 
     const data = {
@@ -58,7 +51,6 @@ router.get("", async (req: Request, res: Response) => {
       data: dashboard,
     };
 
-    cache.set(url, data);
     res.status(200).json(data);
   } catch (error: any) {
     const err = error as ApiResponse<null>;

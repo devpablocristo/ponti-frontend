@@ -419,7 +419,7 @@ export function Stock() {
         header: "Ingresados",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-blue-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
         },
       },
       {
@@ -430,7 +430,7 @@ export function Stock() {
         headerPadding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-blue-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -447,7 +447,7 @@ export function Stock() {
         padding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-blue-700">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-blue-700 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -555,7 +555,7 @@ export function Stock() {
         padding: "xs",
         headerPadding: "xs",
         filterable: false,
-        render: (value) => <span className="font-semibold text-emerald-700">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
+        render: (value) => <span className="font-bold text-gray-900">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "total_usd",
@@ -566,7 +566,7 @@ export function Stock() {
         render: (value) => {
           const num = Number(value);
           return (
-            <span className="font-bold text-emerald-700">
+            <span className="font-bold text-gray-900">
               {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
             </span>
           );

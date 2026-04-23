@@ -1,12 +1,5 @@
 {
   "targets": {
-    "new-ponti-dev": {
-      "hosting": {
-        "frontend": [
-          "ponti-frontend-dev"
-        ]
-      }
-    },
     "new-ponti-stg": {
       "hosting": {
         "frontend": [

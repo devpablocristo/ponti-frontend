@@ -3,6 +3,8 @@ import { RowToRender, SummaryResultsReportData } from "../../../hooks/useReporti
 import { cropColors } from "../colors";
 import { formatNumberAr } from "../utils.ts";
 
+const ROUNDED_ROW_KEYS = new Set(["total_invested_usd", "operating_result_usd"]);
+
 const CropBadge = ({ cropName }: { cropName: string }) => (
   <span
     className={ `px-3 py-1 text-sm font-medium rounded-md whitespace-nowrap ${ cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]" }` }>
@@ -68,7 +70,7 @@ export const SummaryResultsTable = ({
   return (
     <div className="overflow-x-auto">
       <div className="flex items-start gap-6 min-w-max">
-      <table className=" text-base bg-white border border-gray-300">
+      <table className="text-base bg-white border-separate border-spacing-y-1">
         <thead>
         <tr className="h-16">
           <th></th>
@@ -90,20 +92,24 @@ export const SummaryResultsTable = ({
                        classNameRows = "",
                        classNameHeader = "",
                        showIndicator,
-                     }) => (
+                     }) => {
+          const shouldRoundRow = ROUNDED_ROW_KEYS.has(key);
+          return (
           <tr key={ key } className={ classNameHeader }>
             <th className={ [
               !classNameHeader.includes("text-") && "text-gray-600",
               !classNameHeader.includes("font-") && "font-light",
               classNameHeader,
-            ].filter(Boolean).join(" ") + " p-2 pl-3 text-left w-[280px] border-t border-t-gray-300" }>
+            ].filter(Boolean).join(" ") + " p-2 pl-3 text-left w-[280px]" }>
               { label }
             </th>
             { data.crops.map((crop) => {
               const finalRowClasses = [
                 !classNameRows.includes("text-") && "text-gray-600",
+                !classNameRows.includes("bg-") && "bg-white",
                 !classNameRows.includes("font-") && "font-light",
                 classNameRows,
+                shouldRoundRow && "rounded-xl overflow-hidden",
               ].filter(Boolean).join(" ");
 
               const rowValue = getValue(key, crop.crop_id);
@@ -112,7 +118,7 @@ export const SummaryResultsTable = ({
                 <Fragment key={ `${key}-${crop.crop_id}` }>
                   <td className="w-3 bg-white"></td>
                   { showIndicator ? (
-                    <td className={ `${ finalRowClasses } border-t border-t-gray-300 p-1` }>
+                    <td className={ `${ finalRowClasses } p-1` }>
                       <div className="flex items-center justify-center h-full w-full gap-2">
                         {isSingleColumn ? (
                           <div className="w-full pl-10">
@@ -131,7 +137,7 @@ export const SummaryResultsTable = ({
                       </div>
                     </td>
                   ) : (
-                    <td className={ `${ finalRowClasses } border-t border-t-gray-300 p-1` }>
+                    <td className={ `${ finalRowClasses } p-1` }>
                       <div className="flex items-center justify-center h-full w-full">
                         {isSingleColumn ? (
                           <div className="w-full pl-10">
@@ -147,14 +153,14 @@ export const SummaryResultsTable = ({
               );
             }) }
           </tr>
-        )) }
+        )}) }
         </tbody>
       </table>
       <div className="flex gap-2">
-        <table className=" text-base h-1 border border-gray-300 bg-white text-nowrap">
+        <table className="text-base h-1 bg-white text-nowrap border-separate border-spacing-y-1">
           <thead>
           <tr>
-            <th className="h-16 p-3 text-sm text-[#6B7280] bg-white text-nowrap  border-b border-gray-300">GRAL CAMPOS</th>
+            <th className="h-16 p-3 text-sm text-gray-900 bg-white text-nowrap">GRAL CAMPOS</th>
           </tr>
           </thead>
           <tbody>
@@ -164,32 +170,32 @@ export const SummaryResultsTable = ({
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center text-white font-bold h-1 bg-[#9CA3AF] border-t border-gray-300">
+            <td className="p-2 text-center text-gray-900 font-bold h-1 bg-white">
               u$ { formatNumberAr(data.totals.total_net_income_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-[#D1D5DB] border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-white">
               u$ { formatNumberAr(data.totals.total_direct_costs_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-white border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-white">
               u$ { formatNumberAr(data.totals.total_rent_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-[#D1D5DB] border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-white">
               u$ { formatNumberAr(data.totals.total_structure_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-[#FBD5D5] border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-[#FBD5D5] rounded-xl">
               u$ { formatNumberAr(data.totals.total_invested_project_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center h-1 bg-black text-white font-bold border-t border-gray-300">
+            <td className="p-2 text-center h-1 bg-black text-white font-bold rounded-xl">
               <div className="flex justify-center items-center gap-2">
                 <ValueCell value={ `u$ ${ formatNumberAr(data.totals.total_operating_result_usd) }` } />
                 <div className="relative h-5 w-5 ml-1">
@@ -203,7 +209,7 @@ export const SummaryResultsTable = ({
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-white border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-white">
               <div className="flex justify-center items-center gap-2">
                 <ValueCell value={ `${ parseFloat(data.totals.project_return_pct) }%` } />
                 <div className="relative h-5 w-5 ml-1">
@@ -218,45 +224,45 @@ export const SummaryResultsTable = ({
           </tr>
           </tbody>
         </table>
-        <table className=" text-base border border-gray-300 bg-white text-nowrap">
+        <table className="text-base bg-white text-nowrap border-separate border-spacing-y-1">
           <thead>
           <tr>
-            <th className="h-16 text-sm text-[#6B7280] bg-white text-nowrap px-4 border-b border-gray-300">GRAL CULTIVOS</th>
+            <th className="h-16 text-sm text-gray-900 bg-white text-nowrap px-4">GRAL CULTIVOS</th>
           </tr>
           </thead>
           <tbody>
           <tr>
-            <td className="p-2 text-center text-[#6B7280] font-bold h-1 bg-[#D1D5DB] border-t border-gray-300">
+            <td className="p-2 text-center text-gray-900 font-bold h-1 bg-white">
               { data.general_crops.total_surface_ha } Has
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center text-white font-bold h-1 bg-[#9CA3AF] border-t border-gray-300">
+            <td className="p-2 text-center text-gray-900 font-bold h-1 bg-white">
               u$ { formatNumberAr(data.general_crops.total_net_income_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-[#D1D5DB] border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-white">
               u$ { formatNumberAr(data.general_crops.total_direct_costs_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-white border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-white">
               u$ { formatNumberAr(data.general_crops.total_rent_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-[#D1D5DB] border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-white">
               u$ { formatNumberAr(data.general_crops.total_structure_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-[#FBD5D5] border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-[#FBD5D5] rounded-xl">
               u$ { formatNumberAr(data.general_crops.total_invested_project_usd) }
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center h-1 bg-black text-white font-bold border-t border-gray-300">
+            <td className="p-2 text-center h-1 bg-black text-white font-bold rounded-xl">
               <div className="flex justify-center items-center gap-2">
                 <ValueCell value={ `u$ ${ formatNumberAr(data.general_crops.total_operating_result_usd) }` } />
                 <div className="relative h-5 w-5 ml-1">
@@ -270,7 +276,7 @@ export const SummaryResultsTable = ({
             </td>
           </tr>
           <tr>
-            <td className="p-2 text-center font-bold h-1 bg-white border-t border-gray-300">
+            <td className="p-2 text-center font-bold h-1 bg-white">
               <div className="flex justify-center items-center gap-2">
                 <ValueCell value={ `${ parseFloat(data.general_crops.project_return_pct) }%` } />
                 <div className="relative h-5 w-5 ml-1">

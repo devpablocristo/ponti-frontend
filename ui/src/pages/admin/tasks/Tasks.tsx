@@ -433,9 +433,9 @@ export function Tasks() {
         filterable: true,
         filterOptions: getFilterOptionsForColumn("surface_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">
+          <span className="font-semibold text-gray-900">
             {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}{" "}
-            <span className="text-emerald-400 font-normal text-xs">Has</span>
+            <span className="text-gray-900 font-normal text-xs">Has</span>
           </span>
         ),
       },
@@ -445,7 +445,7 @@ export function Tasks() {
         filterable: true,
         filterOptions: getFilterOptionsForColumn("cost_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-rose-600">
+          <span className="font-bold text-gray-900">
             $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -455,7 +455,7 @@ export function Tasks() {
         header: "Total $ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-rose-600">
+          <span className="font-bold text-gray-900">
             $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -465,7 +465,7 @@ export function Tasks() {
         header: "Total $ IVA",
         filterable: false,
         render: (value) => (
-          <span className="font-semibold text-rose-600">
+          <span className="font-bold text-gray-900">
             $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -482,7 +482,7 @@ export function Tasks() {
         header: "u$ Prom",
         filterable: false,
         render: (value) => (
-          <span className="font-semibold text-emerald-700">
+          <span className="font-bold text-gray-900">
             u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -494,7 +494,7 @@ export function Tasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("usd_cost_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-emerald-700">
+          <span className="font-bold text-gray-900">
             u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -504,7 +504,7 @@ export function Tasks() {
         header: "Total u$ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-emerald-700">
+          <span className="font-bold text-gray-900">
             u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),

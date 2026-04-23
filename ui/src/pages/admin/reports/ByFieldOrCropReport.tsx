@@ -147,7 +147,7 @@ const rowsToRender: RowToRender[] = [
       crop: (value) => `${ formatNumberAr(value) } u$/Ha`,
     },
     classNameRows: "text-black bg-[#E5E7EB] font-bold",
-    classNameHeader: "text-black bg-gray-[#E5E7EB] font-bold",
+    classNameHeader: "text-black bg-[#E5E7EB] font-bold",
   },
   {
     label: "Total Costos Directos",
@@ -222,14 +222,23 @@ export function ByFieldOrCropReport() {
   
   const { fieldCropReportingData: reportingData, processing, error, getFieldCropReportingData } = useReporting();
 
-  const { filters, projectId, selectedCampaignId, loading } =
-    useWorkspaceFilters(["project", "campaign"]);
+  const {
+    filters,
+    projectId,
+    selectedCustomer,
+    selectedCampaignId,
+    workspaceReady,
+    loading,
+  } = useWorkspaceFilters(["project", "campaign"]);
 
   // ...existing code...
 
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
 
+    if (selectedCustomer?.id) {
+      params.customer_id = String(selectedCustomer.id);
+    }
     if (projectId) {
       params.project_id = String(projectId);
     }
@@ -238,11 +247,15 @@ export function ByFieldOrCropReport() {
     }
 
     return new URLSearchParams(params).toString();
-  }, [projectId, selectedCampaignId]);
+  }, [projectId, selectedCustomer, selectedCampaignId]);
 
   useEffect(() => {
+    if (!workspaceReady) {
+      getFieldCropReportingData("");
+      return;
+    }
     getFieldCropReportingData(buildQueryParams());
-  }, [buildQueryParams, getFieldCropReportingData]);
+  }, [buildQueryParams, getFieldCropReportingData, workspaceReady]);
 
   const filteredData = () => {
     const filteredByField = selectedField === "0"
@@ -277,7 +290,7 @@ export function ByFieldOrCropReport() {
           {
             label: "Generar Informe",
             variant: "primary",
-            disabled: processing,
+            disabled: processing || !workspaceReady,
             onClick: () => getFieldCropReportingData(buildQueryParams()),
           },
           {

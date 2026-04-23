@@ -1,4 +1,4 @@
-name: Deploy Frontend PROD (Cloud Run + Hosting)
+name: Deploy Frontend PROD (promote STAGING artifact)
 
 on:
   workflow_dispatch:
@@ -30,16 +30,19 @@ jobs:
   promote-and-deploy:
     runs-on: ubuntu-latest
     env:
+      # STAGING (source image)
       GCP_PROJECT_ID_STG: ${{ vars.GCP_PROJECT_ID_STG }}
       WIF_PROVIDER_STG: ${{ vars.WIF_PROVIDER_STG }}
       WIF_SERVICE_ACCOUNT_STG: ${{ vars.WIF_SERVICE_ACCOUNT_STG }}
       SERVICE_NAME_STG: ${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}
 
+      # PROD (target deploy)
       GCP_PROJECT_ID_PROD: ${{ vars.GCP_PROJECT_ID_PROD }}
       WIF_PROVIDER_PROD: ${{ vars.WIF_PROVIDER_PROD }}
       WIF_SERVICE_ACCOUNT_PROD: ${{ vars.WIF_SERVICE_ACCOUNT_PROD }}
       CLOUD_RUN_SERVICE_ACCOUNT_PROD: ${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_PROD }}
       SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_FRONTEND_PROD }}
+
       BACKEND_SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_BACKEND_PROD }}
 
     steps:
@@ -179,6 +182,22 @@ jobs:
             exit 1
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: Write Firebase target config (PROD)
+        run: |
+          cat > .firebaserc <<EOF
+          {
+            "targets": {
+              "${GCP_PROJECT_ID_PROD}": {
+                "hosting": {
+                  "frontend": [
+                    "${HOSTING_SITE_ID}"
+                  ]
+                }
+              }
+            }
+          }
+          EOF
 
       - name: Deploy UI to Firebase Hosting (PROD)
         run: |

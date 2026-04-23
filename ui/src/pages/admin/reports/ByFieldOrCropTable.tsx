@@ -22,6 +22,16 @@ const COLLAPSIBLE_KEYS = [
   "net_income",
 ];
 
+const ROUNDED_ROW_KEYS = new Set([
+  "net_income",
+  "labors_cost",
+  "supplies_cost",
+  "total_direct_costs",
+  "gross_margin",
+  "operating_result",
+  "total_invested",
+]);
+
 // --- VALUE CELL (Tu versión original) ---
 const ValueCell = ({ value, isCentered }: { value: string, isCentered: boolean }) => {
   const match = value.match(/^([\d.,-]+)\s*(.*)$/);
@@ -95,7 +105,7 @@ export const ByFieldOrCropTable = ({
           width: `${data.columns.length * 360}px`,
         }}
       >
-        <table className="text-sm bg-white border border-gray-300">
+        <table className="text-sm bg-white border-separate border-spacing-y-1">
         <thead>
           <tr className="h-14">
             <th></th>
@@ -146,7 +156,11 @@ export const ByFieldOrCropTable = ({
     }: RowToRender,
     isToggleRow: boolean = false
   ) {
-    return (
+    const shouldRoundRow = ROUNDED_ROW_KEYS.has(key);
+    const spacerBeforeHeight =
+      key === "gross_margin" ? "h-1" : key === "total_invested" ? "h-4" : null;
+
+    const rowContent = (
       <tr key={key} className={classNameHeader}>
         {/* Columna de etiquetas (Siempre a la izquierda) */}
         <th
@@ -158,7 +172,7 @@ export const ByFieldOrCropTable = ({
             ]
               .filter(Boolean)
               .join(" ") +
-            " p-1 text-left w-[210px] border-t border-t-gray-300 " +
+            " p-1 text-left w-[210px] " +
             (isToggleRow ? "cursor-pointer hover:bg-gray-50" : "")
           }
           onClick={
@@ -183,9 +197,10 @@ export const ByFieldOrCropTable = ({
         {data!.columns.map((column, index) => {
           const finalRowClasses = [
             !classNameRows.includes("text-") && "text-gray-600",
-            !classNameRows.includes("bg-"),
+            !classNameRows.includes("bg-") && "bg-white",
             !classNameRows.includes("font-") && "font-light",
             classNameRows,
+            shouldRoundRow && "rounded-xl overflow-hidden",
           ]
             .filter(Boolean)
             .join(" ");
@@ -199,7 +214,7 @@ export const ByFieldOrCropTable = ({
               {showIndicator ? (
                 <td
                   key={index}
-                  className={`${finalRowClasses} border-t border-t-gray-300 p-0`}
+                  className={`${finalRowClasses} p-0`}
                 >
                   <div className="flex items-center justify-center h-full w-full gap-1">
                     <ValueCell value={formattedValue} isCentered={!isSingleColumn} />
@@ -222,7 +237,7 @@ export const ByFieldOrCropTable = ({
               ) : (
                 <td
                   key={index}
-                  className={`${finalRowClasses} border-t border-t-gray-300 p-0`}
+                  className={`${finalRowClasses} p-0`}
                 >
                   <div className="flex items-center justify-center h-full w-full">
                     <ValueCell value={formattedValue} isCentered={!isSingleColumn} />
@@ -233,6 +248,19 @@ export const ByFieldOrCropTable = ({
           );
         })}
       </tr>
+    );
+
+    if (!spacerBeforeHeight) {
+      return rowContent;
+    }
+
+    return (
+      <>
+        <tr aria-hidden="true">
+          <td colSpan={data!.columns.length * 2 + 1} className={`${spacerBeforeHeight} bg-white`}></td>
+        </tr>
+        {rowContent}
+      </>
     );
   }
 };
