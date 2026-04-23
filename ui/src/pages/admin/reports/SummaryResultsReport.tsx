@@ -83,8 +83,14 @@ const rowsToRender: RowToRender[] = [
 export function SummaryResultsReport() {
   const [selectedCrop, setSelectedCrop] = useState<string>("0");
 
-  const { filters, projectId, selectedCampaignId, loading } =
-    useWorkspaceFilters(["project", "campaign"]);
+  const {
+    filters,
+    projectId,
+    selectedCustomer,
+    selectedCampaignId,
+    workspaceReady,
+    loading,
+  } = useWorkspaceFilters(["project", "campaign"]);
 
   const {
     summaryResultsReportingData: reportingData,
@@ -96,6 +102,9 @@ export function SummaryResultsReport() {
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
 
+    if (selectedCustomer?.id) {
+      params.customer_id = String(selectedCustomer.id);
+    }
     if (projectId) {
       params.project_id = String(projectId);
     }
@@ -104,11 +113,15 @@ export function SummaryResultsReport() {
     }
 
     return new URLSearchParams(params).toString();
-  }, [projectId, selectedCampaignId]);
+  }, [projectId, selectedCustomer, selectedCampaignId]);
 
   useEffect(() => {
+    if (!workspaceReady) {
+      getSummaryResultsReportingData("");
+      return;
+    }
     getSummaryResultsReportingData(buildQueryParams());
-  }, [buildQueryParams, getSummaryResultsReportingData]);
+  }, [buildQueryParams, getSummaryResultsReportingData, workspaceReady]);
 
   const filteredData = selectedCrop === "0"
     ? reportingData
@@ -134,7 +147,7 @@ export function SummaryResultsReport() {
           {
             label: "Generar Informe",
             variant: "primary",
-            disabled: processing,
+            disabled: processing || !workspaceReady,
             onClick: () => getSummaryResultsReportingData(buildQueryParams()),
           },
           {

@@ -152,8 +152,14 @@ const harvestRowsToRender: RowToRender[] = [
 ];
 
 export function InvestorContributionReport() {
-  const { filters, projectId, selectedCampaignId, loading } =
-    useWorkspaceFilters(["project", "campaign"]);
+  const {
+    filters,
+    projectId,
+    selectedCustomer,
+    selectedCampaignId,
+    workspaceReady,
+    loading,
+  } = useWorkspaceFilters(["project", "campaign"]);
 
   const {
     investorContributionReportingData: reportingData,
@@ -165,6 +171,9 @@ export function InvestorContributionReport() {
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
 
+    if (selectedCustomer?.id) {
+      params.customer_id = String(selectedCustomer.id);
+    }
     if (projectId) {
       params.project_id = String(projectId);
     }
@@ -173,11 +182,15 @@ export function InvestorContributionReport() {
     }
 
     return new URLSearchParams(params).toString();
-  }, [projectId, selectedCampaignId]);
+  }, [projectId, selectedCustomer, selectedCampaignId]);
 
   useEffect(() => {
+    if (!workspaceReady) {
+      getInvestorContributionReportingData("");
+      return;
+    }
     getInvestorContributionReportingData(buildQueryParams());
-  }, [buildQueryParams, getInvestorContributionReportingData]);
+  }, [buildQueryParams, getInvestorContributionReportingData, workspaceReady]);
 
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
   const { toPDF, targetRef } = usePDF({ filename: `informe-aporte-inversor-${ timestamp }.pdf` });
@@ -196,7 +209,7 @@ export function InvestorContributionReport() {
           {
             label: "Generar Informe",
             variant: "primary",
-            disabled: processing,
+            disabled: processing || !workspaceReady,
             onClick: () => getInvestorContributionReportingData(buildQueryParams()),
           },
           {

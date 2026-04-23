@@ -155,6 +155,7 @@ export function Dashboard() {
     projectId,
     selectedCampaignId,
     selectedField,
+    workspaceReady,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const { dashboard, processing, error, getDashboardInfo } = useDashboard();
@@ -223,7 +224,9 @@ export function Dashboard() {
   useEffect(() => {
     const hasCustomer = Boolean(selectedCustomer && selectedCustomer.id !== 0);
     const hasProject = Boolean(projectId && projectId > 0);
-    if (!hasCustomer || !hasProject) {
+    const hasCampaign = Boolean(selectedCampaignId && selectedCampaignId > 0);
+    if (!hasCustomer || !hasProject || !hasCampaign || !workspaceReady) {
+      getDashboardInfo("");
       return;
     }
     getDashboardInfo(buildQueryParams());
@@ -231,6 +234,7 @@ export function Dashboard() {
     selectedCustomer,
     projectId,
     selectedCampaignId,
+    workspaceReady,
     selectedField,
     getDashboardInfo,
     buildQueryParams,
@@ -244,6 +248,7 @@ export function Dashboard() {
           {
             label: "Generar Informe",
             variant: "primary",
+            disabled: processing || !workspaceReady,
             onClick: () => getDashboardInfo(buildQueryParams()),
           },
           {
@@ -268,6 +273,7 @@ export function Dashboard() {
           <Button
             variant="primary"
             size="sm"
+            disabled={!workspaceReady}
             onClick={() => getDashboardInfo(buildQueryParams())}
           >
             Reintentar

@@ -20,11 +20,15 @@ router.get("/field-crop", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
+    const customerId = req.query?.customer_id as string;
     const projectId = req.query?.project_id as string;
     const campaign_id = req.query?.campaign_id as string;
 
     const params: Record<string, string> = {};
 
+    if (customerId) {
+      params.customer_id = customerId;
+    }
     if (projectId) {
       params.project_id = projectId;
     }
@@ -80,11 +84,15 @@ router.get("/investor-contribution", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
+    const customerId = req.query?.customer_id as string;
     const projectId = req.query?.project_id as string;
     const campaign_id = req.query?.campaign_id as string;
 
     const params: Record<string, string> = {};
 
+    if (customerId) {
+      params.customer_id = customerId;
+    }
     if (projectId) {
       params.project_id = projectId;
     }
@@ -140,11 +148,15 @@ router.get("/summary-results", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
+    const customerId = req.query?.customer_id as string;
     const projectId = req.query?.project_id as string;
     const campaign_id = req.query?.campaign_id as string;
 
     const params: Record<string, string> = {};
 
+    if (customerId) {
+      params.customer_id = customerId;
+    }
     if (projectId) {
       params.project_id = projectId;
     }

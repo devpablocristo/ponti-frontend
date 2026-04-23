@@ -52,6 +52,7 @@ export interface UseWorkspaceFiltersReturn {
   projectId: number | null;
   selectedCampaignId: number | undefined; // Or Campaign object if you prefer
   selectedField: Field | undefined;
+  workspaceReady: boolean;
   seasons: { name: string; id: number }[];
   filters: FilterBarFilter[];
   errors: {
@@ -73,7 +74,9 @@ type FilterKey = "customer" | "project" | "campaign" | "field";
 export const useWorkspaceFilters = (
   enabledFilters: FilterKey[] = ["customer", "project", "campaign", "field"]
 ): UseWorkspaceFiltersReturn => {
-  const enabledFiltersKey = enabledFilters.join("|");
+  const enabledFiltersKey = Array.from(
+    new Set<FilterKey>(["customer", "project", "campaign", ...enabledFilters])
+  ).join("|");
   const enabledFilterSet = useMemo(
     () =>
       new Set(
@@ -145,14 +148,21 @@ export const useWorkspaceFilters = (
 
   const setSelectedCampaign = useCallback(
     (campaign: Campaign | undefined) => {
-      if (campaign && selectedProject) {
+      if (!campaign) {
+        contextSetCampaign(undefined);
+        contextSetField(undefined);
+        return;
+      }
+
+      if (selectedProject) {
         const updatedProject = { ...selectedProject, id: campaign.project_id };
         contextSetProject(updatedProject);
-        contextSetProjectId(campaign.project_id);
-        contextSetCampaign(campaign);
       }
+      contextSetProjectId(campaign.project_id);
+      contextSetCampaign(campaign);
+      contextSetField(undefined);
     },
-    [contextSetCampaign, contextSetProject, contextSetProjectId, selectedProject]
+    [contextSetCampaign, contextSetField, contextSetProject, contextSetProjectId, selectedProject]
   );
 
   const setSelectedField: React.Dispatch<
@@ -181,6 +191,14 @@ export const useWorkspaceFilters = (
     selectedField && typeof selectedField.id === "number" && selectedField.id > 0
       ? selectedField
       : undefined;
+  const workspaceReady = Boolean(
+    selectedCustomer &&
+      selectedCustomer.id > 0 &&
+      normalizedSelectedProject &&
+      normalizedSelectedProject.id > 0 &&
+      selectedCampaignId &&
+      selectedCampaignId > 0
+  );
 
   const [queryCustomer, setQueryCustomer] = useState<string>("");
   const [queryProject, setQueryProject] = useState<string>("");
@@ -353,10 +371,10 @@ export const useWorkspaceFilters = (
   }
 
   useEffect(() => {
-    if (enabledFilterSet.has("field") && normalizedProjectId) {
+    if (enabledFilterSet.has("field") && normalizedProjectId && selectedCampaignId) {
       getFields(`project_id=${normalizedProjectId}`);
     }
-  }, [enabledFilterSet, getFields, normalizedProjectId]);
+  }, [enabledFilterSet, getFields, normalizedProjectId, selectedCampaignId]);
 
   if (enabledFilterSet.has("field")) {
     filters.push({
@@ -365,7 +383,7 @@ export const useWorkspaceFilters = (
       label: "Campo",
       placeholder: "Seleccione campo",
       options:
-        selectedCustomer && normalizedSelectedProject
+        selectedCustomer && normalizedSelectedProject && selectedCampaignId
           ? [{ id: 0, name: "Todos los campos" }, ...(Array.isArray(fields) ? fields : [])]
           : [],
       total: selectedCustomer ? totalFields : 0,
@@ -379,6 +397,7 @@ export const useWorkspaceFilters = (
         selectedCustomer.id === 0 ||
         !normalizedSelectedProject ||
         normalizedSelectedProject.id === 0 ||
+        !selectedCampaignId ||
         loadingFields,
     });
   }
@@ -391,9 +410,10 @@ export const useWorkspaceFilters = (
     projectPageInfo: projectPageInfo,
     selectedCustomer,
     selectedProject: normalizedSelectedProject,
-    projectId: normalizedProjectId ?? null,
+    projectId: workspaceReady ? (normalizedProjectId ?? null) : null,
     selectedCampaignId,
     selectedField: normalizedSelectedField,
+    workspaceReady,
     filters,
     seasons,
     loading: {
