@@ -48,8 +48,6 @@ export type WorkorderItem = {
 export interface WorkorderData {
   id: number;
   number: string;
-  official_number?: string;
-  legacy_number?: string | null;
   project_id: number;
   field_id: number;
   lot_id: number;

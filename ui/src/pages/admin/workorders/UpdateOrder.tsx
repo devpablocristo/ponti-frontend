@@ -17,8 +17,8 @@ import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Drawer from "../../../components/Drawer/Drawer";
 import {
-  getDisplayedWorkOrderNumber,
   isOfficialWorkOrderNumber,
+  normalizeOfficialWorkOrderNumber,
   trimWorkOrderNumber,
 } from "./workOrderNumber";
 
@@ -392,7 +392,7 @@ export default function UpdateOrder({
       labors.length > 0 &&
       lots.length > 0
     ) {
-      setOrderNumber(getDisplayedWorkOrderNumber(selectedOrder));
+      setOrderNumber(trimWorkOrderNumber(selectedOrder.number));
       setSurface(selectedOrder.effective_area.toString());
 
       const formattedDate = selectedOrder.date.split("T")[0];
@@ -634,16 +634,9 @@ export default function UpdateOrder({
       }
     }
 
-    const nextOrderNumber =
-      selectedOrder.official_number &&
-      trimWorkOrderNumber(orderNumber) === getDisplayedWorkOrderNumber(selectedOrder)
-        ? trimWorkOrderNumber(selectedOrder.official_number)
-        : trimWorkOrderNumber(orderNumber);
+    const nextOrderNumber = trimWorkOrderNumber(orderNumber);
 
-    if (
-      nextOrderNumber !== trimWorkOrderNumber(selectedOrder.number) &&
-      !isOfficialWorkOrderNumber(nextOrderNumber)
-    ) {
+    if (!isOfficialWorkOrderNumber(nextOrderNumber)) {
       setError("El número de orden debe contener solo dígitos");
       return;
     }
@@ -760,7 +753,9 @@ export default function UpdateOrder({
                   name="order"
                   type="text"
                   value={orderNumber || ""}
-                  onChange={(e) => setOrderNumber(e.target.value)}
+                  onChange={(e) =>
+                    setOrderNumber(normalizeOfficialWorkOrderNumber(e.target.value))
+                  }
                   size="sm"
                 />
                 <InputField
