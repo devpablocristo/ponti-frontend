@@ -150,6 +150,22 @@ jobs:
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
 
+      - name: Write Firebase target config (DEV)
+        run: |
+          cat > .firebaserc <<EOF
+          {
+            "targets": {
+              "${{ steps.env.outputs.PROJECT_ID }}": {
+                "hosting": {
+                  "frontend": [
+                    "${HOSTING_SITE_ID}"
+                  ]
+                }
+              }
+            }
+          }
+          EOF
+
       - name: Deploy UI to Firebase Hosting
         run: |
           npx -y firebase-tools deploy \
