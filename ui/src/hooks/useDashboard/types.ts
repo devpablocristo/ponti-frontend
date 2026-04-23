@@ -93,6 +93,6 @@ export interface OperationalIndicators {
 export interface OperationalItem {
   type: string;
   title: string;
-  date: string;
-  workorder_id?: number;
+  date: string | null;
+  workorder_id?: string;
 }
