@@ -525,48 +525,10 @@ export function WorkOrders() {
           return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
-      {
-        key: "__actions" as keyof OrdersData,
-        header: "Acción",
-        filterable: false,
-        sortable: false,
-        render: (_, data) => {
-          const isDraftDigital = isDigitalOrder(data) && data.status === "draft";
-
-          if (!isDraftDigital) {
-            return <span className="text-slate-400 text-xs">-</span>;
-          }
-
-          return (
-            <div className="flex items-center gap-2 justify-end">
-              <Button
-                variant="primary"
-                size="xs"
-                onClick={() => {
-                  handlePrePublish(data);
-                }}
-              >
-                Publicar
-              </Button>
-              <Button
-                variant="primary"
-                size="xs"
-                onClick={() => {
-                  handlePreDeleteDraft(data);
-                }}
-              >
-                Eliminar
-              </Button>
-            </div>
-          );
-        },
-      },
     ];
   }, [
     getFilterOptionsForColumn,
     handleOpenOrder,
-    handlePrePublish,
-    handlePreDeleteDraft,
   ]);
 
   const allColumns = useMemo(
@@ -1089,6 +1051,37 @@ export function WorkOrders() {
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           columns={columnsToShow}
+          actionsHeader="Acciones"
+          renderActions={(item) => {
+            const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
+
+            if (!isDraftDigital) {
+              return null;
+            }
+
+            return (
+              <>
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => {
+                    handlePrePublish(item);
+                  }}
+                >
+                  Publicar
+                </Button>
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => {
+                    handlePreDeleteDraft(item);
+                  }}
+                >
+                  Eliminar
+                </Button>
+              </>
+            );
+          }}
           onDelete={(item) => {
             if (isDigitalOrder(item) && item.status === "draft") {
               handlePreDeleteDraft(item);

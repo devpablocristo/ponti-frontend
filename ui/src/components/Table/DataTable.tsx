@@ -45,6 +45,8 @@ type DataTableProps<T> = {
   canEdit?: (item: T) => boolean;
   onCopy?: (item: T) => void;
   onDelete?: (item: T) => void;
+  renderActions?: (item: T) => React.ReactNode;
+  actionsHeader?: string;
   className?: string;
   pagination?: {
     page: number;
@@ -90,6 +92,59 @@ function getPaginationRange(
   return rangeWithDots;
 }
 
+function parseLeadingNumber(value: string): number | null {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^-?\d+(?:[.,]\d+)?/);
+
+  if (!match) return null;
+
+  const normalized = match[0].replace(",", ".");
+  const parsed = Number(normalized);
+
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function isNumericSearch(value: string): boolean {
+  return /^-?\d[\d.,]*$/.test(value.trim());
+}
+
+function compareFilterOptions(a: string, b: string): number {
+  const aNumber = parseLeadingNumber(a);
+  const bNumber = parseLeadingNumber(b);
+
+  if (aNumber !== null && bNumber !== null) {
+    if (aNumber !== bNumber) {
+      return bNumber - aNumber;
+    }
+  } else if (aNumber !== null) {
+    return -1;
+  } else if (bNumber !== null) {
+    return 1;
+  }
+
+  return a.localeCompare(b, "es", {
+    sensitivity: "base",
+    numeric: true,
+  });
+}
+
+function getVisibleFilterOptions(options: string[], search: string): string[] {
+  const query = search.trim().toLowerCase();
+
+  return [...options]
+    .sort(compareFilterOptions)
+    .filter((option) => {
+      const normalizedOption = option.trim().toLowerCase();
+
+      if (!query) return true;
+      if (isNumericSearch(query)) {
+        return normalizedOption.startsWith(query);
+      }
+
+      return normalizedOption.includes(query);
+    });
+}
+
 const DataTable = <T,>({
   data,
   filters,
@@ -101,12 +156,15 @@ const DataTable = <T,>({
   canEdit,
   onDelete,
   onCopy,
+  renderActions,
+  actionsHeader = "Acciones",
   className,
   pagination,
   message = "No hay proyectos disponibles",
   enableFilters = false,
   rowStyle = "default",
 }: DataTableProps<T>) => {
+  const hasActions = Boolean(onEdit || onDelete || onCopy || renderActions);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(
     null
@@ -328,6 +386,15 @@ const DataTable = <T,>({
                                 {column.filterType === "select" &&
                                   column.filterOptions ? (
                                   <>
+                                    {(() => {
+                                      const visibleFilterOptions =
+                                        getVisibleFilterOptions(
+                                          column.filterOptions ?? [],
+                                          filterSearch[String(column.key)] || ""
+                                        );
+
+                                      return (
+                                        <>
                                     <input
                                       type="text"
                                       className="border border-slate-200 rounded-lg px-2.5 py-1.5 w-full text-xs text-slate-600 mb-2"
@@ -342,13 +409,7 @@ const DataTable = <T,>({
                                     />
 
                                     <div className="max-h-48 overflow-auto pr-1 text-slate-600">
-                                      {column.filterOptions
-                                        .filter((option) =>
-                                          option
-                                            .toLowerCase()
-                                            .includes((filterSearch[String(column.key)] || "").toLowerCase())
-                                        )
-                                        .map((option) => {
+                                      {visibleFilterOptions.map((option) => {
                                           const current = filters?.[String(column.key)];
                                           const selected = Array.isArray(current)
                                             ? current.includes(option)
@@ -375,14 +436,13 @@ const DataTable = <T,>({
                                           );
                                         })}
 
-                                      {column.filterOptions.filter((option) =>
-                                        option
-                                          .toLowerCase()
-                                          .includes((filterSearch[String(column.key)] || "").toLowerCase())
-                                      ).length === 0 && (
+                                      {visibleFilterOptions.length === 0 && (
                                         <p className="text-xs text-slate-400 py-1">Sin resultados</p>
                                       )}
                                     </div>
+                                        </>
+                                      );
+                                    })()}
                                   </>
                                 ) : column.filterType === "date" ? (
                                   (() => {
@@ -478,8 +538,10 @@ const DataTable = <T,>({
                   </th>
                 );
               })}
-              {(onEdit || onDelete || onCopy) && (
-                <th className="p-4 text-center"></th>
+              {hasActions && (
+                <th className="p-4 text-center uppercase font-bold text-xs">
+                  {actionsHeader}
+                </th>
               )}
             </tr>
           </thead>
@@ -553,50 +615,62 @@ const DataTable = <T,>({
                           : String(item[column.key])}
                       </td>
                     ))}
-                    {(onEdit || onDelete || onCopy) && (
+                    {hasActions && (
                       <td
                         className="px-6 py-4 text-center"
                       >
                         <div className="flex justify-center space-x-2">
-                          {onEdit && (
-                            <button
-                              onClick={() => {
-                                if ((canEdit?.(item) ?? true) === false) return;
-                                onEdit(item);
-                              }}
-                              disabled={(canEdit?.(item) ?? true) === false}
-                              className={`font-medium mr-3 ${
-                                (canEdit?.(item) ?? true) === false
-                                  ? "text-slate-300 cursor-not-allowed"
-                                  : "text-slate-500 hover:text-slate-700 hover:underline"
-                              }`}
-                              title={
-                                (canEdit?.(item) ?? true) === false
-                                  ? "Edición bloqueada para este tipo de movimiento"
-                                  : "Editar proyecto"
-                              }
-                            >
-                              <Edit size={16} />
-                            </button>
-                          )}
-                          {onCopy && (
-                            <button
-                              onClick={() => onCopy(item)}
-                              className="flex items-center gap-1 text-primary-500 hover:text-primary-700"
-                              title="Duplicar proyecto"
-                            >
-                              <Copy size={16} />
-                            </button>
-                          )}
-                          {onDelete && (
-                            <button
-                              onClick={() => onDelete(item)}
-                              className="font-medium text-amber-500 hover:text-amber-600 hover:underline"
-                              title="Archivar"
-                            >
-                              <Archive size={16} />
-                            </button>
-                          )}
+                          {(() => {
+                            const customActions = renderActions?.(item);
+
+                            if (customActions !== null && customActions !== undefined) {
+                              return customActions;
+                            }
+
+                            return (
+                              <>
+                                {onEdit && (
+                                  <button
+                                    onClick={() => {
+                                      if ((canEdit?.(item) ?? true) === false) return;
+                                      onEdit(item);
+                                    }}
+                                    disabled={(canEdit?.(item) ?? true) === false}
+                                    className={`font-medium mr-3 ${
+                                      (canEdit?.(item) ?? true) === false
+                                        ? "text-slate-300 cursor-not-allowed"
+                                        : "text-slate-500 hover:text-slate-700 hover:underline"
+                                    }`}
+                                    title={
+                                      (canEdit?.(item) ?? true) === false
+                                        ? "Edición bloqueada para este tipo de movimiento"
+                                        : "Editar proyecto"
+                                    }
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                )}
+                                {onCopy && (
+                                  <button
+                                    onClick={() => onCopy(item)}
+                                    className="flex items-center gap-1 text-primary-500 hover:text-primary-700"
+                                    title="Duplicar proyecto"
+                                  >
+                                    <Copy size={16} />
+                                  </button>
+                                )}
+                                {onDelete && (
+                                  <button
+                                    onClick={() => onDelete(item)}
+                                    className="font-medium text-amber-500 hover:text-amber-600 hover:underline"
+                                    title="Archivar"
+                                  >
+                                    <Archive size={16} />
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       </td>
                     )}
@@ -605,7 +679,7 @@ const DataTable = <T,>({
                     <tr className="bg-white">
                       <td
                         colSpan={
-                          columns.length + 1 + (onEdit || onDelete ? 1 : 0)
+                          columns.length + 1 + (hasActions ? 1 : 0)
                         }
                       >
                         <div className="p-4">{expandableRowRender(item)}</div>
@@ -616,7 +690,7 @@ const DataTable = <T,>({
               )})
             ) : (
               <tr>
-                <td colSpan={columns.length + 1 + (onEdit || onDelete ? 1 : 0)}>
+                <td colSpan={columns.length + 1 + (hasActions ? 1 : 0)}>
                   <div className="p-4 text-center text-slate-500 text-sm py-12">{message}</div>
                 </td>
               </tr>

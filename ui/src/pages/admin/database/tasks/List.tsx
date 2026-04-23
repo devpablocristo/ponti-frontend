@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import * as XLSX from "xlsx";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import DataTable from "../../../../components/Table/DataTable";
 import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
@@ -22,37 +22,18 @@ import {
   parsePartialPrice,
 } from "./importUtils";
 
-const columns: Column<LaborInfo>[] = [
-  {
-    key: "name",
-    header: "Labor",
-    render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
-  },
-  {
-    key: "category_name",
-    header: "Rubro",
-    render: (value) => String(value ?? ""),
-  },
-  {
-    key: "price",
-    header: "Precio",
-    render: (value, row) => (
-      <div className="flex items-center gap-2">
-        <strong>{String(value ?? "")}</strong>
-        {row.is_partial_price ? (
-          <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
-            Parcial
-          </span>
-        ) : null}
-      </div>
-    ),
-  },
-  {
-    key: "contractor_name",
-    header: "Contratista",
-    render: (value) => String(value ?? ""),
-  },
-];
+function renderPriceCell(value: unknown, row: LaborInfo) {
+  return (
+    <div className="flex items-center gap-2">
+      <strong>{String(value ?? "")}</strong>
+      {row.is_partial_price ? (
+        <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
+          Parcial
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 export default function ListTasks() {
   const {
@@ -76,6 +57,7 @@ export default function ListTasks() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
@@ -96,6 +78,11 @@ export default function ListTasks() {
       getCategories("type_id=4");
     }
   }, [projectId, getCategories, getLabors]);
+
+  useEffect(() => {
+    setColumnsFilters({});
+    setCurrentPage(1);
+  }, [projectId]);
 
   useEffect(() => {
     if (result && projectId) {
@@ -339,10 +326,110 @@ export default function ListTasks() {
     }
   };
 
-  const paginatedLabors = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return safeLabors.slice(startIndex, startIndex + itemsPerPage);
-  }, [safeLabors, currentPage, itemsPerPage]);
+  const applyColumnFilters = useCallback(
+    (
+      data: LaborInfo[],
+      activeFilters: Record<string, unknown>,
+      excludeKey?: keyof LaborInfo
+    ) => {
+      return data.filter((laborItem) =>
+        Object.entries(activeFilters).every(([key, value]) => {
+          if (key === excludeKey) return true;
+          if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+          const currentValue = String(
+            laborItem[key as keyof LaborInfo] ?? ""
+          );
+
+          if (Array.isArray(value)) {
+            if (value.length === 0) return true;
+            return value.includes(currentValue);
+          }
+
+          return currentValue
+            .toLowerCase()
+            .includes(String(value).toLowerCase());
+        })
+      );
+    },
+    []
+  );
+
+  const filteredLabors = useMemo(() => {
+    return applyColumnFilters(safeLabors, columnsFilters);
+  }, [applyColumnFilters, safeLabors, columnsFilters]);
+
+  const columns = useMemo<Column<LaborInfo>[]>(() => {
+    const nameOptions = [
+      ...new Set(
+        applyColumnFilters(safeLabors, columnsFilters, "name")
+          .map((item) => item.name)
+          .filter(Boolean)
+      ),
+    ] as string[];
+
+    const categoryOptions = [
+      ...new Set(
+        applyColumnFilters(safeLabors, columnsFilters, "category_name")
+          .map((item) => item.category_name)
+          .filter(Boolean)
+      ),
+    ] as string[];
+
+    const priceOptions = [
+      ...new Set(
+        applyColumnFilters(safeLabors, columnsFilters, "price")
+          .map((item) => item.price)
+          .filter(Boolean)
+      ),
+    ] as string[];
+
+    const contractorOptions = [
+      ...new Set(
+        applyColumnFilters(safeLabors, columnsFilters, "contractor_name")
+          .map((item) => item.contractor_name)
+          .filter(Boolean)
+      ),
+    ] as string[];
+
+    return [
+      {
+        key: "name",
+        header: "Labor",
+        render: (value) => (
+          <strong className="text-blue-700">{String(value ?? "")}</strong>
+        ),
+        filterType: "select",
+        filterOptions: nameOptions,
+      },
+      {
+        key: "category_name",
+        header: "Rubro",
+        render: (value) => String(value ?? ""),
+        filterType: "select",
+        filterOptions: categoryOptions,
+      },
+      {
+        key: "price",
+        header: "Precio",
+        render: (value, row) => renderPriceCell(value, row),
+        filterType: "select",
+        filterOptions: priceOptions,
+      },
+      {
+        key: "contractor_name",
+        header: "Contratista",
+        render: (value) => String(value ?? ""),
+        filterType: "select",
+        filterOptions: contractorOptions,
+      },
+    ];
+  }, [applyColumnFilters, safeLabors, columnsFilters]);
+
+  const handleFilterChange = (filters: Record<string, unknown>) => {
+    setColumnsFilters(filters);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="w-full mx-auto">
@@ -572,15 +659,18 @@ export default function ListTasks() {
             onPrimaryAction={confirmDelete}
           />
           <DataTable
-            data={paginatedLabors}
+            data={filteredLabors}
             columns={columns}
+            filters={columnsFilters}
+            onFilterChange={handleFilterChange}
+            enableFilters={true}
             onDelete={(item) => handleDelete(item)}
             onEdit={(item) => handleEdit(item)}
             message="No hay labores cargadas en el proyecto"
             pagination={{
               page: currentPage,
               perPage: itemsPerPage,
-              total: safeLabors.length,
+              total: filteredLabors.length,
               onPageChange: (newPage: number) => setCurrentPage(newPage),
             }}
           />

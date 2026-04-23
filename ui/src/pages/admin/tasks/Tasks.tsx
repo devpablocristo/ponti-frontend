@@ -4,7 +4,7 @@ import * as XLSX from "xlsx";
 
 import useLabors from "../../../hooks/useLabors";
 import useCategories from "../../../hooks/useCategories";
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import DataTable from "../../../components/Table/DataTable";
 import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -328,14 +328,14 @@ export function Tasks() {
           const val = String(task[k as keyof LaborGroupData] ?? "").toLowerCase();
 
           if (Array.isArray(value)) {
-            return value.some((v) => val.includes(String(v).toLowerCase()));
+            return value.some((v) => val === String(v).toLowerCase());
           }
 
           return val.includes(String(value).toLowerCase());
         })
       );
 
-      return [...new Set(filtered.map((t) => String(t[key] ?? "")))].filter(Boolean).sort();
+      return [...new Set(filtered.map((t) => String(t[key] ?? "")))].filter(Boolean);
     },
     []
   );

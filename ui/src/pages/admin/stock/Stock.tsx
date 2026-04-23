@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
 
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import DataTable from "../../../components/Table/DataTable";
 import useStock from "../../../hooks/useStock";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -296,9 +296,7 @@ export function Stock() {
 
         // 🟢 MULTI SELECT
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return value.some((v) => itemValue === String(v).toLowerCase());
         }
 
         // 🟢 SINGLE SELECT
@@ -347,9 +345,7 @@ export function Stock() {
         const itemValue = String(item[k as keyof GetStockItems] ?? "").toLowerCase();
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return value.some((v) => itemValue === String(v).toLowerCase());
         }
 
         return itemValue.includes(String(value).toLowerCase());

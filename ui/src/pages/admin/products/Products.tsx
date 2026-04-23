@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import DataTable from "../../../components/Table/DataTable";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -110,9 +110,7 @@ export function Products() {
         ).toLowerCase();
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return value.some((v) => itemValue === String(v).toLowerCase());
         }
 
         return itemValue.includes(String(value).toLowerCase());
@@ -136,10 +134,8 @@ export function Products() {
         const rawValue = item[k as keyof SupplyMovement];
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            String(rawValue ?? "")
-              .toLowerCase()
-              .includes(String(v).toLowerCase())
+          return value.some(
+            (v) => String(rawValue ?? "").toLowerCase() === String(v).toLowerCase()
           );
         }
 
@@ -427,9 +423,7 @@ export function Products() {
         const itemValue = String(rawValue ?? "").toLowerCase();
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return value.some((v) => itemValue === String(v).toLowerCase());
         }
 
         return itemValue.includes(String(value).toLowerCase());

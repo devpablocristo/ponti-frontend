@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import DataTable from "../../../components/Table/DataTable";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ProjectData } from "../../../hooks/useDatabase/projects/types";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";

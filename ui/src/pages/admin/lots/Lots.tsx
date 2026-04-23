@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LoaderCircle, Pencil } from "lucide-react";
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import DataTable from "../../../components/Table/DataTable";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import { LotKPIs, LotsData, LotsDataUpdate } from "../../../hooks/useLots/types";
 import useLots from "../../../hooks/useLots";
