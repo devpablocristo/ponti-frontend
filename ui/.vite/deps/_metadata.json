@@ -1,172 +1,166 @@
 {
-  "hash": "b093721f",
+  "hash": "f06d71ef",
   "configHash": "b1ace619",
-  "lockfileHash": "a65848ee",
-  "browserHash": "d399d85f",
+  "lockfileHash": "62a0bce0",
+  "browserHash": "e981080d",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "62881588",
+      "fileHash": "985ed473",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "4230f563",
+      "fileHash": "efe8636a",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "1f88536e",
+      "fileHash": "c2817635",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "b1a86264",
+      "fileHash": "52c2e646",
       "needsInterop": true
     },
     "@devpablocristo/core-authn/browser/storage": {
       "src": "../../node_modules/@devpablocristo/core-authn/src/browser/storage.ts",
       "file": "@devpablocristo_core-authn_browser_storage.js",
-      "fileHash": "1e0b62fa",
+      "fileHash": "473171b5",
       "needsInterop": false
     },
     "@devpablocristo/core-authn/http/axios": {
       "src": "../../node_modules/@devpablocristo/core-authn/src/http/axios.ts",
       "file": "@devpablocristo_core-authn_http_axios.js",
-      "fileHash": "79b89dd0",
+      "fileHash": "9a8d2072",
       "needsInterop": false
     },
     "@devpablocristo/core-browser/crud": {
       "src": "../../node_modules/@devpablocristo/core-browser/src/crud/index.ts",
       "file": "@devpablocristo_core-browser_crud.js",
-      "fileHash": "681af65d",
+      "fileHash": "a68e0b2c",
       "needsInterop": false
     },
     "@devpablocristo/core-browser/storage": {
       "src": "../../node_modules/@devpablocristo/core-browser/src/storage.ts",
       "file": "@devpablocristo_core-browser_storage.js",
-      "fileHash": "c79793d7",
+      "fileHash": "79f79481",
       "needsInterop": false
     },
     "@devpablocristo/core-http/fetch": {
       "src": "../../node_modules/@devpablocristo/core-http/src/fetch.ts",
       "file": "@devpablocristo_core-http_fetch.js",
-      "fileHash": "566dc9c1",
+      "fileHash": "eee6b30f",
       "needsInterop": false
     },
     "@devpablocristo/modules-ui-data-display": {
       "src": "../../node_modules/@devpablocristo/modules-ui-data-display/src/index.ts",
       "file": "@devpablocristo_modules-ui-data-display.js",
-      "fileHash": "2b898596",
+      "fileHash": "7ab2ce96",
       "needsInterop": false
     },
     "@devpablocristo/modules-ui-filters": {
       "src": "../../node_modules/@devpablocristo/modules-ui-filters/src/index.ts",
       "file": "@devpablocristo_modules-ui-filters.js",
-      "fileHash": "ebedfe4c",
+      "fileHash": "12b4d971",
       "needsInterop": false
     },
     "flowbite": {
       "src": "../../node_modules/flowbite/lib/esm/index.js",
       "file": "flowbite.js",
-      "fileHash": "7265db54",
+      "fileHash": "46cb4d29",
       "needsInterop": false
     },
     "jwt-decode": {
       "src": "../../node_modules/jwt-decode/build/esm/index.js",
       "file": "jwt-decode.js",
-      "fileHash": "ffd59251",
+      "fileHash": "a397aadf",
       "needsInterop": false
     },
     "lucide-react": {
       "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
       "file": "lucide-react.js",
-      "fileHash": "18f3def8",
+      "fileHash": "d62fe553",
       "needsInterop": false
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "03b0e1cd",
+      "fileHash": "2372ccb3",
       "needsInterop": true
     },
     "react-markdown": {
       "src": "../../node_modules/react-markdown/index.js",
       "file": "react-markdown.js",
-      "fileHash": "cb911c9f",
+      "fileHash": "9f4c590d",
       "needsInterop": false
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "91092b94",
+      "fileHash": "7bb5aa2b",
       "needsInterop": false
     },
     "react-to-pdf": {
       "src": "../../node_modules/react-to-pdf/dist/index.mjs",
       "file": "react-to-pdf.js",
-      "fileHash": "3122d031",
+      "fileHash": "626e5363",
       "needsInterop": false
     },
     "remark-gfm": {
       "src": "../../node_modules/remark-gfm/index.js",
       "file": "remark-gfm.js",
-      "fileHash": "9e441c7e",
+      "fileHash": "510cbcbb",
       "needsInterop": false
     },
     "sonner": {
       "src": "../../node_modules/sonner/dist/index.mjs",
       "file": "sonner.js",
-      "fileHash": "a5c6d772",
+      "fileHash": "d6e96b6e",
       "needsInterop": false
     },
     "xlsx": {
       "src": "../../node_modules/xlsx/xlsx.mjs",
       "file": "xlsx.js",
-      "fileHash": "c9956c4a",
-      "needsInterop": false
-    },
-    "@devpablocristo/modules-ai-console": {
-      "src": "../../node_modules/@devpablocristo/modules-ai-console/src/index.ts",
-      "file": "@devpablocristo_modules-ai-console.js",
-      "fileHash": "7e834eb2",
+      "fileHash": "61e7daa8",
       "needsInterop": false
     }
   },
   "chunks": {
-    "index.es-WFZLP7RR": {
-      "file": "index__es-WFZLP7RR.js"
-    },
     "html2canvas.esm-VCVW5XKW": {
       "file": "html2canvas__esm-VCVW5XKW.js"
-    },
-    "purify.es-WBKO7BOE": {
-      "file": "purify__es-WBKO7BOE.js"
-    },
-    "chunk-MX6SYE36": {
-      "file": "chunk-MX6SYE36.js"
-    },
-    "chunk-TVB5VAKH": {
-      "file": "chunk-TVB5VAKH.js"
-    },
-    "chunk-SITVF2AJ": {
-      "file": "chunk-SITVF2AJ.js"
     },
     "chunk-7KIVJFBE": {
       "file": "chunk-7KIVJFBE.js"
     },
-    "chunk-QC6SL3B2": {
-      "file": "chunk-QC6SL3B2.js"
+    "purify.es-WBKO7BOE": {
+      "file": "purify__es-WBKO7BOE.js"
+    },
+    "index.es-WFZLP7RR": {
+      "file": "index__es-WFZLP7RR.js"
+    },
+    "chunk-SITVF2AJ": {
+      "file": "chunk-SITVF2AJ.js"
+    },
+    "chunk-TVB5VAKH": {
+      "file": "chunk-TVB5VAKH.js"
+    },
+    "chunk-MX6SYE36": {
+      "file": "chunk-MX6SYE36.js"
     },
     "chunk-NWKZXVHX": {
       "file": "chunk-NWKZXVHX.js"
     },
     "chunk-YLDSBLSF": {
       "file": "chunk-YLDSBLSF.js"
+    },
+    "chunk-QC6SL3B2": {
+      "file": "chunk-QC6SL3B2.js"
     },
     "chunk-DC5AMYBS": {
       "file": "chunk-DC5AMYBS.js"

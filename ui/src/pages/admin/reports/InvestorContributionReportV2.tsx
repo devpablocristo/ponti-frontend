@@ -25,56 +25,61 @@ import {
   type LegendItem,
 } from "./reportV2/InvestorDistributionBars";
 import {
-  ContributionAdjustmentsList,
-  type AdjustmentItem,
-} from "./reportV2/ContributionAdjustmentsList";
-import {
   HarvestPaymentStrip,
   type HarvestInvestor,
 } from "./reportV2/HarvestPaymentStrip";
 import { investorColorMap } from "./reportV2/lib/investorPalette";
+
+const CONTRIBUTION_TONES = [
+  "#F05252",
+  "#F98080",
+  "#F8B4B4",
+  "#FBD5D5",
+  "#FCE8E8",
+  "#FDF2F2",
+] as const;
 
 const CATEGORY_CONFIG = [
   {
     key: "agro-inputs",
     label: "Agroquímicos / Fertilizantes",
     keys: ["agrochemicals", "fertilizers"],
-    color: "#2563EB",
+    color: CONTRIBUTION_TONES[0],
     icon: <FlaskConical className="h-3.5 w-3.5" />,
   },
   {
     key: "seeds",
     label: "Semilla",
     keys: ["seeds"],
-    color: "#10B981",
+    color: CONTRIBUTION_TONES[1],
     icon: <Leaf className="h-3.5 w-3.5" />,
   },
   {
     key: "sowing",
     label: "Siembra",
     keys: ["sowing"],
-    color: "#9CA3AF",
+    color: CONTRIBUTION_TONES[2],
     icon: <Sprout className="h-3.5 w-3.5" />,
   },
   {
     key: "general-labors",
     label: "Labores grales.",
     keys: ["general_labors", "irrigation"],
-    color: "#34D399",
+    color: CONTRIBUTION_TONES[3],
     icon: <Tractor className="h-3.5 w-3.5" />,
   },
   {
     key: "admin",
     label: "Administración y estructura",
     keys: ["administration_structure"],
-    color: "#8B5CF6",
+    color: CONTRIBUTION_TONES[4],
     icon: <Settings className="h-3.5 w-3.5" />,
   },
   {
     key: "lease",
     label: "Arriendo",
     keys: ["capitalizable_lease"],
-    color: "#7C3AED",
+    color: CONTRIBUTION_TONES[5],
     icon: <House className="h-3.5 w-3.5" />,
   },
 ] as const;
@@ -204,13 +209,6 @@ export function InvestorContributionReportV2() {
       sharePct: h.share_pct,
     }));
 
-    const adjustments: AdjustmentItem[] = data.comparison.map((c) => ({
-      investor_id: c.investor_id,
-      name: c.investor_name,
-      color: colorByInvestor[c.investor_id],
-      amount: Number(c.adjustment_usd) || 0,
-    }));
-
     const harvestTotal =
       data.harvest.rows.find((r) => r.key === "totals")?.total_usd ??
       data.harvest.rows.reduce((s, r) => s + (Number(r.total_usd) || 0), 0);
@@ -248,7 +246,6 @@ export function InvestorContributionReportV2() {
       donutTotal: totalInvested,
       categories,
       legend,
-      adjustments,
       harvest: {
         total: Number(harvestTotal) || 0,
         perHa: Number(harvestPerHa) || 0,
@@ -296,7 +293,7 @@ export function InvestorContributionReportV2() {
 
       {!error && dashboard && (
         <div ref={targetRef} className="space-y-4">
-          <div className="flex flex-col gap-2 xl:h-[300px] xl:flex-row xl:items-stretch">
+          <div className="grid grid-cols-1 gap-2 xl:grid-cols-[170px_minmax(0,1fr)] xl:items-stretch">
             <ReportKpiRow
               totalInvested={dashboard.kpi.totalInvested}
               perHa={dashboard.kpi.perHa}
@@ -307,10 +304,9 @@ export function InvestorContributionReportV2() {
               surfaceTotalHa={dashboard.general.surface_total_ha}
               adminPerHaUsd={dashboard.general.admin_per_ha_usd}
             />
-            <ContributionAdjustmentsList items={dashboard.adjustments} />
           </div>
 
-          <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.45fr)]">
+          <div className="grid gap-3 xl:grid-cols-[minmax(320px,0.75fr)_minmax(0,1.55fr)]">
             <CostCompositionDonut slices={dashboard.donutSlices} total={dashboard.donutTotal} />
             <InvestorDistributionBars categories={dashboard.categories} legend={dashboard.legend} />
           </div>
