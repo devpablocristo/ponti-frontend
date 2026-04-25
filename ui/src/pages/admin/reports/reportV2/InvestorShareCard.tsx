@@ -21,7 +21,7 @@ function Metric({
   return (
     <div className="min-w-0">
       <div className="text-[9px] font-medium text-slate-500">{label}</div>
-      <div className={`mt-1 text-[0.78rem] font-semibold tabular-nums truncate ${valueClass}`}>
+      <div className={`mt-1 whitespace-nowrap text-[0.78rem] font-semibold leading-tight tabular-nums ${valueClass}`}>
         {value}
       </div>
     </div>
@@ -62,7 +62,7 @@ export function InvestorShareCard({ name, color, contributed, sharePct, adjustme
           </span>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
           <Metric label="Aportado" value={`u$s ${formatNumberAr(contributed)}`} />
           <Metric label="Participación" value={`${sharePct}%`} />
           <Metric

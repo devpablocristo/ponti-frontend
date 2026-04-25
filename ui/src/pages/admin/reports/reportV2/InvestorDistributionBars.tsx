@@ -90,7 +90,7 @@ export function InvestorDistributionBars({ categories, legend }: Props) {
                   return (
                     <div
                       key={s.investor_id}
-                      className="flex min-w-[18px] items-center justify-center text-[11px] font-bold text-white/95"
+                      className="flex min-w-0 items-center justify-center overflow-hidden text-[11px] font-bold text-white/95"
                       style={{ width: `${pct}%`, background: s.color }}
                       title={`${s.name}: u$s ${formatNumberAr(s.amount)}`}
                     >

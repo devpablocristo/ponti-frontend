@@ -1,166 +1,172 @@
 {
-  "hash": "f06d71ef",
+  "hash": "b093721f",
   "configHash": "b1ace619",
-  "lockfileHash": "62a0bce0",
-  "browserHash": "e981080d",
+  "lockfileHash": "a65848ee",
+  "browserHash": "d399d85f",
   "optimized": {
     "react": {
       "src": "../../node_modules/react/index.js",
       "file": "react.js",
-      "fileHash": "985ed473",
+      "fileHash": "62881588",
       "needsInterop": true
     },
     "react-dom": {
       "src": "../../node_modules/react-dom/index.js",
       "file": "react-dom.js",
-      "fileHash": "efe8636a",
+      "fileHash": "4230f563",
       "needsInterop": true
     },
     "react/jsx-dev-runtime": {
       "src": "../../node_modules/react/jsx-dev-runtime.js",
       "file": "react_jsx-dev-runtime.js",
-      "fileHash": "c2817635",
+      "fileHash": "1f88536e",
       "needsInterop": true
     },
     "react/jsx-runtime": {
       "src": "../../node_modules/react/jsx-runtime.js",
       "file": "react_jsx-runtime.js",
-      "fileHash": "52c2e646",
+      "fileHash": "b1a86264",
       "needsInterop": true
     },
     "@devpablocristo/core-authn/browser/storage": {
       "src": "../../node_modules/@devpablocristo/core-authn/src/browser/storage.ts",
       "file": "@devpablocristo_core-authn_browser_storage.js",
-      "fileHash": "473171b5",
+      "fileHash": "1e0b62fa",
       "needsInterop": false
     },
     "@devpablocristo/core-authn/http/axios": {
       "src": "../../node_modules/@devpablocristo/core-authn/src/http/axios.ts",
       "file": "@devpablocristo_core-authn_http_axios.js",
-      "fileHash": "9a8d2072",
+      "fileHash": "79b89dd0",
       "needsInterop": false
     },
     "@devpablocristo/core-browser/crud": {
       "src": "../../node_modules/@devpablocristo/core-browser/src/crud/index.ts",
       "file": "@devpablocristo_core-browser_crud.js",
-      "fileHash": "a68e0b2c",
+      "fileHash": "681af65d",
       "needsInterop": false
     },
     "@devpablocristo/core-browser/storage": {
       "src": "../../node_modules/@devpablocristo/core-browser/src/storage.ts",
       "file": "@devpablocristo_core-browser_storage.js",
-      "fileHash": "79f79481",
+      "fileHash": "c79793d7",
       "needsInterop": false
     },
     "@devpablocristo/core-http/fetch": {
       "src": "../../node_modules/@devpablocristo/core-http/src/fetch.ts",
       "file": "@devpablocristo_core-http_fetch.js",
-      "fileHash": "eee6b30f",
+      "fileHash": "566dc9c1",
       "needsInterop": false
     },
     "@devpablocristo/modules-ui-data-display": {
       "src": "../../node_modules/@devpablocristo/modules-ui-data-display/src/index.ts",
       "file": "@devpablocristo_modules-ui-data-display.js",
-      "fileHash": "7ab2ce96",
+      "fileHash": "2b898596",
       "needsInterop": false
     },
     "@devpablocristo/modules-ui-filters": {
       "src": "../../node_modules/@devpablocristo/modules-ui-filters/src/index.ts",
       "file": "@devpablocristo_modules-ui-filters.js",
-      "fileHash": "12b4d971",
+      "fileHash": "ebedfe4c",
       "needsInterop": false
     },
     "flowbite": {
       "src": "../../node_modules/flowbite/lib/esm/index.js",
       "file": "flowbite.js",
-      "fileHash": "46cb4d29",
+      "fileHash": "7265db54",
       "needsInterop": false
     },
     "jwt-decode": {
       "src": "../../node_modules/jwt-decode/build/esm/index.js",
       "file": "jwt-decode.js",
-      "fileHash": "a397aadf",
+      "fileHash": "ffd59251",
       "needsInterop": false
     },
     "lucide-react": {
       "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
       "file": "lucide-react.js",
-      "fileHash": "d62fe553",
+      "fileHash": "18f3def8",
       "needsInterop": false
     },
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "2372ccb3",
+      "fileHash": "03b0e1cd",
       "needsInterop": true
     },
     "react-markdown": {
       "src": "../../node_modules/react-markdown/index.js",
       "file": "react-markdown.js",
-      "fileHash": "9f4c590d",
+      "fileHash": "cb911c9f",
       "needsInterop": false
     },
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "7bb5aa2b",
+      "fileHash": "91092b94",
       "needsInterop": false
     },
     "react-to-pdf": {
       "src": "../../node_modules/react-to-pdf/dist/index.mjs",
       "file": "react-to-pdf.js",
-      "fileHash": "626e5363",
+      "fileHash": "3122d031",
       "needsInterop": false
     },
     "remark-gfm": {
       "src": "../../node_modules/remark-gfm/index.js",
       "file": "remark-gfm.js",
-      "fileHash": "510cbcbb",
+      "fileHash": "9e441c7e",
       "needsInterop": false
     },
     "sonner": {
       "src": "../../node_modules/sonner/dist/index.mjs",
       "file": "sonner.js",
-      "fileHash": "d6e96b6e",
+      "fileHash": "a5c6d772",
       "needsInterop": false
     },
     "xlsx": {
       "src": "../../node_modules/xlsx/xlsx.mjs",
       "file": "xlsx.js",
-      "fileHash": "61e7daa8",
+      "fileHash": "c9956c4a",
+      "needsInterop": false
+    },
+    "@devpablocristo/modules-ai-console": {
+      "src": "../../node_modules/@devpablocristo/modules-ai-console/src/index.ts",
+      "file": "@devpablocristo_modules-ai-console.js",
+      "fileHash": "7e834eb2",
       "needsInterop": false
     }
   },
   "chunks": {
+    "index.es-WFZLP7RR": {
+      "file": "index__es-WFZLP7RR.js"
+    },
     "html2canvas.esm-VCVW5XKW": {
       "file": "html2canvas__esm-VCVW5XKW.js"
-    },
-    "chunk-7KIVJFBE": {
-      "file": "chunk-7KIVJFBE.js"
     },
     "purify.es-WBKO7BOE": {
       "file": "purify__es-WBKO7BOE.js"
     },
-    "index.es-WFZLP7RR": {
-      "file": "index__es-WFZLP7RR.js"
-    },
-    "chunk-SITVF2AJ": {
-      "file": "chunk-SITVF2AJ.js"
+    "chunk-MX6SYE36": {
+      "file": "chunk-MX6SYE36.js"
     },
     "chunk-TVB5VAKH": {
       "file": "chunk-TVB5VAKH.js"
     },
-    "chunk-MX6SYE36": {
-      "file": "chunk-MX6SYE36.js"
+    "chunk-SITVF2AJ": {
+      "file": "chunk-SITVF2AJ.js"
+    },
+    "chunk-7KIVJFBE": {
+      "file": "chunk-7KIVJFBE.js"
+    },
+    "chunk-QC6SL3B2": {
+      "file": "chunk-QC6SL3B2.js"
     },
     "chunk-NWKZXVHX": {
       "file": "chunk-NWKZXVHX.js"
     },
     "chunk-YLDSBLSF": {
       "file": "chunk-YLDSBLSF.js"
-    },
-    "chunk-QC6SL3B2": {
-      "file": "chunk-QC6SL3B2.js"
     },
     "chunk-DC5AMYBS": {
       "file": "chunk-DC5AMYBS.js"
