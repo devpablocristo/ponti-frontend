@@ -5,6 +5,7 @@ interface Props {
   name: string;
   color: string;
   contributed: number;
+  actualPct: number;
   sharePct: number;
   adjustment: number;
 }
@@ -28,7 +29,7 @@ function Metric({
   );
 }
 
-export function InvestorShareCard({ name, color, contributed, sharePct, adjustment }: Props) {
+export function InvestorShareCard({ name, color, contributed, actualPct, sharePct, adjustment }: Props) {
   const adjPositive = adjustment >= 0;
   const adjColor = adjPositive ? "text-emerald-600" : "text-red-600";
   const adjSign = adjPositive ? "" : "-";
@@ -57,14 +58,15 @@ export function InvestorShareCard({ name, color, contributed, sharePct, adjustme
           <span
             className="shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-semibold tabular-nums"
             style={{ background: `${color}1A`, color }}
+            title="Aporte actual sobre el total invertido"
           >
-            {sharePct}%
+            {actualPct.toFixed(0)}%
           </span>
         </div>
 
         <div className="mt-3 grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2">
           <Metric label="Aportado" value={`u$s ${formatNumberAr(contributed)}`} />
-          <Metric label="Participación" value={`${sharePct}%`} />
+          <Metric label="Aporte acordado" value={`${sharePct}%`} />
           <Metric
             label="Ajuste"
             value={`${adjSign}u$s ${formatNumberAr(adjAbs)}`}

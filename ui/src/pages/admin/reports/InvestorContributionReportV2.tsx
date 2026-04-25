@@ -154,6 +154,9 @@ export function InvestorContributionReportV2() {
 
     const totalInvested = data.pre_harvest.total_usd;
     const perHa = data.pre_harvest.total_us_ha;
+    const comparisonByInvestor = new Map(
+      data.comparison.map((c) => [c.investor_id, c]),
+    );
 
     const agreedUsd = data.comparison.reduce(
       (sum, c) => sum + (Number(c.agreed_usd) || 0),
@@ -165,13 +168,19 @@ export function InvestorContributionReportV2() {
         const preHarvestInv = data.pre_harvest.investors.find(
           (i) => i.investor_id === h.investor_id,
         );
-        const comp = data.comparison.find((c) => c.investor_id === h.investor_id);
+        const comp = comparisonByInvestor.get(h.investor_id);
+        const contributed =
+          Number(preHarvestInv?.amount_usd ?? comp?.actual_usd) || 0;
+        const actualPct =
+          totalInvested > 0 ? (contributed / totalInvested) * 100 : 0;
+        const agreedPct = Number(comp?.agreed_share_pct ?? h.share_pct) || 0;
         return {
           investor_id: h.investor_id,
           name: h.investor_name,
           color: colorByInvestor[h.investor_id],
-          contributed: Number(preHarvestInv?.amount_usd) || 0,
-          sharePct: h.share_pct,
+          contributed,
+          actualPct,
+          sharePct: agreedPct,
           adjustment: Number(comp?.adjustment_usd) || 0,
         };
       },
@@ -206,7 +215,11 @@ export function InvestorContributionReportV2() {
       investor_id: h.investor_id,
       name: h.investor_name,
       color: colorByInvestor[h.investor_id],
-      sharePct: h.share_pct,
+      sharePct:
+        Number(
+          comparisonByInvestor.get(h.investor_id)?.agreed_share_pct ??
+            h.share_pct,
+        ) || 0,
     }));
 
     const harvestTotal =
@@ -224,7 +237,11 @@ export function InvestorContributionReportV2() {
         investor_id: h.investor_id,
         name: h.investor_name,
         color: colorByInvestor[h.investor_id],
-        sharePct: h.share_pct,
+        sharePct:
+          Number(
+            comparisonByInvestor.get(h.investor_id)?.agreed_share_pct ??
+              h.share_pct,
+          ) || 0,
         amount: Number(amount) || 0,
       };
     });

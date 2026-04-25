@@ -6,6 +6,7 @@ export interface InvestorShareItem {
   name: string;
   color: string;
   contributed: number;
+  actualPct: number;
   sharePct: number;
   adjustment: number;
 }
@@ -22,7 +23,7 @@ export function InvestorShareRow({ investors, surfaceTotalHa, adminPerHaUsd }: P
       <header className="mb-2.5 flex flex-wrap items-start justify-between gap-2.5">
         <div>
           <h2 className="text-[1.05rem] font-semibold text-[#020617]">Aportes por inversor</h2>
-          <p className="mt-0.5 text-[0.72rem] text-slate-500">Participación, aportes y ajustes</p>
+          <p className="mt-0.5 text-[0.72rem] text-slate-500">Aporte actual, acordado y ajustes</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5 rounded-xl border bg-white px-2 py-1">
           <div className="flex items-center gap-1.5">
@@ -46,6 +47,7 @@ export function InvestorShareRow({ investors, surfaceTotalHa, adminPerHaUsd }: P
             name={inv.name}
             color={inv.color}
             contributed={inv.contributed}
+            actualPct={inv.actualPct}
             sharePct={inv.sharePct}
             adjustment={inv.adjustment}
           />
