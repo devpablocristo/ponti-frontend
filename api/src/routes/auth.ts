@@ -8,8 +8,27 @@ const router: Router = Router();
 const identityToolkitBase = "https://identitytoolkit.googleapis.com/v1";
 const secureTokenBase = "https://securetoken.googleapis.com/v1";
 
+type LocalTokenPayload = {
+  sub: string;
+  email: string;
+  Username: string;
+  ID: number;
+  Rol: number;
+  iat: number;
+  exp: number;
+  token_use: "access" | "refresh";
+};
+
 const identityConfigured = () =>
-  Boolean(configService.identityApiKey && configService.identityProjectId);
+  Boolean(
+    configService.identityApiKey &&
+      configService.identityProjectId &&
+      !isPlaceholder(configService.identityApiKey) &&
+      !isPlaceholder(configService.identityProjectId)
+  );
+
+const isPlaceholder = (value: string) =>
+  value.trim().toLowerCase().startsWith("your-");
 
 const usernameToEmail = (value: string) => {
   const v = String(value || "").trim();
@@ -18,6 +37,58 @@ const usernameToEmail = (value: string) => {
   // Identity Platform email/password auth needs an email.
   // We support "username" by mapping deterministically to a synthetic email.
   return `${v}@ponti.local`;
+};
+
+const encodeBase64Url = (value: unknown) =>
+  Buffer.from(JSON.stringify(value)).toString("base64url");
+
+const createUnsignedJwt = (payload: LocalTokenPayload) =>
+  `${encodeBase64Url({ alg: "none", typ: "JWT" })}.${encodeBase64Url(payload)}.`;
+
+const decodeUnsignedJwtPayload = (token: string): LocalTokenPayload | null => {
+  const [, payload] = String(token || "").split(".");
+  if (!payload) return null;
+
+  try {
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  } catch {
+    return null;
+  }
+};
+
+const createLocalTokenPair = (email: string) => {
+  const now = Math.floor(Date.now() / 1000);
+  const username = email.split("@")[0] || "local-dev-user";
+  const numericUserId = Number(configService.localDevUserId) || 1;
+  const basePayload = {
+    sub: `local:${email}`,
+    email,
+    Username: username,
+    ID: numericUserId,
+    Rol: 1,
+    iat: now,
+  };
+
+  return {
+    access_token: createUnsignedJwt({
+      ...basePayload,
+      exp: now + 60 * 60,
+      token_use: "access",
+    }),
+    refresh_token: createUnsignedJwt({
+      ...basePayload,
+      exp: now + 30 * 24 * 60 * 60,
+      token_use: "refresh",
+    }),
+  };
+};
+
+const respondWithLocalSession = (res: Response, email: string) => {
+  res.status(200).json({
+    success: true,
+    message: "Operación exitosa",
+    data: createLocalTokenPair(email),
+  });
 };
 
 router.post("/login", async (req: Request, res: Response) => {
@@ -30,6 +101,23 @@ router.post("/login", async (req: Request, res: Response) => {
         message: "Credenciales inválidas",
         error: { status: 400, details: "email y password son requeridos" },
       });
+      return;
+    }
+
+    if (configService.localDevAuth) {
+      if (
+        configService.localDevPassword &&
+        password !== configService.localDevPassword
+      ) {
+        res.status(401).json({
+          success: false,
+          message: "Error de autenticación",
+          error: { status: 401, details: "Credenciales locales inválidas" },
+        });
+        return;
+      }
+
+      respondWithLocalSession(res, email);
       return;
     }
 
@@ -89,6 +177,28 @@ router.post("/logout", async (req: Request, res: Response) => {
 });
 
 router.get("/access-token", async (req: Request, res: Response) => {
+  if (configService.localDevAuth) {
+    const authHeader = req.headers.authorization;
+    const refreshToken = authHeader?.split(" ")[1];
+    const payload = decodeUnsignedJwtPayload(refreshToken || "");
+
+    if (
+      !payload ||
+      payload.token_use !== "refresh" ||
+      payload.exp * 1000 <= Date.now()
+    ) {
+      res.status(401).json({
+        success: false,
+        message: "No autorizado",
+        error: { status: 401, details: "refresh token inválido" },
+      });
+      return;
+    }
+
+    respondWithLocalSession(res, payload.email);
+    return;
+  }
+
   if (!identityConfigured()) {
     res.status(503).json({
       success: false,
@@ -148,6 +258,32 @@ router.get("/access-token", async (req: Request, res: Response) => {
 });
 
 router.get("/session", async (req: Request, res: Response) => {
+  if (configService.localDevAuth) {
+    const authHeader = req.headers.authorization;
+    const idToken = authHeader?.split(" ")[1];
+    const payload = decodeUnsignedJwtPayload(idToken || "");
+
+    if (
+      !payload ||
+      payload.token_use !== "access" ||
+      payload.exp * 1000 <= Date.now()
+    ) {
+      res.status(401).json({
+        success: false,
+        message: "Sesión inválida",
+        error: { status: 401, details: "Token inválido o expirado" },
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Operación exitosa",
+      data: { users: [payload] },
+    });
+    return;
+  }
+
   if (!identityConfigured()) {
     res.status(503).json({
       success: false,

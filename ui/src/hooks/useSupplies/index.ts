@@ -2,7 +2,12 @@ import React, { useState } from "react";
 
 import useSupplyReducer from "./suppliesReducer";
 import * as actions from "./actions";
-import { SupplyCreatePayload, Supply, SupplyResponse } from "./types";
+import {
+  SupplyCreatePayload,
+  Supply,
+  SupplyResponse,
+  SuppliesMode,
+} from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
@@ -19,11 +24,11 @@ const useSupplies = () => {
   const [resultUpdate, setResultUpdate] = useState<string | null>(null);
 
   const getSupplies = React.useCallback(
-    async (projectId: number) => {
+    async (projectId: number, mode: SuppliesMode = "all") => {
       setProcessing(true);
       try {
         const response = await apiClient.get<SuccessResponse<SupplyResponse>>(
-          `/supplies/${projectId}`
+          `/supplies?project_id=${projectId}&mode=${mode}`
         );
 
         if (response.success) {
@@ -33,9 +38,17 @@ const useSupplies = () => {
           });
           return;
         }
-        setError("Ocurrio un error en la busqueda de lotes");
+
+        setError("Ocurrio un error en la busqueda de insumos");
       } catch (err) {
-        setError(extractErrorMessage(err, "Error en el servicio, inténtalo más tarde."));
+        if (extractErrorStatus(err) === 409) {
+          setError("Ya existe un insumo con el mismo nombre.");
+          return;
+        }
+
+        setError(
+          extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.")
+        );
       } finally {
         setProcessing(false);
       }
@@ -73,7 +86,12 @@ const useSupplies = () => {
           return;
         }
 
-        setError(extractErrorMessage(error, "Error desconocido en la creación de los insumos."));
+        setError(
+          extractErrorMessage(
+            error,
+            "Error desconocido en la creación de los insumos."
+          )
+        );
       } finally {
         setProcessing(false);
       }
@@ -91,7 +109,9 @@ const useSupplies = () => {
       });
 
       try {
-        const response = await apiClient.delete<SupplyMutationResponse>(`/supplies/${id}`);
+        const response = await apiClient.delete<SupplyMutationResponse>(
+          `/supplies/${id}`
+        );
 
         if (response.success) {
           dispatch({
@@ -107,10 +127,16 @@ const useSupplies = () => {
           return "conflict";
         }
 
-        setError(extractErrorMessage(error, "Error desconocido en la eliminación del insumo."));
+        setError(
+          extractErrorMessage(
+            error,
+            "Error desconocido en la eliminación del insumo."
+          )
+        );
       } finally {
         setProcessing(false);
       }
+
       return "error";
     },
     [dispatch]
@@ -126,7 +152,10 @@ const useSupplies = () => {
       });
 
       try {
-        const response = await apiClient.put<SupplyMutationResponse>(`/supplies/${id}/archive`, {});
+        const response = await apiClient.put<SupplyMutationResponse>(
+          `/supplies/${id}/archive`,
+          {}
+        );
 
         if (response.success) {
           dispatch({
@@ -138,57 +167,116 @@ const useSupplies = () => {
 
         setError("Ocurrio un error en el archivado del insumo");
       } catch (error) {
-        setError(extractErrorMessage(error, "Error desconocido en el archivado del insumo."));
+        setError(
+          extractErrorMessage(
+            error,
+            "Error desconocido en el archivado del insumo."
+          )
+        );
       } finally {
         setProcessing(false);
       }
+
       return false;
     },
     [dispatch]
   );
 
-  const getWorkOrdersCount = React.useCallback(async (supplyId: number): Promise<number> => {
-    try {
-      const response = await apiClient.get<SupplyWorkOrdersCountResponse>(
-        `/supplies/workorders-count/${supplyId}`
-      );
-      if (response.success) {
-        return response.data?.count ?? 0;
+  const getWorkOrdersCount = React.useCallback(
+    async (supplyId: number): Promise<number> => {
+      try {
+        const response = await apiClient.get<SupplyWorkOrdersCountResponse>(
+          `/supplies/workorders-count/${supplyId}`
+        );
+        if (response.success) {
+          return response.data?.count ?? 0;
+        }
+        return 0;
+      } catch {
+        return 0;
       }
-      return 0;
-    } catch {
-      return 0;
-    }
-  }, []);
+    },
+    []
+  );
 
-  const updateSupply = React.useCallback(async (projectId: number, supply: Supply) => {
-    setProcessing(true);
-    setErrorUpdate(null);
-    setResultUpdate(null);
+  const updateSupply = React.useCallback(
+    async (projectId: number, supply: Supply) => {
+      setProcessing(true);
+      setErrorUpdate(null);
+      setResultUpdate(null);
 
-    try {
-      const response = await apiClient.put<SupplyMutationResponse>(
-        `/supplies/projects/${projectId}/${supply.id}`,
-        supply
-      );
+      try {
+        const response = await apiClient.put<SupplyMutationResponse>(
+          `/supplies/projects/${projectId}/${supply.id}`,
+          supply
+        );
 
-      if (response.success) {
-        setResultUpdate("Se editado el insumo con éxito!");
-        return;
+        if (response.success) {
+          setResultUpdate("Se editado el insumo con éxito!");
+          return;
+        }
+
+        setErrorUpdate("Ocurrio un error en la edicion del insumo");
+      } catch (error) {
+        if (extractErrorStatus(error) === 404) {
+          setErrorUpdate("El insumo no existe.");
+          return;
+        }
+
+        setErrorUpdate(
+          extractErrorMessage(error, "Error desconocido en la edicion del insumo.")
+        );
+      } finally {
+        setProcessing(false);
       }
+    },
+    []
+  );
 
-      setErrorUpdate("Ocurrio un error en la edicion del insumo");
-    } catch (error) {
-      if (extractErrorStatus(error) === 404) {
-        setErrorUpdate("El insumo no existe.");
-        return;
+  const completePendingSupply = React.useCallback(
+    async (projectId: number, supply: Supply) => {
+      setProcessing(true);
+      setErrorUpdate(null);
+      setResultUpdate(null);
+
+      try {
+        const response = await apiClient.put<SupplyMutationResponse>(
+          `/supplies/pending/${supply.id}/complete`,
+          {
+            project_id: projectId,
+            name: supply.name,
+            price: supply.price,
+            unit_id: supply.unit_id,
+            category_id: supply.category_id,
+            type_id: supply.type_id,
+            is_partial_price: Boolean(supply.is_partial_price),
+          }
+        );
+
+        if (response.success) {
+          setResultUpdate("Se completó el insumo pendiente con éxito!");
+          return;
+        }
+
+        setErrorUpdate("Ocurrio un error al completar el insumo pendiente");
+      } catch (error) {
+        if (extractErrorStatus(error) === 404) {
+          setErrorUpdate("El insumo pendiente no existe.");
+          return;
+        }
+
+        setErrorUpdate(
+          extractErrorMessage(
+            error,
+            "Error desconocido al completar el insumo pendiente."
+          )
+        );
+      } finally {
+        setProcessing(false);
       }
-
-      setErrorUpdate(extractErrorMessage(error, "Error desconocido en la edicion del insumo."));
-    } finally {
-      setProcessing(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   return {
     supplies,
@@ -197,6 +285,7 @@ const useSupplies = () => {
     updateSupply,
     deleteSupply,
     archiveSupply,
+    completePendingSupply,
     getWorkOrdersCount,
     processing,
     error,

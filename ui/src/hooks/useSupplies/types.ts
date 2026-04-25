@@ -37,3 +37,5 @@ export type Supply = {
 export type SupplyResponse = {
   data: Supply[];
 };
+
+export type SuppliesMode = "all" | "pending";

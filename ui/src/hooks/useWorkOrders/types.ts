@@ -8,6 +8,8 @@ export interface OrderInputDetail {
   total: number;
 }
 
+export type WorkOrderStatus = "draft" | "published";
+
 export interface OrdersData {
   id: number;
   number: string;
@@ -24,11 +26,24 @@ export interface OrdersData {
   supply_name: string;
   consumption: string;
   category_name: string;
-  dose: number;
-  cost_per_ha: number;
-  unit_price: number;
-  total_cost: number;
+  dose: number | string;
+  cost_per_ha: number | string;
+  unit_price: number | string;
+  total_cost: number | string;
+  is_digital: boolean;
+  status: WorkOrderStatus;
 }
+
+export interface InvestorSplit {
+  investor_id: number;
+  percentage: number;
+}
+
+export type WorkorderItem = {
+  supply_id: number;
+  total_used: number | string;
+  final_dose: number | string;
+};
 
 export interface WorkorderData {
   id: number;
@@ -42,16 +57,14 @@ export interface WorkorderData {
   observations: string;
   date: string;
   investor_id: number;
-  investor_splits?: { investor_id: number; percentage: number }[];
-  effective_area: number;
+  investor_splits?: InvestorSplit[];
+  effective_area: number | string;
   items: WorkorderItem[];
+  is_digital?: boolean;
+  status?: WorkOrderStatus;
+  published_work_order_id?: number | null;
+  review_notes?: string;
 }
-
-export type WorkorderItem = {
-  supply_id: number;
-  total_used: number;
-  final_dose: number;
-};
 
 export type Workorder = {
   number: string;
@@ -64,9 +77,13 @@ export type Workorder = {
   observations: string;
   date: string;
   investor_id: number;
-  investor_splits?: { investor_id: number; percentage: number }[];
+  investor_splits?: InvestorSplit[];
   effective_area: number;
-  items: WorkorderItem[];
+  items: {
+    supply_id: number;
+    total_used: number;
+    final_dose: number;
+  }[];
 };
 
 export type Metrics = {

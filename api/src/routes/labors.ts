@@ -20,6 +20,11 @@ router.post("/invoice", async (req: Request, res: Response) => {
       return;
     }
 
+        if (!req.body.investor_id || req.body.investor_id === 0) {
+      res.status(400).json({ message: "El id del inversor es obligatorio" });
+      return;
+    }
+
     if (!req.body.invoice_number || req.body.invoice_number === 0) {
       res
         .status(400)
@@ -60,8 +65,8 @@ router.post("/invoice", async (req: Request, res: Response) => {
       status: req.body.invoice_status,
     };
 
-    const { data: invoice } = await apiClient.post<any>(
-      `/invoices/${req.body.workorder_id}`,
+        const { data: invoice } = await apiClient.post<any>(
+      `/invoices/${req.body.workorder_id}?investor_id=${req.body.investor_id}`,
       requestData,
       headers,
     );
@@ -102,6 +107,11 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
       return;
     }
 
+        if (!req.body.investor_id || req.body.investor_id === 0) {
+      res.status(400).json({ message: "El id del inversor es obligatorio" });
+      return;
+    }
+
     if (!req.body.invoice_number || req.body.invoice_number === 0) {
       res
         .status(400)
@@ -142,8 +152,8 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
       status: req.body.invoice_status,
     };
 
-    await apiClient.put<any>(
-      `/invoices/${req.body.workorder_id}`,
+        await apiClient.put<any>(
+      `/invoices/${req.body.workorder_id}?investor_id=${req.body.investor_id}`,
       requestData,
       headers,
     );

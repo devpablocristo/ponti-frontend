@@ -25,6 +25,7 @@ import reports from "./reports";
 import dataIntegrity from "./data-integrity";
 import ai from "./ai";
 import admin from "./admin";
+import insights from "./insights";
 
 const router: Router = Router();
 export const cache = new NodeCache({ stdTTL: CACHE_TTL_DEFAULT, checkperiod: CACHE_TTL_DEFAULT });
@@ -72,6 +73,7 @@ router.use("/reports", reports);
 router.use("/data-integrity", dataIntegrity);
 router.use("/ai", ai);
 router.use("/admin", admin);
+router.use("/insights", insights);
 
 router.use("/form-options", options);
 

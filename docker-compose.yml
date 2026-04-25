@@ -1,4 +1,16 @@
 services:
+  ponti-frontend-volumes:
+    image: node:20.19.0
+    user: "0:0"
+    command: sh -c "mkdir -p /ui-node-modules /bff-node-modules /yarn-cache && chown -R ${UID:-1000}:${GID:-1000} /ui-node-modules /bff-node-modules /yarn-cache"
+    volumes:
+      - ui_node_modules:/ui-node-modules
+      - bff_node_modules:/bff-node-modules
+      - yarn_cache:/yarn-cache
+    networks:
+      - fe-network
+    restart: "no"
+
   ponti-ui:
     image: node:20.19.0
     user: "${UID:-1000}:${GID:-1000}"
@@ -16,13 +28,17 @@ services:
       - BFF_URL=http://ponti-bff:3000
       - YARN_CACHE_FOLDER=/yarn-cache
     depends_on:
-      - ponti-bff
+      ponti-frontend-volumes:
+        condition: service_completed_successfully
+      ponti-bff:
+        condition: service_started
     networks:
       - fe-network
     restart: unless-stopped
 
   ponti-bff:
     image: node:20.19.0
+    user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app
     command: sh -c "if [ ! -f node_modules/.yarn-integrity ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev"
     ports:
@@ -35,6 +51,8 @@ services:
       - ./api/.env
     environment:
       - NODE_ENV=development
+      # Detalle seguro en JSON de errores BFF (p. ej. /ai/chat/stream); no usar en prod expuesto.
+      - BFF_VERBOSE_ERRORS=true
       - YARN_CACHE_FOLDER=/yarn-cache
       # El backend (Go) corre en el host. Desde contenedor, usar host.docker.internal.
       # Si tu backend está en otro host/puerto, ajustarlo acá o en ./api/.env.
@@ -43,6 +61,9 @@ services:
       # - ENABLE_MOCKS=1
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      ponti-frontend-volumes:
+        condition: service_completed_successfully
     networks:
       - fe-network
     restart: unless-stopped

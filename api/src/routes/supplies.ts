@@ -21,7 +21,10 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedSupplies = cache.get(`supplies:${projectId}`);
+    const mode = req.query.mode === "pending" ? "pending" : "all";
+    const cacheKey = `supplies:${projectId}:mode:${mode}`;
+
+    const cachedSupplies = cache.get(cacheKey);
     if (cachedSupplies) {
       res.status(200).json(cachedSupplies);
       return;
@@ -39,7 +42,9 @@ router.get("", async (req: Request, res: Response) => {
       project_id: String(projectId),
       page: String(page),
       per_page: String(perPage),
+      mode,
     });
+
     const { data: backendResp } = await apiClient.get<any>(
       `/supplies?${params.toString()}`,
       headers
@@ -68,9 +73,7 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    if (items.length > 0) {
-      setImmediate(() => cache.set(`supplies:${projectId}`, data));
-    }
+    setImmediate(() => cache.set(cacheKey, data));
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -88,6 +91,7 @@ router.get("", async (req: Request, res: Response) => {
     });
   }
 });
+
 
 router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
   try {
@@ -135,6 +139,56 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
     };
 
     res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.put("/pending/:id/complete", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": String(userId),
+    };
+
+    const requestData = {
+      project_id: Number(req.body.project_id),
+      name: req.body.name,
+      price: req.body.price,
+      unit_id: Number(req.body.unit_id),
+      category_id: Number(req.body.category_id),
+      type_id: Number(req.body.type_id),
+      is_partial_price: parsePartialPriceFlag(req.body.is_partial_price),
+    };
+
+    await apiClient.put<any>(
+      `/supplies/pending/${req.params.id}/complete`,
+      requestData,
+      headers
+    );
+
+    setImmediate(() => cache.flushAll());
+
+    res.status(200).json({
+      success: true,
+      message: "Insumo pendiente completado exitosamente",
+    });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
     if ("error" in err) {
