@@ -46,6 +46,15 @@ jobs:
       BACKEND_SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_BACKEND_PROD }}
 
     steps:
+      - name: Validate staging SHA input
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          if [[ ! "$STAGING_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "ERROR: staging_sha debe ser un SHA completo de 40 caracteres hexadecimales."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -104,7 +113,8 @@ jobs:
           docker tag "$SRC_IMAGE" "$dst_prod"
           docker push "$dst_sha"
           docker push "$dst_prod"
-          echo "IMAGE=$dst_prod" >> "$GITHUB_ENV"
+          echo "IMAGE=$dst_sha" >> "$GITHUB_ENV"
+          echo "IMAGE_ALIAS=$dst_prod" >> "$GITHUB_ENV"
 
       - name: Build frontend
         run: |
@@ -148,7 +158,7 @@ jobs:
           service_json="$(gcloud run services describe "${SERVICE_NAME_PROD}" \
             --project="${GCP_PROJECT_ID_PROD}" \
             --region="${{ env.REGION }}" \
-            --format='json(spec.template.spec.containers[0].env)')"
+            --format='json')"
           deployed_base_manager_api="$(SERVICE_JSON="$service_json" python3 - <<'PY'
           import json, os
           data = json.loads(os.environ["SERVICE_JSON"])
