@@ -91,15 +91,25 @@ const useStock = () => {
   );
 
   const updateStock = React.useCallback(
-    async (projectId: number, id: number, realStock: number) => {
+    async (
+      projectId: number,
+      id: number,
+      realStock: number,
+      updatedAt?: string | null
+    ) => {
       setProcessingStock(true);
       setErrorStock(null);
       setResultStock(null);
 
       try {
+        const payload = {
+          real_stock_units: realStock,
+          ...(updatedAt ? { updated_at: updatedAt } : {}),
+        };
+
         const response = await apiClient.put<StockMutationResponse>(
           `/stock/${projectId}/${id}`,
-          { real_stock_units: realStock }
+          payload
         );
 
         if (response.success) {

@@ -32,4 +32,5 @@ export interface GetStockItems {
   entry_stock: number;
   out_stock: number;
   consumed: number;
+  updated_at?: string | null;
 }

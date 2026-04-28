@@ -196,7 +196,7 @@ router.put("/close/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     const data = {
       success: true,
@@ -235,6 +235,7 @@ router.put("/:id/:idStock", async (req: Request, res: Response) => {
 
     const requestData = {
       real_stock_units: req.body.real_stock_units,
+      ...(req.body.updated_at ? { updated_at: req.body.updated_at } : {}),
     };
 
     await apiClient.put<any>(
@@ -243,7 +244,7 @@ router.put("/:id/:idStock", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     const data = {
       success: true,

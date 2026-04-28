@@ -205,7 +205,7 @@ router.delete(
         success: true,
       };
 
-      setImmediate(() => cache.flushAll());
+      cache.flushAll();
 
       res.status(200).json(data);
     } catch (error: any) {
@@ -255,7 +255,7 @@ router.post("/:project_id", async (req: Request, res: Response) => {
       data: result,
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(201).json(data);
   } catch (error: any) {
@@ -304,7 +304,7 @@ router.post("/:project_id/import", async (req: Request, res: Response) => {
       data: result,
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(201).json(data);
   } catch (error: any) {
@@ -359,7 +359,7 @@ router.put("/:id/project/:project_id", async (req: Request, res: Response) => {
       data: result,
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json(data);
   } catch (error: any) {
