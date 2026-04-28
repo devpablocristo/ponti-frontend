@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
 
 import { DataTable } from "@devpablocristo/modules-ui-data-display";
@@ -29,6 +29,7 @@ const EditableCell = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value ?? "");
+  const savingRef = useRef(false);
   const { updateStock, processingStock, errorStock, resultStock } = useStock();
 
   useEffect(() => {
@@ -36,6 +37,9 @@ const EditableCell = ({
   }, [value, item.id]);
 
   const save = async () => {
+    if (savingRef.current || processingStock) {
+      return;
+    }
     if (editValue === "") {
       return;
     }
@@ -43,7 +47,12 @@ const EditableCell = ({
       alert("Error al guardar");
       return;
     }
-    updateStock(projectId, item.id, Number(editValue));
+    savingRef.current = true;
+    try {
+      await updateStock(projectId, item.id, Number(editValue), item.updated_at);
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   useEffect(() => {
@@ -582,6 +591,8 @@ export function Stock() {
     }
 
     setCurrentPage(1); // 👈 RESET PAGINACIÓN
+    setPeriod("0");
+    setStockPeriods([{ id: 0, name: "Activo" }]);
 
     getStock(projectId, "");
     getPeriods(projectId);
