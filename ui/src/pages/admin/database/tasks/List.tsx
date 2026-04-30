@@ -3,7 +3,11 @@ import * as XLSX from "xlsx";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
+import {
+  DataTable,
+  useClientTableFilters,
+  usePagination,
+} from "@devpablocristo/modules-ui-data-display";
 import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
@@ -22,37 +26,18 @@ import {
   parsePartialPrice,
 } from "./importUtils";
 
-const columns: Column<LaborInfo>[] = [
-  {
-    key: "name",
-    header: "Labor",
-    render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
-  },
-  {
-    key: "category_name",
-    header: "Rubro",
-    render: (value) => String(value ?? ""),
-  },
-  {
-    key: "price",
-    header: "Precio",
-    render: (value, row) => (
-      <div className="flex items-center gap-2">
-        <strong>{String(value ?? "")}</strong>
-        {row.is_partial_price ? (
-          <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
-            Parcial
-          </span>
-        ) : null}
-      </div>
-    ),
-  },
-  {
-    key: "contractor_name",
-    header: "Contratista",
-    render: (value) => String(value ?? ""),
-  },
-];
+function renderPriceCell(value: unknown, row: LaborInfo) {
+  return (
+    <div className="flex items-center gap-2">
+      <strong>{String(value ?? "")}</strong>
+      {row.is_partial_price ? (
+        <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
+          Parcial
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 export default function ListTasks() {
   const {
@@ -77,7 +62,18 @@ export default function ListTasks() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
   const pagination = usePagination({ perPage: 10 });
+  const { buildPagination, clampPageForTotal, resetPage } = pagination;
   const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
+  const {
+    filters: columnsFilters,
+    filteredRows: filteredLabors,
+    getFilterOptionsForColumn,
+    handleFilterChange,
+    resetFilters,
+  } = useClientTableFilters<LaborInfo>({
+    rows: safeLabors,
+    onChange: resetPage,
+  });
   const safeCategories = useMemo(
     () => (Array.isArray(categories) ? categories : []),
     [categories]
@@ -95,6 +91,47 @@ export default function ListTasks() {
       getCategories("type_id=4");
     }
   }, [projectId, getCategories, getLabors]);
+
+  useEffect(() => {
+    resetFilters();
+    resetPage();
+  }, [projectId, resetFilters, resetPage]);
+
+  const columns = useMemo<Column<LaborInfo>[]>(
+    () => [
+      {
+        key: "name",
+        header: "Labor",
+        render: (value) => (
+          <strong className="text-blue-700">{String(value ?? "")}</strong>
+        ),
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("name"),
+      },
+      {
+        key: "category_name",
+        header: "Rubro",
+        render: (value) => String(value ?? ""),
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("category_name"),
+      },
+      {
+        key: "price",
+        header: "Precio",
+        render: (value, row) => renderPriceCell(value, row),
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("price"),
+      },
+      {
+        key: "contractor_name",
+        header: "Contratista",
+        render: (value) => String(value ?? ""),
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn("contractor_name"),
+      },
+    ],
+    [getFilterOptionsForColumn]
+  );
 
   useEffect(() => {
     if (result && projectId) {
@@ -143,7 +180,7 @@ export default function ListTasks() {
 
     setTimeout(() => {
       const totalAfterDelete = safeLabors.length - 1;
-      pagination.clampPageForTotal(totalAfterDelete);
+      clampPageForTotal(totalAfterDelete);
     }, 200);
   };
 
@@ -560,12 +597,15 @@ export default function ListTasks() {
             onPrimaryAction={confirmDelete}
           />
           <DataTable
-            data={safeLabors}
+            data={filteredLabors}
             columns={columns}
+            filters={columnsFilters}
+            onFilterChange={handleFilterChange}
+            enableFilters={true}
             onDelete={(item) => handleDelete(item)}
             onEdit={(item) => handleEdit(item)}
             message="No hay labores cargadas en el proyecto"
-            pagination={pagination.buildPagination(safeLabors.length)}
+            pagination={buildPagination(filteredLabors.length)}
           />
         </div>
       </div>
