@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "api/**"
+      - "ui/**"
+      - "Dockerfile.api"
+      - "scripts/**"
+      - ".github/workflows/deploy-staging.yml"
   workflow_dispatch:
     inputs:
       ref:
@@ -164,7 +170,7 @@ jobs:
 
       - name: Deploy UI to Firebase Hosting (STAGING)
         run: |
-          npx -y firebase-tools deploy \
+          npx -y firebase-tools@15.16.0 deploy \
             --only hosting:frontend \
             --project "${{ vars.GCP_PROJECT_ID_STG }}" \
             --non-interactive

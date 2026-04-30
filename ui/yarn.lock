@@ -255,10 +255,10 @@
   resolved "https://registry.npmjs.org/@devpablocristo/modules-ai-console/-/modules-ai-console-0.1.0.tgz"
   integrity sha512-qzKaTWev8vjKupXfv7KaW33ii5ZbX6vwHwhmYiHUeSdK9SZCLYa3iGHq9lLYsZDpx8f/Ivp9u+X2+2rhvYk2oA==
 
-"@devpablocristo/modules-ui-data-display@^0.3.1":
-  version "0.3.1"
-  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.3.1.tgz#a082c862558364104a75a19c82c3752c2d6647e8"
-  integrity sha512-63rEdXAP1Q7lEvduw/Qk9x2PQK1EEZ44lzsmPY2y9E0HuTnBEmeZ+JlsVhCfiAGFo3WNVIr8aOhZ1Jkhpj4BSg==
+"@devpablocristo/modules-ui-data-display@^0.3.2":
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.3.2.tgz#a633e372e52bdc895aea975218c4e68ff38ab8d0"
+  integrity sha512-U8JCVMPWGE0ec6vYhuZomMFvWNzeYedjJSuGaKhy6lN24fl2jvMLBSrJgcga9O0ob1sINO/DkqfPaJx5evIJaA==
 
 "@devpablocristo/modules-ui-filters@^0.1.0":
   version "0.1.0"
