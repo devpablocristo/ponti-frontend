@@ -8,6 +8,7 @@ on:
       - "api/**"
       - "ui/**"
       - "Dockerfile.api"
+      - "firebase.json"
       - "scripts/**"
       - ".github/workflows/deploy-staging.yml"
   workflow_dispatch:

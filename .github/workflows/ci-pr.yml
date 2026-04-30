@@ -7,6 +7,7 @@ on:
       - "api/**"
       - "ui/**"
       - "Dockerfile.api"
+      - "firebase.json"
       - "scripts/**"
       - ".github/workflows/ci-pr.yml"
   workflow_dispatch:
