@@ -252,6 +252,10 @@ export function WorkOrders() {
       name: params.get("supply_name") || "",
     };
   }, [location.search]);
+  const routeProjectId = useMemo(() => {
+    const value = Number(new URLSearchParams(location.search).get("project_id"));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }, [location.search]);
   const [selectedOrderRow, setSelectedOrderRow] = useState<{
     id: number;
     isDigital: boolean;
@@ -281,10 +285,11 @@ export function WorkOrders() {
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [filterDatasetOrders, setFilterDatasetOrders] = useState<OrdersData[]>([]);
+  const [filterDatasetReady, setFilterDatasetReady] = useState(false);
   const [filterDatasetVersion, setFilterDatasetVersion] = useState(0);
   const globalFilterSourceOrders = useMemo(
-    () => (filterDatasetOrders.length > 0 ? filterDatasetOrders : orders),
-    [filterDatasetOrders, orders]
+    () => (filterDatasetReady ? filterDatasetOrders : []),
+    [filterDatasetOrders, filterDatasetReady]
   );
 
   // Helper: filtra las órdenes según todos los filtros activos
@@ -595,12 +600,8 @@ export function WorkOrders() {
     selectedCampaignId,
     filters,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
-
-  // Filtros globales de workspace y limpiar filtros al cambiar de cliente
-  useEffect(() => {
-    setColumnsFilters({});
-    pagination.resetPage();
-  }, [selectedCustomer]);
+  const effectiveProjectId = projectId ?? selectedProject?.id ?? routeProjectId;
+  const hasWorkOrderScope = Boolean(effectiveProjectId || selectedField);
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -622,8 +623,8 @@ export function WorkOrders() {
       params.customer_id = String(selectedCustomer.id);
     }
 
-    if (projectId) {
-      params.project_id = String(projectId);
+    if (effectiveProjectId) {
+      params.project_id = String(effectiveProjectId);
     }
 
     if (selectedCampaignId) {
@@ -639,7 +640,7 @@ export function WorkOrders() {
     }
 
     return new URLSearchParams(params).toString();
-  }, [projectId, selectedCampaignId, selectedCustomer, selectedField, selectedSupplyFilter.id]);
+  }, [effectiveProjectId, selectedCampaignId, selectedCustomer, selectedField, selectedSupplyFilter.id]);
 
   const workOrdersQuery = useMemo(() => {
     const params = new URLSearchParams(workOrdersBaseQuery);
@@ -857,11 +858,14 @@ export function WorkOrders() {
 
   useEffect(() => {
     setVisibleColumns(latestAllColumnKeysRef.current);
+    setColumnsFilters({});
+    setFilterDatasetOrders([]);
+    setFilterDatasetReady(false);
     pagination.resetPage();
-  }, [projectId, selectedField, selectedCampaignId, selectedCustomer?.id, selectedSupplyFilter.id]);
+  }, [effectiveProjectId, selectedField, selectedCampaignId, selectedCustomer?.id, selectedSupplyFilter.id]);
 
   useEffect(() => {
-    if (!projectId && !selectedField) {
+    if (!hasWorkOrderScope) {
       setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
       return;
     }
@@ -870,31 +874,40 @@ export function WorkOrders() {
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
   }, [
-    projectId,
-    selectedField,
+    hasWorkOrderScope,
     workOrdersQuery,
     getOrders,
     getMetrics,
   ]);
 
   useEffect(() => {
-    if (!projectId && !selectedField) {
+    if (!hasWorkOrderScope) {
       setFilterDatasetOrders([]);
+      setFilterDatasetReady(false);
       return;
     }
 
     let active = true;
+    setFilterDatasetOrders([]);
+    setFilterDatasetReady(false);
 
-    const querySuffix = workOrdersFilterDatasetQuery ? `?${workOrdersFilterDatasetQuery}` : "";
+    if (!workOrdersFilterDatasetQuery) {
+      setErrorMessage("Seleccione un proyecto o un campo para cargar filtros");
+      return;
+    }
+
+    const querySuffix = `?${workOrdersFilterDatasetQuery}`;
 
     apiClient.get<WorkOrdersListResponse>(`/work-orders/filter-rows${querySuffix}`)
       .then((response) => {
         if (!active) return;
         setFilterDatasetOrders(response.data.rows ?? []);
+        setFilterDatasetReady(true);
       })
       .catch((error) => {
         if (!active) return;
         setFilterDatasetOrders([]);
+        setFilterDatasetReady(false);
         setErrorMessage(
           extractErrorMessage(
             error,
@@ -907,8 +920,7 @@ export function WorkOrders() {
       active = false;
     };
   }, [
-    projectId,
-    selectedField,
+    hasWorkOrderScope,
     workOrdersFilterDatasetQuery,
     filterDatasetVersion,
   ]);

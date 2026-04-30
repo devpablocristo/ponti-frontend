@@ -68,7 +68,13 @@ test("ordenes muestra opciones de filtros de todo el proyecto, no solo de la pag
 
   await page.goto("/admin/work-orders?project_id=30");
   await firstPageResponse;
-  await filterDatasetResponse;
+  const response = await filterDatasetResponse;
+  const payload = await response.json();
+  expect(
+    (payload.data.rows as Array<{ project_name: string }>).every((row) =>
+      row.project_name.includes("JUJUY")
+    )
+  ).toBe(true);
 
   await page
     .getByRole("columnheader", { name: /Lote/ })

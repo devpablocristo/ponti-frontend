@@ -2,6 +2,13 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
+import {
+  buildWorkOrderFilterRowsCacheKey,
+  buildWorkOrderScopeParams,
+  hasWorkOrderScope,
+  parseWorkOrderScope,
+} from "../utils/workOrdersRoute";
+import type { WorkOrderQueryScope } from "../utils/workOrdersRoute";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -12,6 +19,71 @@ const getAuthHeaders = (userId: string) => ({
 });
 
 const normalizeDraftId = (id: string | number) => Math.abs(Number(id));
+
+type PageInfo = {
+  per_page: number;
+  page: number;
+  max_page: number;
+  total: number;
+};
+
+type WorkOrderListItem = {
+  id: number;
+  number: string;
+  project_name: string;
+  field_name: string;
+  lot_name: string;
+  date: string;
+  sequence_day?: number;
+  crop_name: string;
+  labor_name: string;
+  labor_category_name: string;
+  type_name: string;
+  contractor: string;
+  surface_ha: string;
+  supply_name: string;
+  consumption: string;
+  category_name: string;
+  dose: string;
+  cost_per_ha: string;
+  unit_price: string;
+  total_cost: string;
+  is_digital: boolean;
+  status: string;
+};
+
+type WorkOrderListResponse = {
+  items: WorkOrderListItem[];
+  page_info: PageInfo;
+};
+
+type WorkOrderFilterRowsResponse = {
+  rows: WorkOrderListItem[];
+};
+
+type WorkOrderListPayload = {
+  success: true;
+  data: {
+    data: WorkOrderListItem[];
+    page_info: PageInfo;
+  };
+};
+
+type WorkOrderFilterRowsPayload = {
+  success: true;
+  data: {
+    rows: WorkOrderListItem[];
+  };
+};
+
+const requireWorkOrderScope = (scope: WorkOrderQueryScope, res: Response) => {
+  if (hasWorkOrderScope(scope)) {
+    return true;
+  }
+
+  res.status(400).json({ message: "Campo o proyecto obligatorio" });
+  return false;
+};
 
 router.post("", async (req: Request, res: Response) => {
   try {
@@ -65,54 +137,21 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const field_id = parseInt(req.query.field_id as string) || 0;
-    const project_id = parseInt(req.query.project_id as string) || 0;
-    const customer_id = parseInt(req.query.customer_id as string) || 0;
-    const campaign_id = parseInt(req.query.campaign_id as string) || 0;
+    const scope = parseWorkOrderScope(req.query);
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 1000;
-    const supply_id = parseInt(req.query.supply_id as string) || 0;
-    const isDigital = req.query.is_digital as string | undefined;
-    const status = req.query.status as string | undefined;
 
-    if (field_id === 0 && project_id === 0) {
-      res.status(400).json({ message: "Campo o proyecto obligatorio" });
+    if (!requireWorkOrderScope(scope, res)) {
       return;
     }
 
-    const params = new URLSearchParams();
+    const params = buildWorkOrderScopeParams(scope);
     params.set("page", String(page));
     params.set("per_page", String(perPage));
 
-    if (field_id !== 0) {
-      params.set("field_id", String(field_id));
-    } else {
-      params.set("project_id", String(project_id));
-    }
-
-    if (typeof isDigital === "string" && isDigital !== "") {
-      params.set("is_digital", isDigital);
-    }
-
-    if (customer_id > 0) {
-      params.set("customer_id", String(customer_id));
-    }
-
-    if (campaign_id > 0) {
-      params.set("campaign_id", String(campaign_id));
-    }
-
-    if (typeof status === "string" && status !== "") {
-      params.set("status", status);
-    }
-
-    if (supply_id > 0) {
-      params.set("supply_id", String(supply_id));
-    }
-
     const query = `?${params.toString()}`;
 
-    const cachedWorkorders = cache.get(`workorders:query:${query}`);
+    const cachedWorkorders = cache.get<WorkOrderListPayload>(`workorders:query:${query}`);
     if (cachedWorkorders) {
       res.status(200).json(cachedWorkorders);
       return;
@@ -120,12 +159,16 @@ router.get("", async (req: Request, res: Response) => {
 
     const headers = getAuthHeaders(userId);
 
-    const { data: workorders } = await apiClient.get<any>(
+    const { data: workorders } = await apiClient.get<WorkOrderListResponse>(
       `/work-orders${query}`,
       headers
     );
 
-    const data = {
+    if (!workorders) {
+      throw new Error("Respuesta vacía del servicio de órdenes");
+    }
+
+    const data: WorkOrderListPayload = {
       success: true,
       data: {
         data: workorders.items,
@@ -147,6 +190,63 @@ router.get("", async (req: Request, res: Response) => {
       success: false,
       message: "Error inesperado",
       error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.get("/filter-rows", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const scope = parseWorkOrderScope(req.query);
+    if (!requireWorkOrderScope(scope, res)) {
+      return;
+    }
+
+    const query = `?${buildWorkOrderScopeParams(scope).toString()}`;
+    const cacheKey = buildWorkOrderFilterRowsCacheKey(query);
+    const cachedRows = cache.get<WorkOrderFilterRowsPayload>(cacheKey);
+    if (cachedRows) {
+      res.status(200).json(cachedRows);
+      return;
+    }
+
+    const headers = getAuthHeaders(userId);
+
+    const { data: filterRows } = await apiClient.get<WorkOrderFilterRowsResponse>(
+      `/work-orders/filter-rows${query}`,
+      headers
+    );
+
+    if (!filterRows) {
+      throw new Error("Respuesta vacía del servicio de filtros de órdenes");
+    }
+
+    const data: WorkOrderFilterRowsPayload = {
+      success: true,
+      data: {
+        rows: filterRows.rows,
+      },
+    };
+
+    setImmediate(() => cache.set(cacheKey, data));
+
+    res.status(200).json(data);
+  } catch (error: unknown) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudieron cargar los filtros de órdenes" },
     });
   }
 });
