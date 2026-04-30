@@ -1,8 +1,11 @@
 import { PageInfo } from "@/api/types";
 
+export type DecimalString = string | null;
+
 export type LotsData = {
   id: number;
   project_id: number;
+  field_id: number;
   project_name: string;
   field_name: string;
   lot_name: string;
@@ -11,33 +14,29 @@ export type LotsData = {
   current_crop: string;
   current_crop_id: number;
   variety: string;
-  hectares: string;
-  sowed_area: string;
+  hectares: DecimalString;
+  sowed_area: DecimalString;
   harvest_date?: string | null;
-  harvested_area: string | null;
+  harvested_area: DecimalString;
   dates: LotDate[];
-  tons: number | null;
-  yield?: number | null;
-  yield_tn_per_ha: number | null;
-  income_net_per_ha: number | null;
-  cost_usd_per_ha: number | null;
-  cost_per_hectare?: number | null;
-  rent_per_ha: number | null;
-  net_income?: number | null;
-  rent?: number | null;
-  total_assets?: number | null;
-  operating_result?: number | null;
-  admin_cost: number | null;
-  active_total_per_ha: number | null;
-  operating_result_per_ha: number | null;
+  tons: DecimalString;
+  yield_tn_per_ha: DecimalString;
+  income_net_per_ha: DecimalString;
+  cost_usd_per_ha: DecimalString;
+  cost_per_hectare?: DecimalString;
+  rent_per_ha: DecimalString;
+  admin_cost: DecimalString;
+  active_total_per_ha: DecimalString;
+  operating_result_per_ha: DecimalString;
   season: string;
-  updated_at: string;
+  updated_at?: string | null;
 };
 
 export type LotsDataUpdate = {
   id: number;
   field_id?: number;
   project_name?: string;
+  field_name?: string;
   lot_name: string;
   previous_crop_id: number;
   current_crop_id: number;
@@ -45,7 +44,7 @@ export type LotsDataUpdate = {
   sowed_area: string;
   dates?: LotDate[];
   season: string;
-  updated_at: string;
+  updated_at?: string | null;
 };
 
 export type LotDate = {
@@ -65,9 +64,9 @@ export type Crop = {
 };
 
 export type LotKPIs = {
-  seeded_area: number;
-  harvested_area: number;
-  yield_tn_per_ha: number;
-  cost_per_hectare: number;
-  superficie_total: number;
+  seeded_area: string;
+  harvested_area: string;
+  yield_tn_per_ha: string;
+  cost_per_hectare: string;
+  superficie_total: string;
 };

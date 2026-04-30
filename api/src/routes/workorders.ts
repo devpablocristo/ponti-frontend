@@ -71,6 +71,7 @@ router.get("", async (req: Request, res: Response) => {
     const campaign_id = parseInt(req.query.campaign_id as string) || 0;
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 1000;
+    const supply_id = parseInt(req.query.supply_id as string) || 0;
     const isDigital = req.query.is_digital as string | undefined;
     const status = req.query.status as string | undefined;
 
@@ -103,6 +104,10 @@ router.get("", async (req: Request, res: Response) => {
 
     if (typeof status === "string" && status !== "") {
       params.set("status", status);
+    }
+
+    if (supply_id > 0) {
+      params.set("supply_id", String(supply_id));
     }
 
     const query = `?${params.toString()}`;
@@ -160,6 +165,7 @@ router.get("/metrics", async (req: Request, res: Response) => {
     const project_id = parseInt(req.query.project_id as string) || 0;
     const customer_id = parseInt(req.query.customer_id as string) || 0;
     const campaign_id = parseInt(req.query.campaign_id as string) || 0;
+    const supply_id = parseInt(req.query.supply_id as string) || 0;
 
     if (field_id === 0 && project_id === 0) {
       res.status(400).json({ message: "Campo o proyecto obligatorio" });
@@ -179,6 +185,10 @@ router.get("/metrics", async (req: Request, res: Response) => {
 
     if (campaign_id > 0) {
       params.set("campaign_id", String(campaign_id));
+    }
+
+    if (supply_id > 0) {
+      params.set("supply_id", String(supply_id));
     }
 
     const query = params.size > 0 ? `?${params.toString()}` : "";
