@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
 import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
@@ -76,8 +76,7 @@ export default function ListTasks() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const pagination = usePagination({ perPage: 10 });
   const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
   const safeCategories = useMemo(
     () => (Array.isArray(categories) ? categories : []),
@@ -144,13 +143,7 @@ export default function ListTasks() {
 
     setTimeout(() => {
       const totalAfterDelete = safeLabors.length - 1;
-      const lastPage = Math.max(
-        1,
-        Math.ceil(totalAfterDelete / itemsPerPage)
-      );
-      if (currentPage > lastPage) {
-        setCurrentPage(lastPage);
-      }
+      pagination.clampPageForTotal(totalAfterDelete);
     }, 200);
   };
 
@@ -338,11 +331,6 @@ export default function ListTasks() {
       setErrorMessage("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
     }
   };
-
-  const paginatedLabors = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return safeLabors.slice(startIndex, startIndex + itemsPerPage);
-  }, [safeLabors, currentPage, itemsPerPage]);
 
   return (
     <div className="w-full mx-auto">
@@ -572,17 +560,12 @@ export default function ListTasks() {
             onPrimaryAction={confirmDelete}
           />
           <DataTable
-            data={paginatedLabors}
+            data={safeLabors}
             columns={columns}
             onDelete={(item) => handleDelete(item)}
             onEdit={(item) => handleEdit(item)}
             message="No hay labores cargadas en el proyecto"
-            pagination={{
-              page: currentPage,
-              perPage: itemsPerPage,
-              total: safeLabors.length,
-              onPageChange: (newPage: number) => setCurrentPage(newPage),
-            }}
+            pagination={pagination.buildPagination(safeLabors.length)}
           />
         </div>
       </div>

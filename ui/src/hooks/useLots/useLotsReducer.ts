@@ -18,11 +18,11 @@ interface LotsState {
 const initialState: LotsState = {
   lots: [],
   kpis: {
-    seeded_area: 0,
-    harvested_area: 0,
-    yield_tn_per_ha: 0,
-    cost_per_hectare: 0,
-    superficie_total: 0,
+    seeded_area: "0",
+    harvested_area: "0",
+    yield_tn_per_ha: "0",
+    cost_per_hectare: "0",
+    superficie_total: "0",
   },
   pageInfo: null,
   crops: [],

@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { LoaderCircle } from "lucide-react";
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -57,7 +57,7 @@ export function Products() {
   } = useSupplyMovements();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const pagination = usePagination({ perPage: 10 });
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [editingMovement, setEditingMovement] = useState<SupplyMovement | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -67,7 +67,6 @@ export function Products() {
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
-  const itemsPerPage = 10;
 
   const isInternalMovementEditionBlocked = (entryType?: string) => {
     const normalized = String(entryType ?? "")
@@ -372,13 +371,9 @@ export function Products() {
     setDrawerOpen(true);
   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
   const handleProductCreated = () => {
     if (!projectId) return;
-    setCurrentPage(1);
+    pagination.resetPage();
     getSupplyMovements(projectId);
   };
 
@@ -386,7 +381,7 @@ export function Products() {
     if (!projectId) return;
     setSuccessMessage(message);
     setActionErrorMessage(null);
-    setCurrentPage(1);
+    pagination.resetPage();
     getSupplyMovements(projectId);
     setPendingImportFile(null);
     setImportDrawerOpen(false);
@@ -498,7 +493,7 @@ export function Products() {
 
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
-    setCurrentPage(1);
+    pagination.resetPage();
   };
 
 
@@ -610,12 +605,7 @@ export function Products() {
           onEdit={(item) => handleEdit(item)}
           onDelete={(item) => handleDelete(item)}
           message="No hay movimientos disponibles"
-          pagination={{
-            page: currentPage,
-            perPage: itemsPerPage,
-            total: filteredMovements.length,
-            onPageChange: handlePageChange,
-          }}
+          pagination={pagination.buildPagination(filteredMovements.length)}
         />
       </div>
     </div>

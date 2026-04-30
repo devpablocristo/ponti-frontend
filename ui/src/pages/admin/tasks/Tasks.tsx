@@ -4,7 +4,7 @@ import * as XLSX from "xlsx";
 
 import useLabors from "../../../hooks/useLabors";
 import useCategories from "../../../hooks/useCategories";
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
 import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -262,7 +262,7 @@ export function Tasks() {
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
 
-  const [currentPage, setCurrentPage] = useState(1);
+  const pagination = usePagination({ perPage: 10 });
   const [taskFilters, setTaskFilters] = useState<Record<string, unknown>>({});
   const [invoice, setInvoice] = useState<InvoiceData>({
     workorder_id: 0,
@@ -275,8 +275,7 @@ export function Tasks() {
   });
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [resultInvoiceMessage, setResultInvoiceMessage] = useState<string | null>(null);
-  const itemsPerPage = 10;
-  const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
+    const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
 
   const { filters, projectId, selectedField } = useWorkspaceFilters([
@@ -627,7 +626,7 @@ export function Tasks() {
 
     const query = buildFieldQuery();
     setVisibleColumns(latestAllColumnKeysRef.current);
-    setCurrentPage(1);
+    pagination.resetPage();
     getLaborGroups(projectId, query);
     getMetrics(projectId, query);
     getCategories("");
@@ -692,10 +691,6 @@ export function Tasks() {
   useEffect(() => {
     setColumnsToShow(allColumns.filter((col) => visibleColumns.includes(col.key)));
   }, [visibleColumns, allColumns]);
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
 
   const isValidDate = (dateString: string) => {
     if (!dateString) return false;
@@ -846,7 +841,7 @@ export function Tasks() {
   // Handler para resetear página al aplicar filtros
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setTaskFilters(filters);
-    setCurrentPage(1);
+    pagination.resetPage();
   };
 
   return (
@@ -973,12 +968,7 @@ export function Tasks() {
           }
           pagination={
             pageInfo
-              ? {
-                page: currentPage,
-                perPage: itemsPerPage,
-                total: filteredTasks.length,
-                onPageChange: handlePageChange,
-              }
+              ? pagination.buildPagination(filteredTasks.length)
               : undefined
           }
         />

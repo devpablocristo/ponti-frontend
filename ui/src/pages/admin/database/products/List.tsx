@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
-import DataTable from "../../../../components/Table/DataTable";
+import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
 import { Supply, SuppliesMode } from "../../../../hooks/useSupplies/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
@@ -47,13 +47,12 @@ export default function ListItems() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const pagination = usePagination({ perPage: 10 });
   const [suppliesMode, setSuppliesMode] = useState<SuppliesMode>("all");
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const lastHandledResultRef = useRef<string>("");
   const lastHandledResultUpdateRef = useRef<string>("");
   const closeModalOnNextUpdateRef = useRef(false);
-  const itemsPerPage = 10;
 
   const { filters, projectId } = useWorkspaceFilters([
     "customer",
@@ -228,7 +227,7 @@ export default function ListItems() {
     }
 
     setColumnsFilters(nextFilters);
-    setCurrentPage(1);
+    pagination.resetPage();
   };
 
   const handleDelete = async (supplyItem: Supply) => {
@@ -247,13 +246,7 @@ export default function ListItems() {
 
     setTimeout(() => {
       const totalAfterDelete = supplies.length - 1;
-      const lastPage = Math.max(
-        1,
-        Math.ceil(totalAfterDelete / itemsPerPage)
-      );
-      if (currentPage > lastPage) {
-        setCurrentPage(lastPage);
-      }
+      pagination.clampPageForTotal(totalAfterDelete);
     }, 200);
   };
 
@@ -558,7 +551,7 @@ export default function ListItems() {
               size="sm"
               onClick={() => {
                 setSuppliesMode("all");
-                setCurrentPage(1);
+                pagination.resetPage();
               }}
             >
               Activos
@@ -568,7 +561,7 @@ export default function ListItems() {
               size="sm"
               onClick={() => {
                 setSuppliesMode("pending");
-                setCurrentPage(1);
+                pagination.resetPage();
               }}
             >
               Pendientes
@@ -584,12 +577,7 @@ export default function ListItems() {
             onDelete={(item) => handleDelete(item)}
             onEdit={(item) => handleEdit(item)}
             message="No hay insumos cargados en el proyecto"
-            pagination={{
-              page: currentPage,
-              perPage: itemsPerPage,
-              total: filteredSupplies.length,
-              onPageChange: (newPage: number) => setCurrentPage(newPage),
-            }}
+            pagination={pagination.buildPagination(filteredSupplies.length)}
           />
         </div>
       </div>

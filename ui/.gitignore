@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 .vite
+playwright-report
+test-results
+.playwright
 .tsbuildinfo/
 *.local
 
