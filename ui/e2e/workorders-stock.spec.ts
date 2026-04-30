@@ -48,3 +48,33 @@ test("ordenes respeta filtro por insumo y conserva paginacion server-side", asyn
   await expect(page.getByText("Cantidad de Órdenes Ingresadas")).toBeVisible();
   await expect(page.getByText(/Mostrar\s*1-10\s*de\s*\d+/)).toBeVisible();
 });
+
+test("ordenes muestra opciones de filtros de todo el proyecto, no solo de la pagina actual", async ({ page }) => {
+  const firstPageResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      response.url().includes("/api/v1/work-orders?") &&
+      response.url().includes("project_id=30") &&
+      response.url().includes("per_page=10") &&
+      response.ok()
+  );
+  const filterDatasetResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      response.url().includes("/api/v1/work-orders/filter-rows?") &&
+      response.url().includes("project_id=30") &&
+      response.ok()
+  );
+
+  await page.goto("/admin/work-orders?project_id=30");
+  await firstPageResponse;
+  await filterDatasetResponse;
+
+  await page
+    .getByRole("columnheader", { name: /Lote/ })
+    .getByRole("button", { name: "Filtrar" })
+    .click();
+  await page.getByPlaceholder("Buscar opción...").fill("LOTE 1");
+
+  await expect(page.getByText("LOTE 1", { exact: true })).toBeVisible();
+});

@@ -51,8 +51,8 @@ export function LotsHeader({
   return (
     <div className="flex items-center justify-between rounded-t-xl border-b border-gray-100 bg-white p-4">
       <div className="text-sm text-gray-900">
-        Campos: <span className="mr-2 font-semibold">{fieldsAmount}</span>
-        Lotes: <span className="font-semibold">{lotsAmount}</span>
+        <span className="font-semibold">Campos:</span> {fieldsAmount}{" "}
+        <span className="font-semibold">Lotes:</span> {lotsAmount}
       </div>
 
       <div className="inline-flex rounded-md shadow-xs" role="group">
