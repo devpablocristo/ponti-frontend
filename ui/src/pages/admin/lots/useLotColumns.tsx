@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { LotsData } from "../../../hooks/useLots/types";
 import { cropColors } from "../colors";
 import { Column } from "../types";
-import { formatNumberAr } from "../utils";
+import { formatISODate, formatNumberAr } from "../utils";
 import { EditableTonsCell } from "./components/EditableTonsCell";
 
 type UseLotColumnsArgs = {
@@ -23,6 +23,14 @@ const latestDateValue = (
     if (value) return value;
   }
   return "";
+};
+
+const latestHarvestDateValue = (lot: LotsData, value: unknown) => {
+  const latestDate = latestDateValue(lot.dates ?? [], "harvest_date");
+  if (latestDate) return formatISODate(latestDate);
+
+  const fallbackDate = value || lot.harvest_date;
+  return fallbackDate ? formatISODate(String(fallbackDate)) : "";
 };
 
 export function useLotColumns({
@@ -118,7 +126,7 @@ export function useLotColumns({
         filterOptions: getFilterOptionsForColumn("dates"),
         render: (value) =>
           Array.isArray(value) ? (
-            <b>{latestDateValue(value, "sowing_date")}</b>
+            <b>{formatISODate(latestDateValue(value, "sowing_date"))}</b>
           ) : (
             ""
           ),
@@ -154,9 +162,7 @@ export function useLotColumns({
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("harvest_date"),
-        render: (_value, item) => (
-          <b>{latestDateValue(item.dates ?? [], "harvest_date")}</b>
-        ),
+        render: (value, item) => <b>{latestHarvestDateValue(item, value)}</b>,
       },
       {
         key: "tons",

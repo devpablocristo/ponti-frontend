@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
-import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";

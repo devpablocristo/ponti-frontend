@@ -4,7 +4,7 @@ import * as XLSX from "xlsx";
 
 import useLabors from "../../../hooks/useLabors";
 import useCategories from "../../../hooks/useCategories";
-import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
