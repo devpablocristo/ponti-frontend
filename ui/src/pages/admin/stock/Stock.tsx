@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
 
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
+import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -29,6 +30,7 @@ const EditableCell = ({
 }) => {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value ?? "");
+  const savingRef = useRef(false);
   const { updateStock, processingStock, errorStock, resultStock } = useStock();
 
   useEffect(() => {
@@ -36,6 +38,9 @@ const EditableCell = ({
   }, [value, item.id]);
 
   const save = async () => {
+    if (savingRef.current || processingStock) {
+      return;
+    }
     if (editValue === "") {
       return;
     }
@@ -43,7 +48,12 @@ const EditableCell = ({
       alert("Error al guardar");
       return;
     }
-    updateStock(projectId, item.id, Number(editValue));
+    savingRef.current = true;
+    try {
+      await updateStock(projectId, item.id, Number(editValue), item.updated_at);
+    } finally {
+      savingRef.current = false;
+    }
   };
 
   useEffect(() => {
@@ -231,8 +241,8 @@ function ItemsIndicators({
 }
 
 export function Stock() {
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const navigate = useNavigate();
+  const pagination = usePagination({ perPage: 10 });
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -280,9 +290,23 @@ export function Stock() {
 
   const handleStockCreated = () => {
     if (!projectId) return;
-    setCurrentPage(1);
+    pagination.resetPage();
     refreshStock();
   };
+
+  const handleViewConsumingOrders = useCallback(
+    (item: GetStockItems) => {
+      if (!projectId || !item.supply_id) return;
+
+      const params = new URLSearchParams({
+        project_id: String(projectId),
+        supply_id: String(item.supply_id),
+        supply_name: item.supply_name,
+      });
+      navigate(`/admin/work-orders?${params.toString()}`);
+    },
+    [navigate, projectId]
+  );
 
   const filteredStock = useMemo(() => {
     return (Array.isArray(stock) ? stock : []).filter((item) => {
@@ -375,8 +399,15 @@ export function Stock() {
           stock,
           columnsFilters
         ),
-        render: (value) => (
-          <span className="font-semibold text-gray-900">{String(value ?? "")}</span>
+        render: (value, item) => (
+          <button
+            type="button"
+            className="text-left font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+            title="Ver órdenes que consumen este insumo"
+            onClick={() => handleViewConsumingOrders(item)}
+          >
+            {String(value ?? "")}
+          </button>
         ),
       },
       {
@@ -573,7 +604,7 @@ export function Stock() {
         },
       },
     ],
-    [projectId, stock, columnsFilters, refreshStock]
+    [projectId, stock, columnsFilters, refreshStock, handleViewConsumingOrders]
   );
 
   useEffect(() => {
@@ -581,7 +612,9 @@ export function Stock() {
       return;
     }
 
-    setCurrentPage(1); // 👈 RESET PAGINACIÓN
+    pagination.resetPage();
+    setPeriod("0");
+    setStockPeriods([{ id: 0, name: "Activo" }]);
 
     getStock(projectId, "");
     getPeriods(projectId);
@@ -606,7 +639,7 @@ export function Stock() {
   useEffect(() => {
     if (!projectId) return;
 
-    setCurrentPage(1); // 👈 RESET PAGINACIÓN
+    pagination.resetPage();
 
     const periodNumber = Number(period);
     if (periodNumber === 0) {
@@ -637,10 +670,6 @@ export function Stock() {
       setSelectedDate("");
     }
   }, [resultCloseStock, projectId, getStock, getPeriods]);
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
@@ -682,7 +711,7 @@ export function Stock() {
 
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
-    setCurrentPage(1);
+    pagination.resetPage();
   };
 
   return (
@@ -770,12 +799,7 @@ export function Stock() {
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
             enableFilters={true}
-            pagination={{
-              page: currentPage,
-              perPage: itemsPerPage,
-              total: filteredStock.length,
-              onPageChange: handlePageChange,
-            }}
+            pagination={pagination.buildPagination(filteredStock.length)}
           />
         )}
         <BaseModal

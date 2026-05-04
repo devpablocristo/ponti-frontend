@@ -91,4 +91,5 @@ export type Metrics = {
   liters: number;
   kilograms: number;
   direct_cost: number;
+  orders_count: number;
 };

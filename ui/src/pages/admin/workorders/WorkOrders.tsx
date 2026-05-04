@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
-import DataTable from "../../../components/Table/DataTable";
+import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -20,6 +20,13 @@ import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 const FILTER_HIERARCHY: Record<string, string[]> = {
   project_name: ["field_name", "lot_name"],
   field_name: ["lot_name"],
+};
+
+type WorkOrdersListResponse = {
+  success: true;
+  data: {
+    rows?: OrdersData[];
+  };
 };
 
 /** Clasifica la unidad de consumo de una orden (litros, kilos, o null si no se puede determinar). */
@@ -100,16 +107,18 @@ function isDigitalOrder(order: OrdersData) {
   return order.is_digital || isDigitalByNumber(order);
 }
 
+function getOrderBaseNumber(orderNumber: string | number) {
+  return String(orderNumber).trim().split(".")[0];
+}
+
 function OrdersHeader({
   ordersAmount,
-  laborAmount,
   selectedColumns,
   setSelectedColumns,
   setVisibleColumns,
   allColumns,
 }: {
   ordersAmount: number;
-  laborAmount: number;
   selectedColumns: Array<keyof OrdersData>;
   setSelectedColumns: (columns: Array<keyof OrdersData>) => void;
   setVisibleColumns: (columns: Array<keyof OrdersData>) => void;
@@ -120,8 +129,7 @@ function OrdersHeader({
   return (
     <div className="flex justify-between items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
       <div className="text-sm text-gray-900">
-        <span className="font-semibold">Órdenes:</span> {ordersAmount}{" "}
-        <span className="font-semibold ml-4">Labores:</span> {laborAmount}
+        <span className="font-semibold">Cantidad de Órdenes Ingresadas:</span> {formatNumberAr(ordersAmount)}
       </div>
 
       <Button
@@ -235,6 +243,19 @@ function OrdersIndicators({
 export function WorkOrders() {
   const navigate = useNavigate();
   const location = useLocation();
+  const selectedSupplyFilter = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const supplyID = Number(params.get("supply_id"));
+
+    return {
+      id: Number.isFinite(supplyID) && supplyID > 0 ? supplyID : null,
+      name: params.get("supply_name") || "",
+    };
+  }, [location.search]);
+  const routeProjectId = useMemo(() => {
+    const value = Number(new URLSearchParams(location.search).get("project_id"));
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }, [location.search]);
   const [selectedOrderRow, setSelectedOrderRow] = useState<{
     id: number;
     isDigital: boolean;
@@ -255,6 +276,7 @@ export function WorkOrders() {
     processingMetrics,
     errorMetrics,
     orders,
+    pageInfo,
     processing,
     error,
   } = useOrders();
@@ -262,6 +284,13 @@ export function WorkOrders() {
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
+  const [filterDatasetOrders, setFilterDatasetOrders] = useState<OrdersData[]>([]);
+  const [filterDatasetReady, setFilterDatasetReady] = useState(false);
+  const [filterDatasetVersion, setFilterDatasetVersion] = useState(0);
+  const globalFilterSourceOrders = useMemo(
+    () => (filterDatasetReady ? filterDatasetOrders : []),
+    [filterDatasetOrders, filterDatasetReady]
+  );
 
   // Helper: filtra las órdenes según todos los filtros activos
   const filterOrders = useCallback(
@@ -315,7 +344,7 @@ export function WorkOrders() {
     ) => {
       const filtersExceptCurrent = { ...columnsFilters };
       delete filtersExceptCurrent[key];
-      const filtered = filterOrders(orders, filtersExceptCurrent);
+      const filtered = filterOrders(globalFilterSourceOrders, filtersExceptCurrent);
       const options = [...new Set(filtered.map((order) => order[key]))];
       if (customSort) {
         options.sort(customSort);
@@ -324,7 +353,7 @@ export function WorkOrders() {
       }
       return options.map(String);
     },
-    [columnsFilters, filterOrders, orders]
+    [columnsFilters, filterOrders, globalFilterSourceOrders]
   );
 
   const columns: Column<OrdersData>[] = React.useMemo(() => {
@@ -525,48 +554,10 @@ export function WorkOrders() {
           return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
-      {
-        key: "__actions" as keyof OrdersData,
-        header: "Acción",
-        filterable: false,
-        sortable: false,
-        render: (_, data) => {
-          const isDraftDigital = isDigitalOrder(data) && data.status === "draft";
-
-          if (!isDraftDigital) {
-            return <span className="text-slate-400 text-xs">-</span>;
-          }
-
-          return (
-            <div className="flex items-center gap-2 justify-end">
-              <Button
-                variant="primary"
-                size="xs"
-                onClick={() => {
-                  handlePrePublish(data);
-                }}
-              >
-                Publicar
-              </Button>
-              <Button
-                variant="primary"
-                size="xs"
-                onClick={() => {
-                  handlePreDeleteDraft(data);
-                }}
-              >
-                Eliminar
-              </Button>
-            </div>
-          );
-        },
-      },
     ];
   }, [
     getFilterOptionsForColumn,
     handleOpenOrder,
-    handlePrePublish,
-    handlePreDeleteDraft,
   ]);
 
   const allColumns = useMemo(
@@ -599,8 +590,7 @@ export function WorkOrders() {
     [allColumns, visibleColumns]
   );
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const pagination = usePagination({ perPage: 10 });
 
   const {
     projectId,
@@ -610,12 +600,8 @@ export function WorkOrders() {
     selectedCampaignId,
     filters,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
-
-  // Filtros globales de workspace y limpiar filtros al cambiar de cliente
-  useEffect(() => {
-    setColumnsFilters({});
-    setCurrentPage(1);
-  }, [selectedCustomer]);
+  const effectiveProjectId = projectId ?? selectedProject?.id ?? routeProjectId;
+  const hasWorkOrderScope = Boolean(effectiveProjectId || selectedField);
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -630,15 +616,15 @@ export function WorkOrders() {
     setDrawerUpdateOpen(true);
   }
 
-  const workOrdersQuery = useMemo(() => {
+  const workOrdersBaseQuery = useMemo(() => {
     const params: Record<string, string> = {};
 
     if (selectedCustomer && selectedCustomer.id !== 0) {
       params.customer_id = String(selectedCustomer.id);
     }
 
-    if (projectId) {
-      params.project_id = String(projectId);
+    if (effectiveProjectId) {
+      params.project_id = String(effectiveProjectId);
     }
 
     if (selectedCampaignId) {
@@ -649,14 +635,28 @@ export function WorkOrders() {
       params.field_id = String(selectedField.id);
     }
 
+    if (selectedSupplyFilter.id) {
+      params.supply_id = String(selectedSupplyFilter.id);
+    }
+
     return new URLSearchParams(params).toString();
-  }, [projectId, selectedCampaignId, selectedCustomer, selectedField]);
+  }, [effectiveProjectId, selectedCampaignId, selectedCustomer, selectedField, selectedSupplyFilter.id]);
+
+  const workOrdersQuery = useMemo(() => {
+    const params = new URLSearchParams(workOrdersBaseQuery);
+    params.set("page", String(pagination.page));
+    params.set("per_page", String(pagination.perPage));
+    return params.toString();
+  }, [pagination.page, pagination.perPage, workOrdersBaseQuery]);
+
+  const workOrdersFilterDatasetQuery = workOrdersBaseQuery;
 
 
   const handleOrderCreated = useCallback(() => {
-    setCurrentPage(1);
+    pagination.resetPage();
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
+    setFilterDatasetVersion((version) => version + 1);
   }, [getOrders, getMetrics, workOrdersQuery]);
 
 
@@ -807,7 +807,7 @@ export function WorkOrders() {
       if (!columnsFilters[parent]) return;
 
       const parentFilter = columnsFilters[parent];
-      const validData = orders.filter((o) => {
+      const validData = globalFilterSourceOrders.filter((o) => {
         const orderValue = String(o[parent as keyof OrdersData]).toLowerCase();
         if (Array.isArray(parentFilter)) {
           return parentFilter.some(
@@ -852,27 +852,77 @@ export function WorkOrders() {
         }
       });
     });
-  }, [columnsFilters, orders]);
+  }, [columnsFilters, globalFilterSourceOrders]);
 
 
 
   useEffect(() => {
-    if (!projectId && !selectedField) {
+    setVisibleColumns(latestAllColumnKeysRef.current);
+    setColumnsFilters({});
+    setFilterDatasetOrders([]);
+    setFilterDatasetReady(false);
+    pagination.resetPage();
+  }, [effectiveProjectId, selectedField, selectedCampaignId, selectedCustomer?.id, selectedSupplyFilter.id]);
+
+  useEffect(() => {
+    if (!hasWorkOrderScope) {
       setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
       return;
     }
 
     setErrorMessage("");
-    setVisibleColumns(latestAllColumnKeysRef.current);
-    setCurrentPage(1);
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
   }, [
-    projectId,
-    selectedField,
+    hasWorkOrderScope,
     workOrdersQuery,
     getOrders,
     getMetrics,
+  ]);
+
+  useEffect(() => {
+    if (!hasWorkOrderScope) {
+      setFilterDatasetOrders([]);
+      setFilterDatasetReady(false);
+      return;
+    }
+
+    let active = true;
+    setFilterDatasetOrders([]);
+    setFilterDatasetReady(false);
+
+    if (!workOrdersFilterDatasetQuery) {
+      setErrorMessage("Seleccione un proyecto o un campo para cargar filtros");
+      return;
+    }
+
+    const querySuffix = `?${workOrdersFilterDatasetQuery}`;
+
+    apiClient.get<WorkOrdersListResponse>(`/work-orders/filter-rows${querySuffix}`)
+      .then((response) => {
+        if (!active) return;
+        setFilterDatasetOrders(response.data.rows ?? []);
+        setFilterDatasetReady(true);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setFilterDatasetOrders([]);
+        setFilterDatasetReady(false);
+        setErrorMessage(
+          extractErrorMessage(
+            error,
+            "No se pudieron cargar las opciones globales de filtros."
+          )
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    hasWorkOrderScope,
+    workOrdersFilterDatasetQuery,
+    filterDatasetVersion,
   ]);
 
   const handleOrderDuplicated = (order: WorkorderData) => {
@@ -928,12 +978,8 @@ export function WorkOrders() {
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
+    return globalFilterSourceOrders.filter((order) => {
       return Object.entries(columnsFilters).every(([key, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
@@ -963,13 +1009,17 @@ export function WorkOrders() {
         return orderVal === String(value).toLowerCase();
       });
     });
-  }, [orders, columnsFilters]);
+  }, [globalFilterSourceOrders, columnsFilters]);
 
   const derivedMetrics: Metrics = useMemo(() => {
     const toNum = (v: unknown) => Number(v) || 0;
     let surface_ha = 0, liters = 0, kilograms = 0, direct_cost = 0;
+    const orderBaseNumbers = new Set<string>();
 
     filteredOrders.forEach((order) => {
+      const baseNumber = getOrderBaseNumber(order.number);
+      if (baseNumber) orderBaseNumbers.add(baseNumber);
+
       surface_ha += toNum(order.surface_ha);
 
       const consumption = String(order.consumption || "").trim();
@@ -982,8 +1032,15 @@ export function WorkOrders() {
       direct_cost += toNum(order.total_cost);
     });
 
-    return { surface_ha, liters, kilograms, direct_cost };
+    return { surface_ha, liters, kilograms, direct_cost, orders_count: orderBaseNumbers.size };
   }, [filteredOrders]);
+
+  const hasColumnFilters = useMemo(
+    () => Object.values(columnsFilters).some((v) => Array.isArray(v) ? v.length > 0 : !!v),
+    [columnsFilters]
+  );
+
+  const displayedMetrics = hasColumnFilters ? derivedMetrics : metrics;
 
   const handleExport = async () => {
     if (!projectId) return;
@@ -1011,7 +1068,7 @@ export function WorkOrders() {
 
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
-    setCurrentPage(1);
+    pagination.resetPage();
   };
 
   return (
@@ -1051,7 +1108,7 @@ export function WorkOrders() {
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
           <OrdersIndicators
-            metrics={Object.values(columnsFilters).some((v) => Array.isArray(v) ? v.length > 0 : !!v) ? derivedMetrics : metrics}
+            metrics={displayedMetrics}
             processing={processingMetrics}
           />
         </div>
@@ -1082,31 +1139,76 @@ export function WorkOrders() {
             onOrderDuplicated={handleOrderDuplicated}
           />
         )}
+        {selectedSupplyFilter.id && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
+            <span>
+              Filtrando órdenes que consumen: <strong>{selectedSupplyFilter.name || `Insumo ${selectedSupplyFilter.id}`}</strong>
+            </span>
+            <button
+              type="button"
+              className="font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+              onClick={() => navigate("/admin/work-orders")}
+            >
+              Quitar filtro
+            </button>
+          </div>
+        )}
         <DataTable
-          key={`${projectId}-${selectedField?.id || 0}`}
-          data={filteredOrders}
+          key={`${projectId}-${selectedField?.id || 0}-${selectedSupplyFilter.id || 0}`}
+          data={hasColumnFilters ? filteredOrders : orders}
           rowStyle="softZebra"
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           columns={columnsToShow}
-          onDelete={(item) => {
-            if (isDigitalOrder(item) && item.status === "draft") {
-              handlePreDeleteDraft(item);
-              return;
+          actionsHeader="Acciones"
+          renderActions={(item) => {
+            const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
+
+            if (isDigitalOrder(item) && !isDraftDigital) {
+              return null;
             }
 
-            if (isDigitalOrder(item)) {
-              setErrorMessage("No se puede eliminar una orden digital ya cerrada.");
-              return;
+            if (!isDraftDigital) {
+              return (
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => {
+                    handlePreFinish(item.id);
+                  }}
+                >
+                  Eliminar
+                </Button>
+              );
             }
 
-            handlePreFinish(item.id);
+            return (
+              <>
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => {
+                    handlePrePublish(item);
+                  }}
+                >
+                  Publicar
+                </Button>
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => {
+                    handlePreDeleteDraft(item);
+                  }}
+                >
+                  Eliminar
+                </Button>
+              </>
+            );
           }}
           enableFilters={true}
           headerComponent={
             <OrdersHeader
-              ordersAmount={orders.length}
-              laborAmount={orders.length}
+              ordersAmount={Number(displayedMetrics.orders_count) || 0}
               selectedColumns={selectedColumns}
               setSelectedColumns={setSelectedColumns}
               setVisibleColumns={setVisibleColumns}
@@ -1114,12 +1216,10 @@ export function WorkOrders() {
             />
           }
           message="No hay ordenes disponibles"
-          pagination={{
-            page: currentPage,
-            perPage: itemsPerPage,
-            total: filteredOrders.length,
-            onPageChange: handlePageChange,
-          }}
+          pagination={pagination.buildPagination(
+            hasColumnFilters ? filteredOrders.length : pageInfo?.total ?? filteredOrders.length,
+            { serverSide: !hasColumnFilters }
+          )}
         />
         <BaseModal
           isOpen={isModalOpen}

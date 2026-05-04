@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LoaderCircle } from "lucide-react";
 
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ProjectData } from "../../../hooks/useDatabase/projects/types";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -73,40 +73,44 @@ export function Customers() {
     loading, // Contains loading.customers, loading.projects, loading.campaigns
     errors,
   } = useWorkspaceFilters(["customer", "project", "campaign"]);
+  const pagination = usePagination({ perPage: 10 });
+
+  const projectsQuery = useMemo(() => {
+    if (!selectedCustomer) return "";
+
+    const params = new URLSearchParams();
+    params.set("page", String(pagination.page));
+    params.set("per_page", String(pagination.perPage));
+    params.set("customer_id", String(selectedCustomer.id));
+
+    if (selectedProject && selectedProject.id !== 0) {
+      params.set("name", selectedProject.name);
+    }
+
+    if (selectedCampaignId && selectedCampaignId !== 0) {
+      params.set("campaign_id", String(selectedCampaignId));
+    }
+
+    return params.toString();
+  }, [
+    pagination.page,
+    pagination.perPage,
+    selectedCampaignId,
+    selectedCustomer,
+    selectedProject,
+  ]);
 
   useEffect(() => {
-    if (selectedCustomer) {
-      getProjects(
-        `customer_id=${selectedCustomer.id}${
-          selectedProject && selectedProject.id !== 0
-            ? `&name=${selectedProject.name}`
-            : ""
-        }${
-          selectedCampaignId && selectedCampaignId !== 0
-            ? `&campaign_id=${selectedCampaignId}`
-            : ""
-        }`
-      );
-    }
-  }, [selectedCustomer, selectedCampaignId, selectedProject, getProjects]);
+    pagination.resetPage();
+  }, [selectedCampaignId, selectedCustomer?.id, selectedProject?.id, selectedProject?.name]);
+
+  useEffect(() => {
+    if (!projectsQuery) return;
+    getProjects(projectsQuery);
+  }, [projectsQuery, getProjects]);
 
   const renderExpandedRow = (rowData: ProjectData) => {
     return <ExpandedRow projectId={rowData.id} />;
-  };
-
-  const handlePageChange = (newPage: number) => {
-    const queryString = `page=${newPage}&limit=${
-      projectPageInfo?.per_page || 10
-    }&customer_id=${selectedCustomer?.id}${
-      selectedProject && selectedProject.id !== 0
-        ? `&name=${selectedProject.name}`
-        : ""
-    }${
-      selectedCampaignId && selectedCampaignId !== 0
-        ? `&campaign_id=${selectedCampaignId}`
-        : ""
-    }`;
-    getProjects(queryString);
   };
 
   const handlePreFinish = (id: number) => {
@@ -298,12 +302,7 @@ export function Customers() {
           onDelete={(item) => handlePreFinish(item.id)}
           pagination={
             projectPageInfo
-              ? {
-                  page: projectPageInfo.page,
-                  perPage: projectPageInfo.per_page,
-                  total: projectPageInfo.total,
-                  onPageChange: handlePageChange,
-                }
+              ? pagination.buildPagination(projectPageInfo.total, { serverSide: true })
               : undefined
           }
         />

@@ -19,6 +19,7 @@ export interface GetStocksResponse {
 
 export interface GetStockItems {
   id: number;
+  supply_id: number;
   supply_name: string;
   investor_name: string;
   stock_units: number;
@@ -32,4 +33,5 @@ export interface GetStockItems {
   entry_stock: number;
   out_stock: number;
   consumed: number;
+  updated_at?: string | null;
 }

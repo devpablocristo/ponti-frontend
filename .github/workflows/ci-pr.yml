@@ -3,6 +3,12 @@ name: CI PR Frontend
 on:
   pull_request:
     branches: [develop, main]
+    paths:
+      - "api/**"
+      - "ui/**"
+      - "Dockerfile.api"
+      - "scripts/**"
+      - ".github/workflows/ci-pr.yml"
   workflow_dispatch:
 
 concurrency:
@@ -34,6 +40,50 @@ jobs:
 
       - name: Lint UI
         run: yarn --cwd ui lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install UI dependencies
+        run: yarn --cwd ui install --frozen-lockfile
+
+      - name: Typecheck UI
+        run: yarn --cwd ui typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
+
+      - name: Enable corepack
+        run: corepack enable
+
+      - name: Install UI dependencies
+        run: yarn --cwd ui install --frozen-lockfile
+
+      - name: Test UI
+        run: yarn --cwd ui test
 
   build:
     runs-on: ubuntu-latest

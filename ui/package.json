@@ -13,14 +13,17 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,json}\"",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@devpablocristo/core-authn": "^0.3.0",
     "@devpablocristo/core-browser": "^0.4.0",
     "@devpablocristo/core-http": "^0.2.0",
     "@devpablocristo/modules-ai-console": "^0.1.0",
-    "@devpablocristo/modules-ui-data-display": "^0.3.0",
+    "@devpablocristo/modules-ui-data-display": "^0.3.3",
     "@devpablocristo/modules-ui-filters": "^0.1.0",
     "@devpablocristo/modules-ui-forms": "^0.1.0",
     "@heroicons/react": "^2.2.0",
@@ -42,6 +45,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/typography": "^0.5.19",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.7.0",

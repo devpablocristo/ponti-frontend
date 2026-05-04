@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - develop
+    paths:
+      - "api/**"
+      - "ui/**"
+      - "Dockerfile.api"
+      - "scripts/**"
+      - ".github/workflows/deploy-dev.yml"
   workflow_dispatch:
 
 concurrency:
@@ -168,7 +174,7 @@ jobs:
 
       - name: Deploy UI to Firebase Hosting
         run: |
-          npx -y firebase-tools deploy \
+          npx -y firebase-tools@15.16.0 deploy \
             --only hosting:frontend \
             --project "${{ steps.env.outputs.PROJECT_ID }}" \
             --non-interactive

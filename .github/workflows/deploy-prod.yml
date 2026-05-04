@@ -29,6 +29,8 @@ env:
 jobs:
   promote-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: prod
     env:
       # STAGING (source image)
       GCP_PROJECT_ID_STG: ${{ vars.GCP_PROJECT_ID_STG }}
@@ -211,7 +213,7 @@ jobs:
 
       - name: Deploy UI to Firebase Hosting (PROD)
         run: |
-          npx -y firebase-tools deploy \
+          npx -y firebase-tools@15.16.0 deploy \
             --only hosting:frontend \
             --project "${GCP_PROJECT_ID_PROD}" \
             --non-interactive

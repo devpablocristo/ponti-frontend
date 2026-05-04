@@ -21,6 +21,7 @@ const initialState: OrdersState = {
     liters: 0,
     kilograms: 0,
     direct_cost: 0,
+    orders_count: 0,
   },
   selectedOrder: null,
   processing: false,
