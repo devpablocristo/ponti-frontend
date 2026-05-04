@@ -7,6 +7,10 @@ import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useStockMovement from "../../../hooks/useStockMovement";
 import Drawer from "../../../components/Drawer/Drawer";
+import { apiClient } from "@/api/client";
+import { SuccessResponse } from "@/api/types";
+import { GetStocksResponse } from "../../../hooks/useStock/types";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
 const emptyItems = [
   { item: "", quantity: "" },
@@ -51,6 +55,9 @@ export default function CreateStockItem({
     []
   );
   const latestOnStockCreatedRef = useRef(onStockCreated);
+  const submittedItemsRef = useRef<Array<{ supply_id: number; quantity: number }>>(
+    []
+  );
 
   const [items, setItems] = useState<
     { item: string; quantity: string }[]
@@ -83,7 +90,11 @@ export default function CreateStockItem({
   }, [onStockCreated]);
 
   useEffect(() => {
-    if (resultCreation.supply_movements.length > 0) {
+    const handleCreatedMovement = async () => {
+      if (resultCreation.supply_movements.length === 0) {
+        return;
+      }
+
       const errors: string[] = [];
       resultCreation.supply_movements.forEach((movement) => {
         if (movement.error_detail !== "") {
@@ -97,11 +108,24 @@ export default function CreateStockItem({
         return;
       }
 
-      setSuccessMessage("Movimiento guardado correctamente");
-      latestOnStockCreatedRef.current();
-      clearForm();
-    }
-  }, [resultCreation]);
+      try {
+        await syncRealFieldStock(submittedItemsRef.current);
+        setSuccessMessage("Movimiento guardado correctamente");
+        latestOnStockCreatedRef.current();
+        clearForm();
+      } catch (syncError) {
+        setError(
+          extractErrorMessage(
+            syncError,
+            "El movimiento se guardo, pero no se pudo actualizar el stock de campo."
+          )
+        );
+        setSuccessMessage(null);
+      }
+    };
+
+    void handleCreatedMovement();
+  }, [projectId, resultCreation]);
 
   useEffect(() => {
     if (projectId) {
@@ -128,6 +152,43 @@ export default function CreateStockItem({
   const handleItemChange = (i: number, field: string, value: string) => {
     setItems((prev) =>
       prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const syncRealFieldStock = async (
+    submittedItems: Array<{ supply_id: number; quantity: number }>
+  ) => {
+    const quantitiesBySupply = submittedItems.reduce((map, item) => {
+      map.set(item.supply_id, (map.get(item.supply_id) ?? 0) + item.quantity);
+      return map;
+    }, new Map<number, number>());
+
+    if (quantitiesBySupply.size === 0) {
+      return;
+    }
+
+    const response = await apiClient.get<SuccessResponse<GetStocksResponse>>(
+      `/stock/${projectId}?cutoff_date=`
+    );
+
+    if (!response.success) {
+      throw new Error("No se pudo refrescar el stock.");
+    }
+
+    const stockBySupplyId = new Map(
+      (response.data.items ?? []).map((stockItem) => [stockItem.supply_id, stockItem])
+    );
+
+    await Promise.all(
+      Array.from(quantitiesBySupply.entries()).map(async ([supplyId, quantity]) => {
+        const stockItem = stockBySupplyId.get(supplyId);
+        if (!stockItem) return;
+
+        await apiClient.put(`/stock/${projectId}/${stockItem.id}`, {
+          real_stock_units: quantity,
+          ...(stockItem.updated_at ? { updated_at: stockItem.updated_at } : {}),
+        });
+      })
     );
   };
 
@@ -176,6 +237,11 @@ export default function CreateStockItem({
       setErrorMessages(errors);
       return;
     }
+
+    submittedItemsRef.current = itemsWithAnyValue.map((item) => ({
+      supply_id: Number(item.item),
+      quantity: Number(item.quantity),
+    }));
 
     saveStockMovement(projectId, {
       items: itemsWithAnyValue.map((item) => ({
