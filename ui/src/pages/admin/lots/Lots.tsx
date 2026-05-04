@@ -1,4 +1,4 @@
-import { DataTable, usePagination } from "@devpablocristo/modules-ui-data-display";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { AlertCircle, ExternalLink, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";

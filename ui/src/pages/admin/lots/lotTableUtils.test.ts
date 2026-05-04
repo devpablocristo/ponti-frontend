@@ -70,6 +70,20 @@ describe("lotTableUtils", () => {
     expect(filterLots(data, { harvest_date: ["2026-05-10"] })[0].id).toBe(2);
   });
 
+  it("falls back to the root harvest date when dates has no harvest date", () => {
+    const data = [
+      lot({
+        harvest_date: "2026-05-20",
+        dates: [{ sowing_date: "2026-02-04", harvest_date: null, sequence: 1 }],
+      }),
+    ];
+
+    expect(getLotFilterOptions(data, {}, "harvest_date")).toEqual([
+      "2026-05-20",
+    ]);
+    expect(filterLots(data, { harvest_date: ["2026-05-20"] })).toHaveLength(1);
+  });
+
   it("keeps commercialization values from real API fields as decimal strings", () => {
     const data = [
       lot({

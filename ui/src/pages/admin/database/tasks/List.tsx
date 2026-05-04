@@ -7,7 +7,7 @@ import {
   DataTable,
   useClientTableFilters,
   usePagination,
-} from "@devpablocristo/modules-ui-data-display";
+} from "@/lib/dataDisplay";
 import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";

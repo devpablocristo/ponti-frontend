@@ -37,10 +37,13 @@ function valuesForFilter(lot: LotsData, key: string): string[] {
   }
 
   if (key === "harvest_date") {
-    return (lot.dates ?? [])
+    const dateValues = (lot.dates ?? [])
       .map((date) => date.harvest_date)
       .filter(Boolean)
       .map(String);
+
+    if (dateValues.length > 0) return dateValues;
+    return lot.harvest_date ? [String(lot.harvest_date)] : [];
   }
 
   return [String(lot[key as keyof LotsData] ?? "")];
