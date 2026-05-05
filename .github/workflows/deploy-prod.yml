@@ -48,21 +48,51 @@ jobs:
       BACKEND_SERVICE_NAME_PROD: ${{ vars.CLOUD_RUN_SERVICE_BACKEND_PROD }}
 
     steps:
+      - name: Validate staging SHA input
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          if [[ ! "$STAGING_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "ERROR: staging_sha debe ser un SHA completo de 40 caracteres hexadecimales."
+            exit 1
+          fi
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.staging_sha }}
 
       - name: Auth GCP (STAGING - pull Artifact)
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER_STG }}
           service_account: ${{ env.WIF_SERVICE_ACCOUNT_STG }}
 
       - name: Setup gcloud (STAGING)
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID_STG }}
+
+      - name: "Guardrail: staging SHA is currently deployed in STAGING"
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          deployed_image="$(gcloud run services describe "$SERVICE_NAME_STG" \
+            --project="$GCP_PROJECT_ID_STG" \
+            --region="${{ env.REGION }}" \
+            --format='value(spec.template.spec.containers[0].image)')"
+          if [[ -z "$deployed_image" ]]; then
+            echo "ERROR: no se pudo resolver la imagen actualmente desplegada en STAGING."
+            exit 1
+          fi
+          deployed_tag="${deployed_image##*:}"
+          if [[ "$deployed_tag" != "$STAGING_SHA" ]]; then
+            echo "ERROR: staging_sha no coincide con la imagen desplegada en STAGING."
+            echo "       staging_sha=$STAGING_SHA"
+            echo "       deployed_image=$deployed_image"
+            exit 1
+          fi
+          echo "STAGING OK: $deployed_image"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -83,13 +113,13 @@ jobs:
           docker pull "$src_image"
 
       - name: Auth GCP (PROD - push + deploy)
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ env.WIF_PROVIDER_PROD }}
           service_account: ${{ env.WIF_SERVICE_ACCOUNT_PROD }}
 
       - name: Setup gcloud (PROD)
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ env.GCP_PROJECT_ID_PROD }}
 
@@ -106,7 +136,7 @@ jobs:
           docker tag "$SRC_IMAGE" "$dst_prod"
           docker push "$dst_sha"
           docker push "$dst_prod"
-          echo "IMAGE=$dst_prod" >> "$GITHUB_ENV"
+          echo "IMAGE=$dst_sha" >> "$GITHUB_ENV"
 
       - name: Build frontend
         run: |
@@ -184,6 +214,27 @@ jobs:
             exit 1
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: "Guardrail: deployed PROD image matches promoted SHA"
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          deployed_image="$(gcloud run services describe "$SERVICE_NAME_PROD" \
+            --project="$GCP_PROJECT_ID_PROD" \
+            --region="${{ env.REGION }}" \
+            --format='value(spec.template.spec.containers[0].image)')"
+          if [[ -z "$deployed_image" ]]; then
+            echo "ERROR: no se pudo resolver la imagen desplegada en PROD."
+            exit 1
+          fi
+          deployed_tag="${deployed_image##*:}"
+          if [[ "$deployed_tag" != "$STAGING_SHA" ]]; then
+            echo "ERROR: PROD no quedó desplegado con el SHA promovido."
+            echo "       staging_sha=$STAGING_SHA"
+            echo "       deployed_image=$deployed_image"
+            exit 1
+          fi
+          echo "PROD OK: $deployed_image"
 
       - name: Write Firebase target config (PROD)
         run: |

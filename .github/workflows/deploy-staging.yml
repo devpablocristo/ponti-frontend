@@ -38,18 +38,18 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ github.event.inputs.ref || github.ref_name }}
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: ${{ vars.WIF_PROVIDER_STG }}
           service_account: ${{ vars.WIF_SERVICE_ACCOUNT_STG }}
 
       - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ vars.GCP_PROJECT_ID_STG }}
 
@@ -72,9 +72,12 @@ jobs:
 
       - name: Build Docker image (API only)
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
-          docker build -f Dockerfile.api -t "$IMAGE" .
-          docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
+          IMAGE_SHA="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
+          IMAGE_STG="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
+          docker build -f Dockerfile.api -t "$IMAGE_SHA" .
+          docker tag "$IMAGE_SHA" "$IMAGE_STG"
+          echo "IMAGE_SHA=$IMAGE_SHA" >> "$GITHUB_ENV"
+          echo "IMAGE_STG=$IMAGE_STG" >> "$GITHUB_ENV"
 
       - name: Resolve canonical backend API URL (STAGING)
         id: backend
@@ -97,16 +100,15 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
-          docker push "${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
+          docker push "$IMAGE_SHA"
+          docker push "$IMAGE_STG"
 
       - name: Deploy API to Cloud Run (STAGING)
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
           gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}" \
             --project="${{ vars.GCP_PROJECT_ID_STG }}" \
             --region="${{ env.REGION }}" \
-            --image="$IMAGE" \
+            --image="$IMAGE_SHA" \
             --service-account="${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}" \
             --allow-unauthenticated \
             --port=3000 \
