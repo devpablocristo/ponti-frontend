@@ -65,14 +65,13 @@ export function usePagination({ perPage }: { perPage: number }) {
 
   const buildPagination = useCallback(
     (total: number, options?: BuildPaginationOptions) => {
-      void options?.serverSide;
-
       const maxPage = Math.max(1, Math.ceil(total / perPage));
 
       return {
         page: Math.min(page, maxPage),
         perPage,
         total,
+        serverSide: options?.serverSide,
         onPageChange: (nextPage: number) => {
           setPage(Math.min(Math.max(1, nextPage), maxPage));
         },
