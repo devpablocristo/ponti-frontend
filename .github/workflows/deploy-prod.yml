@@ -73,6 +73,27 @@ jobs:
         with:
           project_id: ${{ env.GCP_PROJECT_ID_STG }}
 
+      - name: "Guardrail: staging SHA is currently deployed in STAGING"
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          deployed_image="$(gcloud run services describe "$SERVICE_NAME_STG" \
+            --project="$GCP_PROJECT_ID_STG" \
+            --region="${{ env.REGION }}" \
+            --format='value(spec.template.spec.containers[0].image)')"
+          if [[ -z "$deployed_image" ]]; then
+            echo "ERROR: no se pudo resolver la imagen actualmente desplegada en STAGING."
+            exit 1
+          fi
+          deployed_tag="${deployed_image##*:}"
+          if [[ "$deployed_tag" != "$STAGING_SHA" ]]; then
+            echo "ERROR: staging_sha no coincide con la imagen desplegada en STAGING."
+            echo "       staging_sha=$STAGING_SHA"
+            echo "       deployed_image=$deployed_image"
+            exit 1
+          fi
+          echo "STAGING OK: $deployed_image"
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
@@ -116,7 +137,6 @@ jobs:
           docker push "$dst_sha"
           docker push "$dst_prod"
           echo "IMAGE=$dst_sha" >> "$GITHUB_ENV"
-          echo "IMAGE_ALIAS=$dst_prod" >> "$GITHUB_ENV"
 
       - name: Build frontend
         run: |
@@ -194,6 +214,27 @@ jobs:
             exit 1
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: "Guardrail: deployed PROD image matches promoted SHA"
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          deployed_image="$(gcloud run services describe "$SERVICE_NAME_PROD" \
+            --project="$GCP_PROJECT_ID_PROD" \
+            --region="${{ env.REGION }}" \
+            --format='value(spec.template.spec.containers[0].image)')"
+          if [[ -z "$deployed_image" ]]; then
+            echo "ERROR: no se pudo resolver la imagen desplegada en PROD."
+            exit 1
+          fi
+          deployed_tag="${deployed_image##*:}"
+          if [[ "$deployed_tag" != "$STAGING_SHA" ]]; then
+            echo "ERROR: PROD no quedó desplegado con el SHA promovido."
+            echo "       staging_sha=$STAGING_SHA"
+            echo "       deployed_image=$deployed_image"
+            exit 1
+          fi
+          echo "PROD OK: $deployed_image"
 
       - name: Write Firebase target config (PROD)
         run: |
