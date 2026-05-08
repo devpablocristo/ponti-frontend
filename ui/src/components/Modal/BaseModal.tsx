@@ -8,14 +8,10 @@ interface BaseModalProps {
   message?: string;
   icon?: React.ReactNode;
   primaryButtonText?: string | null;
-  secondaryButtonText?: string;
+  secondaryButtonText?: string | null;
   onPrimaryAction?: () => void;
   onSecondaryAction?: () => void;
   children?: React.ReactNode;
-  /**
-   * Tailwind class string para el color del botón principal.
-   * Ejemplo: "bg-blue-600 hover:bg-blue-800 focus:ring-blue-300"
-   */
   primaryButtonColor?: string;
 }
 
@@ -55,9 +51,8 @@ export function BaseModal({
     <div
       id="popup-modal"
       tabIndex={-1}
-      className={`animate-modal-backdrop fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-screen backdrop-blur-sm bg-slate-900/50 ${
-        isOpen ? "flex" : "hidden"
-      }`}
+      className={`animate-modal-backdrop fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-screen backdrop-blur-sm bg-slate-900/50 ${isOpen ? "flex" : "hidden"
+        }`}
     >
       <div className="relative p-4 w-full max-w-md max-h-full">
         <div
@@ -111,14 +106,16 @@ export function BaseModal({
                 {primaryButtonText}
               </button>
             )}
-            <button
-              disabled={isSaving}
-              onClick={onSecondaryAction || onClose}
-              type="button"
-              className="py-2.5 px-5 ms-3 text-sm font-medium text-slate-700 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-all duration-200"
-            >
-              {secondaryButtonText}
-            </button>
+            {secondaryButtonText?.trim() && (
+  <button
+    disabled={isSaving}
+    onClick={onSecondaryAction || onClose}
+    type="button"
+    className="py-2.5 px-5 ms-3 text-sm font-medium text-slate-700 bg-white rounded-lg border border-slate-200 hover:bg-slate-50 transition-all duration-200"
+  >
+    {secondaryButtonText}
+  </button>
+)}
           </div>
         </div>
       </div>

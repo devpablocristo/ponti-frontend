@@ -46,14 +46,16 @@ export default function CommerceForm() {
     "campaign",
   ]);
 
-  useEffect(() => {
-    if (!projectId) {
-      setErrorMessage("Por favor, seleccione un proyecto y campaña.");
-      return;
-    }
+useEffect(() => {
+  if (!projectId) {
+    setErrorMessage("Por favor, seleccione un proyecto y campaña.");
+    return;
+  }
 
-    getProject(projectId);
-  }, [projectId, getProject]);
+  setRows([]);
+  setProjectCropList([]);
+  getProject(projectId);
+}, [projectId, getProject]);
 
   useEffect(() => {
     if (!projectId) {
@@ -81,32 +83,40 @@ export default function CommerceForm() {
     setProjectCropList(uniqueCrops);
   }, [selectedProject]);
 
-  useEffect(() => {
-    if (projectCropList.length && rows.length === 0) {
-      setRows(
-        projectCropList.map((crop) => {
-          const found = commercializations.find((ci) => ci.crop_id === crop.id);
-          return {
-            id: found?.id || 0,
-            cropId: crop.id,
-            cropName: crop.name,
-            boardPrice: found?.board_price || "",
-            freightCost: found?.freight_cost || "",
-            commercialCost: found?.commercial_cost || "",
-            netWorth: found?.net_price || "",
-          };
-        })
-      );
-    }
-  }, [projectCropList, commercializations, rows.length]);
+useEffect(() => {
+  if (!projectCropList.length || processing) {
+    return;
+  }
 
-  useEffect(() => {
-    if (result !== "") {
-      window.location.reload();
-    }
-    setErrorMessage("");
-    setSuccessMessage(result);
-  }, [result]);
+  setRows(
+    projectCropList.map((crop) => {
+      const found = commercializations.find((ci) => ci.crop_id === crop.id);
+
+      return {
+        id: found?.id || 0,
+        cropId: crop.id,
+        cropName: crop.name,
+        boardPrice: found?.board_price || "",
+        freightCost: found?.freight_cost || "",
+        commercialCost: found?.commercial_cost || "",
+        netWorth: found?.net_price || "",
+      };
+    })
+  );
+}, [projectCropList, commercializations, processing]);
+
+useEffect(() => {
+  if (!result) {
+    return;
+  }
+
+  setErrorMessage("");
+  setSuccessMessage(result);
+
+  if (projectId) {
+    getCommercializations(projectId);
+  }
+}, [result, projectId, getCommercializations]);
 
   useEffect(() => {
     if (error) {

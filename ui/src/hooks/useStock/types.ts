@@ -22,6 +22,7 @@ export interface GetStockItems {
   supply_id: number;
   supply_name: string;
   investor_name: string;
+  has_multiple_investors: boolean;
   stock_units: number;
   real_stock_units: number;
   stock_difference: number | null;
@@ -35,3 +36,4 @@ export interface GetStockItems {
   consumed: number;
   updated_at?: string | null;
 }
+
