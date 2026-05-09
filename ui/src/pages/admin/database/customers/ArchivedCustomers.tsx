@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
-import { RotateCcw, Trash2 } from "lucide-react";
+import { useCallback } from "react";
 
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
-import { BaseModal } from "../../../../components/Modal/BaseModal";
+import { ArchivedListPage } from "../../../../components/ArchivedListPage/ArchivedListPage";
+import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useCustomers from "../../../../hooks/useCustomers";
-import { getHardDeleteCustomerMessage } from "./hardDeleteCopy";
 import { Column } from "../../types";
 
 type ArchivedCustomer = {
@@ -12,110 +10,46 @@ type ArchivedCustomer = {
   name: string;
 };
 
+const ENTITY_LABEL = "el cliente";
+
+const columns: Column<ArchivedCustomer>[] = [
+  { key: "name", header: "Cliente/Sociedad" },
+];
+
 export default function ArchivedCustomers() {
-  const { customers, getArchivedCustomers, restoreCustomer, hardDeleteCustomer, processing, error } =
-    useCustomers();
+  const {
+    customers,
+    getArchivedCustomers,
+    restoreCustomer,
+    hardDeleteCustomer,
+    processing,
+    error,
+  } = useCustomers();
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [modalConfig, setModalConfig] = useState({
-    title: "",
-    message: "",
-    primaryButtonText: "",
-    secondaryButtonText: "Cancelar",
-    onConfirm: () => {},
-  });
+  const refetch = useCallback(
+    () => getArchivedCustomers("page=1&per_page=1000"),
+    [getArchivedCustomers],
+  );
 
-  useEffect(() => {
-    getArchivedCustomers("page=1&per_page=1000");
-  }, [getArchivedCustomers]);
-
-  const handleRestore = (item: ArchivedCustomer) => {
-    setModalConfig({
-      title: "Confirmar restauración",
-      message: `¿Restaurar el cliente "${item.name}"?`,
-      primaryButtonText: "Restaurar",
-      secondaryButtonText: "Cancelar",
-      onConfirm: async () => {
-        setIsProcessing(true);
-        try {
-          await restoreCustomer(item.id);
-          await getArchivedCustomers("page=1&per_page=1000");
-        } finally {
-          setIsProcessing(false);
-        }
-      },
+  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+    useArchiveActions<ArchivedCustomer>({
+      refetch,
+      restore: restoreCustomer,
+      hardDelete: hardDeleteCustomer,
     });
-    setIsModalOpen(true);
-  };
-
-  const handleHardDelete = (item: ArchivedCustomer) => {
-    setModalConfig({
-      title: "Confirmar eliminación definitiva",
-      message: getHardDeleteCustomerMessage(item.name),
-      primaryButtonText: "Eliminar",
-      secondaryButtonText: "Cancelar",
-      onConfirm: async () => {
-        setIsProcessing(true);
-        try {
-          await hardDeleteCustomer(item.id);
-          await getArchivedCustomers("page=1&per_page=1000");
-        } finally {
-          setIsProcessing(false);
-        }
-      },
-    });
-    setIsModalOpen(true);
-  };
-
-  const columns: Column<ArchivedCustomer>[] = [
-    { key: "name", header: "Cliente/Sociedad" },
-    {
-      key: "id",
-      header: "Acciones",
-      render: (_value: unknown, item: ArchivedCustomer) => (
-        <div className="flex items-center justify-center gap-3">
-          <button
-            className="text-green-700 hover:text-green-900"
-            title="Restaurar"
-            onClick={() => handleRestore(item)}
-          >
-            <RotateCcw size={16} />
-          </button>
-          <button
-            className="text-red-700 hover:text-red-900"
-            title="Eliminar definitivo"
-            onClick={() => handleHardDelete(item)}
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      ),
-    },
-  ];
 
   return (
-    <div>
-      <p className="text-sm text-gray-500 mb-4">Restaurar o eliminar clientes de forma definitiva</p>
-      <DataTable data={customers as ArchivedCustomer[]} columns={columns} />
-      {error && (
-        <div className="p-4 mt-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-          <span className="font-medium">Error!</span> {error}
-        </div>
-      )}
-      <BaseModal
-        isOpen={isModalOpen}
-        isSaving={isProcessing || processing}
-        onClose={() => setIsModalOpen(false)}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        primaryButtonText={modalConfig.primaryButtonText}
-        secondaryButtonText={modalConfig.secondaryButtonText}
-        onPrimaryAction={() => {
-          modalConfig.onConfirm();
-          setIsModalOpen(false);
-        }}
-      />
-    </div>
+    <ArchivedListPage<ArchivedCustomer>
+      description="Restaurar o eliminar clientes de forma definitiva"
+      columns={columns}
+      data={customers as ArchivedCustomer[]}
+      entityLabel={ENTITY_LABEL}
+      getItemLabel={(item) => item.name}
+      onRestore={runRestore ?? undefined}
+      onHardDelete={runHardDelete ?? undefined}
+      onMount={refetch}
+      processing={processing || actionProcessing}
+      error={lastError ?? error}
+    />
   );
 }
