@@ -18,10 +18,8 @@ import useCampaigns, {
   CampaignPayloadInput,
 } from "../../../../hooks/useCampaigns";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
+import { CAMPAIGN_ENTITY as ENTITY } from "../../entities";
 import CampaignFormDrawer from "./CampaignFormDrawer";
-
-const ENTITY: EntityCopy = { article: "la", singular: "campaña", plural: "campañas" };
 
 const baseColumns: Column<Campaign>[] = [
   { key: "name", header: "Nombre" },

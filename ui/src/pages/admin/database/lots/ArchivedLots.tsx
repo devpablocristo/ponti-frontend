@@ -5,9 +5,7 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useLots from "../../../../hooks/useLots";
 import type { LotsData } from "../../../../hooks/useLots/types";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "lote", plural: "lotes" };
+import { LOT_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<LotsData>[] = [
   { key: "project_name", header: "Proyecto" },

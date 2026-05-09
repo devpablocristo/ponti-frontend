@@ -19,10 +19,8 @@ import {
   CustomerPayloadInput,
 } from "../../../../hooks/useCustomers/types";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
+import { CUSTOMER_ENTITY as ENTITY } from "../../entities";
 import CustomerFormDrawer from "./CustomerFormDrawer";
-
-const ENTITY: EntityCopy = { article: "el", singular: "cliente", plural: "clientes" };
 
 const baseColumns: Column<CustomerData>[] = [
   { key: "name", header: "Cliente / Sociedad" },

@@ -5,9 +5,7 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useFields from "../../../../hooks/useFields";
 import type { Data as Field } from "../../../../hooks/useFields/types";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "campo", plural: "campos" };
+import { FIELD_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<Field>[] = [
   { key: "name", header: "Campo" },

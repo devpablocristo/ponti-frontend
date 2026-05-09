@@ -5,9 +5,7 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useOrders from "../../../../hooks/useWorkOrders";
 import type { OrdersData } from "../../../../hooks/useWorkOrders/types";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "la", singular: "orden", plural: "órdenes" };
+import { WORKORDER_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<OrdersData>[] = [
   { key: "number", header: "Número" },

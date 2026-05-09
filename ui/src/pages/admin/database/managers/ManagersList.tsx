@@ -18,10 +18,8 @@ import useManagers, {
   ManagerPayloadInput,
 } from "../../../../hooks/useManagers";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
+import { MANAGER_ENTITY as ENTITY } from "../../entities";
 import ManagerFormDrawer from "./ManagerFormDrawer";
-
-const ENTITY: EntityCopy = { article: "el", singular: "responsable", plural: "responsables" };
 
 const baseColumns: Column<Manager>[] = [
   { key: "name", header: "Nombre" },

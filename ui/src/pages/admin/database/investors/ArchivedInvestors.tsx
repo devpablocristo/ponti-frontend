@@ -4,9 +4,7 @@ import { ArchivedListPage } from "../../../../components/ArchivedListPage/Archiv
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useInvestors, { Investor } from "../../../../hooks/useInvestors";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "inversor", plural: "inversores" };
+import { INVESTOR_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<Investor>[] = [
   { key: "name", header: "Inversor" },

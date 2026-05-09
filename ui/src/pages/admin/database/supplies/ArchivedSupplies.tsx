@@ -5,9 +5,7 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useSupplies from "../../../../hooks/useSupplies";
 import type { Supply } from "../../../../hooks/useSupplies/types";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "insumo", plural: "insumos" };
+import { SUPPLY_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<Supply>[] = [
   { key: "name", header: "Insumo" },

@@ -9,9 +9,7 @@ import { makeActionsColumn } from "../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../hooks/useEntityRowActions";
-import type { EntityCopy } from "../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "lote", plural: "lotes" };
+import { LOT_ENTITY as ENTITY } from "../entities";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 

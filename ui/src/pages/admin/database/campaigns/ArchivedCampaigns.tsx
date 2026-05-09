@@ -5,9 +5,7 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useCampaigns from "../../../../hooks/useCampaigns";
 import type { Data as Campaign } from "../../../../hooks/useCampaigns/types";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "la", singular: "campaña", plural: "campañas" };
+import { CAMPAIGN_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<Campaign>[] = [
   { key: "name", header: "Campaña" },

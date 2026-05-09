@@ -20,9 +20,7 @@ import { makeActionsColumn } from "../../../../components/crud/makeActionsColumn
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "insumo", plural: "insumos" };
+import { SUPPLY_ENTITY as ENTITY } from "../../entities";
 
 const renderPriceCell = (value: unknown, row: Supply) => (
   <div className="flex items-center gap-2">

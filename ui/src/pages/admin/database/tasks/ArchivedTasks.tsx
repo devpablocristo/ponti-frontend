@@ -7,9 +7,7 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useLabors from "../../../../hooks/useLabors";
 import { LaborInfo } from "../../../../hooks/useLabors/types";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "la", singular: "labor", plural: "labores" };
+import { LABOR_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<LaborInfo>[] = [
   { key: "name", header: "Labor" },

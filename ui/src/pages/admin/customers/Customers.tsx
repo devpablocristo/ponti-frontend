@@ -4,9 +4,7 @@ import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { makeActionsColumn } from "../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
-import type { EntityCopy } from "../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "proyecto", plural: "proyectos" };
+import { PROJECT_ENTITY as ENTITY } from "../entities";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";

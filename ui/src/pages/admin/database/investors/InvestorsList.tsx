@@ -18,10 +18,8 @@ import useInvestors, {
   InvestorPayloadInput,
 } from "../../../../hooks/useInvestors";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
+import { INVESTOR_ENTITY as ENTITY } from "../../entities";
 import InvestorFormDrawer from "./InvestorFormDrawer";
-
-const ENTITY: EntityCopy = { article: "el", singular: "inversor", plural: "inversores" };
 
 const columns: Column<Investor>[] = [
   { key: "name", header: "Nombre" },

@@ -34,9 +34,7 @@ import {
   parsePartialPrice,
 } from "./importUtils";
 
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "la", singular: "labor", plural: "labores" };
+import { LABOR_ENTITY as ENTITY } from "../../entities";
 
 function renderPriceCell(value: unknown, row: LaborInfo) {
   return (

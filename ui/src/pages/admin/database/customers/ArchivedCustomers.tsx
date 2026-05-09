@@ -4,14 +4,12 @@ import { ArchivedListPage } from "../../../../components/ArchivedListPage/Archiv
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useCustomers from "../../../../hooks/useCustomers";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
+import { CUSTOMER_ENTITY as ENTITY } from "../../entities";
 
 type ArchivedCustomer = {
   id: number;
   name: string;
 };
-
-const ENTITY: EntityCopy = { article: "el", singular: "cliente", plural: "clientes" };
 
 const columns: Column<ArchivedCustomer>[] = [
   { key: "name", header: "Cliente/Sociedad" },

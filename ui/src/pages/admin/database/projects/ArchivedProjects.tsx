@@ -5,9 +5,7 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import { ProjectData } from "../../../../hooks/useDatabase/projects/types";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "proyecto", plural: "proyectos" };
+import { PROJECT_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<ProjectData>[] = [
   { key: "customer", header: "Cliente/Sociedad" },

@@ -4,9 +4,7 @@ import { ArchivedListPage } from "../../../../components/ArchivedListPage/Archiv
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useManagers, { Manager } from "../../../../hooks/useManagers";
 import { Column } from "../../types";
-import type { EntityCopy } from "../../../../components/Modal/copy";
-
-const ENTITY: EntityCopy = { article: "el", singular: "responsable", plural: "responsables" };
+import { MANAGER_ENTITY as ENTITY } from "../../entities";
 
 const columns: Column<Manager>[] = [
   { key: "name", header: "Responsable" },
