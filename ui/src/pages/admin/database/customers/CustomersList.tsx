@@ -8,6 +8,7 @@ import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { RowActions } from "../../../../components/crud/RowActions";
+import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import {
   getArchiveCopy,
   getCreateSuccessCopy,
@@ -15,6 +16,7 @@ import {
   getUpdateSuccessCopy,
 } from "../../../../components/Modal/copy";
 import { useConfirmDialog } from "../../../../hooks/useConfirmDialog";
+import { useBulkActions } from "../../../../hooks/useBulkActions";
 import useCustomers from "../../../../hooks/useCustomers";
 import {
   CustomerData,
@@ -50,6 +52,14 @@ export default function CustomersList() {
   useEffect(() => {
     getCustomers("limit=1000");
   }, [getCustomers]);
+
+  const bulk = useBulkActions<CustomerData>({
+    items: customers,
+    entityLabelPlural: "clientes",
+    archive: archiveCustomer,
+    hardDelete: hardDeleteCustomer,
+    onAfter: () => getCustomers("limit=1000"),
+  });
 
   const openCreate = () => {
     setEditing(null);
@@ -136,8 +146,32 @@ export default function CustomersList() {
     [confirm, getCustomers, hardDeleteCustomer],
   );
 
+  const selectColumn = useMemo<Column<CustomerData>>(
+    () => ({
+      key: "id",
+      header: "",
+      align: "center",
+      width: "40px",
+      render: (_value, item) => (
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          checked={bulk.isSelected(item.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            bulk.toggle(item.id);
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Seleccionar cliente ${item.name}`}
+        />
+      ),
+    }),
+    [bulk],
+  );
+
   const tableColumns = useMemo<Column<CustomerData>[]>(
     () => [
+      selectColumn,
       ...baseColumns,
       {
         key: "id",
@@ -168,7 +202,7 @@ export default function CustomersList() {
         ),
       },
     ],
-    [handleArchive, handleHardDelete],
+    [handleArchive, handleHardDelete, selectColumn],
   );
 
   return (
@@ -206,7 +240,18 @@ export default function CustomersList() {
             }
           />
         ) : (
-          <DataTable data={customers} columns={tableColumns} />
+          <>
+            <BulkSelectionPanel
+              selectedCount={bulk.selectedCount}
+              totalCount={customers.length}
+              allSelected={bulk.allSelected}
+              onToggleAll={bulk.toggleAll}
+              onClear={bulk.clear}
+              actions={bulk.actions}
+              entityLabelPlural="clientes"
+            />
+            <DataTable data={customers} columns={tableColumns} />
+          </>
         )}
       </div>
 

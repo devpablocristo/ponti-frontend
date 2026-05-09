@@ -4,14 +4,12 @@ import { AlertCircle, Archive, ExternalLink, Pencil, Trash2 } from "lucide-react
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { RowActions } from "../../../components/crud/RowActions";
-import { BulkActionBar } from "../../../components/crud/BulkActionBar";
+import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
-import { useBulkSelection } from "../../../hooks/useBulkSelection";
+import { useBulkActions } from "../../../hooks/useBulkActions";
 import { toastError, toastSuccess } from "../../../lib/toast";
 import {
   getArchiveCopy,
-  getBulkArchiveCopy,
-  getBulkHardDeleteCopy,
   getHardDeleteCopy,
 } from "../../../components/Modal/copy";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -204,7 +202,13 @@ export function Lots() {
     [columnsFilters, lots]
   );
 
-  const bulk = useBulkSelection<LotsData>(filteredLots);
+  const bulk = useBulkActions<LotsData>({
+    items: filteredLots,
+    entityLabelPlural: "lotes",
+    archive: archiveLot,
+    hardDelete: hardDeleteLot,
+    onAfter: () => reloadFromFirstPage(),
+  });
   const calculatedKpis = useMemo(
     () => calculateLotIndicators(filteredLots),
     [filteredLots]
@@ -277,40 +281,6 @@ export function Lots() {
     },
     [confirm, hardDeleteLot, reloadFromFirstPage],
   );
-
-  const handleBulkArchive = useCallback(async () => {
-    const items = bulk.selectedItems;
-    if (items.length === 0) return;
-    const ok = await confirm({
-      ...getBulkArchiveCopy(items.length, "lotes"),
-      severity: "warning",
-    });
-    if (!ok) return;
-    const results = await Promise.allSettled(items.map((it) => archiveLot(it.id)));
-    const okCount = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.length - okCount;
-    if (failed === 0) toastSuccess(`Se archivaron ${okCount} lotes.`);
-    else toastError(`${okCount} de ${results.length} OK; ${failed} fallaron.`);
-    bulk.clear();
-    reloadFromFirstPage();
-  }, [archiveLot, bulk, confirm, reloadFromFirstPage]);
-
-  const handleBulkHardDelete = useCallback(async () => {
-    const items = bulk.selectedItems;
-    if (items.length === 0) return;
-    const ok = await confirm({
-      ...getBulkHardDeleteCopy(items.length, "lotes"),
-      severity: "danger",
-    });
-    if (!ok) return;
-    const results = await Promise.allSettled(items.map((it) => hardDeleteLot(it.id)));
-    const okCount = results.filter((r) => r.status === "fulfilled").length;
-    const failed = results.length - okCount;
-    if (failed === 0) toastSuccess(`Se eliminaron ${okCount} lotes.`);
-    else toastError(`${okCount} de ${results.length} OK; ${failed} fallaron (probablemente por dependencias).`);
-    bulk.clear();
-    reloadFromFirstPage();
-  }, [bulk, confirm, hardDeleteLot, reloadFromFirstPage]);
 
   const selectColumn = useMemo<Column<LotsData>>(
     () => ({
@@ -517,42 +487,16 @@ export function Lots() {
           onSave={handleSave}
         />
 
-        {!message && !error && bulk.selectedCount > 0 && (
-          <BulkActionBar
+        {!message && !error && (
+          <BulkSelectionPanel
             selectedCount={bulk.selectedCount}
-            itemLabel="lotes"
+            totalCount={filteredLots.length}
+            allSelected={bulk.allSelected}
+            onToggleAll={bulk.toggleAll}
             onClear={bulk.clear}
-            actions={[
-              {
-                label: `Archivar ${bulk.selectedCount}`,
-                icon: Archive,
-                onClick: handleBulkArchive,
-              },
-              {
-                label: `Eliminar ${bulk.selectedCount}`,
-                icon: Trash2,
-                variant: "danger",
-                onClick: handleBulkHardDelete,
-              },
-            ]}
+            actions={bulk.actions}
+            entityLabelPlural="lotes"
           />
-        )}
-        {!message && !error && filteredLots.length > 0 && (
-          <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-              checked={bulk.allSelected}
-              onChange={bulk.toggleAll}
-              aria-label="Seleccionar todos los lotes"
-            />
-            <span>Seleccionar todo</span>
-            {bulk.selectedCount > 0 && (
-              <span className="ml-auto">
-                {bulk.selectedCount} de {filteredLots.length}
-              </span>
-            )}
-          </div>
         )}
         {!message && !error ? (
           <DataTable
