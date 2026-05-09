@@ -345,16 +345,35 @@ function SidebarSubmenu({
   setIsSidebarOpen,
 }: SidebarSubmenuProps) {
   const location = useLocation();
-  const [open, setOpen] = useState(
-    item.children?.some((child) => location.pathname.startsWith(child.route)) ??
+  const storageKey = `sidebar:submenu:${item.name}:open`;
+  const [open, setOpen] = useState(() => {
+    const stored = typeof window !== "undefined"
+      ? window.localStorage.getItem(storageKey)
+      : null;
+    if (stored !== null) return stored === "1";
+    return (
+      item.children?.some((child) => location.pathname.startsWith(child.route)) ??
       false
-  );
+    );
+  });
+
+  const toggleOpen = () => {
+    setOpen((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(storageKey, next ? "1" : "0");
+      } catch {
+        // localStorage may be unavailable (private mode); ignore
+      }
+      return next;
+    });
+  };
 
   if (item) {
     return (
       <div className="w-full">
         <button
-          onClick={() => setOpen(!open)}
+          onClick={toggleOpen}
           className="flex items-center justify-between w-full h-[36px] px-3 rounded-lg hover:bg-slate-800 transition-all duration-200"
           style={{ color: "#94A3B8" }}
         >
