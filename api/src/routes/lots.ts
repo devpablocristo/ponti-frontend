@@ -322,6 +322,126 @@ router.put("/:id", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data: lots } = await apiClient.get<any>("/lots/archived", headers);
+    const items = Array.isArray(lots?.data) ? lots.data : [];
+    const total =
+      typeof lots?.page_info?.total === "number" ? lots.page_info.total : items.length;
+
+    res.status(200).json({
+      success: true,
+      data: { data: items, total },
+    });
+  } catch (error: unknown) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.post("/:id/archive", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+    await apiClient.post<any>(`/lots/${req.params.id}/archive`, {}, headers);
+    setImmediate(invalidateLotsCache);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
+  } catch (error: unknown) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.post("/:id/restore", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+    await apiClient.post<any>(`/lots/${req.params.id}/restore`, {}, headers);
+    setImmediate(invalidateLotsCache);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
+  } catch (error: unknown) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.delete("/:id/hard", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+    await apiClient.delete<any>(`/lots/${req.params.id}/hard`, headers);
+    setImmediate(invalidateLotsCache);
+    res.status(200).json({ success: true, message: "Operación exitosa" });
+  } catch (error: unknown) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 router.put("/:id/tons", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;

@@ -146,6 +146,89 @@ const useLots = () => {
     [dispatch]
   );
 
+  const getArchivedLots = React.useCallback(
+    async (queryString: string) => {
+      setProcessing(true);
+      setError(null);
+      let queryParams = "";
+      if (queryString !== "") queryParams = `?${queryString}`;
+
+      try {
+        const response = await apiClient.get<SuccessResponse<Payload>>(
+          "/lots/archived" + queryParams
+        );
+        if (response.success) {
+          dispatch({ type: actions.SET_LOTS, payload: response.data.data });
+          dispatch({ type: actions.SET_PAGE_INFO, payload: response.data.page_info });
+          return;
+        }
+        setError("Ocurrió un error al listar lotes archivados");
+      } catch (err) {
+        setError(extractErrorMessage(err, "Error en el servicio, inténtalo más tarde."));
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [dispatch]
+  );
+
+  const archiveLot = React.useCallback(async (id: number) => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<LotMutationResponse>(`/lots/${id}/archive`, {});
+      if (!response.success) {
+        const message = "Ocurrió un error al archivar el lote";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (err) {
+      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const restoreLot = React.useCallback(async (id: number) => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<LotMutationResponse>(`/lots/${id}/restore`, {});
+      if (!response.success) {
+        const message = "Ocurrió un error al restaurar el lote";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (err) {
+      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const hardDeleteLot = React.useCallback(async (id: number) => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.delete<LotMutationResponse>(`/lots/${id}/hard`);
+      if (!response.success) {
+        const message = "Ocurrió un error al eliminar el lote";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (err) {
+      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
   const updateTons = React.useCallback(
     async (id: number, tons: number) => {
       setProcessingTons(true);
@@ -179,6 +262,10 @@ const useLots = () => {
     updateLot,
     updateTons,
     getLots,
+    getArchivedLots,
+    archiveLot,
+    restoreLot,
+    hardDeleteLot,
     getLotsKpis,
     crops,
     getCrops,

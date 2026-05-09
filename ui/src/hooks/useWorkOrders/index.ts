@@ -438,12 +438,105 @@ const useOrders = () => {
     }
   }, []);
 
+  const archiveOrder = React.useCallback(async (id: number): Promise<void> => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<WorkOrderMutationResponse>(
+        `/work-orders/${id}/archive`,
+        {},
+      );
+      if (!response.success) {
+        const message = "Ocurrió un error al archivar la orden";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (error) {
+      const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const restoreOrder = React.useCallback(async (id: number): Promise<void> => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<WorkOrderMutationResponse>(
+        `/work-orders/${id}/restore`,
+        {},
+      );
+      if (!response.success) {
+        const message = "Ocurrió un error al restaurar la orden";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (error) {
+      const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const hardDeleteOrder = React.useCallback(async (id: number): Promise<void> => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.delete<WorkOrderMutationResponse>(
+        `/work-orders/${id}/hard`,
+      );
+      if (!response.success) {
+        const message = "Ocurrió un error al eliminar la orden";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (error) {
+      const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const getArchivedOrders = React.useCallback(
+    async (queryString: string): Promise<void> => {
+      setProcessing(true);
+      setError(null);
+      let queryParams = "";
+      if (queryString !== "") queryParams = `?${queryString}`;
+      try {
+        const response = await apiClient.get<OrdersListResponse>(
+          `/work-orders/archived${queryParams}`,
+        );
+        if (response.success) {
+          dispatch({ type: actions.SET_ORDERS, payload: response.data.data });
+          if (response.data.page_info) {
+            dispatch({ type: actions.SET_PAGE_INFO, payload: response.data.page_info });
+          }
+          return;
+        }
+        setError("Ocurrió un error al listar órdenes archivadas");
+      } catch (error) {
+        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [dispatch],
+  );
+
   return {
     orders,
     metrics,
     processingMetrics,
     errorMetrics,
     getOrders,
+    getArchivedOrders,
     getMetrics,
     saveOrder,
     updateOrder,
@@ -453,6 +546,9 @@ const useOrders = () => {
     publishDraftOrder,
     deleteDraftOrder,
     deleteOrder,
+    archiveOrder,
+    restoreOrder,
+    hardDeleteOrder,
     selectedOrder,
     resultCreation,
     processing,

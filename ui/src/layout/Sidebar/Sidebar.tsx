@@ -133,6 +133,36 @@ const menuArchiveItems: MenuItem[] = [
     ),
     route: "/admin/database/investors/archived",
   },
+  {
+    name: "Lotes Archivados",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    route: "/admin/database/lots/archived",
+  },
+  {
+    name: "Insumos Archivados",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    route: "/admin/database/supplies/archived",
+  },
+  {
+    name: "Órdenes Archivadas",
+    icon: (color: string) => (
+      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+    route: "/admin/database/work-orders/archived",
+  },
 ];
 
 const menuAdminItems: MenuItem[] = [

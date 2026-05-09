@@ -425,47 +425,132 @@ router.delete("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.put("/:id/archive", async (req: Request, res: Response) => {
+router.get("/archived", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
       res.status(401).json({ message: "Usuario no autenticado" });
       return;
     }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": String(userId),
+    };
+    const { data: supplies } = await apiClient.get<any>("/supplies/archived", headers);
+    const items = Array.isArray(supplies?.data) ? supplies.data : [];
+    const total =
+      typeof supplies?.page_info?.total === "number"
+        ? supplies.page_info.total
+        : items.length;
+    res.status(200).json({
+      success: true,
+      data: { data: items, total },
+    });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
 
+router.post("/:id/archive", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
     const supplyId = parseInt(req.params.id) || 0;
     if (supplyId === 0) {
       res.status(400).json({ message: "Insumo obligatorio" });
       return;
     }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": String(userId),
     };
-
-    await apiClient.post<any>(
-      `/supplies/${supplyId}/archive`,
-      {},
-      headers
-    );
-
-    const data = {
-      success: true,
-      message: "Insumo archivado exitosamente",
-    };
-
+    await apiClient.post<any>(`/supplies/${supplyId}/archive`, {}, headers);
     setImmediate(() => cache.flushAll());
-
-    res.status(200).json(data);
+    res.status(200).json({ success: true, message: "Insumo archivado exitosamente" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
-
     if ("error" in err) {
       res.status(err.error?.status || 500).json(err);
       return;
     }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
 
+router.post("/:id/restore", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const supplyId = parseInt(req.params.id) || 0;
+    if (supplyId === 0) {
+      res.status(400).json({ message: "Insumo obligatorio" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": String(userId),
+    };
+    await apiClient.post<any>(`/supplies/${supplyId}/restore`, {}, headers);
+    setImmediate(() => cache.flushAll());
+    res.status(200).json({ success: true, message: "Insumo restaurado exitosamente" });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.delete("/:id/hard", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const supplyId = parseInt(req.params.id) || 0;
+    if (supplyId === 0) {
+      res.status(400).json({ message: "Insumo obligatorio" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": String(userId),
+    };
+    await apiClient.delete<any>(`/supplies/${supplyId}/hard`, headers);
+    setImmediate(() => cache.flushAll());
+    res.status(200).json({ success: true, message: "Insumo eliminado definitivamente" });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
     res.status(500).json({
       success: false,
       message: "Error inesperado",

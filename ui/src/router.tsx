@@ -16,6 +16,9 @@ import DatabaseCustomers from "./pages/admin/database/customers/Customers";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
 import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
 import ArchivedInvestors from "./pages/admin/database/investors/ArchivedInvestors";
+import ArchivedLots from "./pages/admin/database/lots/ArchivedLots";
+import ArchivedSupplies from "./pages/admin/database/supplies/ArchivedSupplies";
+import ArchivedWorkOrders from "./pages/admin/database/work-orders/ArchivedWorkOrders";
 import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
 import DatabaseTasksForm from "./pages/admin/database/tasks/TasksForm";
 import Lots from "./pages/admin/lots/Lots";
@@ -132,6 +135,18 @@ export default [
       {
         path: "database/investors/archived",
         element: <ArchivedInvestors />,
+      },
+      {
+        path: "database/lots/archived",
+        element: <ArchivedLots />,
+      },
+      {
+        path: "database/supplies/archived",
+        element: <ArchivedSupplies />,
+      },
+      {
+        path: "database/work-orders/archived",
+        element: <ArchivedWorkOrders />,
       },
       {
         path: "database/data-integrity",

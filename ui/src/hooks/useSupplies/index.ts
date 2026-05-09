@@ -152,7 +152,7 @@ const useSupplies = () => {
       });
 
       try {
-        const response = await apiClient.put<SupplyMutationResponse>(
+        const response = await apiClient.post<SupplyMutationResponse>(
           `/supplies/${id}/archive`,
           {}
         );
@@ -165,21 +165,100 @@ const useSupplies = () => {
           return true;
         }
 
-        setError("Ocurrio un error en el archivado del insumo");
+        const message = "Ocurrió un error en el archivado del insumo";
+        setError(message);
+        throw new Error(message);
       } catch (error) {
-        setError(
-          extractErrorMessage(
-            error,
-            "Error desconocido en el archivado del insumo."
-          )
+        const message = extractErrorMessage(
+          error,
+          "Error desconocido en el archivado del insumo.",
         );
+        setError(message);
+        throw new Error(message);
       } finally {
         setProcessing(false);
       }
-
-      return false;
     },
-    [dispatch]
+    [dispatch],
+  );
+
+  const restoreSupply = React.useCallback(
+    async (id: number): Promise<void> => {
+      setProcessing(true);
+      setError(null);
+      try {
+        const response = await apiClient.post<SupplyMutationResponse>(
+          `/supplies/${id}/restore`,
+          {}
+        );
+        if (!response.success) {
+          const message = "Ocurrió un error al restaurar el insumo";
+          setError(message);
+          throw new Error(message);
+        }
+      } catch (error) {
+        const message = extractErrorMessage(
+          error,
+          "Error en el servicio, inténtalo más tarde.",
+        );
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [],
+  );
+
+  const hardDeleteSupply = React.useCallback(
+    async (id: number): Promise<void> => {
+      setProcessing(true);
+      setError(null);
+      try {
+        const response = await apiClient.delete<SupplyMutationResponse>(
+          `/supplies/${id}/hard`
+        );
+        if (!response.success) {
+          const message = "Ocurrió un error al eliminar el insumo";
+          setError(message);
+          throw new Error(message);
+        }
+      } catch (error) {
+        const message = extractErrorMessage(
+          error,
+          "Error en el servicio, inténtalo más tarde.",
+        );
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [],
+  );
+
+  const getArchivedSupplies = React.useCallback(
+    async (queryString: string): Promise<void> => {
+      setProcessing(true);
+      setError(null);
+      let queryParams = "";
+      if (queryString !== "") queryParams = `?${queryString}`;
+      try {
+        const response = await apiClient.get<SuccessResponse<SupplyResponse>>(
+          "/supplies/archived" + queryParams,
+        );
+        if (response.success) {
+          dispatch({ type: actions.SET_SUPPLIES, payload: response.data.data });
+          return;
+        }
+        setError("Ocurrió un error al listar insumos archivados");
+      } catch (error) {
+        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [dispatch],
   );
 
   const getWorkOrdersCount = React.useCallback(
@@ -281,10 +360,13 @@ const useSupplies = () => {
   return {
     supplies,
     getSupplies,
+    getArchivedSupplies,
     saveSupplies,
     updateSupply,
     deleteSupply,
     archiveSupply,
+    restoreSupply,
+    hardDeleteSupply,
     completePendingSupply,
     getWorkOrdersCount,
     processing,
