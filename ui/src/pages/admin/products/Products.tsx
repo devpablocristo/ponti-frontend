@@ -318,7 +318,36 @@ export function Products() {
           return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
+      {
+        key: "id",
+        header: "",
+        align: "center",
+        render: (_value, item) => {
+          const editBlocked = isInternalMovementEditionBlocked(item.entry_type);
+          return (
+            <RowActions
+              actions={[
+                {
+                  label: "Editar",
+                  icon: Pencil,
+                  disabled: editBlocked,
+                  title: editBlocked ? "Movimiento interno no editable" : undefined,
+                  onClick: () => handleEdit(item),
+                },
+                {
+                  label: "Eliminar",
+                  icon: Trash2,
+                  variant: "danger",
+                  divider: true,
+                  onClick: () => handleDelete(item),
+                },
+              ]}
+            />
+          );
+        },
+      },
     ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [supplyMovements, columnsFilters]
   );
 

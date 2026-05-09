@@ -9,7 +9,7 @@ import { useCallback, useState } from "react";
 
 export type ArchiveAction<T> = (item: T) => Promise<void>;
 
-export type UseArchiveActionsOptions<T> = {
+export type UseArchiveActionsOptions = {
   /** Función para refrescar la lista después de cada acción exitosa. */
   refetch: () => Promise<void> | void;
   /** Acciones disponibles. Cualquiera puede ser undefined si la entidad no la soporta. */
@@ -32,7 +32,7 @@ export function useArchiveActions<T extends { id: number }>({
   archive,
   restore,
   hardDelete,
-}: UseArchiveActionsOptions<T>): UseArchiveActionsResult<T> {
+}: UseArchiveActionsOptions): UseArchiveActionsResult<T> {
   const [processing, setProcessing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 

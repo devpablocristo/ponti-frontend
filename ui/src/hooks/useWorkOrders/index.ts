@@ -514,7 +514,7 @@ const useOrders = () => {
           `/work-orders/archived${queryParams}`,
         );
         if (response.success) {
-          dispatch({ type: actions.SET_ORDERS, payload: response.data.data });
+          dispatch({ type: actions.SET_ORDERS, payload: response.data.data ?? [] });
           if (response.data.page_info) {
             dispatch({ type: actions.SET_PAGE_INFO, payload: response.data.page_info });
           }
