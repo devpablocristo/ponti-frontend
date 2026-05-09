@@ -1,5 +1,9 @@
+import type { ReactNode } from "react";
+
 type ErrorBannerProps = {
-  message: string | null | undefined;
+  message?: string | null;
+  /** Slot opcional para contenido enriquecido (lista de errores, JSX). */
+  children?: ReactNode;
   /** "simple" (default): caja roja con el mensaje, sin icono. "alert": con icono y opcional prefix. */
   variant?: "simple" | "alert";
   /** Texto que precede al mensaje en variant="alert" (ej: "Error:"). */
@@ -21,12 +25,14 @@ type ErrorBannerProps = {
  */
 export function ErrorBanner({
   message,
+  children,
   variant = "simple",
   prefix,
   onDismiss,
   className = "",
 }: ErrorBannerProps) {
-  if (!message) return null;
+  if (!message && !children) return null;
+  const body = children ?? message;
 
   if (variant === "simple") {
     return (
@@ -36,7 +42,7 @@ export function ErrorBanner({
         } ${className}`}
         role="alert"
       >
-        <span className="font-medium">{message}</span>
+        {children ? body : <span className="font-medium">{message}</span>}
         {onDismiss && (
           <button
             type="button"
@@ -82,7 +88,7 @@ export function ErrorBanner({
       <span className="sr-only">Error</span>
       <div className="flex-1 whitespace-pre-line">
         {prefix && <span className="font-medium">{prefix} </span>}
-        {message}
+        {body}
       </div>
       {onDismiss && (
         <button

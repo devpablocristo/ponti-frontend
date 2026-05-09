@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Button from "../../../components/Button/Button";
 import Header from "../../../components/Header/Header";
 import { useAuth } from "../../login/context/useAuth";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 
 export function Profile() {
   const auth = useAuth();
@@ -57,14 +58,7 @@ export function Profile() {
             </Button>
           </div>
         </form>
-        {message && (
-          <div
-            className="p-4 mt-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-            role="alert"
-          >
-            <span className="font-medium">Info:</span> {message}
-          </div>
-        )}
+        <ErrorBanner message={message} prefix="Info:" variant="alert" className="mt-4" />
       </div>
     </div>
   );

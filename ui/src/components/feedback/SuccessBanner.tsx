@@ -1,5 +1,9 @@
+import type { ReactNode } from "react";
+
 type SuccessBannerProps = {
-  message: string | null | undefined;
+  message?: string | null;
+  /** Slot opcional para contenido enriquecido. */
+  children?: ReactNode;
   /** "simple" (default): caja verde con el mensaje. "alert": con icono. */
   variant?: "simple" | "alert";
   onDismiss?: () => void;
@@ -13,11 +17,13 @@ type SuccessBannerProps = {
  */
 export function SuccessBanner({
   message,
+  children,
   variant = "simple",
   onDismiss,
   className = "",
 }: SuccessBannerProps) {
-  if (!message) return null;
+  if (!message && !children) return null;
+  const body = children ?? message;
 
   if (variant === "simple") {
     return (
@@ -27,7 +33,7 @@ export function SuccessBanner({
         } ${className}`}
         role="status"
       >
-        <span className="font-medium">{message}</span>
+        {children ? body : <span className="font-medium">{message}</span>}
         {onDismiss && (
           <button
             type="button"
@@ -72,7 +78,7 @@ export function SuccessBanner({
       </svg>
       <span className="sr-only">Éxito</span>
       <div className="flex-1 whitespace-pre-line">
-        <span className="font-medium">{message}</span>
+        {children ? body : <span className="font-medium">{message}</span>}
       </div>
       {onDismiss && (
         <button
