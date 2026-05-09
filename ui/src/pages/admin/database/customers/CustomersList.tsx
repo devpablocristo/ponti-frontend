@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Briefcase, Plus } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
@@ -39,11 +39,14 @@ export default function CustomersList() {
     hardDeleteCustomer,
   } = useCustomers();
 
-  const refresh = () => getCustomers("limit=1000");
+  const refresh = useCallback(
+    () => getCustomers("limit=1000"),
+    [getCustomers],
+  );
 
   useEffect(() => {
-    getCustomers("limit=1000");
-  }, [getCustomers]);
+    refresh();
+  }, [refresh]);
 
   const bulk = useBulkActions<CustomerData>({
     items: customers,
@@ -58,6 +61,7 @@ export default function CustomersList() {
     create: createCustomer,
     update: updateCustomer,
     fallbackErrorMessage: "No se pudo guardar el cliente",
+    onAfter: refresh,
   });
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<CustomerData>({
@@ -65,7 +69,7 @@ export default function CustomersList() {
     getLabel: (c) => c.name,
     archive: archiveCustomer,
     hardDelete: hardDeleteCustomer,
-    onAfter: () => getCustomers("limit=1000"),
+    onAfter: refresh,
   });
 
   const selectColumn = useMemo<Column<CustomerData>>(

@@ -23,20 +23,23 @@ export function useBulkSelection<T extends { id: number }>(items: T[]) {
     });
   }, []);
 
-  const allSelected = items.length > 0 && items.every((it) => selectedIds.has(it.id));
-  const someSelected = !allSelected && items.some((it) => selectedIds.has(it.id));
+  const allSelected = useMemo(
+    () => items.length > 0 && items.every((it) => selectedIds.has(it.id)),
+    [items, selectedIds],
+  );
+  const someSelected = useMemo(
+    () => !allSelected && items.some((it) => selectedIds.has(it.id)),
+    [allSelected, items, selectedIds],
+  );
 
   const toggleAll = useCallback(() => {
     setSelectedIds((prev) => {
-      if (items.every((it) => prev.has(it.id))) {
-        // Si todos están seleccionados → limpiar (al menos los visibles)
-        const next = new Set(prev);
-        items.forEach((it) => next.delete(it.id));
-        return next;
-      }
-      // Caso contrario → seleccionar todos los visibles
       const next = new Set(prev);
-      items.forEach((it) => next.add(it.id));
+      if (items.every((it) => prev.has(it.id))) {
+        items.forEach((it) => next.delete(it.id));
+      } else {
+        items.forEach((it) => next.add(it.id));
+      }
       return next;
     });
   }, [items]);
@@ -49,7 +52,6 @@ export function useBulkSelection<T extends { id: number }>(items: T[]) {
   );
 
   return {
-    selectedIds: Array.from(selectedIds),
     selectedItems,
     isSelected,
     toggle,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Plus, Users } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
@@ -51,7 +51,10 @@ export default function InvestorsList() {
     hardDeleteInvestor,
   } = useInvestors();
 
-  const refresh = () => getInvestors("limit=1000");
+  const refresh = useCallback(
+    () => getInvestors("limit=1000"),
+    [getInvestors],
+  );
 
   const bulk = useBulkActions<Investor>({
     items: investors,
@@ -66,18 +69,19 @@ export default function InvestorsList() {
     create: createInvestor,
     update: updateInvestor,
     fallbackErrorMessage: "No se pudo guardar el inversor",
+    onAfter: refresh,
   });
 
   useEffect(() => {
-    getInvestors("limit=1000");
-  }, [getInvestors]);
+    refresh();
+  }, [refresh]);
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<Investor>({
     entityLabel: ENTITY_LABEL,
     getLabel: (i) => i.name,
     archive: archiveInvestor,
     hardDelete: hardDeleteInvestor,
-    onAfter: () => getInvestors("limit=1000"),
+    onAfter: refresh,
   });
 
   const selectColumn = useMemo<Column<Investor>>(

@@ -42,76 +42,73 @@ export function useBulkActions<T extends Identifiable>({
   onAfter,
 }: UseBulkActionsOptions<T>) {
   const selection = useBulkSelection<T>(items);
+  const { selectedItems, selectedCount, clear } = selection;
   const confirm = useConfirmDialog();
 
   const runBulk = useCallback(
     async (
       op: (id: number) => Promise<unknown>,
+      copy: { title: string; message: string; primaryButtonText: string; secondaryButtonText: string },
+      severity: "warning" | "danger",
       successMsg: (count: number) => string,
       partialMsg: (ok: number, failed: number, total: number) => string,
     ) => {
-      const selected = selection.selectedItems;
-      if (selected.length === 0) return;
-      const results = await Promise.allSettled(selected.map((it) => op(it.id)));
-      const ok = results.filter((r) => r.status === "fulfilled").length;
-      const failed = results.length - ok;
-      if (failed === 0) toastSuccess(successMsg(ok));
-      else toastError(partialMsg(ok, failed, results.length));
-      selection.clear();
+      if (selectedItems.length === 0) return;
+      const ok = await confirm({ ...copy, severity });
+      if (!ok) return;
+      const results = await Promise.allSettled(selectedItems.map((it) => op(it.id)));
+      const okCount = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.length - okCount;
+      if (failed === 0) toastSuccess(successMsg(okCount));
+      else toastError(partialMsg(okCount, failed, results.length));
+      clear();
       onAfter?.();
     },
-    [onAfter, selection],
+    [clear, confirm, onAfter, selectedItems],
   );
 
   const handleBulkArchive = useCallback(async () => {
-    if (!archive || selection.selectedCount === 0) return;
-    const ok = await confirm({
-      ...getBulkArchiveCopy(selection.selectedCount, entityLabelPlural),
-      severity: "warning",
-    });
-    if (!ok) return;
+    if (!archive) return;
     await runBulk(
       archive,
+      getBulkArchiveCopy(selectedCount, entityLabelPlural),
+      "warning",
       (count) => `Se archivaron ${count} ${entityLabelPlural}.`,
-      (okN, failed, total) =>
-        `${okN} de ${total} OK; ${failed} fallaron.`,
+      (okN, failed, total) => `${okN} de ${total} OK; ${failed} fallaron.`,
     );
-  }, [archive, confirm, entityLabelPlural, runBulk, selection.selectedCount]);
+  }, [archive, entityLabelPlural, runBulk, selectedCount]);
 
   const handleBulkHardDelete = useCallback(async () => {
-    if (!hardDelete || selection.selectedCount === 0) return;
-    const ok = await confirm({
-      ...getBulkHardDeleteCopy(selection.selectedCount, entityLabelPlural),
-      severity: "danger",
-    });
-    if (!ok) return;
+    if (!hardDelete) return;
     await runBulk(
       hardDelete,
+      getBulkHardDeleteCopy(selectedCount, entityLabelPlural),
+      "danger",
       (count) => `Se eliminaron ${count} ${entityLabelPlural}.`,
       (okN, failed, total) =>
         `${okN} de ${total} OK; ${failed} fallaron (probablemente por dependencias).`,
     );
-  }, [confirm, entityLabelPlural, hardDelete, runBulk, selection.selectedCount]);
+  }, [entityLabelPlural, hardDelete, runBulk, selectedCount]);
 
   const actions = useMemo<BulkAction[]>(() => {
     const out: BulkAction[] = [];
     if (archive) {
       out.push({
-        label: `Archivar ${selection.selectedCount}`,
+        label: `Archivar ${selectedCount}`,
         icon: Archive,
         onClick: handleBulkArchive,
       });
     }
     if (hardDelete) {
       out.push({
-        label: `Eliminar ${selection.selectedCount}`,
+        label: `Eliminar ${selectedCount}`,
         icon: Trash2,
         variant: "danger",
         onClick: handleBulkHardDelete,
       });
     }
     return out;
-  }, [archive, handleBulkArchive, handleBulkHardDelete, hardDelete, selection.selectedCount]);
+  }, [archive, handleBulkArchive, handleBulkHardDelete, hardDelete, selectedCount]);
 
   return {
     ...selection,

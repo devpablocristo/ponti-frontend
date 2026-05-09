@@ -37,52 +37,57 @@ export function useEntityRowActions<T extends Identifiable>({
 }: UseEntityRowActionsOptions<T>) {
   const confirm = useConfirmDialog();
 
+  const runRowAction = useCallback(
+    async (
+      item: T,
+      op: (id: number) => Promise<unknown>,
+      copy: { title: string; message: string; primaryButtonText: string; secondaryButtonText: string },
+      severity: "warning" | "danger",
+      successMsg: (label: string) => string,
+      fallbackError: string,
+    ) => {
+      const label = getLabel(item);
+      const ok = await confirm({ ...copy, severity });
+      if (!ok) return;
+      try {
+        await op(item.id);
+        toastSuccess(successMsg(label));
+        onAfter?.();
+      } catch (err) {
+        toastError(err instanceof Error ? err.message : fallbackError);
+      }
+    },
+    [confirm, getLabel, onAfter],
+  );
+
   const handleArchive = useCallback(
     async (item: T) => {
       if (!archive) return;
-      const label = getLabel(item);
-      const ok = await confirm({
-        ...getArchiveCopy(entityLabel, label),
-        primaryLabel: getArchiveCopy(entityLabel, label).primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "warning",
-      });
-      if (!ok) return;
-      try {
-        await archive(item.id);
-        toastSuccess(`Se archivó "${label}"`);
-        onAfter?.();
-      } catch (err) {
-        toastError(
-          err instanceof Error ? err.message : `No se pudo archivar ${entityLabel}`,
-        );
-      }
+      await runRowAction(
+        item,
+        archive,
+        getArchiveCopy(entityLabel, getLabel(item)),
+        "warning",
+        (label) => `Se archivó "${label}"`,
+        `No se pudo archivar ${entityLabel}`,
+      );
     },
-    [archive, confirm, entityLabel, getLabel, onAfter],
+    [archive, entityLabel, getLabel, runRowAction],
   );
 
   const handleHardDelete = useCallback(
     async (item: T) => {
       if (!hardDelete) return;
-      const label = getLabel(item);
-      const ok = await confirm({
-        ...getHardDeleteCopy(entityLabel, label),
-        primaryLabel: getHardDeleteCopy(entityLabel, label).primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "danger",
-      });
-      if (!ok) return;
-      try {
-        await hardDelete(item.id);
-        toastSuccess(`Se eliminó "${label}" definitivamente`);
-        onAfter?.();
-      } catch (err) {
-        toastError(
-          err instanceof Error ? err.message : `No se pudo eliminar ${entityLabel}`,
-        );
-      }
+      await runRowAction(
+        item,
+        hardDelete,
+        getHardDeleteCopy(entityLabel, getLabel(item)),
+        "danger",
+        (label) => `Se eliminó "${label}" definitivamente`,
+        `No se pudo eliminar ${entityLabel}`,
+      );
     },
-    [confirm, entityLabel, getLabel, hardDelete, onAfter],
+    [entityLabel, getLabel, hardDelete, runRowAction],
   );
 
   return { handleArchive, handleHardDelete };

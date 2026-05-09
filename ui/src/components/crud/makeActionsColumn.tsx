@@ -1,7 +1,15 @@
-import { Archive, Pencil, Trash2 } from "lucide-react";
+import { Archive, Pencil, Trash2, type LucideIcon } from "lucide-react";
 
 import type { Column } from "../../pages/admin/types";
 import { RowActions } from "./RowActions";
+
+type RowAction = {
+  label: string;
+  icon: LucideIcon;
+  onClick: () => void;
+  variant?: "danger";
+  divider?: boolean;
+};
 
 type Identifiable = { id: number };
 
@@ -36,7 +44,7 @@ export function makeActionsColumn<T extends Identifiable>({
     header: "",
     align: "center",
     render: (_value: unknown, item: T) => {
-      const actions = [];
+      const actions: RowAction[] = [];
       if (onEdit) {
         actions.push({
           label: labels?.edit ?? "Editar",

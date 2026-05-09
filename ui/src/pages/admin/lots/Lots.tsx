@@ -203,7 +203,7 @@ export function Lots() {
     entityLabelPlural: "lotes",
     archive: archiveLot,
     hardDelete: hardDeleteLot,
-    onAfter: () => reloadFromFirstPage(),
+    onAfter: reloadFromFirstPage,
   });
   const calculatedKpis = useMemo(
     () => calculateLotIndicators(filteredLots),

@@ -1,19 +1,12 @@
 import { BulkActionBar, type BulkAction } from "./BulkActionBar";
 
 type BulkSelectionPanelProps = {
-  /** Cantidad de items seleccionados. */
   selectedCount: number;
-  /** Cantidad total de items en la lista (para "X de N"). */
   totalCount: number;
-  /** ¿Están todos seleccionados? */
   allSelected: boolean;
-  /** Toggle "select all". */
   onToggleAll: () => void;
-  /** Limpiar selección. */
   onClear: () => void;
-  /** Acciones masivas (provistas por useBulkActions). */
   actions: BulkAction[];
-  /** Plural de la entidad (ej: "lotes", "inversores"). */
   entityLabelPlural: string;
 };
 
