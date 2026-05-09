@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { CheckCircle } from "lucide-react";
 
+import { DismissButton } from "./DismissButton";
+
 type SuccessBannerProps = {
   message?: string | null;
   /** Slot opcional para contenido enriquecido. */
@@ -46,30 +48,7 @@ export function SuccessBanner({
           {prefix && <span className="font-semibold">{prefix} </span>}
           {body}
         </div>
-        {onDismiss && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="absolute top-2 right-2 text-green-600 hover:text-green-800"
-            aria-label="Cerrar"
-          >
-            <svg
-              className="w-4 h-4"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 14 14"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-              />
-            </svg>
-          </button>
-        )}
+        {onDismiss && <DismissButton tone="green" onClick={onDismiss} />}
       </div>
     );
   }
@@ -83,30 +62,7 @@ export function SuccessBanner({
         role="status"
       >
         {children ? body : <span className="font-medium">{message}</span>}
-        {onDismiss && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="absolute top-2 right-2 text-green-600 hover:text-green-800"
-            aria-label="Cerrar"
-          >
-            <svg
-              className="w-4 h-4"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 14 14"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-              />
-            </svg>
-          </button>
-        )}
+        {onDismiss && <DismissButton tone="green" onClick={onDismiss} />}
       </div>
     );
   }
@@ -129,30 +85,7 @@ export function SuccessBanner({
       <div className="flex-1 whitespace-pre-line">
         {children ? body : <span className="font-medium">{message}</span>}
       </div>
-      {onDismiss && (
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="absolute top-2 right-2 text-green-600 hover:text-green-800"
-          aria-label="Cerrar"
-        >
-          <svg
-            className="w-4 h-4"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 14 14"
-          >
-            <path
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-            />
-          </svg>
-        </button>
-      )}
+      {onDismiss && <DismissButton tone="green" onClick={onDismiss} />}
     </div>
   );
 }

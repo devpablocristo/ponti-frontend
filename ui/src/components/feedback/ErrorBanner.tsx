@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { AlertCircle } from "lucide-react";
 
+import { DismissButton } from "./DismissButton";
+
 type ErrorBannerProps = {
   message?: string | null;
   /** Slot opcional para contenido enriquecido (lista de errores, JSX). */
@@ -52,30 +54,7 @@ export function ErrorBanner({
           {prefix && <span className="font-semibold">{prefix} </span>}
           {body}
         </div>
-        {onDismiss && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="absolute top-2 right-2 text-red-600 hover:text-red-800"
-            aria-label="Cerrar"
-          >
-            <svg
-              className="w-4 h-4"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 14 14"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-              />
-            </svg>
-          </button>
-        )}
+        {onDismiss && <DismissButton tone="red" onClick={onDismiss} />}
       </div>
     );
   }
@@ -89,30 +68,7 @@ export function ErrorBanner({
         role="alert"
       >
         {children ? body : <span className="font-medium">{message}</span>}
-        {onDismiss && (
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="absolute top-2 right-2 text-red-600 hover:text-red-800"
-            aria-label="Cerrar"
-          >
-            <svg
-              className="w-4 h-4"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 14 14"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-              />
-            </svg>
-          </button>
-        )}
+        {onDismiss && <DismissButton tone="red" onClick={onDismiss} />}
       </div>
     );
   }
@@ -136,30 +92,7 @@ export function ErrorBanner({
         {prefix && <span className="font-medium">{prefix} </span>}
         {body}
       </div>
-      {onDismiss && (
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="absolute top-2 right-2 text-red-600 hover:text-red-800"
-          aria-label="Cerrar"
-        >
-          <svg
-            className="w-4 h-4"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 14 14"
-          >
-            <path
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-            />
-          </svg>
-        </button>
-      )}
+      {onDismiss && <DismissButton tone="red" onClick={onDismiss} />}
     </div>
   );
 }
