@@ -16,6 +16,7 @@ import DatabaseCustomers from "./pages/admin/database/customers/Customers";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
 import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
 import ArchivedInvestors from "./pages/admin/database/investors/ArchivedInvestors";
+import InvestorsList from "./pages/admin/database/investors/InvestorsList";
 import ArchivedLots from "./pages/admin/database/lots/ArchivedLots";
 import ArchivedSupplies from "./pages/admin/database/supplies/ArchivedSupplies";
 import ArchivedWorkOrders from "./pages/admin/database/work-orders/ArchivedWorkOrders";
@@ -134,6 +135,10 @@ export default [
       {
         path: "database/projects/archived",
         element: <ArchivedProjects />,
+      },
+      {
+        path: "database/investors",
+        element: <InvestorsList />,
       },
       {
         path: "database/investors/archived",
