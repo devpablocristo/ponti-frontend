@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
@@ -15,6 +15,13 @@ import { apiClient } from "@/api/client";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
 import { Checkbox } from "../../../../components/Input/Checkbox";
+import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
+import { makeActionsColumn } from "../../../../components/crud/makeActionsColumn";
+import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
+import { useBulkActions } from "../../../../hooks/useBulkActions";
+import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
+
+const ENTITY_LABEL = "el insumo";
 
 const renderPriceCell = (value: unknown, row: Supply) => (
   <div className="flex items-center gap-2">
@@ -34,8 +41,8 @@ export default function ListItems() {
     supplies,
     updateSupply,
     completePendingSupply,
-    deleteSupply,
-    getWorkOrdersCount,
+    archiveSupply,
+    hardDeleteSupply,
     result,
     processing,
     errorUpdate,
@@ -47,8 +54,6 @@ export default function ListItems() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
   const pagination = usePagination({ perPage: 10 });
   const [suppliesMode, setSuppliesMode] = useState<SuppliesMode>("all");
@@ -62,6 +67,36 @@ export default function ListItems() {
     "project",
     "campaign",
   ]);
+
+  const refresh = useCallback(() => {
+    if (projectId) getSupplies(projectId, suppliesMode);
+  }, [projectId, suppliesMode, getSupplies]);
+
+  const safeSupplies = useMemo(
+    () => (Array.isArray(supplies) ? supplies : []),
+    [supplies],
+  );
+
+  const bulk = useBulkActions<Supply>({
+    items: safeSupplies,
+    entityLabelPlural: "insumos",
+    archive: archiveSupply,
+    hardDelete: hardDeleteSupply,
+    onAfter: refresh,
+  });
+
+  const handleEdit = useCallback((supplyItem: Supply) => {
+    setItem(supplyItem);
+    setModalOpen(true);
+  }, []);
+
+  const { handleArchive, handleHardDelete } = useEntityRowActions<Supply>({
+    entityLabel: ENTITY_LABEL,
+    getLabel: (s) => s.name,
+    archive: archiveSupply,
+    hardDelete: hardDeleteSupply,
+    onAfter: refresh,
+  });
 
   useEffect(() => {
     if (projectId) {
@@ -143,6 +178,11 @@ export default function ListItems() {
     return applyColumnFilters(supplies || [], columnsFilters);
   }, [supplies, columnsFilters]);
 
+  const selectColumn = useMemo<Column<Supply>>(
+    () => makeSelectColumn<Supply>(bulk, (s) => s.name, "insumo"),
+    [bulk],
+  );
+
   const columns = useMemo<Column<Supply>[]>(() => {
     const nameOptions = [
       ...new Set(
@@ -185,6 +225,7 @@ export default function ListItems() {
     ] as string[];
 
     return [
+      selectColumn,
       {
         key: "name",
         header: "Nombre",
@@ -220,8 +261,13 @@ export default function ListItems() {
         filterType: "select",
         filterOptions: typeOptions,
       },
+      makeActionsColumn<Supply>({
+        onEdit: handleEdit,
+        onArchive: handleArchive,
+        onHardDelete: handleHardDelete,
+      }),
     ];
-  }, [supplies, columnsFilters]);
+  }, [supplies, columnsFilters, selectColumn, handleEdit, handleArchive, handleHardDelete]);
 
   const handleFilterChange = (filters: Record<string, unknown>) => {
     const nextFilters = { ...filters };
@@ -231,31 +277,6 @@ export default function ListItems() {
 
     setColumnsFilters(nextFilters);
     pagination.resetPage();
-  };
-
-  const handleDelete = async (supplyItem: Supply) => {
-    const count = await getWorkOrdersCount(supplyItem.id);
-    setDeleteTarget({ id: supplyItem.id, name: supplyItem.name, count });
-    setDeleteModalOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
-    setErrorMessage("");
-    setSuccessMessage(null);
-    deleteSupply(deleteTarget.id);
-    setDeleteModalOpen(false);
-    setDeleteTarget(null);
-
-    setTimeout(() => {
-      const totalAfterDelete = supplies.length - 1;
-      pagination.clampPageForTotal(totalAfterDelete);
-    }, 200);
-  };
-
-  const handleEdit = (item: Supply) => {
-    setItem(item);
-    setModalOpen(true);
   };
 
   const handleSave = () => {
@@ -458,22 +479,6 @@ export default function ListItems() {
 
             </div>
           </BaseModal>
-          <BaseModal
-            isOpen={deleteModalOpen}
-            onClose={() => {
-              setDeleteModalOpen(false);
-              setDeleteTarget(null);
-            }}
-            title="Archivar insumo"
-            message={
-              deleteTarget && deleteTarget.count > 0
-                ? `El insumo "${deleteTarget.name}" está en ${deleteTarget.count} orden${deleteTarget.count > 1 ? "es" : ""} de trabajo activa${deleteTarget.count > 1 ? "s" : ""}. Se archivará del catálogo pero las órdenes no se verán afectadas. ¿Continuar?`
-                : `¿Está seguro que desea archivar el insumo "${deleteTarget?.name}"?`
-            }
-            primaryButtonText="Archivar"
-            primaryButtonColor="bg-red-600 hover:bg-red-800 focus:ring-red-300"
-            onPrimaryAction={confirmDelete}
-          />
           <div className="flex items-center gap-2 mb-4">
             <Button
               variant={suppliesMode === "all" ? "primary" : "secondary"}
@@ -497,14 +502,21 @@ export default function ListItems() {
             </Button>
           </div>
 
+          <BulkSelectionPanel
+            selectedCount={bulk.selectedCount}
+            totalCount={filteredSupplies.length}
+            allSelected={bulk.allSelected}
+            onToggleAll={bulk.toggleAll}
+            onClear={bulk.clear}
+            actions={bulk.actions}
+            entityLabelPlural="insumos"
+          />
           <DataTable
             data={filteredSupplies}
             columns={columns}
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
             enableFilters={true}
-            onDelete={(item) => handleDelete(item)}
-            onEdit={(item) => handleEdit(item)}
             message="No hay insumos cargados en el proyecto"
             pagination={pagination.buildPagination(filteredSupplies.length)}
           />
