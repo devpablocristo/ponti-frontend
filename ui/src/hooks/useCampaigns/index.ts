@@ -1,226 +1,89 @@
-import React from "react";
-
-import * as actions from "./actions";
+import { useMemo } from "react";
 
 import { apiClient } from "@/api/client";
+import { SuccessResponse } from "@/api/types";
 import { Data as Campaign, Payload } from "./types";
+import {
+  CrudService,
+  useEntityCrud,
+} from "../useEntityCrud";
 
 export type CampaignPayloadInput = {
   name: string;
 };
 
 export type { Campaign };
-import { SuccessResponse } from "@/api/types";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
-import useCampaignsReducer from "./useCampaignsReducer";
+
+const buildQuery = (queryString?: string) =>
+  queryString && queryString !== "" ? `?${queryString}` : "";
 
 const useCampaigns = () => {
-  const [{ total, campaigns, processing, error }, dispatch] =
-    useCampaignsReducer();
-
-  const getCampaigns = React.useCallback(
-    async (queryString: string): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      let queryParams = "";
-      if (queryString !== "") {
-        queryParams = `?${queryString}`;
-      }
-
-      try {
+  const service = useMemo<
+    CrudService<Campaign, CampaignPayloadInput, CampaignPayloadInput>
+  >(
+    () => ({
+      list: async (query) => {
         const response = await apiClient.get<SuccessResponse<Payload>>(
-          "/campaigns" + queryParams
+          "/campaigns" + buildQuery(query),
         );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_CAMPAIGNS,
-            payload: response.data.data,
-          });
-
-          dispatch({
-            type: actions.SET_TOTAL,
-            payload: response.data.total,
-          });
-          return;
-        }
-
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: "Ocurrio un error en la busqueda de campañas",
-        });
-      } catch (error) {
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
-        });
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
-
-  const getArchivedCampaigns = React.useCallback(
-    async (queryString: string): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-      let queryParams = "";
-      if (queryString !== "") queryParams = `?${queryString}`;
-      try {
+        return { data: response.data.data, total: response.data.total };
+      },
+      listArchived: async (query) => {
         const response = await apiClient.get<SuccessResponse<Payload>>(
-          "/campaigns/archived" + queryParams
+          "/campaigns/archived" + buildQuery(query),
         );
-        if (response.success) {
-          dispatch({ type: actions.SET_CAMPAIGNS, payload: response.data.data });
-          dispatch({ type: actions.SET_TOTAL, payload: response.data.total });
-          return;
-        }
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: "Ocurrió un error al listar campañas archivadas",
-        });
-      } catch (err) {
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: extractErrorMessage(err, "Error en el servicio, inténtalo más tarde."),
-        });
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch],
-  );
-
-  const createCampaign = React.useCallback(
-    async (input: CampaignPayloadInput): Promise<Campaign | null> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-      try {
+        return { data: response.data.data, total: response.data.total };
+      },
+      create: async (input) => {
         const response = await apiClient.post<SuccessResponse<Campaign>>(
           "/campaigns",
           input,
         );
-        if (response.success) {
-          return response.data ?? null;
-        }
-        const message = "Ocurrió un error al crear la campaña.";
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      } catch (err) {
-        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch],
-  );
-
-  const updateCampaign = React.useCallback(
-    async (id: number, input: CampaignPayloadInput): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-      try {
-        const response = await apiClient.put<SuccessResponse<string>>(
-          "/campaigns/" + id,
+        return response.data;
+      },
+      update: async (id, input) => {
+        await apiClient.put<SuccessResponse<string>>(
+          `/campaigns/${id}`,
           input,
         );
-        if (!response.success) {
-          const message = "Ocurrió un error al actualizar la campaña.";
-          dispatch({ type: actions.SET_ERROR, payload: message });
-          throw new Error(message);
-        }
-      } catch (err) {
-        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch],
+        return { id, ...input } as Campaign;
+      },
+      archive: async (id) => {
+        await apiClient.post<SuccessResponse<string>>(
+          `/campaigns/${id}/archive`,
+          {},
+        );
+      },
+      restore: async (id) => {
+        await apiClient.post<SuccessResponse<string>>(
+          `/campaigns/${id}/restore`,
+          {},
+        );
+      },
+      hardDelete: async (id) => {
+        await apiClient.delete<SuccessResponse<string>>(`/campaigns/${id}/hard`);
+      },
+    }),
+    [],
   );
 
-  const archiveCampaign = React.useCallback(async (id: number): Promise<void> => {
-    dispatch({ type: actions.SET_ERROR, payload: "" });
-    dispatch({ type: actions.START_PROCESSING });
-    try {
-      const response = await apiClient.post<SuccessResponse<string>>(
-        "/campaigns/" + id + "/archive",
-        {},
-      );
-      if (!response.success) {
-        const message = "Ocurrió un error al archivar la campaña.";
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-      dispatch({ type: actions.SET_ERROR, payload: message });
-      throw new Error(message);
-    } finally {
-      dispatch({ type: actions.STOP_PROCESSING });
-    }
-  }, [dispatch]);
-
-  const restoreCampaign = React.useCallback(async (id: number): Promise<void> => {
-    dispatch({ type: actions.SET_ERROR, payload: "" });
-    dispatch({ type: actions.START_PROCESSING });
-    try {
-      const response = await apiClient.post<SuccessResponse<string>>(
-        "/campaigns/" + id + "/restore",
-        {},
-      );
-      if (!response.success) {
-        const message = "Ocurrió un error al restaurar la campaña.";
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-      dispatch({ type: actions.SET_ERROR, payload: message });
-      throw new Error(message);
-    } finally {
-      dispatch({ type: actions.STOP_PROCESSING });
-    }
-  }, [dispatch]);
-
-  const hardDeleteCampaign = React.useCallback(async (id: number): Promise<void> => {
-    dispatch({ type: actions.SET_ERROR, payload: "" });
-    dispatch({ type: actions.START_PROCESSING });
-    try {
-      const response = await apiClient.delete<SuccessResponse<string>>(
-        "/campaigns/" + id + "/hard",
-      );
-      if (!response.success) {
-        const message = "Ocurrió un error al eliminar la campaña.";
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-      dispatch({ type: actions.SET_ERROR, payload: message });
-      throw new Error(message);
-    } finally {
-      dispatch({ type: actions.STOP_PROCESSING });
-    }
-  }, [dispatch]);
+  const crud = useEntityCrud<Campaign, CampaignPayloadInput, CampaignPayloadInput>(
+    service,
+  );
 
   return {
-    getCampaigns,
-    getArchivedCampaigns,
-    createCampaign,
-    updateCampaign,
-    archiveCampaign,
-    restoreCampaign,
-    hardDeleteCampaign,
-    total,
-    campaigns,
-    processing,
-    error,
+    campaigns: crud.data,
+    archivedCampaigns: crud.archivedData,
+    total: crud.total,
+    processing: crud.processing,
+    error: crud.error,
+    getCampaigns: crud.list,
+    getArchivedCampaigns: crud.listArchived,
+    createCampaign: crud.create,
+    updateCampaign: crud.update,
+    archiveCampaign: crud.archive,
+    restoreCampaign: crud.restore,
+    hardDeleteCampaign: crud.hardDelete,
   };
 };
 

@@ -14,7 +14,7 @@ const columns: Column<Campaign>[] = [
 
 export default function ArchivedCampaigns() {
   const {
-    campaigns,
+    archivedCampaigns,
     getArchivedCampaigns,
     restoreCampaign,
     hardDeleteCampaign,
@@ -22,10 +22,9 @@ export default function ArchivedCampaigns() {
     error,
   } = useCampaigns();
 
-  const refetch = useCallback(
-    () => getArchivedCampaigns("page=1&per_page=1000"),
-    [getArchivedCampaigns],
-  );
+  const refetch = useCallback(async () => {
+    await getArchivedCampaigns("page=1&per_page=1000");
+  }, [getArchivedCampaigns]);
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Campaign>({
@@ -38,7 +37,7 @@ export default function ArchivedCampaigns() {
     <ArchivedListPage<Campaign>
       description="Restaurar o eliminar campañas de forma definitiva"
       columns={columns}
-      data={campaigns}
+      data={archivedCampaigns}
       entityLabel={ENTITY_LABEL}
       entityLabelPlural="campañas"
       getItemLabel={(item) => item.name}
