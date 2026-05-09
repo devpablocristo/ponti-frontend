@@ -67,6 +67,7 @@ const menuDatabase = {
   children: [
     { name: "Crear Clientes y Sociedades", route: "/admin/database/customers" },
     { name: "Inversores", route: "/admin/database/investors" },
+    { name: "Responsables", route: "/admin/database/managers" },
     { name: "Crear Labores", route: "/admin/database/tasks" },
     { name: "Crear Insumos", route: "/admin/database/items" },
     { name: "Cargar Dólar Promedio", route: "/admin/database/dollar" },

@@ -10,6 +10,10 @@ export type Manager = {
   archived_at?: string | null;
 };
 
+export type ManagerPayloadInput = {
+  name: string;
+};
+
 type ManagerPayload = {
   data: Manager[];
   total: number;
@@ -110,6 +114,57 @@ const useManagers = () => {
     }
   }, []);
 
+  const createManager = React.useCallback(
+    async (input: ManagerPayloadInput): Promise<Manager | null> => {
+      dispatch({ type: "SET_ERROR", payload: "" });
+      dispatch({ type: "START_PROCESSING" });
+      try {
+        const response = await apiClient.post<SuccessResponse<Manager>>(
+          "/managers",
+          input,
+        );
+        if (response.success) {
+          return response.data ?? null;
+        }
+        const message = "Ocurrió un error al crear el responsable.";
+        dispatch({ type: "SET_ERROR", payload: message });
+        throw new Error(message);
+      } catch (err) {
+        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+        dispatch({ type: "SET_ERROR", payload: message });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: "STOP_PROCESSING" });
+      }
+    },
+    [],
+  );
+
+  const updateManager = React.useCallback(
+    async (id: number, input: ManagerPayloadInput): Promise<void> => {
+      dispatch({ type: "SET_ERROR", payload: "" });
+      dispatch({ type: "START_PROCESSING" });
+      try {
+        const response = await apiClient.put<SuccessResponse<string>>(
+          "/managers/" + id,
+          input,
+        );
+        if (!response.success) {
+          const message = "Ocurrió un error al actualizar el responsable.";
+          dispatch({ type: "SET_ERROR", payload: message });
+          throw new Error(message);
+        }
+      } catch (err) {
+        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+        dispatch({ type: "SET_ERROR", payload: message });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: "STOP_PROCESSING" });
+      }
+    },
+    [],
+  );
+
   const archiveManager = React.useCallback(async (id: number): Promise<void> => {
     dispatch({ type: "SET_ERROR", payload: "" });
     dispatch({ type: "START_PROCESSING" });
@@ -178,6 +233,8 @@ const useManagers = () => {
   return {
     getManagers,
     getArchivedManagers,
+    createManager,
+    updateManager,
     archiveManager,
     restoreManager,
     hardDeleteManager,

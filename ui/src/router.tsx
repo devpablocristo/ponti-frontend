@@ -22,6 +22,7 @@ import ArchivedSupplies from "./pages/admin/database/supplies/ArchivedSupplies";
 import ArchivedWorkOrders from "./pages/admin/database/work-orders/ArchivedWorkOrders";
 import ArchivedFields from "./pages/admin/database/fields/ArchivedFields";
 import ArchivedManagers from "./pages/admin/database/managers/ArchivedManagers";
+import ManagersList from "./pages/admin/database/managers/ManagersList";
 import ArchivedCampaigns from "./pages/admin/database/campaigns/ArchivedCampaigns";
 import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
 import DatabaseTasksForm from "./pages/admin/database/tasks/TasksForm";
@@ -159,6 +160,10 @@ export default [
       {
         path: "database/fields/archived",
         element: <ArchivedFields />,
+      },
+      {
+        path: "database/managers",
+        element: <ManagersList />,
       },
       {
         path: "database/managers/archived",
