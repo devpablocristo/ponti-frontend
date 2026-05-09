@@ -102,98 +102,50 @@ const menuAIItems: MenuItem[] = [
   },
 ];
 
-const menuArchiveItems: MenuItem[] = [
-  {
-    name: "Clientes Archivados",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/customers/archived",
-  },
-  {
-    name: "Proyectos Archivados",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/projects/archived",
-  },
-  {
-    name: "Inversores Archivados",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/investors/archived",
-  },
-  {
-    name: "Lotes Archivados",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/lots/archived",
-  },
-  {
-    name: "Insumos Archivados",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/supplies/archived",
-  },
-  {
-    name: "Órdenes Archivadas",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/work-orders/archived",
-  },
-  {
-    name: "Campos Archivados",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/fields/archived",
-  },
-  {
-    name: "Responsables Archivados",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/managers/archived",
-  },
-  {
-    name: "Campañas Archivadas",
-    icon: (color: string) => (
-      <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M2.66667 4.66667C2.66667 4.29848 2.96514 4 3.33333 4H12.6667C13.0349 4 13.3333 4.29848 13.3333 4.66667V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V4.66667Z" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M2.66667 6H13.3333" stroke={color} strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    route: "/admin/database/campaigns/archived",
-  },
-];
+const menuArchive = {
+  name: "Archivados",
+  icon: (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2 4.66667C2 4.29848 2.29848 4 2.66667 4H13.3333C13.7015 4 14 4.29848 14 4.66667V6C14 6.36819 13.7015 6.66667 13.3333 6.66667H2.66667C2.29848 6.66667 2 6.36819 2 6V4.66667Z"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.33333 6.66667V12C3.33333 12.7364 3.93029 13.3333 4.66667 13.3333H11.3333C12.0697 13.3333 12.6667 12.7364 12.6667 12V6.66667"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.66667 9.33333H9.33333"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  ),
+  children: [
+    { name: "Clientes", route: "/admin/database/customers/archived" },
+    { name: "Proyectos", route: "/admin/database/projects/archived" },
+    { name: "Inversores", route: "/admin/database/investors/archived" },
+    { name: "Lotes", route: "/admin/database/lots/archived" },
+    { name: "Insumos", route: "/admin/database/supplies/archived" },
+    { name: "Órdenes", route: "/admin/database/work-orders/archived" },
+    { name: "Campos", route: "/admin/database/fields/archived" },
+    { name: "Responsables", route: "/admin/database/managers/archived" },
+    { name: "Campañas", route: "/admin/database/campaigns/archived" },
+  ],
+};
+
+// Mantenido por compatibilidad — el sidebar usa menuArchive (collapsible) en su lugar.
 
 const menuAdminItems: MenuItem[] = [
   {
@@ -560,16 +512,15 @@ const Sidebar: React.FC<SidebarProps> = ({
             </li>
           ))}
         </ul>
-         <ul className="flex flex-col gap-0.5 font-medium">
-          {menuArchiveItems.map((item) => (
-            <li key={item.name}>
-              <SidebarItem
-                setTitle={setTitle}
-                item={item}
-                setIsSidebarOpen={setIsSidebarOpen}
-              />
-            </li>
-          ))}
+        <div className="h-3" />
+        <ul className="flex flex-col gap-0.5 font-medium">
+          <li>
+            <SidebarSubmenu
+              setTitle={setTitle}
+              item={menuArchive}
+              setIsSidebarOpen={setIsSidebarOpen}
+            />
+          </li>
         </ul>
       </div>
     </aside>
