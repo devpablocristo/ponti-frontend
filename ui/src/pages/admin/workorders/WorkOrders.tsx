@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
@@ -1100,12 +1101,7 @@ export function WorkOrders() {
           },
         ]}
       />
-      {errorMessage && (
-        <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
-          <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-          <div><span className="font-semibold">Error:</span> {errorMessage}</div>
-        </div>
-      )}
+      <ErrorBanner message={errorMessage} variant="outlined" prefix="Error:" />
       {!processing && !errorMetrics && orders.length > 0 && (
         <div className="my-4">
           <OrdersIndicators

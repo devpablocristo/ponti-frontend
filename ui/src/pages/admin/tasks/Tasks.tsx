@@ -1,6 +1,8 @@
 import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { LoaderCircle, ClockIcon, CheckIcon, FileTextIcon, FileXIcon } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import * as XLSX from "xlsx";
 
 import useLabors from "../../../hooks/useLabors";
@@ -885,25 +887,7 @@ export function Tasks() {
       />
       <div className="my-4">
         {errorMetrics ? (
-          <div
-            className="flex items-center gap-3 p-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
-            role="alert"
-          >
-            <svg
-              className="w-5 h-5 text-red-500 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div>
-              <span className="font-semibold">Error:</span> {errorMetrics}
-            </div>
-          </div>
+          <ErrorBanner message={errorMetrics} variant="outlined" prefix="Error:" />
         ) : (
           <TasksIndicators metrics={derivedMetrics} processing={processing} />
         )}
@@ -1053,134 +1037,34 @@ export function Tasks() {
               }}
             />
           </div>
-          {errorInvoiceMessage && (
-            <div
-              className="flex items-center gap-3 p-3 mt-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
-              role="alert"
-            >
-              <svg
-                className="w-4 h-4 text-red-500 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div>
-                <span className="font-semibold">Error:</span> {errorInvoiceMessage}
-              </div>
-            </div>
-          )}
-          {resultInvoiceMessage && (
-            <div
-              className="flex items-center gap-3 p-3 mt-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200"
-              role="alert"
-            >
-              <svg
-                className="w-4 h-4 text-emerald-500 flex-shrink-0"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <div>
-                <span className="font-semibold">{resultInvoiceMessage}</span>
-              </div>
-            </div>
-          )}
+          <ErrorBanner
+            message={errorInvoiceMessage}
+            variant="outlined"
+            prefix="Error:"
+            className="mt-4"
+          />
+          <SuccessBanner
+            message={resultInvoiceMessage}
+            variant="outlined"
+            className="mt-4"
+          />
         </BaseModal>
-        {importMessage && (
-          <div
-            className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200"
-            role="alert"
-          >
-            <svg
-              className="w-5 h-5 text-emerald-500 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div>
-              <span className="font-semibold">{importMessage}</span>
-            </div>
-          </div>
+        <SuccessBanner message={importMessage} variant="outlined" />
+        {!showInvoiceModal && (
+          <SuccessBanner message={resultInvoiceMessage} variant="outlined" />
         )}
-        {!showInvoiceModal && resultInvoiceMessage && (
-          <div
-            className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200"
-            role="alert"
-          >
-            <svg
-              className="w-5 h-5 text-emerald-500 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div>
-              <span className="font-semibold">{resultInvoiceMessage}</span>
-            </div>
-          </div>
+        {!showInvoiceModal && (
+          <ErrorBanner
+            message={errorInvoiceMessage}
+            variant="outlined"
+            prefix="Error:"
+          />
         )}
-        {!showInvoiceModal && errorInvoiceMessage && (
-          <div
-            className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
-            role="alert"
-          >
-            <svg
-              className="w-5 h-5 text-red-500 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div>
-              <span className="font-semibold">Error:</span> {errorInvoiceMessage}
-            </div>
-          </div>
-        )}
-        {(error || exportErrorMessage || importError) && (
-          <div
-            className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
-            role="alert"
-          >
-            <svg
-              className="w-5 h-5 text-red-500 flex-shrink-0"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
-                clipRule="evenodd"
-              />
-            </svg>
-            <div>
-              <span className="font-semibold">Error:</span>{" "}
-              {importError || exportErrorMessage || error}
-            </div>
-          </div>
-        )}
+        <ErrorBanner
+          message={importError || exportErrorMessage || error}
+          variant="outlined"
+          prefix="Error:"
+        />
       </div>
     </div>
   );

@@ -1,11 +1,18 @@
 import type { ReactNode } from "react";
+import { CheckCircle } from "lucide-react";
 
 type SuccessBannerProps = {
   message?: string | null;
   /** Slot opcional para contenido enriquecido. */
   children?: ReactNode;
-  /** "simple" (default): caja verde con el mensaje. "alert": con icono. */
-  variant?: "simple" | "alert";
+  /**
+   * "simple" (default): caja verde con el mensaje.
+   * "alert": con icono Flowbite (estilo formularios).
+   * "outlined": con borde + icono lucide CheckCircle (estilo active lists).
+   */
+  variant?: "simple" | "alert" | "outlined";
+  /** Texto que precede al mensaje en variant="outlined" (ej: "Listo:"). */
+  prefix?: string;
   onDismiss?: () => void;
   className?: string;
 };
@@ -19,11 +26,53 @@ export function SuccessBanner({
   message,
   children,
   variant = "simple",
+  prefix,
   onDismiss,
   className = "",
 }: SuccessBannerProps) {
   if (!message && !children) return null;
   const body = children ?? message;
+
+  if (variant === "outlined") {
+    return (
+      <div
+        className={`relative flex items-center gap-3 p-4 mb-4 text-sm text-green-800 rounded-xl border border-green-200 bg-green-50 whitespace-pre-line ${
+          onDismiss ? "pr-12" : ""
+        } ${className}`}
+        role="status"
+      >
+        <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-500" aria-hidden="true" />
+        <div className="flex-1">
+          {prefix && <span className="font-semibold">{prefix} </span>}
+          {body}
+        </div>
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="absolute top-2 right-2 text-green-600 hover:text-green-800"
+            aria-label="Cerrar"
+          >
+            <svg
+              className="w-4 h-4"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 14 14"
+            >
+              <path
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  }
 
   if (variant === "simple") {
     return (

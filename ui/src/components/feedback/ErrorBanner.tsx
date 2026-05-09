@@ -1,12 +1,17 @@
 import type { ReactNode } from "react";
+import { AlertCircle } from "lucide-react";
 
 type ErrorBannerProps = {
   message?: string | null;
   /** Slot opcional para contenido enriquecido (lista de errores, JSX). */
   children?: ReactNode;
-  /** "simple" (default): caja roja con el mensaje, sin icono. "alert": con icono y opcional prefix. */
-  variant?: "simple" | "alert";
-  /** Texto que precede al mensaje en variant="alert" (ej: "Error:"). */
+  /**
+   * "simple" (default): caja roja con el mensaje, sin icono.
+   * "alert": con icono Flowbite y opcional prefix (estilo formularios).
+   * "outlined": con borde + icono lucide AlertCircle (estilo active lists).
+   */
+  variant?: "simple" | "alert" | "outlined";
+  /** Texto que precede al mensaje en variant="alert"|"outlined" (ej: "Error:"). */
   prefix?: string;
   /** Si se pasa, muestra botón X para cerrar. */
   onDismiss?: () => void;
@@ -33,6 +38,47 @@ export function ErrorBanner({
 }: ErrorBannerProps) {
   if (!message && !children) return null;
   const body = children ?? message;
+
+  if (variant === "outlined") {
+    return (
+      <div
+        className={`relative flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl border border-red-200 bg-red-50 whitespace-pre-line ${
+          onDismiss ? "pr-12" : ""
+        } ${className}`}
+        role="alert"
+      >
+        <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500" aria-hidden="true" />
+        <div className="flex-1">
+          {prefix && <span className="font-semibold">{prefix} </span>}
+          {body}
+        </div>
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="absolute top-2 right-2 text-red-600 hover:text-red-800"
+            aria-label="Cerrar"
+          >
+            <svg
+              className="w-4 h-4"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 14 14"
+            >
+              <path
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+              />
+            </svg>
+          </button>
+        )}
+      </div>
+    );
+  }
 
   if (variant === "simple") {
     return (

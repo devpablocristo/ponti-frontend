@@ -2,6 +2,7 @@ import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { AlertCircle, Archive, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { RowActions } from "../../../components/crud/RowActions";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import { toastError, toastSuccess } from "../../../lib/toast";
@@ -421,17 +422,7 @@ export function Lots() {
         </div>
       ) : null}
 
-      {error ? (
-        <div
-          className="mb-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
-          role="alert"
-        >
-          <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500" />
-          <div>
-            <span className="font-semibold">Error:</span> {error}
-          </div>
-        </div>
-      ) : null}
+      <ErrorBanner message={error} variant="outlined" prefix="Error:" />
 
       {!message && !error ? (
         <div className="my-4">

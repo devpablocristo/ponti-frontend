@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { RowActions } from "../../../components/crud/RowActions";
 import { Archive, Pencil, Trash2 } from "lucide-react";
 
@@ -338,17 +339,12 @@ export function Customers() {
         />
       </FilterBar>
 
-      {errors.customers ||
-        errors.projects ||
-        (errors.campaigns && (
-          <div
-            className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-            role="alert"
-          >
-            <span className="font-medium">Error!</span> {errors.customers}{" "}
-            {errors.projects} {errors.campaigns}
-          </div>
-        ))}
+      {(errors.customers || errors.projects || errors.campaigns) && (
+        <ErrorBanner
+          message={`${errors.customers ?? ""} ${errors.projects ?? ""} ${errors.campaigns ?? ""}`.trim()}
+          prefix="Error!"
+        />
+      )}
 
       <div className="mt-2 relative">
         <LoadingOverlay
@@ -370,14 +366,7 @@ export function Customers() {
               : undefined
           }
         />
-        {error && (
-          <div
-            className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-            role="alert"
-          >
-            <span className="font-medium">Error!</span> {error}
-          </div>
-        )}
+        <ErrorBanner message={error} prefix="Error!" />
       </div>
       <BaseModal
         isOpen={isModalOpen}
