@@ -17,6 +17,7 @@ import { getUnitName, units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Drawer from "../../../components/Drawer/Drawer";
+import EntityFormDrawer from "../../../components/crud/EntityFormDrawer";
 
 type WorkOrderItem = {
   itemId: number | null;
@@ -716,19 +717,16 @@ export default function CreateOrder({
   };
 
   return (
-    <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-      <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">
-          Nueva Orden de Trabajo:{" "}
-          <span className="text-gray-700">{selectedProject?.name}</span>
-        </h2>
-        {processing || processingCreation || processingSplit ? (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <form className="space-y-4 flex-1">
+    <>
+    <EntityFormDrawer
+      open={drawerOpen}
+      onClose={() => setDrawerOpen(false)}
+      title="Nueva Orden de Trabajo"
+      subtitle={selectedProject?.name}
+      processing={processing || processingCreation || processingSplit}
+      onSubmit={handleSaveOrder}
+    >
+      <>
               <div className="grid grid-cols-4 gap-4">
                 <InputField
                   label="Nro. Orden"
@@ -1408,65 +1406,44 @@ export default function CreateOrder({
                   </button>
                 </div>
               )}
-            </form>
-            <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSaveOrder}
-                  variant="primary"
-                  className="text-base font-medium"
-                  disabled={processing || processingCreation || (splitByInvestor && investorSplits.reduce((acc, s) => acc + (Number(s.percentage) || 0), 0) !== 100)}
-                >
-                  Guardar
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
+      </>
+    </EntityFormDrawer>
+
+    {/* ============================
+    DRAWER CREAR INSUMO
+============================ */}
+    <Drawer
+      open={openCreateSupply}
+      onClose={() => {
+        setOpenCreateSupply(false);
+        setItemIndexToUpdate(null);
+        setPendingCreatedSupplyName(null);
+      }}
+    >
+      <div className="flex flex-col h-full">
+        <h2 className="text-lg font-semibold mb-4">
+          Crear Nuevo Insumo
+        </h2>
+        {/* FORMULARIO SIMPLE DE INSUMO */}
+        <CreateSupplyInline
+          projectId={projectId}
+          onCreated={async (createdName) => {
+            setPendingCreatedSupplyName(createdName);
+            if (projectId) {
+              await getSupplies(projectId);
+            }
+
+            setOpenCreateSupply(false);
+          }}
+          onCancel={() => {
+            setOpenCreateSupply(false);
+            setItemIndexToUpdate(null);
+            setPendingCreatedSupplyName(null);
+          }}
+        />
       </div>
-
-      {/* ============================
-      DRAWER CREAR INSUMO
-  ============================ */}
-      <Drawer
-        open={openCreateSupply}
-        onClose={() => {
-          setOpenCreateSupply(false);
-          setItemIndexToUpdate(null);
-          setPendingCreatedSupplyName(null);
-        }}
-      >
-        <div className="flex flex-col h-full">
-          <h2 className="text-lg font-semibold mb-4">
-            Crear Nuevo Insumo
-          </h2>
-          {/* FORMULARIO SIMPLE DE INSUMO */}
-          <CreateSupplyInline
-            projectId={projectId}
-            onCreated={async (createdName) => {
-              setPendingCreatedSupplyName(createdName);
-              if (projectId) {
-                await getSupplies(projectId);
-              }
-
-              setOpenCreateSupply(false);
-            }}
-            onCancel={() => {
-              setOpenCreateSupply(false);
-              setItemIndexToUpdate(null);
-              setPendingCreatedSupplyName(null);
-            }}
-          />
-        </div>
-      </Drawer>
     </Drawer>
+    </>
 
   );
 }

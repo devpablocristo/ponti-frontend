@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import useSupplies from "../../../hooks/useSupplies";
-import { LoaderCircle, Trash } from "lucide-react";
+import { Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useStockMovement from "../../../hooks/useStockMovement";
-import Drawer from "../../../components/Drawer/Drawer";
+import EntityFormDrawer from "../../../components/crud/EntityFormDrawer";
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
 import { GetStocksResponse } from "../../../hooks/useStock/types";
@@ -261,16 +260,14 @@ export default function CreateStockItem({
   };
 
   return (
-    <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-      <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">Ingreso de Stock</h2>
-        {processing || processingCreation ? (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <form className="space-y-4 flex-1">
+    <EntityFormDrawer
+      open={drawerOpen}
+      onClose={() => setDrawerOpen(false)}
+      title="Ingreso de Stock"
+      processing={processing || processingCreation}
+      onSubmit={handlePreSave}
+    >
+      <>
               <div className="grid grid-cols-3 gap-4">
                 <InputField
                   label="Tipo de ingreso"
@@ -507,29 +504,7 @@ export default function CreateStockItem({
                   </button>
                 </div>
               )}
-            </form>
-            <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={handlePreSave}
-                  disabled={processing || processingCreation}
-                >
-                  Guardar
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </Drawer>
+      </>
+    </EntityFormDrawer>
   );
 }

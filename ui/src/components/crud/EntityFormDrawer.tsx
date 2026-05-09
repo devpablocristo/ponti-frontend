@@ -77,7 +77,7 @@ export function EntityFormDrawer({
 
         <LoadingOverlay show={processing} />
 
-        <form className="flex-1 space-y-4 overflow-y-auto" onSubmit={handleSubmit}>
+        <form className="flex-1 space-y-4" onSubmit={handleSubmit}>
           {errorMessage && (
             <ErrorBanner message={errorMessage} onDismiss={onDismissError} />
           )}

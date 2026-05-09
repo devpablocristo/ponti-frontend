@@ -18,6 +18,7 @@ import {
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import { DEFAULT_ITEM_ROW_COUNT, replaceSupplyIdsWithNames } from "../utils";
 import Drawer from "../../../components/Drawer/Drawer";
+import EntityFormDrawer from "../../../components/crud/EntityFormDrawer";
 import {
   Campaign,
   Customer,
@@ -763,19 +764,16 @@ useEffect(() => {
   };
 
   return (
-    <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-      <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">
-          {isEditing ? "Editar Insumo" : "Ingreso de Insumo"}
-        </h2>
-
-        {processing || processingCreation ? (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <form className="space-y-4 flex-1">
+    <>
+    <EntityFormDrawer
+      open={drawerOpen}
+      onClose={() => setDrawerOpen(false)}
+      title={isEditing ? "Editar Insumo" : "Ingreso de Insumo"}
+      processing={processing || processingCreation}
+      onSubmit={handlePreSave}
+      submitLabel={isEditing ? "Guardar cambios" : "Guardar"}
+    >
+      <>
               <div className="grid grid-cols-3 gap-4">
                 <SelectField
                   label="Tipo de ingreso"
@@ -1094,47 +1092,25 @@ useEffect(() => {
                   </button>
                 </div>
               )}
-            </form>
-            <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={handlePreSave}
-                  disabled={processing || processingCreation}
-                >
-                  {isEditing ? "Guardar cambios" : "Guardar"}
-                </Button>
-
-              </div>
-            </div>
-          </>
-        )}
+      </>
+    </EntityFormDrawer>
+    <Drawer open={openCreateSupply} onClose={() => setOpenCreateSupply(false)}>
+      <div className="flex flex-col h-full">
+        <h2 className="text-lg font-semibold mb-4">Crear nuevo insumo</h2>
+        <CreateSupplyInline
+          projectId={projectId}
+          onCreated={async (createdName) => {
+            setPendingCreatedSupplyName(createdName);
+            setOpenCreateSupply(false);
+            if (projectId) {
+              await getSupplies(projectId);
+              await getStock(projectId, "");
+            }
+          }}
+          onCancel={() => setOpenCreateSupply(false)}
+        />
       </div>
-      <Drawer open={openCreateSupply} onClose={() => setOpenCreateSupply(false)}>
-        <div className="flex flex-col h-full">
-          <h2 className="text-lg font-semibold mb-4">Crear nuevo insumo</h2>
-          <CreateSupplyInline
-            projectId={projectId}
-            onCreated={async (createdName) => {
-              setPendingCreatedSupplyName(createdName);
-              setOpenCreateSupply(false);
-              if (projectId) {
-                await getSupplies(projectId);
-                await getStock(projectId, "");
-              }
-            }}
-            onCancel={() => setOpenCreateSupply(false)}
-          />
-        </div>
-      </Drawer>
     </Drawer>
+    </>
   );
 }

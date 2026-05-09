@@ -16,6 +16,7 @@ import { getUnitName, units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Drawer from "../../../components/Drawer/Drawer";
+import EntityFormDrawer from "../../../components/crud/EntityFormDrawer";
 
 const emptyItems = Array.from({ length: 7 }, () => ({
   item: "",
@@ -716,19 +717,27 @@ export default function UpdateOrder({
   };
 
   return (
-    <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-      <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">
-          {isDigital ? "Edición de Borrador Digital:" : "Edición de Orden de Trabajo:"}{" "}
-          <span className="text-gray-700">{selectedProject?.name}</span>
-        </h2>
-        {processing || processingCreation || processingSplit ? (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <form className="space-y-4 flex-1">
+    <>
+    <EntityFormDrawer
+      open={drawerOpen}
+      onClose={() => setDrawerOpen(false)}
+      title={isDigital ? "Edición de Borrador Digital" : "Edición de Orden de Trabajo"}
+      subtitle={selectedProject?.name}
+      processing={processing || processingCreation || processingSplit}
+      onSubmit={handleSaveOrder}
+      extraActions={
+        selectedOrder && !isDigital ? (
+          <Button
+            onClick={() => onOrderDuplicated(selectedOrder)}
+            variant="primary"
+            className="text-base font-medium"
+          >
+            Duplicar orden
+          </Button>
+        ) : null
+      }
+    >
+      <>
               <div className="grid grid-cols-4 gap-4">
                 <InputField
                   label="Nro. Orden"
@@ -1397,66 +1406,36 @@ export default function UpdateOrder({
                   </button>
                 </div>
               )}
-            </form>
-            <div className="flex justify-between gap-2 mt-auto pt-6 pb-2 bg-white">
-              {selectedOrder && !isDigital && (
-                <Button
-                  onClick={() => onOrderDuplicated(selectedOrder)}
-                  variant="primary"
-                  className="text-base font-medium"
-                >
-                  Duplicar orden
-                </Button>
-              )}
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSaveOrder}
-                  variant="primary"
-                  className="text-base font-medium"
-                  disabled={processing || processingCreation || (splitByInvestor && investorSplits.reduce((acc, s) => acc + (Number(s.percentage) || 0), 0) !== 100)}
-                >
-                  Guardar
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      </>
+    </EntityFormDrawer>
 
-      <Drawer
-        open={openCreateSupply}
-        onClose={() => {
-          setOpenCreateSupply(false);
-          setItemIndexToUpdate(null);
-          setPendingCreatedSupplyName(null);
-        }}
-      >
-        <div className="flex flex-col h-full">
-          <h2 className="text-lg font-semibold mb-4">Crear Nuevo Insumo</h2>
-          <CreateSupplyInline
-            projectId={selectedOrder?.project_id || null}
-            onCreated={async (createdName) => {
-              setPendingCreatedSupplyName(createdName);
-              if (selectedOrder?.project_id) {
-                await getSupplies(selectedOrder.project_id);
-              }
-              setOpenCreateSupply(false);
-            }}
-            onCancel={() => {
-              setOpenCreateSupply(false);
-              setItemIndexToUpdate(null);
-              setPendingCreatedSupplyName(null);
-            }}
-          />
-        </div>
-      </Drawer>
+    <Drawer
+      open={openCreateSupply}
+      onClose={() => {
+        setOpenCreateSupply(false);
+        setItemIndexToUpdate(null);
+        setPendingCreatedSupplyName(null);
+      }}
+    >
+      <div className="flex flex-col h-full">
+        <h2 className="text-lg font-semibold mb-4">Crear Nuevo Insumo</h2>
+        <CreateSupplyInline
+          projectId={selectedOrder?.project_id || null}
+          onCreated={async (createdName) => {
+            setPendingCreatedSupplyName(createdName);
+            if (selectedOrder?.project_id) {
+              await getSupplies(selectedOrder.project_id);
+            }
+            setOpenCreateSupply(false);
+          }}
+          onCancel={() => {
+            setOpenCreateSupply(false);
+            setItemIndexToUpdate(null);
+            setPendingCreatedSupplyName(null);
+          }}
+        />
+      </div>
     </Drawer>
+    </>
   );
 }
