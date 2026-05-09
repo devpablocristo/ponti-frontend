@@ -15,7 +15,7 @@ const columns: Column<Field>[] = [
 
 export default function ArchivedFields() {
   const {
-    fields,
+    archivedFields,
     getArchivedFields,
     restoreField,
     hardDeleteField,
@@ -23,10 +23,9 @@ export default function ArchivedFields() {
     error,
   } = useFields();
 
-  const refetch = useCallback(
-    () => getArchivedFields("page=1&per_page=1000"),
-    [getArchivedFields],
-  );
+  const refetch = useCallback(async () => {
+    await getArchivedFields("page=1&per_page=1000");
+  }, [getArchivedFields]);
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Field>({
@@ -39,7 +38,7 @@ export default function ArchivedFields() {
     <ArchivedListPage<Field>
       description="Restaurar o eliminar campos de forma definitiva"
       columns={columns}
-      data={fields}
+      data={archivedFields}
       entityLabel={ENTITY_LABEL}
       entityLabelPlural="campos"
       getItemLabel={(item) => item.name}

@@ -13,7 +13,7 @@ import { useCallback, useReducer, type Reducer } from "react";
  * y este hook se encarga del estado.
  */
 
-export type CrudService<T, CreateInput, UpdateInput> = {
+export type CrudService<T, CreateInput = never, UpdateInput = never> = {
   list: (query?: string) => Promise<{ data: T[]; total: number }>;
   listArchived?: (query?: string) => Promise<{ data: T[]; total: number }>;
   get?: (id: number) => Promise<T>;
@@ -76,7 +76,7 @@ function extractMessage(err: unknown): string {
   return "Error desconocido";
 }
 
-export function useEntityCrud<T, CreateInput = Partial<T>, UpdateInput = Partial<T>>(
+export function useEntityCrud<T, CreateInput = never, UpdateInput = never>(
   service: CrudService<T, CreateInput, UpdateInput>,
 ) {
   const [state, dispatch] = useReducer(
