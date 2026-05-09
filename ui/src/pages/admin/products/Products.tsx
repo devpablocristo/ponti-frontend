@@ -1,5 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { RowActions } from "../../../components/crud/RowActions";
+import { Pencil, Trash2 } from "lucide-react";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -605,9 +607,6 @@ export function Products() {
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           enableFilters={true}
-          canEdit={(item) => !isInternalMovementEditionBlocked(item.entry_type)}
-          onEdit={(item) => handleEdit(item)}
-          onDelete={(item) => handleDelete(item)}
           message="No hay movimientos disponibles"
           pagination={pagination.buildPagination(filteredMovements.length)}
         />
