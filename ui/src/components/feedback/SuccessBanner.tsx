@@ -15,6 +15,13 @@ type SuccessBannerProps = {
   variant?: "simple" | "alert" | "outlined";
   /** Texto que precede al mensaje en variant="outlined" (ej: "Listo:"). */
   prefix?: string;
+  /**
+   * "default": p-4 + rounded-lg + text-green-800 + mb-4 (banner principal).
+   * "sm": p-3 + rounded + text-green-700 + sin margin (mini-banner inline en
+   *   forms/drawers donde el padre controla el spacing).
+   * Sólo aplica a variant="simple".
+   */
+  size?: "default" | "sm";
   onDismiss?: () => void;
   className?: string;
 };
@@ -29,11 +36,16 @@ export function SuccessBanner({
   children,
   variant = "simple",
   prefix,
+  size = "default",
   onDismiss,
   className = "",
 }: SuccessBannerProps) {
   if (!message && !children) return null;
   const body = children ?? message;
+  const simpleSizeClass =
+    size === "sm"
+      ? "p-3 text-sm text-green-700 rounded bg-green-50"
+      : "p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50";
 
   if (variant === "outlined") {
     return (
@@ -56,7 +68,7 @@ export function SuccessBanner({
   if (variant === "simple") {
     return (
       <div
-        className={`p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 whitespace-pre-line ${
+        className={`${simpleSizeClass} whitespace-pre-line ${
           onDismiss ? "relative pr-12" : ""
         } ${className}`}
         role="status"

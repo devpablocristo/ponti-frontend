@@ -15,6 +15,13 @@ type ErrorBannerProps = {
   variant?: "simple" | "alert" | "outlined";
   /** Texto que precede al mensaje en variant="alert"|"outlined" (ej: "Error:"). */
   prefix?: string;
+  /**
+   * "default": p-4 + rounded-lg + text-red-800 + mb-4 (banner principal).
+   * "sm": p-3 + rounded + text-red-700 + sin margin (mini-banner inline en
+   *   forms/drawers donde el padre controla el spacing).
+   * Sólo aplica a variant="simple".
+   */
+  size?: "default" | "sm";
   /** Si se pasa, muestra botón X para cerrar. */
   onDismiss?: () => void;
   className?: string;
@@ -35,11 +42,16 @@ export function ErrorBanner({
   children,
   variant = "simple",
   prefix,
+  size = "default",
   onDismiss,
   className = "",
 }: ErrorBannerProps) {
   if (!message && !children) return null;
   const body = children ?? message;
+  const simpleSizeClass =
+    size === "sm"
+      ? "p-3 text-sm text-red-700 rounded bg-red-50"
+      : "p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50";
 
   if (variant === "outlined") {
     return (
@@ -62,7 +74,7 @@ export function ErrorBanner({
   if (variant === "simple") {
     return (
       <div
-        className={`p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 whitespace-pre-line ${
+        className={`${simpleSizeClass} whitespace-pre-line ${
           onDismiss ? "relative pr-12" : ""
         } ${className}`}
         role="alert"

@@ -151,21 +151,19 @@ export default function CreateOrder({
     return (
       <div className="space-y-4">
         {success && (
-          <div className="p-3 rounded bg-green-50 text-green-700 text-sm flex items-center justify-between">
-            <span>{success}</span>
-            <Button size="xs" variant="primary" onClick={() => {
-              setSuccess(null);
-              onCreated(normalizedName);
-            }}>OK</Button>
-          </div>
+          <SuccessBanner size="sm">
+            <div className="flex items-center justify-between">
+              <span>{success}</span>
+              <Button size="xs" variant="primary" onClick={() => {
+                setSuccess(null);
+                onCreated(normalizedName);
+              }}>OK</Button>
+            </div>
+          </SuccessBanner>
         )}
 
         {!success && <>
-          {error && (
-            <div className="p-3 rounded bg-red-50 text-red-700 text-sm">
-              {error}
-            </div>
-          )}
+          {error && <ErrorBanner message={error} size="sm" />}
           <InputField
             label="Nombre del insumo"
             name="suplyName"
