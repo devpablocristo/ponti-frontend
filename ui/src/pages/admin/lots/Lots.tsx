@@ -1,8 +1,9 @@
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
-import { AlertCircle, Archive, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { Archive, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { RowActions } from "../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
@@ -446,15 +447,7 @@ export function Lots() {
         ]}
       />
 
-      {message ? (
-        <div
-          className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
-          role="alert"
-        >
-          <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-500" />
-          <span className="font-medium">{message}</span>
-        </div>
-      ) : null}
+      <WarningBanner message={message || null} />
 
       <ErrorBanner message={error} variant="outlined" prefix="Error:" />
 

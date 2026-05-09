@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { WarningBanner } from "../../../components/feedback/WarningBanner";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
@@ -835,12 +836,7 @@ export function Stock() {
             />
           </div>
         )}
-        {errorPeriods && (
-          <div className="flex items-center gap-2 p-3 mb-3 text-sm text-amber-800 rounded-xl bg-amber-50 border border-amber-200">
-            <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-            <span>{errorPeriods}</span>
-          </div>
-        )}
+        <WarningBanner message={errorPeriods} className="mb-3" />
         {projectId && customers && (
           <CreateStockItem
             drawerOpen={drawerOpen}
