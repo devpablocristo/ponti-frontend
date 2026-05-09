@@ -7,6 +7,7 @@ import useProviders from "../../../hooks/useProviders";
 import useSupplies from "../../../hooks/useSupplies";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
 import { apiClient } from "@/api/client";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { replaceSupplyIdsWithNames } from "../utils";
 import {
   normalizeText,
@@ -731,18 +732,18 @@ export default function ImportSupplyMovements({
         </div>
 
         {displayError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <ErrorBanner>
             <span className="font-semibold">Error:</span>
             <div className="mt-1 space-y-1">
               {displayErrorLines.map((line, index) => (
                 <p key={`${line}-${index}`}>{line}</p>
               ))}
             </div>
-          </div>
+          </ErrorBanner>
         )}
 
         {rowErrors.length > 0 && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <ErrorBanner>
             <span className="font-semibold">
               Se detectaron {rowErrors.length} error
               {rowErrors.length !== 1 ? "es" : ""} antes de guardar:
@@ -758,7 +759,7 @@ export default function ImportSupplyMovements({
                 {rowErrors.length - 10 !== 1 ? "es" : ""} mas.
               </p>
             )}
-          </div>
+          </ErrorBanner>
         )}
 
         <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { usePDF } from "react-to-pdf";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import Button from "../../../components/Button/Button";
@@ -105,16 +106,18 @@ export function DashboardV2() {
       )}
 
       {error && (
-        <div className="flex items-center justify-between gap-3 p-4 my-4 text-sm text-red-800 rounded-lg bg-red-50">
-          <div>Error al cargar datos del dashboard: {error}</div>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => getDashboardInfo(buildQueryParams())}
-          >
-            Reintentar
-          </Button>
-        </div>
+        <ErrorBanner className="mt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>Error al cargar datos del dashboard: {error}</div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => getDashboardInfo(buildQueryParams())}
+            >
+              Reintentar
+            </Button>
+          </div>
+        </ErrorBanner>
       )}
 
       <DashboardV2Content dashboard={dashboard} contextChips={contextChips} />

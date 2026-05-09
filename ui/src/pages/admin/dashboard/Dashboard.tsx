@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { ArrowUp, Hourglass, Wallet } from "lucide-react";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { usePDF } from "react-to-pdf";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -267,17 +268,19 @@ export function Dashboard() {
       )}
 
       {error && (
-        <div className="flex items-center justify-between gap-3 p-4 my-4 text-sm text-red-800 rounded-lg bg-red-50">
-          <div>Error al cargar datos del dashboard: {error}</div>
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={!workspaceReady}
-            onClick={() => getDashboardInfo(buildQueryParams())}
-          >
-            Reintentar
-          </Button>
-        </div>
+        <ErrorBanner className="mt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>Error al cargar datos del dashboard: {error}</div>
+            <Button
+              variant="primary"
+              size="sm"
+              disabled={!workspaceReady}
+              onClick={() => getDashboardInfo(buildQueryParams())}
+            >
+              Reintentar
+            </Button>
+          </div>
+        </ErrorBanner>
       )}
 
       <DashboardContent dashboard={dashboard} selectedFilters={selectedFilters} />
