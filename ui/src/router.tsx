@@ -25,6 +25,7 @@ import ArchivedFields from "./pages/admin/database/fields/ArchivedFields";
 import ArchivedManagers from "./pages/admin/database/managers/ArchivedManagers";
 import ManagersList from "./pages/admin/database/managers/ManagersList";
 import ArchivedCampaigns from "./pages/admin/database/campaigns/ArchivedCampaigns";
+import CampaignsList from "./pages/admin/database/campaigns/CampaignsList";
 import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
 import DatabaseTasksForm from "./pages/admin/database/tasks/TasksForm";
 import Lots from "./pages/admin/lots/Lots";
@@ -34,6 +35,7 @@ import CommerceForm from "./pages/admin/database/commerce/CommerceForm";
 import WorkspaceSelectorPage from "./pages/login/WorkspaceSelector";
 import ListItems from "./pages/admin/database/products/List";
 import ListTasks from "./pages/admin/database/tasks/List";
+import ArchivedTasks from "./pages/admin/database/tasks/ArchivedTasks";
 import ByFieldOrCropReport from "./pages/admin/reports/ByFieldOrCropReport.tsx";
 import ByFieldOrCropReportV2 from "./pages/admin/reports/ByFieldOrCropReportV2.tsx";
 import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
@@ -175,6 +177,10 @@ export default [
         element: <ArchivedManagers />,
       },
       {
+        path: "database/campaigns",
+        element: <CampaignsList />,
+      },
+      {
         path: "database/campaigns/archived",
         element: <ArchivedCampaigns />,
       },
@@ -197,6 +203,10 @@ export default [
       {
         path: "database/tasks/list",
         element: <ListTasks />,
+      },
+      {
+        path: "database/tasks/archived",
+        element: <ArchivedTasks />,
       },
       {
         path: "database/dollar",

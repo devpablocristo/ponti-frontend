@@ -337,6 +337,94 @@ const useLabors = () => {
     [dispatch]
   );
 
+  const archiveLabor = React.useCallback(async (id: number): Promise<void> => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<LaborMutationResponse>(
+        `/labors/${id}/archive`,
+        {},
+      );
+      if (!response.success) {
+        const message = "Ocurrió un error al archivar la labor.";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (err) {
+      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const restoreLabor = React.useCallback(async (id: number): Promise<void> => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.post<LaborMutationResponse>(
+        `/labors/${id}/restore`,
+        {},
+      );
+      if (!response.success) {
+        const message = "Ocurrió un error al restaurar la labor.";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (err) {
+      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const hardDeleteLabor = React.useCallback(async (id: number): Promise<void> => {
+    setProcessing(true);
+    setError(null);
+    try {
+      const response = await apiClient.delete<LaborMutationResponse>(
+        `/labors/${id}/hard`,
+      );
+      if (!response.success) {
+        const message = "Ocurrió un error al eliminar la labor.";
+        setError(message);
+        throw new Error(message);
+      }
+    } catch (err) {
+      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const getArchivedLabors = React.useCallback(
+    async (projectId: number) => {
+      setProcessing(true);
+      setError(null);
+      try {
+        const response = await apiClient.get<LaborsResponse>(
+          `/labors/projects/${projectId}/archived`,
+        );
+        if (response.success) {
+          const normalized = extractLaborsArray(response.data);
+          dispatch({ type: actions.SET_LABORS, payload: normalized });
+          return;
+        }
+        setError("Ocurrió un error al listar labores archivadas.");
+      } catch (err) {
+        setError(extractErrorMessage(err, "Error en el servicio, inténtalo más tarde."));
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [dispatch],
+  );
+
   const getWorkOrdersCount = React.useCallback(
     async (projectId: number, laborId: number): Promise<number> => {
       try {
@@ -389,7 +477,11 @@ const useLabors = () => {
     getLaborGroups,
     getMetrics,
     getLabors,
+    getArchivedLabors,
     deleteLabor,
+    archiveLabor,
+    restoreLabor,
+    hardDeleteLabor,
     updateLabor,
     getWorkOrdersCount,
     saveLabors,

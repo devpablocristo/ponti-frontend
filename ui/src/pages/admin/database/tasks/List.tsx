@@ -46,7 +46,7 @@ export default function ListTasks() {
     getLabors,
     error,
     labors,
-    deleteLabor,
+    archiveLabor,
     updateLabor,
     saveLabors,
     getWorkOrdersCount,
@@ -172,11 +172,17 @@ export default function ListTasks() {
     setDeleteModalOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
     setErrorMessage("");
     setSuccessMessage(null);
-    deleteLabor(deleteTarget.id);
+    try {
+      await archiveLabor(deleteTarget.id);
+      setSuccessMessage(`Se archivó "${deleteTarget.name}".`);
+      if (projectId) await getLabors(projectId);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "No se pudo archivar la labor.");
+    }
     setDeleteModalOpen(false);
     setDeleteTarget(null);
 

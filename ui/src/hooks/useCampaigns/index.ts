@@ -3,7 +3,13 @@ import React from "react";
 import * as actions from "./actions";
 
 import { apiClient } from "@/api/client";
-import { Payload } from "./types";
+import { Data as Campaign, Payload } from "./types";
+
+export type CampaignPayloadInput = {
+  name: string;
+};
+
+export type { Campaign };
 import { SuccessResponse } from "@/api/types";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import useCampaignsReducer from "./useCampaignsReducer";
@@ -87,6 +93,57 @@ const useCampaigns = () => {
     [dispatch],
   );
 
+  const createCampaign = React.useCallback(
+    async (input: CampaignPayloadInput): Promise<Campaign | null> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+      try {
+        const response = await apiClient.post<SuccessResponse<Campaign>>(
+          "/campaigns",
+          input,
+        );
+        if (response.success) {
+          return response.data ?? null;
+        }
+        const message = "Ocurrió un error al crear la campaña.";
+        dispatch({ type: actions.SET_ERROR, payload: message });
+        throw new Error(message);
+      } catch (err) {
+        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+        dispatch({ type: actions.SET_ERROR, payload: message });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch],
+  );
+
+  const updateCampaign = React.useCallback(
+    async (id: number, input: CampaignPayloadInput): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+      try {
+        const response = await apiClient.put<SuccessResponse<string>>(
+          "/campaigns/" + id,
+          input,
+        );
+        if (!response.success) {
+          const message = "Ocurrió un error al actualizar la campaña.";
+          dispatch({ type: actions.SET_ERROR, payload: message });
+          throw new Error(message);
+        }
+      } catch (err) {
+        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+        dispatch({ type: actions.SET_ERROR, payload: message });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch],
+  );
+
   const archiveCampaign = React.useCallback(async (id: number): Promise<void> => {
     dispatch({ type: actions.SET_ERROR, payload: "" });
     dispatch({ type: actions.START_PROCESSING });
@@ -155,6 +212,8 @@ const useCampaigns = () => {
   return {
     getCampaigns,
     getArchivedCampaigns,
+    createCampaign,
+    updateCampaign,
     archiveCampaign,
     restoreCampaign,
     hardDeleteCampaign,

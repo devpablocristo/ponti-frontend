@@ -528,4 +528,145 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
   }
 });
 
+router.get(
+  "/projects/:project_id/archived",
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user?.userID;
+      if (!userId) {
+        res.status(401).json({ message: "Usuario no autenticado" });
+        return;
+      }
+      const project_id = parseInt(req.params.project_id as string) || 0;
+      if (project_id === 0) {
+        res.status(400).json({ message: "Proyecto obligatorio" });
+        return;
+      }
+      const headers = {
+        "X-API-KEY": configService.apiKey,
+        "X-User-Id": userId,
+      };
+      const { data: labors } = await apiClient.get<any>(
+        `/projects/${project_id}/labors/archived`,
+        headers,
+      );
+      const items = Array.isArray(labors?.data) ? labors.data : [];
+      const total =
+        typeof labors?.page_info?.total === "number"
+          ? labors.page_info.total
+          : items.length;
+      res.status(200).json({
+        success: true,
+        data: { data: items, total },
+      });
+    } catch (error: any) {
+      const err = error as ApiResponse<null>;
+      if ("error" in err) {
+        res.status(err.error?.status || 500).json(err);
+        return;
+      }
+      res.status(500).json({
+        success: false,
+        message: "Error inesperado",
+        error: { status: 500, details: "No se pudo procesar la solicitud" },
+      });
+    }
+  },
+);
+
+router.post("/:labor_id/archive", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+    await apiClient.post<any>(
+      `/labors/${req.params.labor_id}/archive`,
+      {},
+      headers,
+    );
+    setImmediate(() => cache.flushAll());
+    res.status(200).json({ success: true, message: "Operación exitosa" });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.post("/:labor_id/restore", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+    await apiClient.post<any>(
+      `/labors/${req.params.labor_id}/restore`,
+      {},
+      headers,
+    );
+    setImmediate(() => cache.flushAll());
+    res.status(200).json({ success: true, message: "Operación exitosa" });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.delete("/:labor_id/hard", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+    await apiClient.delete<any>(
+      `/labors/${req.params.labor_id}/hard`,
+      headers,
+    );
+    setImmediate(() => cache.flushAll());
+    res.status(200).json({ success: true, message: "Operación exitosa" });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 export default router;

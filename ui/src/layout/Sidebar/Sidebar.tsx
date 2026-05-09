@@ -69,6 +69,7 @@ const menuDatabase = {
     { name: "Form de Proyectos", route: "/admin/database/customers" },
     { name: "Inversores", route: "/admin/database/investors" },
     { name: "Responsables", route: "/admin/database/managers" },
+    { name: "Campañas", route: "/admin/database/campaigns" },
     { name: "Crear Labores", route: "/admin/database/tasks" },
     { name: "Crear Insumos", route: "/admin/database/items" },
     { name: "Cargar Dólar Promedio", route: "/admin/database/dollar" },
@@ -145,6 +146,7 @@ const menuArchive = {
     { name: "Campos", route: "/admin/database/fields/archived" },
     { name: "Responsables", route: "/admin/database/managers/archived" },
     { name: "Campañas", route: "/admin/database/campaigns/archived" },
+    { name: "Labores", route: "/admin/database/tasks/archived" },
   ],
 };
 
