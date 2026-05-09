@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
@@ -813,11 +814,7 @@ export function Stock() {
         </div>
       )}
       <div className="mt-4 relative">
-        {processing && (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        )}
+        <LoadingOverlay show={processing} />
 
         {(error || exportErrorMessage) && (
           <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">

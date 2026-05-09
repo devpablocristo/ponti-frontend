@@ -5,7 +5,7 @@ import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import useCommercializations from "../../../../hooks/useCommercializations";
-import { LoaderCircle } from "lucide-react";
+import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 
 interface Commerce {
   id: number;
@@ -279,9 +279,7 @@ useEffect(() => {
           </div>
         )}
         {processingProjects || processing ? (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
+          <LoadingOverlay show />
         ) : (
           <div className="mt-1">
             <div className="w-full px-4 py-6">

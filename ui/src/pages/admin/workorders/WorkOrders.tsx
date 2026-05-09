@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
@@ -1114,11 +1115,7 @@ export function WorkOrders() {
         </div>
       )}
       <div className="mt-4 relative">
-        {isProcessing && (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        )}
+        <LoadingOverlay show={isProcessing} />
         {selectedProject && (
           <CreateOrder
             drawerOpen={drawerOpen}

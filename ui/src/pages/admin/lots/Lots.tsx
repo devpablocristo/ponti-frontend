@@ -1,6 +1,7 @@
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
-import { AlertCircle, ExternalLink, LoaderCircle } from "lucide-react";
+import { AlertCircle, ExternalLink } from "lucide-react";
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -337,11 +338,7 @@ export function Lots() {
       ) : null}
 
       <div className="relative mt-4">
-        {processing ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-white bg-opacity-70 backdrop-blur-sm">
-            <LoaderCircle className="h-10 w-10 animate-spin text-blue-600" />
-          </div>
-        ) : null}
+        <LoadingOverlay show={processing} />
 
         <LotDrawer
           open={drawerOpen}

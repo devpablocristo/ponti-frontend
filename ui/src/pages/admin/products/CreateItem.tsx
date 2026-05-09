@@ -4,7 +4,7 @@ import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import useSupplies from "../../../hooks/useSupplies";
 import useStock from "../../../hooks/useStock";
-import { LoaderCircle, Trash } from "lucide-react";
+import { Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
 import useProviders from "../../../hooks/useProviders";

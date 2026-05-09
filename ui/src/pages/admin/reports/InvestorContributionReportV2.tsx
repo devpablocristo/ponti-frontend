@@ -3,13 +3,13 @@ import {
   FlaskConical,
   House,
   Leaf,
-  LoaderCircle,
   Settings,
   Sprout,
   SquareArrowOutUpRight,
   Tractor,
   Wallet,
 } from "lucide-react";
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { usePDF } from "react-to-pdf";
 
@@ -274,11 +274,7 @@ export function InvestorContributionReportV2() {
 
   return (
     <div className="relative">
-      {(loading.projects || loading.campaigns || processing) && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-        </div>
-      )}
+      <LoadingOverlay show={loading.projects || loading.campaigns || processing} />
 
       <FilterBar
         filters={filters}

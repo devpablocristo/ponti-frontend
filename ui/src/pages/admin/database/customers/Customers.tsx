@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { LoaderCircle } from "lucide-react";
+import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
@@ -844,11 +844,7 @@ export default function Customers() {
           : `Edición del proyecto: ${selectedProject?.name}`}
       </h1>
       <div className="grid grid-cols-1 md:grid-cols-[1fr_3fr] gap-2 mt-2">
-        {processing || isSaving && (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        )}
+        <LoadingOverlay show={processing || isSaving} />
         <div className="pt-4 pl-1 pr-2 space-y-4">
           <div ref={wrapperRef} className="relative">
             <Search

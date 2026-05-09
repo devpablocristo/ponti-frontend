@@ -6,7 +6,7 @@ import { Field } from "../../../hooks/useWorkspaceFilters";
 import useLabors from "../../../hooks/useLabors";
 import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import { ChevronDown, LoaderCircle } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";

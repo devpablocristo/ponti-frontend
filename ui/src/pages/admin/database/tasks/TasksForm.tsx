@@ -9,7 +9,7 @@ import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
-import { LoaderCircle } from "lucide-react";
+import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import * as XLSX from "xlsx";
 import {
   getValueByAliases,
@@ -576,9 +576,7 @@ export default function TasksForm() {
           </div>
         </div>
         {processing ? (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
+          <LoadingOverlay show />
         ) : (
           <div className="mt-4">
             <div className="hidden sm:grid grid-cols-[1fr_1fr_0.5fr_0.45fr_1fr] gap-4 mb-2">
