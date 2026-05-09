@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
+import { Checkbox } from "../../../components/Input/Checkbox";
 import useSupplies from "../../../hooks/useSupplies";
 import useStock from "../../../hooks/useStock";
 import { Trash } from "lucide-react";
@@ -252,9 +253,8 @@ export default function CreateItem({
             />
 
             <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              <Checkbox
+                tone="form"
                 checked={isPartialPrice}
                 onChange={(e) => setIsPartialPrice(e.target.checked)}
               />

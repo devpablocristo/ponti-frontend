@@ -24,6 +24,7 @@ import { makeActionsColumn } from "../../../../components/crud/makeActionsColumn
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
+import { Checkbox } from "../../../../components/Input/Checkbox";
 import {
   getValueByAliases,
   LABOR_HEADER_ALIASES,
@@ -511,9 +512,8 @@ export default function ListTasks() {
                 }}
               />
               <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                <Checkbox
+                  tone="warning"
                   checked={Boolean(labor?.is_partial_price)}
                   onChange={(e) => {
                     if (!labor) return;

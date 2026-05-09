@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
+import { Checkbox } from "../../../components/Input/Checkbox";
 import { Field } from "../../../hooks/useWorkspaceFilters";
 import useLabors from "../../../hooks/useLabors";
 import { LaborInfo } from "../../../hooks/useLabors/types";
@@ -196,9 +197,8 @@ export default function CreateOrder({
           />
 
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-            <input
-              type="checkbox"
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            <Checkbox
+              tone="form"
               checked={isPartialPrice}
               onChange={(e) => setIsPartialPrice(e.target.checked)}
             />
@@ -879,9 +879,8 @@ export default function CreateOrder({
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold text-gray-700">Inversor del labor</span>
                   <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    <Checkbox
+                      tone="form"
                       checked={splitByInvestor}
                       onChange={(e) => {
                         const checked = e.target.checked;

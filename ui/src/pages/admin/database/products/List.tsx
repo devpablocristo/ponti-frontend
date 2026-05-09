@@ -14,6 +14,7 @@ import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { Checkbox } from "../../../../components/Input/Checkbox";
 
 const renderPriceCell = (value: unknown, row: Supply) => (
   <div className="flex items-center gap-2">
@@ -412,9 +413,8 @@ export default function ListItems() {
                 </div>
               </div>
               <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                <Checkbox
+                  tone="warning"
                   checked={Boolean(item?.is_partial_price)}
                   onChange={(e) => {
                     if (!item) return;

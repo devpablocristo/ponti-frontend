@@ -1,3 +1,4 @@
+import { Checkbox } from "../Input/Checkbox";
 import type { Column } from "../../pages/admin/types";
 
 type Identifiable = { id: number };
@@ -22,9 +23,7 @@ export function makeSelectColumn<T extends Identifiable>(
     align: "center",
     width: "40px",
     render: (_value: unknown, item: T) => (
-      <input
-        type="checkbox"
-        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+      <Checkbox
         checked={bulk.isSelected(item.id)}
         onChange={(e) => {
           e.stopPropagation();

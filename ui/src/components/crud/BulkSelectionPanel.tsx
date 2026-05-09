@@ -1,3 +1,4 @@
+import { Checkbox } from "../Input/Checkbox";
 import { BulkActionBar, type BulkAction } from "./BulkActionBar";
 
 type BulkSelectionPanelProps = {
@@ -35,9 +36,7 @@ export function BulkSelectionPanel({
         />
       )}
       <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+        <Checkbox
           checked={allSelected}
           onChange={onToggleAll}
           aria-label={`Seleccionar todos los ${entityLabelPlural}`}
