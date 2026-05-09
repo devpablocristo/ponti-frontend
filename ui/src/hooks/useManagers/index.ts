@@ -1,8 +1,11 @@
-import React, { useReducer, useRef } from "react";
+import { useMemo } from "react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import {
+  CrudService,
+  useEntityCrud,
+} from "../useEntityCrud";
 
 export type Manager = {
   id: number;
@@ -19,229 +22,73 @@ type ManagerPayload = {
   total: number;
 };
 
-type State = {
-  total: number;
-  managers: Manager[];
-  processing: boolean;
-  error: string;
-};
-
-type Action =
-  | { type: "SET_MANAGERS"; payload: Manager[] }
-  | { type: "SET_TOTAL"; payload: number }
-  | { type: "SET_ERROR"; payload: string }
-  | { type: "START_PROCESSING" }
-  | { type: "STOP_PROCESSING" };
-
-const initialState: State = {
-  total: 0,
-  managers: [],
-  processing: false,
-  error: "",
-};
-
-function reducer(state: State, action: Action): State {
-  switch (action.type) {
-    case "SET_MANAGERS":
-      return { ...state, managers: action.payload };
-    case "SET_TOTAL":
-      return { ...state, total: action.payload };
-    case "SET_ERROR":
-      return { ...state, error: action.payload };
-    case "START_PROCESSING":
-      return { ...state, processing: true };
-    case "STOP_PROCESSING":
-      return { ...state, processing: false };
-    default:
-      return state;
-  }
-}
+const buildQuery = (queryString?: string) =>
+  queryString && queryString !== "" ? `?${queryString}` : "";
 
 const useManagers = () => {
-  const [{ total, managers, processing, error }, dispatch] = useReducer(reducer, initialState);
-  const lastQueryRef = useRef<string>("limit=1000");
-
-  const getManagers = React.useCallback(async (queryString: string): Promise<void> => {
-    dispatch({ type: "SET_ERROR", payload: "" });
-    dispatch({ type: "START_PROCESSING" });
-    let queryParams = "";
-    if (queryString !== "") {
-      lastQueryRef.current = queryString;
-      queryParams = `?${queryString}`;
-    }
-    try {
-      const response = await apiClient.get<SuccessResponse<ManagerPayload>>(
-        "/managers" + queryParams,
-      );
-      if (response.success) {
-        dispatch({ type: "SET_MANAGERS", payload: response.data.data });
-        dispatch({ type: "SET_TOTAL", payload: response.data.total });
-        return;
-      }
-      dispatch({ type: "SET_ERROR", payload: "Ocurrió un error en la búsqueda de responsables." });
-    } catch (err) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: extractErrorMessage(err, "Error en el servicio, inténtalo más tarde."),
-      });
-    } finally {
-      dispatch({ type: "STOP_PROCESSING" });
-    }
-  }, []);
-
-  const getArchivedManagers = React.useCallback(async (queryString: string): Promise<void> => {
-    dispatch({ type: "SET_ERROR", payload: "" });
-    dispatch({ type: "START_PROCESSING" });
-    let queryParams = "";
-    if (queryString !== "") queryParams = `?${queryString}`;
-    try {
-      const response = await apiClient.get<SuccessResponse<ManagerPayload>>(
-        "/managers/archived" + queryParams,
-      );
-      if (response.success) {
-        dispatch({ type: "SET_MANAGERS", payload: response.data.data });
-        dispatch({ type: "SET_TOTAL", payload: response.data.total });
-        return;
-      }
-      dispatch({ type: "SET_ERROR", payload: "Ocurrió un error al listar responsables archivados." });
-    } catch (err) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: extractErrorMessage(err, "Error en el servicio, inténtalo más tarde."),
-      });
-    } finally {
-      dispatch({ type: "STOP_PROCESSING" });
-    }
-  }, []);
-
-  const createManager = React.useCallback(
-    async (input: ManagerPayloadInput): Promise<Manager | null> => {
-      dispatch({ type: "SET_ERROR", payload: "" });
-      dispatch({ type: "START_PROCESSING" });
-      try {
+  const service = useMemo<
+    CrudService<Manager, ManagerPayloadInput, ManagerPayloadInput>
+  >(
+    () => ({
+      list: async (query) => {
+        const response = await apiClient.get<SuccessResponse<ManagerPayload>>(
+          "/managers" + buildQuery(query),
+        );
+        return { data: response.data.data, total: response.data.total };
+      },
+      listArchived: async (query) => {
+        const response = await apiClient.get<SuccessResponse<ManagerPayload>>(
+          "/managers/archived" + buildQuery(query),
+        );
+        return { data: response.data.data, total: response.data.total };
+      },
+      create: async (input) => {
         const response = await apiClient.post<SuccessResponse<Manager>>(
           "/managers",
           input,
         );
-        if (response.success) {
-          return response.data ?? null;
-        }
-        const message = "Ocurrió un error al crear el responsable.";
-        dispatch({ type: "SET_ERROR", payload: message });
-        throw new Error(message);
-      } catch (err) {
-        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-        dispatch({ type: "SET_ERROR", payload: message });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: "STOP_PROCESSING" });
-      }
-    },
-    [],
-  );
-
-  const updateManager = React.useCallback(
-    async (id: number, input: ManagerPayloadInput): Promise<void> => {
-      dispatch({ type: "SET_ERROR", payload: "" });
-      dispatch({ type: "START_PROCESSING" });
-      try {
-        const response = await apiClient.put<SuccessResponse<string>>(
-          "/managers/" + id,
-          input,
+        return response.data;
+      },
+      update: async (id, input) => {
+        await apiClient.put<SuccessResponse<string>>(`/managers/${id}`, input);
+        return { id, ...input } as Manager;
+      },
+      archive: async (id) => {
+        await apiClient.post<SuccessResponse<string>>(
+          `/managers/${id}/archive`,
+          {},
         );
-        if (!response.success) {
-          const message = "Ocurrió un error al actualizar el responsable.";
-          dispatch({ type: "SET_ERROR", payload: message });
-          throw new Error(message);
-        }
-      } catch (err) {
-        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-        dispatch({ type: "SET_ERROR", payload: message });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: "STOP_PROCESSING" });
-      }
-    },
+      },
+      restore: async (id) => {
+        await apiClient.post<SuccessResponse<string>>(
+          `/managers/${id}/restore`,
+          {},
+        );
+      },
+      hardDelete: async (id) => {
+        await apiClient.delete<SuccessResponse<string>>(`/managers/${id}/hard`);
+      },
+    }),
     [],
   );
 
-  const archiveManager = React.useCallback(async (id: number): Promise<void> => {
-    dispatch({ type: "SET_ERROR", payload: "" });
-    dispatch({ type: "START_PROCESSING" });
-    try {
-      const response = await apiClient.post<SuccessResponse<string>>(
-        "/managers/" + id + "/archive",
-        {},
-      );
-      if (!response.success) {
-        const message = "Ocurrió un error al archivar el responsable.";
-        dispatch({ type: "SET_ERROR", payload: message });
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-      dispatch({ type: "SET_ERROR", payload: message });
-      throw new Error(message);
-    } finally {
-      dispatch({ type: "STOP_PROCESSING" });
-    }
-  }, []);
-
-  const restoreManager = React.useCallback(async (id: number): Promise<void> => {
-    dispatch({ type: "SET_ERROR", payload: "" });
-    dispatch({ type: "START_PROCESSING" });
-    try {
-      const response = await apiClient.post<SuccessResponse<string>>(
-        "/managers/" + id + "/restore",
-        {},
-      );
-      if (!response.success) {
-        const message = "Ocurrió un error al restaurar el responsable.";
-        dispatch({ type: "SET_ERROR", payload: message });
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-      dispatch({ type: "SET_ERROR", payload: message });
-      throw new Error(message);
-    } finally {
-      dispatch({ type: "STOP_PROCESSING" });
-    }
-  }, []);
-
-  const hardDeleteManager = React.useCallback(async (id: number): Promise<void> => {
-    dispatch({ type: "SET_ERROR", payload: "" });
-    dispatch({ type: "START_PROCESSING" });
-    try {
-      const response = await apiClient.delete<SuccessResponse<string>>(
-        "/managers/" + id + "/hard",
-      );
-      if (!response.success) {
-        const message = "Ocurrió un error al eliminar el responsable.";
-        dispatch({ type: "SET_ERROR", payload: message });
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
-      dispatch({ type: "SET_ERROR", payload: message });
-      throw new Error(message);
-    } finally {
-      dispatch({ type: "STOP_PROCESSING" });
-    }
-  }, []);
+  const crud = useEntityCrud<Manager, ManagerPayloadInput, ManagerPayloadInput>(
+    service,
+  );
 
   return {
-    getManagers,
-    getArchivedManagers,
-    createManager,
-    updateManager,
-    archiveManager,
-    restoreManager,
-    hardDeleteManager,
-    total,
-    managers,
-    processing,
-    error,
+    managers: crud.data,
+    archivedManagers: crud.archivedData,
+    total: crud.total,
+    processing: crud.processing,
+    error: crud.error,
+    getManagers: crud.list,
+    getArchivedManagers: crud.listArchived,
+    createManager: crud.create,
+    updateManager: crud.update,
+    archiveManager: crud.archive,
+    restoreManager: crud.restore,
+    hardDeleteManager: crud.hardDelete,
   };
 };
 

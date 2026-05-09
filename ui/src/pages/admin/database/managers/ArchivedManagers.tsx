@@ -13,7 +13,7 @@ const columns: Column<Manager>[] = [
 
 export default function ArchivedManagers() {
   const {
-    managers,
+    archivedManagers,
     getArchivedManagers,
     restoreManager,
     hardDeleteManager,
@@ -21,10 +21,9 @@ export default function ArchivedManagers() {
     error,
   } = useManagers();
 
-  const refetch = useCallback(
-    () => getArchivedManagers("page=1&per_page=1000"),
-    [getArchivedManagers],
-  );
+  const refetch = useCallback(async () => {
+    await getArchivedManagers("page=1&per_page=1000");
+  }, [getArchivedManagers]);
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Manager>({
@@ -37,7 +36,7 @@ export default function ArchivedManagers() {
     <ArchivedListPage<Manager>
       description="Restaurar o eliminar responsables de proyecto de forma definitiva"
       columns={columns}
-      data={managers}
+      data={archivedManagers}
       entityLabel={ENTITY_LABEL}
       entityLabelPlural="responsables"
       getItemLabel={(item) => item.name}

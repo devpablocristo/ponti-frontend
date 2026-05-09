@@ -13,7 +13,7 @@ const columns: Column<Investor>[] = [
 
 export default function ArchivedInvestors() {
   const {
-    investors,
+    archivedInvestors,
     getArchivedInvestors,
     restoreInvestor,
     hardDeleteInvestor,
@@ -21,10 +21,9 @@ export default function ArchivedInvestors() {
     error,
   } = useInvestors();
 
-  const refetch = useCallback(
-    () => getArchivedInvestors("page=1&per_page=1000"),
-    [getArchivedInvestors],
-  );
+  const refetch = useCallback(async () => {
+    await getArchivedInvestors("page=1&per_page=1000");
+  }, [getArchivedInvestors]);
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Investor>({
@@ -37,7 +36,7 @@ export default function ArchivedInvestors() {
     <ArchivedListPage<Investor>
       description="Restaurar o eliminar inversores de forma definitiva"
       columns={columns}
-      data={investors}
+      data={archivedInvestors}
       entityLabel={ENTITY_LABEL}
       entityLabelPlural="inversores"
       getItemLabel={(item) => item.name}
