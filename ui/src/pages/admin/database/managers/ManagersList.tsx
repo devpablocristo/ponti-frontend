@@ -11,18 +11,16 @@ import { RowActions } from "../../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import {
-  getArchiveCopy,
   getCreateSuccessCopy,
-  getHardDeleteCopy,
   getUpdateSuccessCopy,
 } from "../../../../components/Modal/copy";
-import { useConfirmDialog } from "../../../../hooks/useConfirmDialog";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
+import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
 import useManagers, {
   Manager,
   ManagerPayloadInput,
 } from "../../../../hooks/useManagers";
-import { toastError, toastSuccess } from "../../../../lib/toast";
+import { toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import ManagerFormDrawer from "./ManagerFormDrawer";
 
@@ -43,7 +41,6 @@ export default function ManagersList() {
     archiveManager,
     hardDeleteManager,
   } = useManagers();
-  const confirm = useConfirmDialog();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Manager | null>(null);
@@ -107,54 +104,13 @@ export default function ManagersList() {
     [createManager, editing, refresh, updateManager],
   );
 
-  const handleArchive = useCallback(
-    async (item: Manager) => {
-      const ok = await confirm({
-        ...getArchiveCopy(ENTITY_LABEL, item.name),
-        primaryLabel: getArchiveCopy(ENTITY_LABEL, item.name).primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "warning",
-      });
-      if (!ok) return;
-      try {
-        await archiveManager(item.id);
-        toastSuccess(`Se archivó "${item.name}"`);
-        refresh();
-      } catch (err) {
-        toastError(
-          err instanceof Error
-            ? err.message
-            : "No se pudo archivar el responsable",
-        );
-      }
-    },
-    [archiveManager, confirm, refresh],
-  );
-
-  const handleHardDelete = useCallback(
-    async (item: Manager) => {
-      const ok = await confirm({
-        ...getHardDeleteCopy(ENTITY_LABEL, item.name),
-        primaryLabel: getHardDeleteCopy(ENTITY_LABEL, item.name)
-          .primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "danger",
-      });
-      if (!ok) return;
-      try {
-        await hardDeleteManager(item.id);
-        toastSuccess(`Se eliminó "${item.name}" definitivamente`);
-        refresh();
-      } catch (err) {
-        toastError(
-          err instanceof Error
-            ? err.message
-            : "No se pudo eliminar el responsable",
-        );
-      }
-    },
-    [confirm, hardDeleteManager, refresh],
-  );
+  const { handleArchive, handleHardDelete } = useEntityRowActions<Manager>({
+    entityLabel: ENTITY_LABEL,
+    getLabel: (m) => m.name,
+    archive: archiveManager,
+    hardDelete: hardDeleteManager,
+    onAfter: refresh,
+  });
 
   const selectColumn = useMemo<Column<Manager>>(
     () => makeSelectColumn<Manager>(bulk, (m) => m.name, "responsable"),

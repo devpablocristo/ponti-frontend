@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { RowActions } from "../../../components/crud/RowActions";
@@ -17,10 +17,8 @@ import ExpandedRow from "./ExpandedRow";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import useCustomers from "../../../hooks/useCustomers";
 import { useSelection } from "../../login/context/useSelection";
-import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import { useBulkActions } from "../../../hooks/useBulkActions";
-import { toastError, toastSuccess } from "../../../lib/toast";
-import { getHardDeleteCopy } from "../../../components/Modal/copy";
+import { useEntityRowActions } from "../../../hooks/useEntityRowActions";
 import { Column } from "../types";
 
 const baseColumns: Column<ProjectData>[] = [
@@ -74,7 +72,6 @@ export function Customers() {
   const { archiveCustomer } = useCustomers();
   const { setCustomer, setProject, setCampaign, setProjectId, setField } =
     useSelection();
-  const confirm = useConfirmDialog();
 
   const {
     selectedCustomer,
@@ -131,27 +128,12 @@ export function Customers() {
     onAfter: () => getProjects(`page=1&per_page=10`),
   });
 
-  const handleHardDeleteProject = useCallback(
-    async (item: ProjectData) => {
-      const ok = await confirm({
-        ...getHardDeleteCopy("el proyecto", item.name),
-        primaryLabel: getHardDeleteCopy("el proyecto", item.name).primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "danger",
-      });
-      if (!ok) return;
-      try {
-        await hardDeleteProject(Number(item.id));
-        toastSuccess(`Se eliminó "${item.name}" definitivamente`);
-        getProjects(`page=1&per_page=10`);
-      } catch (err) {
-        toastError(
-          err instanceof Error ? err.message : "No se pudo eliminar el proyecto",
-        );
-      }
-    },
-    [confirm, getProjects, hardDeleteProject],
-  );
+  const { handleHardDelete: handleHardDeleteProject } = useEntityRowActions<ProjectData>({
+    entityLabel: "el proyecto",
+    getLabel: (p) => p.name,
+    hardDelete: (id) => hardDeleteProject(Number(id)),
+    onAfter: () => getProjects(`page=1&per_page=10`),
+  });
 
   const selectColumn = useMemo<Column<ProjectData>>(
     () => makeSelectColumn<ProjectData>(bulk, (p) => p.name, "proyecto"),

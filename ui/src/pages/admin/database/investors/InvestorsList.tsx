@@ -11,18 +11,16 @@ import { RowActions } from "../../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import {
-  getArchiveCopy,
   getCreateSuccessCopy,
-  getHardDeleteCopy,
   getUpdateSuccessCopy,
 } from "../../../../components/Modal/copy";
-import { useConfirmDialog } from "../../../../hooks/useConfirmDialog";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
+import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
 import useInvestors, {
   Investor,
   InvestorPayloadInput,
 } from "../../../../hooks/useInvestors";
-import { toastError, toastSuccess } from "../../../../lib/toast";
+import { toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import InvestorFormDrawer from "./InvestorFormDrawer";
 
@@ -56,7 +54,6 @@ export default function InvestorsList() {
     archiveInvestor,
     hardDeleteInvestor,
   } = useInvestors();
-  const confirm = useConfirmDialog();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Investor | null>(null);
@@ -113,53 +110,13 @@ export default function InvestorsList() {
     [createInvestor, editing, updateInvestor],
   );
 
-  const handleArchive = useCallback(
-    async (item: Investor) => {
-      const ok = await confirm({
-        ...getArchiveCopy(ENTITY_LABEL, item.name),
-        primaryLabel: getArchiveCopy(ENTITY_LABEL, item.name).primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "warning",
-      });
-      if (!ok) return;
-      try {
-        await archiveInvestor(item.id);
-        toastSuccess(`Se archivó "${item.name}"`);
-      } catch (err) {
-        toastError(
-          err instanceof Error
-            ? err.message
-            : "No se pudo archivar el inversor",
-        );
-      }
-    },
-    [archiveInvestor, confirm],
-  );
-
-  const handleHardDelete = useCallback(
-    async (item: Investor) => {
-      const ok = await confirm({
-        ...getHardDeleteCopy(ENTITY_LABEL, item.name),
-        primaryLabel: getHardDeleteCopy(ENTITY_LABEL, item.name)
-          .primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "danger",
-      });
-      if (!ok) return;
-      try {
-        await hardDeleteInvestor(item.id);
-        toastSuccess(`Se eliminó "${item.name}" definitivamente`);
-        getInvestors("limit=1000");
-      } catch (err) {
-        toastError(
-          err instanceof Error
-            ? err.message
-            : "No se pudo eliminar el inversor",
-        );
-      }
-    },
-    [confirm, getInvestors, hardDeleteInvestor],
-  );
+  const { handleArchive, handleHardDelete } = useEntityRowActions<Investor>({
+    entityLabel: ENTITY_LABEL,
+    getLabel: (i) => i.name,
+    archive: archiveInvestor,
+    hardDelete: hardDeleteInvestor,
+    onAfter: () => getInvestors("limit=1000"),
+  });
 
   const selectColumn = useMemo<Column<Investor>>(
     () => makeSelectColumn<Investor>(bulk, (i) => i.name, "inversor"),

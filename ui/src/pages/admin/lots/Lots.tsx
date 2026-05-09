@@ -7,13 +7,8 @@ import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { RowActions } from "../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
-import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import { useBulkActions } from "../../../hooks/useBulkActions";
-import { toastError, toastSuccess } from "../../../lib/toast";
-import {
-  getArchiveCopy,
-  getHardDeleteCopy,
-} from "../../../components/Modal/copy";
+import { useEntityRowActions } from "../../../hooks/useEntityRowActions";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -66,7 +61,6 @@ export function Lots() {
     hardDeleteLot,
   } = useLots();
 
-  const confirm = useConfirmDialog();
 
   const {
     selectedCustomer,
@@ -244,45 +238,14 @@ export function Lots() {
     setDrawerOpen(true);
   }, []);
 
-  const handleArchiveLot = useCallback(
-    async (item: LotsData) => {
-      const ok = await confirm({
-        ...getArchiveCopy("el lote", item.lot_name),
-        primaryLabel: getArchiveCopy("el lote", item.lot_name).primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "warning",
-      });
-      if (!ok) return;
-      try {
-        await archiveLot(item.id);
-        toastSuccess(`Se archivó "${item.lot_name}"`);
-        reloadFromFirstPage();
-      } catch (err) {
-        toastError(err instanceof Error ? err.message : "No se pudo archivar el lote");
-      }
-    },
-    [archiveLot, confirm, reloadFromFirstPage],
-  );
-
-  const handleHardDeleteLot = useCallback(
-    async (item: LotsData) => {
-      const ok = await confirm({
-        ...getHardDeleteCopy("el lote", item.lot_name),
-        primaryLabel: getHardDeleteCopy("el lote", item.lot_name).primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "danger",
-      });
-      if (!ok) return;
-      try {
-        await hardDeleteLot(item.id);
-        toastSuccess(`Se eliminó "${item.lot_name}" definitivamente`);
-        reloadFromFirstPage();
-      } catch (err) {
-        toastError(err instanceof Error ? err.message : "No se pudo eliminar el lote");
-      }
-    },
-    [confirm, hardDeleteLot, reloadFromFirstPage],
-  );
+  const { handleArchive: handleArchiveLot, handleHardDelete: handleHardDeleteLot } =
+    useEntityRowActions<LotsData>({
+      entityLabel: "el lote",
+      getLabel: (l) => l.lot_name,
+      archive: archiveLot,
+      hardDelete: hardDeleteLot,
+      onAfter: reloadFromFirstPage,
+    });
 
   const selectColumn = useMemo<Column<LotsData>>(
     () => makeSelectColumn<LotsData>(bulk, (l) => l.lot_name, "lote"),

@@ -11,19 +11,17 @@ import { RowActions } from "../../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import {
-  getArchiveCopy,
   getCreateSuccessCopy,
-  getHardDeleteCopy,
   getUpdateSuccessCopy,
 } from "../../../../components/Modal/copy";
-import { useConfirmDialog } from "../../../../hooks/useConfirmDialog";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
+import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
 import useCustomers from "../../../../hooks/useCustomers";
 import {
   CustomerData,
   CustomerPayloadInput,
 } from "../../../../hooks/useCustomers/types";
-import { toastError, toastSuccess } from "../../../../lib/toast";
+import { toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import CustomerFormDrawer from "./CustomerFormDrawer";
 
@@ -44,7 +42,6 @@ export default function CustomersList() {
     archiveCustomer,
     hardDeleteCustomer,
   } = useCustomers();
-  const confirm = useConfirmDialog();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<CustomerData | null>(null);
@@ -101,51 +98,13 @@ export default function CustomersList() {
     [createCustomer, editing, updateCustomer],
   );
 
-  const handleArchive = useCallback(
-    async (item: CustomerData) => {
-      const ok = await confirm({
-        ...getArchiveCopy(ENTITY_LABEL, item.name),
-        primaryLabel: getArchiveCopy(ENTITY_LABEL, item.name).primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "warning",
-      });
-      if (!ok) return;
-      try {
-        await archiveCustomer(item.id);
-        toastSuccess(`Se archivó "${item.name}"`);
-      } catch (err) {
-        toastError(
-          err instanceof Error ? err.message : "No se pudo archivar el cliente",
-        );
-      }
-    },
-    [archiveCustomer, confirm],
-  );
-
-  const handleHardDelete = useCallback(
-    async (item: CustomerData) => {
-      const ok = await confirm({
-        ...getHardDeleteCopy(ENTITY_LABEL, item.name),
-        primaryLabel: getHardDeleteCopy(ENTITY_LABEL, item.name)
-          .primaryButtonText,
-        secondaryLabel: "Cancelar",
-        severity: "danger",
-      });
-      if (!ok) return;
-      try {
-        await hardDeleteCustomer(item.id);
-        toastSuccess(`Se eliminó "${item.name}" definitivamente`);
-        getCustomers("limit=1000");
-      } catch (err) {
-        toastError(
-          err instanceof Error
-            ? err.message
-            : "No se pudo eliminar el cliente",
-        );
-      }
-    },
-    [confirm, getCustomers, hardDeleteCustomer],
-  );
+  const { handleArchive, handleHardDelete } = useEntityRowActions<CustomerData>({
+    entityLabel: ENTITY_LABEL,
+    getLabel: (c) => c.name,
+    archive: archiveCustomer,
+    hardDelete: hardDeleteCustomer,
+    onAfter: () => getCustomers("limit=1000"),
+  });
 
   const selectColumn = useMemo<Column<CustomerData>>(
     () => makeSelectColumn<CustomerData>(bulk, (c) => c.name, "cliente"),
