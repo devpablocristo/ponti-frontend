@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Archive, Briefcase, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
@@ -10,18 +10,14 @@ import { PageHeader } from "../../../../components/layout/PageHeader";
 import { RowActions } from "../../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
-import {
-  getCreateSuccessCopy,
-  getUpdateSuccessCopy,
-} from "../../../../components/Modal/copy";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
+import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
 import useCustomers from "../../../../hooks/useCustomers";
 import {
   CustomerData,
   CustomerPayloadInput,
 } from "../../../../hooks/useCustomers/types";
-import { toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import CustomerFormDrawer from "./CustomerFormDrawer";
 
@@ -43,9 +39,7 @@ export default function CustomersList() {
     hardDeleteCustomer,
   } = useCustomers();
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<CustomerData | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const refresh = () => getCustomers("limit=1000");
 
   useEffect(() => {
     getCustomers("limit=1000");
@@ -56,47 +50,15 @@ export default function CustomersList() {
     entityLabelPlural: "clientes",
     archive: archiveCustomer,
     hardDelete: hardDeleteCustomer,
-    onAfter: () => getCustomers("limit=1000"),
+    onAfter: refresh,
   });
 
-  const openCreate = () => {
-    setEditing(null);
-    setSubmitError(null);
-    setDrawerOpen(true);
-  };
-
-  const openEdit = (customer: CustomerData) => {
-    setEditing(customer);
-    setSubmitError(null);
-    setDrawerOpen(true);
-  };
-
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setEditing(null);
-    setSubmitError(null);
-  };
-
-  const handleSubmit = useCallback(
-    async (input: CustomerPayloadInput) => {
-      setSubmitError(null);
-      try {
-        if (editing) {
-          await updateCustomer(editing.id, input);
-          toastSuccess(getUpdateSuccessCopy(`el cliente "${input.name}"`));
-        } else {
-          await createCustomer(input);
-          toastSuccess(getCreateSuccessCopy(`el cliente "${input.name}"`));
-        }
-        closeDrawer();
-      } catch (err) {
-        setSubmitError(
-          err instanceof Error ? err.message : "No se pudo guardar el cliente",
-        );
-      }
-    },
-    [createCustomer, editing, updateCustomer],
-  );
+  const drawer = useEntityFormDrawer<CustomerData, CustomerPayloadInput>({
+    buildSuccessLabel: (input) => `el cliente "${input.name}"`,
+    create: createCustomer,
+    update: updateCustomer,
+    fallbackErrorMessage: "No se pudo guardar el cliente",
+  });
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<CustomerData>({
     entityLabel: ENTITY_LABEL,
@@ -125,7 +87,7 @@ export default function CustomersList() {
               {
                 label: "Editar",
                 icon: Pencil,
-                onClick: () => openEdit(item),
+                onClick: () => drawer.openEdit(item),
               },
               {
                 label: "Archivar",
@@ -144,7 +106,7 @@ export default function CustomersList() {
         ),
       },
     ],
-    [handleArchive, handleHardDelete, selectColumn],
+    [drawer, handleArchive, handleHardDelete, selectColumn],
   );
 
   return (
@@ -156,7 +118,7 @@ export default function CustomersList() {
           <Button
             variant="primary"
             iconLeft={<Plus className="h-4 w-4" />}
-            onClick={openCreate}
+            onClick={drawer.openCreate}
           >
             Nuevo cliente
           </Button>
@@ -175,7 +137,7 @@ export default function CustomersList() {
               <Button
                 variant="primary"
                 iconLeft={<Plus className="h-4 w-4" />}
-                onClick={openCreate}
+                onClick={drawer.openCreate}
               >
                 Nuevo cliente
               </Button>
@@ -198,12 +160,12 @@ export default function CustomersList() {
       </div>
 
       <CustomerFormDrawer
-        open={drawerOpen}
-        customer={editing}
+        open={drawer.open}
+        customer={drawer.editing}
         processing={processing}
-        errorMessage={submitError}
-        onClose={closeDrawer}
-        onSubmit={handleSubmit}
+        errorMessage={drawer.submitError}
+        onClose={drawer.close}
+        onSubmit={drawer.handleSubmit}
       />
     </div>
   );

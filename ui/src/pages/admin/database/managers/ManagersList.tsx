@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Archive, Pencil, Plus, Trash2, UserCog } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
@@ -10,17 +10,13 @@ import { PageHeader } from "../../../../components/layout/PageHeader";
 import { RowActions } from "../../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
-import {
-  getCreateSuccessCopy,
-  getUpdateSuccessCopy,
-} from "../../../../components/Modal/copy";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
+import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
 import useManagers, {
   Manager,
   ManagerPayloadInput,
 } from "../../../../hooks/useManagers";
-import { toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import ManagerFormDrawer from "./ManagerFormDrawer";
 
@@ -42,10 +38,6 @@ export default function ManagersList() {
     hardDeleteManager,
   } = useManagers();
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<Manager | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
   const refresh = useCallback(() => {
     getManagers("limit=1000");
   }, [getManagers]);
@@ -58,51 +50,17 @@ export default function ManagersList() {
     onAfter: refresh,
   });
 
+  const drawer = useEntityFormDrawer<Manager, ManagerPayloadInput>({
+    buildSuccessLabel: (input) => `el responsable "${input.name}"`,
+    create: createManager,
+    update: updateManager,
+    fallbackErrorMessage: "No se pudo guardar el responsable",
+    onAfter: refresh,
+  });
+
   useEffect(() => {
     refresh();
   }, [refresh]);
-
-  const openCreate = () => {
-    setEditing(null);
-    setSubmitError(null);
-    setDrawerOpen(true);
-  };
-
-  const openEdit = (manager: Manager) => {
-    setEditing(manager);
-    setSubmitError(null);
-    setDrawerOpen(true);
-  };
-
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setEditing(null);
-    setSubmitError(null);
-  };
-
-  const handleSubmit = useCallback(
-    async (input: ManagerPayloadInput) => {
-      setSubmitError(null);
-      try {
-        if (editing) {
-          await updateManager(editing.id, input);
-          toastSuccess(getUpdateSuccessCopy(`el responsable "${input.name}"`));
-        } else {
-          await createManager(input);
-          toastSuccess(getCreateSuccessCopy(`el responsable "${input.name}"`));
-        }
-        closeDrawer();
-        refresh();
-      } catch (err) {
-        setSubmitError(
-          err instanceof Error
-            ? err.message
-            : "No se pudo guardar el responsable",
-        );
-      }
-    },
-    [createManager, editing, refresh, updateManager],
-  );
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<Manager>({
     entityLabel: ENTITY_LABEL,
@@ -131,7 +89,7 @@ export default function ManagersList() {
               {
                 label: "Editar",
                 icon: Pencil,
-                onClick: () => openEdit(item),
+                onClick: () => drawer.openEdit(item),
               },
               {
                 label: "Archivar",
@@ -150,7 +108,7 @@ export default function ManagersList() {
         ),
       },
     ],
-    [handleArchive, handleHardDelete, selectColumn],
+    [drawer, handleArchive, handleHardDelete, selectColumn],
   );
 
   return (
@@ -162,7 +120,7 @@ export default function ManagersList() {
           <Button
             variant="primary"
             iconLeft={<Plus className="h-4 w-4" />}
-            onClick={openCreate}
+            onClick={drawer.openCreate}
           >
             Nuevo responsable
           </Button>
@@ -181,7 +139,7 @@ export default function ManagersList() {
               <Button
                 variant="primary"
                 iconLeft={<Plus className="h-4 w-4" />}
-                onClick={openCreate}
+                onClick={drawer.openCreate}
               >
                 Nuevo responsable
               </Button>
@@ -204,12 +162,12 @@ export default function ManagersList() {
       </div>
 
       <ManagerFormDrawer
-        open={drawerOpen}
-        manager={editing}
+        open={drawer.open}
+        manager={drawer.editing}
         processing={processing}
-        errorMessage={submitError}
-        onClose={closeDrawer}
-        onSubmit={handleSubmit}
+        errorMessage={drawer.submitError}
+        onClose={drawer.close}
+        onSubmit={drawer.handleSubmit}
       />
     </div>
   );

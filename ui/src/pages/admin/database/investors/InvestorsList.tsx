@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Archive, Pencil, Plus, Trash2, Users } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
@@ -10,17 +10,13 @@ import { PageHeader } from "../../../../components/layout/PageHeader";
 import { RowActions } from "../../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
-import {
-  getCreateSuccessCopy,
-  getUpdateSuccessCopy,
-} from "../../../../components/Modal/copy";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
+import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
 import useInvestors, {
   Investor,
   InvestorPayloadInput,
 } from "../../../../hooks/useInvestors";
-import { toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import InvestorFormDrawer from "./InvestorFormDrawer";
 
@@ -55,60 +51,26 @@ export default function InvestorsList() {
     hardDeleteInvestor,
   } = useInvestors();
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editing, setEditing] = useState<Investor | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const refresh = () => getInvestors("limit=1000");
 
   const bulk = useBulkActions<Investor>({
     items: investors,
     entityLabelPlural: "inversores",
     archive: archiveInvestor,
     hardDelete: hardDeleteInvestor,
-    onAfter: () => getInvestors("limit=1000"),
+    onAfter: refresh,
+  });
+
+  const drawer = useEntityFormDrawer<Investor, InvestorPayloadInput>({
+    buildSuccessLabel: (input) => `el inversor "${input.name}"`,
+    create: createInvestor,
+    update: updateInvestor,
+    fallbackErrorMessage: "No se pudo guardar el inversor",
   });
 
   useEffect(() => {
     getInvestors("limit=1000");
   }, [getInvestors]);
-
-  const openCreate = () => {
-    setEditing(null);
-    setSubmitError(null);
-    setDrawerOpen(true);
-  };
-
-  const openEdit = (investor: Investor) => {
-    setEditing(investor);
-    setSubmitError(null);
-    setDrawerOpen(true);
-  };
-
-  const closeDrawer = () => {
-    setDrawerOpen(false);
-    setEditing(null);
-    setSubmitError(null);
-  };
-
-  const handleSubmit = useCallback(
-    async (input: InvestorPayloadInput) => {
-      setSubmitError(null);
-      try {
-        if (editing) {
-          await updateInvestor(editing.id, input);
-          toastSuccess(getUpdateSuccessCopy(`el inversor "${input.name}"`));
-        } else {
-          await createInvestor(input);
-          toastSuccess(getCreateSuccessCopy(`el inversor "${input.name}"`));
-        }
-        closeDrawer();
-      } catch (err) {
-        setSubmitError(
-          err instanceof Error ? err.message : "No se pudo guardar el inversor",
-        );
-      }
-    },
-    [createInvestor, editing, updateInvestor],
-  );
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<Investor>({
     entityLabel: ENTITY_LABEL,
@@ -137,7 +99,7 @@ export default function InvestorsList() {
               {
                 label: "Editar",
                 icon: Pencil,
-                onClick: () => openEdit(item),
+                onClick: () => drawer.openEdit(item),
               },
               {
                 label: "Archivar",
@@ -156,7 +118,7 @@ export default function InvestorsList() {
         ),
       },
     ],
-    [handleArchive, handleHardDelete, selectColumn],
+    [drawer, handleArchive, handleHardDelete, selectColumn],
   );
 
   return (
@@ -168,7 +130,7 @@ export default function InvestorsList() {
           <Button
             variant="primary"
             iconLeft={<Plus className="h-4 w-4" />}
-            onClick={openCreate}
+            onClick={drawer.openCreate}
           >
             Nuevo inversor
           </Button>
@@ -187,7 +149,7 @@ export default function InvestorsList() {
               <Button
                 variant="primary"
                 iconLeft={<Plus className="h-4 w-4" />}
-                onClick={openCreate}
+                onClick={drawer.openCreate}
               >
                 Nuevo inversor
               </Button>
@@ -210,12 +172,12 @@ export default function InvestorsList() {
       </div>
 
       <InvestorFormDrawer
-        open={drawerOpen}
-        investor={editing}
+        open={drawer.open}
+        investor={drawer.editing}
         processing={processing}
-        errorMessage={submitError}
-        onClose={closeDrawer}
-        onSubmit={handleSubmit}
+        errorMessage={drawer.submitError}
+        onClose={drawer.close}
+        onSubmit={drawer.handleSubmit}
       />
     </div>
   );
