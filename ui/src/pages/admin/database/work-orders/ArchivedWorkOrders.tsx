@@ -45,6 +45,7 @@ export default function ArchivedWorkOrders() {
       columns={columns}
       data={orders}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="órdenes"
       getItemLabel={(item) => item.number}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

@@ -44,6 +44,7 @@ export default function ArchivedProjects() {
       columns={columns}
       data={projects}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="proyectos"
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

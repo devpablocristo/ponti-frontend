@@ -59,6 +59,7 @@ export default function ArchivedSupplies() {
       columns={columns}
       data={supplies}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="insumos"
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

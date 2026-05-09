@@ -39,6 +39,7 @@ export default function ArchivedManagers() {
       columns={columns}
       data={managers}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="responsables"
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

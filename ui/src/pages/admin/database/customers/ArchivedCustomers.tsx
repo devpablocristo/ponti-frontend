@@ -44,6 +44,7 @@ export default function ArchivedCustomers() {
       columns={columns}
       data={customers as ArchivedCustomer[]}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="clientes"
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

@@ -45,6 +45,7 @@ export default function ArchivedLots() {
       columns={columns}
       data={lots}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="lotes"
       getItemLabel={(item) => item.lot_name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

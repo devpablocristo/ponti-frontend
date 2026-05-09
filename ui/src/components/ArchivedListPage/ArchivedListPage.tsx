@@ -1,18 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 
 import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { BaseModal } from "../Modal/BaseModal";
+import { BulkActionBar } from "../crud/BulkActionBar";
 import { Column } from "../../pages/admin/types";
 import {
   ConfirmCopy,
+  getBulkHardDeleteCopy,
+  getBulkRestoreCopy,
   getHardDeleteCopy,
   getRestoreCopy,
 } from "../Modal/copy";
+import { useBulkSelection } from "../../hooks/useBulkSelection";
+import { toastError, toastSuccess } from "../../lib/toast";
 
 // Genérico para vistas de "X Archivados". Encapsula tabla + columna de acciones
 // (Restaurar, Eliminar definitivamente) + modal de confirmación. Las páginas
 // concretas solo pasan columns + handlers + getItemLabel.
+//
+// Soporta opcionalmente bulk actions: si se pasa entityLabelPlural, agrega
+// checkboxes por fila + barra de acciones masivas (Restaurar N / Eliminar N).
 
 type ArchivedListPageProps<T extends { id: number }> = {
   /** Texto descriptivo arriba de la tabla (1 línea). */
@@ -23,6 +31,8 @@ type ArchivedListPageProps<T extends { id: number }> = {
   data: T[];
   /** Etiqueta de entidad para los modales (ej: "el cliente", "el proyecto"). */
   entityLabel: string;
+  /** Etiqueta plural (ej: "clientes", "proyectos") — habilita bulk actions si está. */
+  entityLabelPlural?: string;
   /** Cómo extraer el "nombre amigable" de un item para el modal. */
   getItemLabel: (item: T) => string;
   /** Disparar restore para el item seleccionado. Si no se pasa, no hay botón. */
@@ -42,6 +52,7 @@ export function ArchivedListPage<T extends { id: number }>({
   columns,
   data,
   entityLabel,
+  entityLabelPlural,
   getItemLabel,
   onRestore,
   onHardDelete,
@@ -51,10 +62,22 @@ export function ArchivedListPage<T extends { id: number }>({
 }: ArchivedListPageProps<T>) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pending, setPending] = useState<{
-    item: T;
+    items: T[];
     op: "restore" | "hard";
   } | null>(null);
   const [copy, setCopy] = useState<ConfirmCopy | null>(null);
+
+  const {
+    isSelected,
+    toggle,
+    toggleAll,
+    clear,
+    allSelected,
+    selectedItems,
+    selectedCount,
+  } = useBulkSelection(data);
+
+  const bulkEnabled = Boolean(entityLabelPlural);
 
   useEffect(() => {
     onMount?.();
@@ -63,30 +86,88 @@ export function ArchivedListPage<T extends { id: number }>({
   }, []);
 
   const openRestore = (item: T) => {
-    setPending({ item, op: "restore" });
+    setPending({ items: [item], op: "restore" });
     setCopy(getRestoreCopy(entityLabel, getItemLabel(item)));
     setIsModalOpen(true);
   };
 
   const openHardDelete = (item: T) => {
-    setPending({ item, op: "hard" });
+    setPending({ items: [item], op: "hard" });
     setCopy(getHardDeleteCopy(entityLabel, getItemLabel(item)));
+    setIsModalOpen(true);
+  };
+
+  const openBulkRestore = () => {
+    if (!entityLabelPlural || selectedItems.length === 0) return;
+    setPending({ items: selectedItems, op: "restore" });
+    setCopy(getBulkRestoreCopy(selectedItems.length, entityLabelPlural));
+    setIsModalOpen(true);
+  };
+
+  const openBulkHardDelete = () => {
+    if (!entityLabelPlural || selectedItems.length === 0) return;
+    setPending({ items: selectedItems, op: "hard" });
+    setCopy(getBulkHardDeleteCopy(selectedItems.length, entityLabelPlural));
     setIsModalOpen(true);
   };
 
   const handleConfirm = async () => {
     if (!pending) return;
+    const { items, op } = pending;
+    const handler = op === "restore" ? onRestore : onHardDelete;
+    if (!handler) {
+      setIsModalOpen(false);
+      setPending(null);
+      return;
+    }
     try {
-      if (pending.op === "restore" && onRestore) {
-        await onRestore(pending.item);
-      } else if (pending.op === "hard" && onHardDelete) {
-        await onHardDelete(pending.item);
+      if (items.length === 1) {
+        await handler(items[0]);
+      } else {
+        const results = await Promise.allSettled(
+          items.map((item) => Promise.resolve(handler(item))),
+        );
+        const ok = results.filter((r) => r.status === "fulfilled").length;
+        const failed = results.length - ok;
+        if (failed === 0) {
+          toastSuccess(
+            op === "restore"
+              ? `Se restauraron ${ok} ${entityLabelPlural}.`
+              : `Se eliminaron ${ok} ${entityLabelPlural}.`,
+          );
+        } else {
+          toastError(
+            `${ok} de ${results.length} OK; ${failed} fallaron (probablemente por dependencias).`,
+          );
+        }
+        clear();
       }
     } finally {
       setIsModalOpen(false);
       setPending(null);
     }
   };
+
+  const selectColumn: Column<T> | null = bulkEnabled
+    ? {
+        key: "id" as keyof T,
+        header: "",
+        align: "center",
+        render: (_value: unknown, item: T) => (
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            checked={isSelected(item.id)}
+            onChange={(e) => {
+              e.stopPropagation();
+              toggle(item.id);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            aria-label={`Seleccionar ${getItemLabel(item)}`}
+          />
+        ),
+      }
+    : null;
 
   const actionsColumn: Column<T> = {
     key: "id" as keyof T,
@@ -115,12 +196,72 @@ export function ArchivedListPage<T extends { id: number }>({
     ),
   };
 
-  const fullColumns: Column<T>[] = [...columns, actionsColumn];
+  const fullColumns: Column<T>[] = useMemo(
+    () =>
+      selectColumn
+        ? [selectColumn, ...columns, actionsColumn]
+        : [...columns, actionsColumn],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [columns, selectColumn, actionsColumn],
+  );
+
+  const bulkActions = useMemo(
+    () =>
+      [
+        onRestore && {
+          label: `Restaurar ${selectedCount}`,
+          icon: RotateCcw,
+          onClick: openBulkRestore,
+        },
+        onHardDelete && {
+          label: `Eliminar ${selectedCount}`,
+          icon: Trash2,
+          variant: "danger" as const,
+          onClick: openBulkHardDelete,
+        },
+      ].filter(Boolean) as {
+        label: string;
+        icon: typeof RotateCcw;
+        variant?: "danger";
+        onClick: () => void;
+      }[],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onRestore, onHardDelete, selectedCount],
+  );
 
   return (
     <div>
       {description && (
         <p className="text-sm text-gray-500 mb-4">{description}</p>
+      )}
+      {bulkEnabled && (
+        <>
+          {selectedCount > 0 && (
+            <BulkActionBar
+              selectedCount={selectedCount}
+              itemLabel={entityLabelPlural}
+              actions={bulkActions}
+              onClear={clear}
+            />
+          )}
+          {data.length > 0 && (
+            <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                checked={allSelected}
+                onChange={toggleAll}
+                aria-label={`Seleccionar todos los ${entityLabelPlural}`}
+              />
+              <span>Seleccionar todo</span>
+              {selectedCount > 0 && (
+                <span className="ml-auto">
+                  {selectedCount} de {data.length}
+                </span>
+              )}
+            </div>
+          )}
+        </>
       )}
       <DataTable data={data as T[]} columns={fullColumns} />
       {error && (

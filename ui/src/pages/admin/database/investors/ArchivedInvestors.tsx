@@ -39,6 +39,7 @@ export default function ArchivedInvestors() {
       columns={columns}
       data={investors}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="inversores"
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

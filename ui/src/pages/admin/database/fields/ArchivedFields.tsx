@@ -41,6 +41,7 @@ export default function ArchivedFields() {
       columns={columns}
       data={fields}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="campos"
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

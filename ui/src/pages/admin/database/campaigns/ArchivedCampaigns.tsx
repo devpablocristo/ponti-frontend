@@ -40,6 +40,7 @@ export default function ArchivedCampaigns() {
       columns={columns}
       data={campaigns}
       entityLabel={ENTITY_LABEL}
+      entityLabelPlural="campañas"
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}
