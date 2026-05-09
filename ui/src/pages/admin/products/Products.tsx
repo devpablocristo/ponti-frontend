@@ -4,6 +4,7 @@ import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
+import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import CreateItem from "./CreateItem";
 import ImportSupplyMovements from "./ImportSupplyMovements";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
@@ -45,6 +46,7 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
 export function Products() {
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
+  const confirm = useConfirmDialog();
   const {
     getSupplyMovements,
     supplyMovements,
@@ -358,7 +360,13 @@ export function Products() {
     if (!projectId || !p.id) return;
     setSuccessMessage(null);
     setActionErrorMessage(null);
-    if (window.confirm("¿Estás seguro de eliminar este movimiento?")) {
+    const ok = await confirm({
+      title: "Confirmar eliminación",
+      message: "¿Eliminar este movimiento? Esta acción no se puede deshacer.",
+      severity: "danger",
+      primaryLabel: "Eliminar",
+    });
+    if (ok) {
       deleteSupplyMovement(p.id, projectId);
     }
   };

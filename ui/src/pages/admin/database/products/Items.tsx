@@ -5,6 +5,7 @@ import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
+import { useConfirmDialog } from "../../../../hooks/useConfirmDialog";
 import { SupplyCreatePayload, Supply } from "../../../../hooks/useSupplies/types";
 import useSupplies from "../../../../hooks/useSupplies";
 import useCategories from "../../../../hooks/useCategories";
@@ -188,6 +189,7 @@ function getValueByAliases(
 export default function Items() {
   const { saveSupplies, result, error, supplies, getSupplies } = useSupplies();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const confirm = useConfirmDialog();
 
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -1032,12 +1034,17 @@ export default function Items() {
         <Button
           variant="primary"
           className="text-base font-medium"
-          onClick={() => {
+          onClick={async () => {
             if (hasUnsavedChanges) {
-              const confirmed = window.confirm(
-                "Hay cambios sin guardar. ¿Desea cancelar de todas formas?"
-              );
-              if (confirmed) {
+              const ok = await confirm({
+                title: "Cambios sin guardar",
+                message:
+                  "Hay cambios sin guardar. ¿Desea cancelar de todas formas?",
+                severity: "warning",
+                primaryLabel: "Descartar cambios",
+                secondaryLabel: "Volver",
+              });
+              if (ok) {
                 cleanForm();
               }
             } else {
