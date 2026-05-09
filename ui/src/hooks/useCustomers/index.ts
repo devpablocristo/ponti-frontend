@@ -4,7 +4,7 @@ import * as actions from "./actions";
 
 import useCustomersReducer from "./useCustomersReducer";
 import { apiClient } from "@/api/client";
-import { CustomerPayload } from "./types";
+import { CustomerData, CustomerPayload, CustomerPayloadInput } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
@@ -100,6 +100,66 @@ const useCustomers = () => {
       }
     },
     [dispatch]
+  );
+
+  const createCustomer = React.useCallback(
+    async (input: CustomerPayloadInput): Promise<CustomerData | null> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      try {
+        const response = await apiClient.post<SuccessResponse<CustomerData>>(
+          "/customers",
+          input,
+        );
+
+        if (response.success) {
+          await getCustomers(lastQueryRef.current || "limit=1000");
+          return response.data ?? null;
+        }
+
+        const message = "Ocurrió un error al crear el cliente.";
+        dispatch({ type: actions.SET_ERROR, payload: message });
+        throw new Error(message);
+      } catch (error) {
+        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        dispatch({ type: actions.SET_ERROR, payload: message });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch, getCustomers],
+  );
+
+  const updateCustomer = React.useCallback(
+    async (id: number, input: CustomerPayloadInput): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      try {
+        const response = await apiClient.put<SuccessResponse<string>>(
+          "/customers/" + id,
+          input,
+        );
+
+        if (response.success) {
+          await getCustomers(lastQueryRef.current || "limit=1000");
+          return;
+        }
+
+        const message = "Ocurrió un error al actualizar el cliente.";
+        dispatch({ type: actions.SET_ERROR, payload: message });
+        throw new Error(message);
+      } catch (error) {
+        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        dispatch({ type: actions.SET_ERROR, payload: message });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch, getCustomers],
   );
 
   const archiveCustomer = React.useCallback(
@@ -212,6 +272,8 @@ const useCustomers = () => {
   return {
     getCustomers,
     getArchivedCustomers,
+    createCustomer,
+    updateCustomer,
     archiveCustomer,
     restoreCustomer,
     hardDeleteCustomer,

@@ -65,7 +65,8 @@ const menuDatabase = {
     </svg>
   ),
   children: [
-    { name: "Crear Clientes y Sociedades", route: "/admin/database/customers" },
+    { name: "Clientes y Sociedades", route: "/admin/database/customers/list" },
+    { name: "Form de Proyectos", route: "/admin/database/customers" },
     { name: "Inversores", route: "/admin/database/investors" },
     { name: "Responsables", route: "/admin/database/managers" },
     { name: "Crear Labores", route: "/admin/database/tasks" },

@@ -7,3 +7,7 @@ export type CustomerPayload = {
   data: CustomerData[];
   total: number;
 };
+
+export type CustomerPayloadInput = {
+  name: string;
+};
