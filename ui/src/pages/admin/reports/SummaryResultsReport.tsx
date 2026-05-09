@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
+import { SquareArrowOutUpRight } from "lucide-react";
+import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -189,9 +190,11 @@ export function SummaryResultsReport() {
             <div className="border-b mt-2 mb-6" style={ { borderColor: "#D1D5DB" } }/>
 
             { processing ? (
-              <div className="flex items-center justify-center h-48">
-                <LoaderCircle className="w-8 h-8 text-blue-500 animate-spin"/>
-              </div>
+              <InlineSpinner
+                size="md"
+                spinnerClassName="text-blue-500"
+                containerClassName="flex items-center justify-center h-48"
+              />
             ) : (
               <SummaryResultsTable
                 data={ filteredData }

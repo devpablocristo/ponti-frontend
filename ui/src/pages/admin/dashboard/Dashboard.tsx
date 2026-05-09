@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
-import { ArrowUp, Hourglass, LoaderCircle, Wallet } from "lucide-react";
+import { ArrowUp, Hourglass, Wallet } from "lucide-react";
+import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { usePDF } from "react-to-pdf";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -262,9 +263,7 @@ export function Dashboard() {
       />
 
       {processing && (
-        <div className="flex items-center justify-center h-20">
-          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-        </div>
+        <InlineSpinner size="lg" containerClassName="flex items-center justify-center h-20" />
       )}
 
       {error && (

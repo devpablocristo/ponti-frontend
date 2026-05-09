@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LoaderCircle } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
@@ -210,10 +210,10 @@ function OrdersIndicators({
   return (
     <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
       {processing ? (
-        <div className="flex items-center justify-center py-4">
-          <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
-          <span className="text-sm text-gray-500 font-medium">Cargando indicadores...</span>
-        </div>
+        <InlineSpinner
+          label="Cargando indicadores..."
+          spinnerClassName="text-custom-btn"
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <IndicatorCard

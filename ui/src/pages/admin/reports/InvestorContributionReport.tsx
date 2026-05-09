@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
-import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
+import { SquareArrowOutUpRight } from "lucide-react";
+import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -264,9 +265,11 @@ export function InvestorContributionReport() {
               />
               <h2 className="font-semibold text-xl mb-4">Aportes Pre Cosecha</h2>
               { processing ? (
-                <div className="flex items-center justify-center h-48">
-                  <LoaderCircle className="w-8 h-8 text-blue-500 animate-spin"/>
-                </div>
+                <InlineSpinner
+                  size="md"
+                  spinnerClassName="text-blue-500"
+                  containerClassName="flex items-center justify-center h-48"
+                />
               ) : (
                 <InvestorContributionTable
                   data={ reportingData }
@@ -281,9 +284,11 @@ export function InvestorContributionReport() {
                 Pagos de cosecha
               </h2>
               { processing ? (
-                <div className="flex items-center justify-center h-48">
-                  <LoaderCircle className="w-8 h-8 text-blue-500 animate-spin"/>
-                </div>
+                <InlineSpinner
+                  size="md"
+                  spinnerClassName="text-blue-500"
+                  containerClassName="flex items-center justify-center h-48"
+                />
               ) : (
                 <InvestorContributionTable
                   data={ reportingData }

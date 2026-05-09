@@ -1,5 +1,4 @@
-import { LoaderCircle } from "lucide-react";
-
+import { InlineSpinner } from "../../../../components/feedback/InlineSpinner";
 import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
 import { formatNumberAr } from "../../utils";
 import { LotIndicatorValues } from "../lotTableUtils";
@@ -18,12 +17,10 @@ export function LotsIndicators({
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
       {processing ? (
-        <div className="flex items-center justify-center py-4">
-          <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-custom-btn" />
-          <span className="text-sm font-medium text-gray-500">
-            Cargando indicadores...
-          </span>
-        </div>
+        <InlineSpinner
+          label="Cargando indicadores..."
+          spinnerClassName="text-custom-btn"
+        />
       ) : error ? (
         <div className="flex items-center gap-2 text-sm font-medium text-red-600">
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />

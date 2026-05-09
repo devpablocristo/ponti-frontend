@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
-import { LoaderCircle } from "lucide-react";
 import { usePDF } from "react-to-pdf";
+import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import Button from "../../../components/Button/Button";
@@ -101,9 +101,7 @@ export function DashboardV2() {
       />
 
       {processing && (
-        <div className="flex items-center justify-center h-20">
-          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-        </div>
+        <InlineSpinner size="lg" containerClassName="flex items-center justify-center h-20" />
       )}
 
       {error && (

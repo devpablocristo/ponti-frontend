@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
+import { SquareArrowOutUpRight } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -355,9 +356,11 @@ export function ByFieldOrCropReport() {
             />
 
             { processing ? (
-              <div className="flex items-center justify-center h-48">
-                <LoaderCircle className="w-8 h-8 text-blue-500 animate-spin"/>
-              </div>
+              <InlineSpinner
+                size="md"
+                spinnerClassName="text-blue-500"
+                containerClassName="flex items-center justify-center h-48"
+              />
             ) : (
               <ByFieldOrCropTable
                 data={ filteredData() }
