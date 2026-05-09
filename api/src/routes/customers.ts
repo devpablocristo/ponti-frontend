@@ -206,7 +206,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.delete<any>(`/customers/${id}`, headers);
+    await apiClient.delete<any>(`/customers/${id}/hard`, headers);
     setImmediate(() => cache.flushAll());
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {

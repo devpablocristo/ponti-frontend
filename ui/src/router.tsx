@@ -15,6 +15,7 @@ import Access from "./pages/admin/access/Access";
 import DatabaseCustomers from "./pages/admin/database/customers/Customers";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
 import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
+import ArchivedInvestors from "./pages/admin/database/investors/ArchivedInvestors";
 import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
 import DatabaseTasksForm from "./pages/admin/database/tasks/TasksForm";
 import Lots from "./pages/admin/lots/Lots";
@@ -127,6 +128,10 @@ export default [
       {
         path: "database/projects/archived",
         element: <ArchivedProjects />,
+      },
+      {
+        path: "database/investors/archived",
+        element: <ArchivedInvestors />,
       },
       {
         path: "database/data-integrity",
