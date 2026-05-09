@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useBlocker } from "react-router-dom";
 import { parsePartialPrice } from "@/lib/importHelpers";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
@@ -192,8 +193,38 @@ export default function Items() {
   const confirm = useConfirmDialog();
 
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  // Bloquear navegación in-app cuando hay cambios sin guardar.
+  // beforeunload (efecto más abajo) cubre el cierre de tab / refresh.
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname,
+  );
+
+  useEffect(() => {
+    if (blocker.state !== "blocked") return;
+    let cancelled = false;
+    void confirm({
+      title: "Cambios sin guardar",
+      message: "Hay cambios sin guardar. ¿Desea salir de todas formas?",
+      severity: "warning",
+      primaryLabel: "Salir y descartar",
+      secondaryLabel: "Volver",
+    }).then((ok) => {
+      if (cancelled) return;
+      if (ok) {
+        blocker.proceed?.();
+      } else {
+        blocker.reset?.();
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [blocker, confirm]);
+
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [initialRows, setInitialRows] = useState<string>("");
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
@@ -238,7 +269,8 @@ export default function Items() {
     );
 
 
-    // Add browser refresh/close protection
+    // Browser refresh/close protection (full-page leave). useBlocker covers
+    // in-app navigation; beforeunload covers tab close / external nav.
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
         e.preventDefault();
@@ -249,37 +281,10 @@ export default function Items() {
       }
     };
 
-    // Add protection for all link clicks in the app
-    const handleLinkClick = (e: MouseEvent) => {
-      if (!hasUnsavedChanges) return; // Si no hay cambios, permitir navegación normal
-
-      // Buscar si el clic fue en un enlace (a) o en un elemento dentro de un enlace
-      let target = e.target as HTMLElement;
-      while (target && target.tagName !== "A" && target.tagName !== "BODY") {
-        target = target.parentElement as HTMLElement;
-      }
-
-      // Si es un enlace y no es el botón de guardar, mostrar confirmación
-      if (target && target.tagName === "A") {
-        // Ignorar si el enlace es part of the form (guardar, agregar)
-        if (target.classList.contains("ignore-protection")) return;
-
-        const confirmed = window.confirm(
-          "Hay cambios sin guardar. ¿Desea salir de todas formas?"
-        );
-        if (!confirmed) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-      }
-    };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("click", handleLinkClick, true); // true para fase de captura
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("click", handleLinkClick, true);
     };
   }, [getCategories, getTypes, hasUnsavedChanges]);
 
