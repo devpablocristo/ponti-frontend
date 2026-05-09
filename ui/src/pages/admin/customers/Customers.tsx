@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { RowActions } from "../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { makeActionsColumn } from "../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
-import { Archive, Pencil, Trash2 } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -144,35 +143,12 @@ export function Customers() {
     () => [
       selectColumn,
       ...baseColumns,
-      {
-        key: "id",
-        header: "",
-        align: "center",
-        render: (_value, item) => (
-          <RowActions
-            actions={[
-              {
-                label: "Editar",
-                icon: Pencil,
-                onClick: () =>
-                  navigate(`/admin/database/customers?id=${item.id}`),
-              },
-              {
-                label: "Archivar",
-                icon: Archive,
-                onClick: () => handlePreFinish(item.id),
-              },
-              {
-                label: "Eliminar",
-                icon: Trash2,
-                variant: "danger",
-                divider: true,
-                onClick: () => handleHardDeleteProject(item),
-              },
-            ]}
-          />
-        ),
-      },
+      makeActionsColumn<ProjectData>({
+        onEdit: (item) =>
+          navigate(`/admin/database/customers?id=${item.id}`),
+        onArchive: (item) => handlePreFinish(item.id),
+        onHardDelete: handleHardDeleteProject,
+      }),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [handleHardDeleteProject, navigate, selectColumn],

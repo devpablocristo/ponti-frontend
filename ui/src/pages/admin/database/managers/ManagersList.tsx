@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from "react";
-import { Archive, Pencil, Plus, Trash2, UserCog } from "lucide-react";
+import { Plus, UserCog } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
@@ -7,8 +7,8 @@ import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { PageHeader } from "../../../../components/layout/PageHeader";
-import { RowActions } from "../../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
+import { makeActionsColumn } from "../../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
@@ -79,36 +79,13 @@ export default function ManagersList() {
     () => [
       selectColumn,
       ...baseColumns,
-      {
-        key: "id",
-        header: "",
-        align: "center",
-        render: (_value, item) => (
-          <RowActions
-            actions={[
-              {
-                label: "Editar",
-                icon: Pencil,
-                onClick: () => drawer.openEdit(item),
-              },
-              {
-                label: "Archivar",
-                icon: Archive,
-                onClick: () => handleArchive(item),
-              },
-              {
-                label: "Eliminar",
-                icon: Trash2,
-                variant: "danger",
-                divider: true,
-                onClick: () => handleHardDelete(item),
-              },
-            ]}
-          />
-        ),
-      },
+      makeActionsColumn<Manager>({
+        onEdit: drawer.openEdit,
+        onArchive: handleArchive,
+        onHardDelete: handleHardDelete,
+      }),
     ],
-    [drawer, handleArchive, handleHardDelete, selectColumn],
+    [drawer.openEdit, handleArchive, handleHardDelete, selectColumn],
   );
 
   return (

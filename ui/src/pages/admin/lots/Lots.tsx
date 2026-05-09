@@ -1,11 +1,11 @@
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
-import { Archive, ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
-import { RowActions } from "../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { makeActionsColumn } from "../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../hooks/useEntityRowActions";
@@ -253,34 +253,12 @@ export function Lots() {
   );
 
   const actionsColumn = useMemo<Column<LotsData>>(
-    () => ({
-      key: "id",
-      header: "",
-      align: "center",
-      render: (_value, item) => (
-        <RowActions
-          actions={[
-            {
-              label: "Editar",
-              icon: Pencil,
-              onClick: () => openEditDrawer(item),
-            },
-            {
-              label: "Archivar",
-              icon: Archive,
-              onClick: () => handleArchiveLot(item),
-            },
-            {
-              label: "Eliminar",
-              icon: Trash2,
-              variant: "danger",
-              divider: true,
-              onClick: () => handleHardDeleteLot(item),
-            },
-          ]}
-        />
-      ),
-    }),
+    () =>
+      makeActionsColumn<LotsData>({
+        onEdit: openEditDrawer,
+        onArchive: handleArchiveLot,
+        onHardDelete: handleHardDeleteLot,
+      }),
     [handleArchiveLot, handleHardDeleteLot, openEditDrawer],
   );
 
