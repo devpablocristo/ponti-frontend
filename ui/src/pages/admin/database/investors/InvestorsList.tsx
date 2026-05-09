@@ -18,9 +18,10 @@ import useInvestors, {
   InvestorPayloadInput,
 } from "../../../../hooks/useInvestors";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 import InvestorFormDrawer from "./InvestorFormDrawer";
 
-const ENTITY_LABEL = "el inversor";
+const ENTITY: EntityCopy = { article: "el", singular: "inversor", plural: "inversores" };
 
 const columns: Column<Investor>[] = [
   { key: "name", header: "Nombre" },
@@ -58,7 +59,7 @@ export default function InvestorsList() {
 
   const bulk = useBulkActions<Investor>({
     items: investors,
-    entityLabelPlural: "inversores",
+    entity: ENTITY,
     archive: archiveInvestor,
     hardDelete: hardDeleteInvestor,
     onAfter: refresh,
@@ -77,7 +78,7 @@ export default function InvestorsList() {
   }, [refresh]);
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<Investor>({
-    entityLabel: ENTITY_LABEL,
+    entity: ENTITY,
     getLabel: (i) => i.name,
     archive: archiveInvestor,
     hardDelete: hardDeleteInvestor,
@@ -85,7 +86,7 @@ export default function InvestorsList() {
   });
 
   const selectColumn = useMemo<Column<Investor>>(
-    () => makeSelectColumn<Investor>(bulk, (i) => i.name, "inversor"),
+    () => makeSelectColumn<Investor>(bulk, (i) => i.name, ENTITY),
     [bulk],
   );
 
@@ -145,7 +146,7 @@ export default function InvestorsList() {
               onToggleAll={bulk.toggleAll}
               onClear={bulk.clear}
               actions={bulk.actions}
-              entityLabelPlural="inversores"
+              entity={ENTITY}
             />
             <DataTable data={investors} columns={tableColumns} />
           </>

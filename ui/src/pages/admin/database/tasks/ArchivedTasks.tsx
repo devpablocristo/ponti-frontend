@@ -7,8 +7,9 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useLabors from "../../../../hooks/useLabors";
 import { LaborInfo } from "../../../../hooks/useLabors/types";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "la labor";
+const ENTITY: EntityCopy = { article: "la", singular: "labor", plural: "labores" };
 
 const columns: Column<LaborInfo>[] = [
   { key: "name", header: "Labor" },
@@ -57,8 +58,8 @@ export default function ArchivedTasks() {
           description="Restaurar o eliminar labores archivadas del proyecto seleccionado."
           columns={columns}
           data={safeLabors}
-          entityLabel={ENTITY_LABEL}
-          entityLabelPlural="labores"
+          entity={ENTITY}
+          bulk
           getItemLabel={(item) => item.name}
           onRestore={runRestore ?? undefined}
           onHardDelete={runHardDelete ?? undefined}

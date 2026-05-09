@@ -20,8 +20,9 @@ import { makeActionsColumn } from "../../../../components/crud/makeActionsColumn
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "el insumo";
+const ENTITY: EntityCopy = { article: "el", singular: "insumo", plural: "insumos" };
 
 const renderPriceCell = (value: unknown, row: Supply) => (
   <div className="flex items-center gap-2">
@@ -79,7 +80,7 @@ export default function ListItems() {
 
   const bulk = useBulkActions<Supply>({
     items: safeSupplies,
-    entityLabelPlural: "insumos",
+    entity: ENTITY,
     archive: archiveSupply,
     hardDelete: hardDeleteSupply,
     onAfter: refresh,
@@ -91,7 +92,7 @@ export default function ListItems() {
   }, []);
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<Supply>({
-    entityLabel: ENTITY_LABEL,
+    entity: ENTITY,
     getLabel: (s) => s.name,
     archive: archiveSupply,
     hardDelete: hardDeleteSupply,
@@ -179,7 +180,7 @@ export default function ListItems() {
   }, [supplies, columnsFilters]);
 
   const selectColumn = useMemo<Column<Supply>>(
-    () => makeSelectColumn<Supply>(bulk, (s) => s.name, "insumo"),
+    () => makeSelectColumn<Supply>(bulk, (s) => s.name, ENTITY),
     [bulk],
   );
 
@@ -509,7 +510,7 @@ export default function ListItems() {
             onToggleAll={bulk.toggleAll}
             onClear={bulk.clear}
             actions={bulk.actions}
-            entityLabelPlural="insumos"
+            entity={ENTITY}
           />
           <DataTable
             data={filteredSupplies}

@@ -9,6 +9,9 @@ import { makeActionsColumn } from "../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import { useEntityRowActions } from "../../../hooks/useEntityRowActions";
+import type { EntityCopy } from "../../../components/Modal/copy";
+
+const ENTITY: EntityCopy = { article: "el", singular: "lote", plural: "lotes" };
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -200,7 +203,7 @@ export function Lots() {
 
   const bulk = useBulkActions<LotsData>({
     items: filteredLots,
-    entityLabelPlural: "lotes",
+    entity: ENTITY,
     archive: archiveLot,
     hardDelete: hardDeleteLot,
     onAfter: reloadFromFirstPage,
@@ -240,7 +243,7 @@ export function Lots() {
 
   const { handleArchive: handleArchiveLot, handleHardDelete: handleHardDeleteLot } =
     useEntityRowActions<LotsData>({
-      entityLabel: "el lote",
+      entity: ENTITY,
       getLabel: (l) => l.lot_name,
       archive: archiveLot,
       hardDelete: hardDeleteLot,
@@ -248,7 +251,7 @@ export function Lots() {
     });
 
   const selectColumn = useMemo<Column<LotsData>>(
-    () => makeSelectColumn<LotsData>(bulk, (l) => l.lot_name, "lote"),
+    () => makeSelectColumn<LotsData>(bulk, (l) => l.lot_name, ENTITY),
     [bulk],
   );
 
@@ -412,7 +415,7 @@ export function Lots() {
             onToggleAll={bulk.toggleAll}
             onClear={bulk.clear}
             actions={bulk.actions}
-            entityLabelPlural="lotes"
+            entity={ENTITY}
           />
         )}
         {!message && !error ? (

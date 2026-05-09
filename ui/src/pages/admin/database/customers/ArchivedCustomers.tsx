@@ -4,13 +4,14 @@ import { ArchivedListPage } from "../../../../components/ArchivedListPage/Archiv
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useCustomers from "../../../../hooks/useCustomers";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
 type ArchivedCustomer = {
   id: number;
   name: string;
 };
 
-const ENTITY_LABEL = "el cliente";
+const ENTITY: EntityCopy = { article: "el", singular: "cliente", plural: "clientes" };
 
 const columns: Column<ArchivedCustomer>[] = [
   { key: "name", header: "Cliente/Sociedad" },
@@ -43,8 +44,8 @@ export default function ArchivedCustomers() {
       description="Restaurar o eliminar clientes de forma definitiva"
       columns={columns}
       data={customers as ArchivedCustomer[]}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="clientes"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

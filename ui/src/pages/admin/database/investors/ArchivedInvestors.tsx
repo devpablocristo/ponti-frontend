@@ -4,8 +4,9 @@ import { ArchivedListPage } from "../../../../components/ArchivedListPage/Archiv
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useInvestors, { Investor } from "../../../../hooks/useInvestors";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "el inversor";
+const ENTITY: EntityCopy = { article: "el", singular: "inversor", plural: "inversores" };
 
 const columns: Column<Investor>[] = [
   { key: "name", header: "Inversor" },
@@ -37,8 +38,8 @@ export default function ArchivedInvestors() {
       description="Restaurar o eliminar inversores de forma definitiva"
       columns={columns}
       data={archivedInvestors}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="inversores"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

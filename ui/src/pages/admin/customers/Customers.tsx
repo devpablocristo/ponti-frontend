@@ -4,6 +4,9 @@ import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { makeActionsColumn } from "../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
+import type { EntityCopy } from "../../../components/Modal/copy";
+
+const ENTITY: EntityCopy = { article: "el", singular: "proyecto", plural: "proyectos" };
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -122,20 +125,20 @@ export function Customers() {
 
   const bulk = useBulkActions<ProjectData>({
     items: projects,
-    entityLabelPlural: "proyectos",
+    entity: ENTITY,
     hardDelete: (id) => hardDeleteProject(id),
     onAfter: () => getProjects(`page=1&per_page=10`),
   });
 
   const { handleHardDelete: handleHardDeleteProject } = useEntityRowActions<ProjectData>({
-    entityLabel: "el proyecto",
+    entity: ENTITY,
     getLabel: (p) => p.name,
     hardDelete: (id) => hardDeleteProject(Number(id)),
     onAfter: () => getProjects(`page=1&per_page=10`),
   });
 
   const selectColumn = useMemo<Column<ProjectData>>(
-    () => makeSelectColumn<ProjectData>(bulk, (p) => p.name, "proyecto"),
+    () => makeSelectColumn<ProjectData>(bulk, (p) => p.name, ENTITY),
     [bulk],
   );
 
@@ -336,7 +339,7 @@ export function Customers() {
           onToggleAll={bulk.toggleAll}
           onClear={bulk.clear}
           actions={bulk.actions}
-          entityLabelPlural="proyectos"
+          entity={ENTITY}
         />
         <DataTable
           data={projects}

@@ -5,8 +5,9 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useFields from "../../../../hooks/useFields";
 import type { Data as Field } from "../../../../hooks/useFields/types";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "el campo";
+const ENTITY: EntityCopy = { article: "el", singular: "campo", plural: "campos" };
 
 const columns: Column<Field>[] = [
   { key: "name", header: "Campo" },
@@ -39,8 +40,8 @@ export default function ArchivedFields() {
       description="Restaurar o eliminar campos de forma definitiva"
       columns={columns}
       data={archivedFields}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="campos"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

@@ -3,6 +3,8 @@ import { useCallback } from "react";
 import { useConfirmDialog } from "../useConfirmDialog";
 import { toastError, toastSuccess } from "../../lib/toast";
 import {
+  articleSingular,
+  type EntityCopy,
   getArchiveCopy,
   getHardDeleteCopy,
 } from "../../components/Modal/copy";
@@ -10,8 +12,8 @@ import {
 type Identifiable = { id: number };
 
 type UseEntityRowActionsOptions<T> = {
-  /** Etiqueta singular ("el inversor", "el lote", "el cliente"). */
-  entityLabel: string;
+  /** Copy léxico de la entidad — se deriva el article+singular para los modales. */
+  entity: EntityCopy;
   /** Función para extraer el nombre legible del item (para copy + toast). */
   getLabel: (item: T) => string;
   archive?: (id: number) => Promise<unknown>;
@@ -29,13 +31,14 @@ type UseEntityRowActionsOptions<T> = {
  * pero con Promise.allSettled.
  */
 export function useEntityRowActions<T extends Identifiable>({
-  entityLabel,
+  entity,
   getLabel,
   archive,
   hardDelete,
   onAfter,
 }: UseEntityRowActionsOptions<T>) {
   const confirm = useConfirmDialog();
+  const entityLabel = articleSingular(entity);
 
   const runRowAction = useCallback(
     async (

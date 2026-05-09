@@ -4,8 +4,9 @@ import { ArchivedListPage } from "../../../../components/ArchivedListPage/Archiv
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useManagers, { Manager } from "../../../../hooks/useManagers";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "el responsable";
+const ENTITY: EntityCopy = { article: "el", singular: "responsable", plural: "responsables" };
 
 const columns: Column<Manager>[] = [
   { key: "name", header: "Responsable" },
@@ -37,8 +38,8 @@ export default function ArchivedManagers() {
       description="Restaurar o eliminar responsables de proyecto de forma definitiva"
       columns={columns}
       data={archivedManagers}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="responsables"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

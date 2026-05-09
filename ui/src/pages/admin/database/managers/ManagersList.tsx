@@ -18,9 +18,10 @@ import useManagers, {
   ManagerPayloadInput,
 } from "../../../../hooks/useManagers";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 import ManagerFormDrawer from "./ManagerFormDrawer";
 
-const ENTITY_LABEL = "el responsable";
+const ENTITY: EntityCopy = { article: "el", singular: "responsable", plural: "responsables" };
 
 const baseColumns: Column<Manager>[] = [
   { key: "name", header: "Nombre" },
@@ -44,7 +45,7 @@ export default function ManagersList() {
 
   const bulk = useBulkActions<Manager>({
     items: managers,
-    entityLabelPlural: "responsables",
+    entity: ENTITY,
     archive: archiveManager,
     hardDelete: hardDeleteManager,
     onAfter: refresh,
@@ -63,7 +64,7 @@ export default function ManagersList() {
   }, [refresh]);
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<Manager>({
-    entityLabel: ENTITY_LABEL,
+    entity: ENTITY,
     getLabel: (m) => m.name,
     archive: archiveManager,
     hardDelete: hardDeleteManager,
@@ -71,7 +72,7 @@ export default function ManagersList() {
   });
 
   const selectColumn = useMemo<Column<Manager>>(
-    () => makeSelectColumn<Manager>(bulk, (m) => m.name, "responsable"),
+    () => makeSelectColumn<Manager>(bulk, (m) => m.name, ENTITY),
     [bulk],
   );
 
@@ -131,7 +132,7 @@ export default function ManagersList() {
               onToggleAll={bulk.toggleAll}
               onClear={bulk.clear}
               actions={bulk.actions}
-              entityLabelPlural="responsables"
+              entity={ENTITY}
             />
             <DataTable data={managers} columns={tableColumns} />
           </>

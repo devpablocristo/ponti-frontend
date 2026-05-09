@@ -5,8 +5,9 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useSupplies from "../../../../hooks/useSupplies";
 import type { Supply } from "../../../../hooks/useSupplies/types";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "el insumo";
+const ENTITY: EntityCopy = { article: "el", singular: "insumo", plural: "insumos" };
 
 const columns: Column<Supply>[] = [
   { key: "name", header: "Insumo" },
@@ -58,8 +59,8 @@ export default function ArchivedSupplies() {
       description="Restaurar o eliminar insumos de forma definitiva"
       columns={columns}
       data={supplies}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="insumos"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

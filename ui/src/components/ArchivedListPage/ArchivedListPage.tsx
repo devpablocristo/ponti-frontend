@@ -8,7 +8,9 @@ import { makeSelectColumn } from "../crud/makeSelectColumn";
 import { ErrorBanner } from "../feedback/ErrorBanner";
 import { Column } from "../../pages/admin/types";
 import {
+  articleSingular,
   ConfirmCopy,
+  type EntityCopy,
   getBulkHardDeleteCopy,
   getBulkRestoreCopy,
   getHardDeleteCopy,
@@ -31,10 +33,13 @@ type ArchivedListPageProps<T extends { id: number }> = {
   columns: Column<T>[];
   /** Datos archivados a mostrar. */
   data: T[];
-  /** Etiqueta de entidad para los modales (ej: "el cliente", "el proyecto"). */
-  entityLabel: string;
-  /** Etiqueta plural (ej: "clientes", "proyectos") — habilita bulk actions si está. */
-  entityLabelPlural?: string;
+  /** Copy léxico de la entidad — se deriva singular y plural según se necesite. */
+  entity: EntityCopy;
+  /**
+   * Si está en true, habilita bulk actions (checkbox por fila + barra de
+   * acciones masivas). Por defecto false — las páginas opt-in pasan `bulk`.
+   */
+  bulk?: boolean;
   /** Cómo extraer el "nombre amigable" de un item para el modal. */
   getItemLabel: (item: T) => string;
   /** Disparar restore para el item seleccionado. Si no se pasa, no hay botón. */
@@ -53,8 +58,8 @@ export function ArchivedListPage<T extends { id: number }>({
   description,
   columns,
   data,
-  entityLabel,
-  entityLabelPlural,
+  entity,
+  bulk: bulkEnabled = false,
   getItemLabel,
   onRestore,
   onHardDelete,
@@ -62,6 +67,8 @@ export function ArchivedListPage<T extends { id: number }>({
   processing = false,
   error,
 }: ArchivedListPageProps<T>) {
+  const entityLabel = articleSingular(entity);
+  const entityLabelPlural = entity.plural;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pending, setPending] = useState<{
     items: T[];
@@ -72,8 +79,6 @@ export function ArchivedListPage<T extends { id: number }>({
   const selection = useBulkSelection(data);
   const { toggleAll, clear, allSelected, selectedItems, selectedCount } =
     selection;
-
-  const bulkEnabled = Boolean(entityLabelPlural);
 
   useEffect(() => {
     onMount?.();
@@ -94,14 +99,14 @@ export function ArchivedListPage<T extends { id: number }>({
   };
 
   const openBulkRestore = () => {
-    if (!entityLabelPlural || selectedItems.length === 0) return;
+    if (selectedItems.length === 0) return;
     setPending({ items: selectedItems, op: "restore" });
     setCopy(getBulkRestoreCopy(selectedItems.length, entityLabelPlural));
     setIsModalOpen(true);
   };
 
   const openBulkHardDelete = () => {
-    if (!entityLabelPlural || selectedItems.length === 0) return;
+    if (selectedItems.length === 0) return;
     setPending({ items: selectedItems, op: "hard" });
     setCopy(getBulkHardDeleteCopy(selectedItems.length, entityLabelPlural));
     setIsModalOpen(true);
@@ -145,7 +150,7 @@ export function ArchivedListPage<T extends { id: number }>({
   };
 
   const selectColumn: Column<T> | null = bulkEnabled
-    ? makeSelectColumn<T>(selection, getItemLabel, entityLabel)
+    ? makeSelectColumn<T>(selection, getItemLabel, entity)
     : null;
 
   const actionsColumn: Column<T> = {
@@ -213,7 +218,7 @@ export function ArchivedListPage<T extends { id: number }>({
       {description && (
         <p className="text-sm text-gray-500 mb-4">{description}</p>
       )}
-      {bulkEnabled && entityLabelPlural && (
+      {bulkEnabled && (
         <BulkSelectionPanel
           selectedCount={selectedCount}
           totalCount={data.length}
@@ -221,7 +226,7 @@ export function ArchivedListPage<T extends { id: number }>({
           onToggleAll={toggleAll}
           onClear={clear}
           actions={bulkActions}
-          entityLabelPlural={entityLabelPlural}
+          entity={entity}
         />
       )}
       <DataTable data={data as T[]} columns={fullColumns} />

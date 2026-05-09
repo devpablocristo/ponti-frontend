@@ -1,4 +1,5 @@
 import { Checkbox } from "../Input/Checkbox";
+import type { EntityCopy } from "../Modal/copy";
 import { BulkActionBar, type BulkAction } from "./BulkActionBar";
 
 type BulkSelectionPanelProps = {
@@ -8,7 +9,8 @@ type BulkSelectionPanelProps = {
   onToggleAll: () => void;
   onClear: () => void;
   actions: BulkAction[];
-  entityLabelPlural: string;
+  /** Copy léxico de la entidad — se deriva el plural para los textos. */
+  entity: EntityCopy;
 };
 
 /**
@@ -22,15 +24,16 @@ export function BulkSelectionPanel({
   onToggleAll,
   onClear,
   actions,
-  entityLabelPlural,
+  entity,
 }: BulkSelectionPanelProps) {
   if (totalCount === 0) return null;
+  const plural = entity.plural;
   return (
     <>
       {selectedCount > 0 && (
         <BulkActionBar
           selectedCount={selectedCount}
-          itemLabel={entityLabelPlural}
+          itemLabel={plural}
           onClear={onClear}
           actions={actions}
         />
@@ -39,7 +42,7 @@ export function BulkSelectionPanel({
         <Checkbox
           checked={allSelected}
           onChange={onToggleAll}
-          aria-label={`Seleccionar todos los ${entityLabelPlural}`}
+          aria-label={`Seleccionar todos los ${plural}`}
         />
         <span>Seleccionar todo</span>
         {selectedCount > 0 && (

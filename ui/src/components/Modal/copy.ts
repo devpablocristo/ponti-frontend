@@ -9,6 +9,27 @@ export type ConfirmCopy = {
   secondaryButtonText: string;
 };
 
+/**
+ * Tres formas léxicas de la entidad usadas a lo largo del sistema CRUDAR:
+ *   - article + singular ("el inversor") para confirm copy.
+ *   - singular ("inversor") para aria-label de checkboxes de selección.
+ *   - plural ("inversores") para bulk copy y resumen de selección.
+ *
+ * Cada página declara una sola constante EntityCopy y la pasa a las
+ * primitivas (useEntityRowActions, useBulkActions, makeSelectColumn,
+ * BulkSelectionPanel, ArchivedListPage), que derivan internamente la
+ * forma que necesitan.
+ */
+export type EntityCopy = {
+  article: string;
+  singular: string;
+  plural: string;
+};
+
+/** Devuelve "el inversor", "la campaña", etc. (uso con confirm copy). */
+export const articleSingular = (entity: EntityCopy): string =>
+  `${entity.article} ${entity.singular}`;
+
 // ─── Confirmaciones de acción ────────────────────────────────────────────────
 
 export const getArchiveCopy = (entityLabel: string, itemLabel: string): ConfirmCopy => ({

@@ -34,7 +34,9 @@ import {
   parsePartialPrice,
 } from "./importUtils";
 
-const ENTITY_LABEL = "la labor";
+import type { EntityCopy } from "../../../../components/Modal/copy";
+
+const ENTITY: EntityCopy = { article: "la", singular: "labor", plural: "labores" };
 
 function renderPriceCell(value: unknown, row: LaborInfo) {
   return (
@@ -99,7 +101,7 @@ export default function ListTasks() {
 
   const bulk = useBulkActions<LaborInfo>({
     items: safeLabors,
-    entityLabelPlural: "labores",
+    entity: ENTITY,
     archive: archiveLabor,
     hardDelete: hardDeleteLabor,
     onAfter: refresh,
@@ -111,7 +113,7 @@ export default function ListTasks() {
   }, []);
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<LaborInfo>({
-    entityLabel: ENTITY_LABEL,
+    entity: ENTITY,
     getLabel: (l) => l.name,
     archive: archiveLabor,
     hardDelete: hardDeleteLabor,
@@ -131,7 +133,7 @@ export default function ListTasks() {
   }, [projectId, resetFilters, resetPage]);
 
   const selectColumn = useMemo<Column<LaborInfo>>(
-    () => makeSelectColumn<LaborInfo>(bulk, (l) => l.name, "labor"),
+    () => makeSelectColumn<LaborInfo>(bulk, (l) => l.name, ENTITY),
     [bulk],
   );
 
@@ -531,7 +533,7 @@ export default function ListTasks() {
             onToggleAll={bulk.toggleAll}
             onClear={bulk.clear}
             actions={bulk.actions}
-            entityLabelPlural="labores"
+            entity={ENTITY}
           />
           <DataTable
             data={filteredLabors}

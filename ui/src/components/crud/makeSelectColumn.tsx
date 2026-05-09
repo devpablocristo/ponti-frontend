@@ -1,4 +1,5 @@
 import { Checkbox } from "../Input/Checkbox";
+import type { EntityCopy } from "../Modal/copy";
 import type { Column } from "../../pages/admin/types";
 
 type Identifiable = { id: number };
@@ -15,7 +16,7 @@ type Bulk = {
 export function makeSelectColumn<T extends Identifiable>(
   bulk: Bulk,
   getLabel: (item: T) => string,
-  entitySingular: string,
+  entity: EntityCopy,
 ): Column<T> {
   return {
     key: "id" as keyof T,
@@ -30,7 +31,7 @@ export function makeSelectColumn<T extends Identifiable>(
           bulk.toggle(item.id);
         }}
         onClick={(e) => e.stopPropagation()}
-        aria-label={`Seleccionar ${entitySingular} ${getLabel(item)}`}
+        aria-label={`Seleccionar ${entity.singular} ${getLabel(item)}`}
       />
     ),
   };

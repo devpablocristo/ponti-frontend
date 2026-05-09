@@ -5,6 +5,7 @@ import { useBulkSelection } from "../useBulkSelection";
 import { useConfirmDialog } from "../useConfirmDialog";
 import { toastError, toastSuccess } from "../../lib/toast";
 import {
+  type EntityCopy,
   getBulkArchiveCopy,
   getBulkHardDeleteCopy,
 } from "../../components/Modal/copy";
@@ -20,7 +21,8 @@ type BulkAction = {
 
 type UseBulkActionsOptions<T> = {
   items: T[];
-  entityLabelPlural: string;
+  /** Copy léxico de la entidad — se deriva el plural para confirm/toast/labels. */
+  entity: EntityCopy;
   archive?: (id: number) => Promise<unknown>;
   hardDelete?: (id: number) => Promise<unknown>;
   /** Se llama luego de cualquier operación bulk (refrescar lista, etc). */
@@ -36,7 +38,7 @@ type UseBulkActionsOptions<T> = {
  */
 export function useBulkActions<T extends Identifiable>({
   items,
-  entityLabelPlural,
+  entity,
   archive,
   hardDelete,
   onAfter,
@@ -44,6 +46,7 @@ export function useBulkActions<T extends Identifiable>({
   const selection = useBulkSelection<T>(items);
   const { selectedItems, selectedCount, clear } = selection;
   const confirm = useConfirmDialog();
+  const entityLabelPlural = entity.plural;
 
   const runBulk = useCallback(
     async (

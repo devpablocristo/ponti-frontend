@@ -18,9 +18,10 @@ import useCampaigns, {
   CampaignPayloadInput,
 } from "../../../../hooks/useCampaigns";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 import CampaignFormDrawer from "./CampaignFormDrawer";
 
-const ENTITY_LABEL = "la campaña";
+const ENTITY: EntityCopy = { article: "la", singular: "campaña", plural: "campañas" };
 
 const baseColumns: Column<Campaign>[] = [
   { key: "name", header: "Nombre" },
@@ -45,7 +46,7 @@ export default function CampaignsList() {
 
   const bulk = useBulkActions<Campaign>({
     items: campaigns,
-    entityLabelPlural: "campañas",
+    entity: ENTITY,
     archive: archiveCampaign,
     hardDelete: hardDeleteCampaign,
     onAfter: refresh,
@@ -64,7 +65,7 @@ export default function CampaignsList() {
   }, [refresh]);
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<Campaign>({
-    entityLabel: ENTITY_LABEL,
+    entity: ENTITY,
     getLabel: (c) => c.name,
     archive: archiveCampaign,
     hardDelete: hardDeleteCampaign,
@@ -72,7 +73,7 @@ export default function CampaignsList() {
   });
 
   const selectColumn = useMemo<Column<Campaign>>(
-    () => makeSelectColumn<Campaign>(bulk, (c) => c.name, "campaña"),
+    () => makeSelectColumn<Campaign>(bulk, (c) => c.name, ENTITY),
     [bulk],
   );
 
@@ -132,7 +133,7 @@ export default function CampaignsList() {
               onToggleAll={bulk.toggleAll}
               onClear={bulk.clear}
               actions={bulk.actions}
-              entityLabelPlural="campañas"
+              entity={ENTITY}
             />
             <DataTable data={campaigns} columns={tableColumns} />
           </>

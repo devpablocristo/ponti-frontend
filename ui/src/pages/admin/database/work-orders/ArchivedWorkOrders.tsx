@@ -5,8 +5,9 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useOrders from "../../../../hooks/useWorkOrders";
 import type { OrdersData } from "../../../../hooks/useWorkOrders/types";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "la orden";
+const ENTITY: EntityCopy = { article: "la", singular: "orden", plural: "órdenes" };
 
 const columns: Column<OrdersData>[] = [
   { key: "number", header: "Número" },
@@ -44,8 +45,8 @@ export default function ArchivedWorkOrders() {
       description="Restaurar o eliminar órdenes de trabajo de forma definitiva"
       columns={columns}
       data={orders}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="órdenes"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.number}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

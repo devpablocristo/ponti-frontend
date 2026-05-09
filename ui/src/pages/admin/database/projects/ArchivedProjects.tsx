@@ -5,8 +5,9 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import { ProjectData } from "../../../../hooks/useDatabase/projects/types";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "el proyecto";
+const ENTITY: EntityCopy = { article: "el", singular: "proyecto", plural: "proyectos" };
 
 const columns: Column<ProjectData>[] = [
   { key: "customer", header: "Cliente/Sociedad" },
@@ -43,8 +44,8 @@ export default function ArchivedProjects() {
       description="Restaurar o eliminar proyectos de forma definitiva"
       columns={columns}
       data={projects}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="proyectos"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

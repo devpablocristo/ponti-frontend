@@ -5,8 +5,9 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useCampaigns from "../../../../hooks/useCampaigns";
 import type { Data as Campaign } from "../../../../hooks/useCampaigns/types";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "la campaña";
+const ENTITY: EntityCopy = { article: "la", singular: "campaña", plural: "campañas" };
 
 const columns: Column<Campaign>[] = [
   { key: "name", header: "Campaña" },
@@ -38,8 +39,8 @@ export default function ArchivedCampaigns() {
       description="Restaurar o eliminar campañas de forma definitiva"
       columns={columns}
       data={archivedCampaigns}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="campañas"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

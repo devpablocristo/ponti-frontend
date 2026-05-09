@@ -5,8 +5,9 @@ import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import useLots from "../../../../hooks/useLots";
 import type { LotsData } from "../../../../hooks/useLots/types";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 
-const ENTITY_LABEL = "el lote";
+const ENTITY: EntityCopy = { article: "el", singular: "lote", plural: "lotes" };
 
 const columns: Column<LotsData>[] = [
   { key: "project_name", header: "Proyecto" },
@@ -44,8 +45,8 @@ export default function ArchivedLots() {
       description="Restaurar o eliminar lotes de forma definitiva"
       columns={columns}
       data={lots}
-      entityLabel={ENTITY_LABEL}
-      entityLabelPlural="lotes"
+      entity={ENTITY}
+      bulk
       getItemLabel={(item) => item.lot_name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

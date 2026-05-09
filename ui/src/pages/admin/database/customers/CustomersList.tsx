@@ -19,9 +19,10 @@ import {
   CustomerPayloadInput,
 } from "../../../../hooks/useCustomers/types";
 import { Column } from "../../types";
+import type { EntityCopy } from "../../../../components/Modal/copy";
 import CustomerFormDrawer from "./CustomerFormDrawer";
 
-const ENTITY_LABEL = "el cliente";
+const ENTITY: EntityCopy = { article: "el", singular: "cliente", plural: "clientes" };
 
 const baseColumns: Column<CustomerData>[] = [
   { key: "name", header: "Cliente / Sociedad" },
@@ -50,7 +51,7 @@ export default function CustomersList() {
 
   const bulk = useBulkActions<CustomerData>({
     items: customers,
-    entityLabelPlural: "clientes",
+    entity: ENTITY,
     archive: archiveCustomer,
     hardDelete: hardDeleteCustomer,
     onAfter: refresh,
@@ -65,7 +66,7 @@ export default function CustomersList() {
   });
 
   const { handleArchive, handleHardDelete } = useEntityRowActions<CustomerData>({
-    entityLabel: ENTITY_LABEL,
+    entity: ENTITY,
     getLabel: (c) => c.name,
     archive: archiveCustomer,
     hardDelete: hardDeleteCustomer,
@@ -73,7 +74,7 @@ export default function CustomersList() {
   });
 
   const selectColumn = useMemo<Column<CustomerData>>(
-    () => makeSelectColumn<CustomerData>(bulk, (c) => c.name, "cliente"),
+    () => makeSelectColumn<CustomerData>(bulk, (c) => c.name, ENTITY),
     [bulk],
   );
 
@@ -133,7 +134,7 @@ export default function CustomersList() {
               onToggleAll={bulk.toggleAll}
               onClear={bulk.clear}
               actions={bulk.actions}
-              entityLabelPlural="clientes"
+              entity={ENTITY}
             />
             <DataTable data={customers} columns={tableColumns} />
           </>
