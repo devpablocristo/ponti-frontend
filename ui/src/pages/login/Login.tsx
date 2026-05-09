@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { UserData } from "./types";
 import { RequestError } from "@/api/types";
 import Cover from "./Cover";
+import { ErrorBanner } from "../../components/feedback/ErrorBanner";
 
 function Login() {
   const { login, isAuthenticated, loading } = useAuth();
@@ -147,17 +148,11 @@ function Login() {
             </button>
           </form>
 
-          {error !== "" && (
-            <div
-              className="flex items-start gap-3 p-4 mt-5 text-sm text-red-700 rounded-xl bg-red-50 border border-red-100 animate-fade-in-up"
-              role="alert"
-            >
-              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
-              </svg>
-              <p>{error}</p>
-            </div>
-          )}
+          <ErrorBanner
+            variant="outlined"
+            message={error || null}
+            className="mt-5 animate-fade-in-up"
+          />
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ import { ProjectDropdown } from "../../hooks/useDatabase/projects/types";
 import { useClickOutside } from "./useClickOutside";
 import { SelectionProvider } from "./context/SelectionContext";
 import { useSelection } from "./context/useSelection";
+import { ErrorBanner } from "../../components/feedback/ErrorBanner";
 
 function WorkspaceSelector() {
   const navigate = useNavigate();
@@ -260,17 +261,11 @@ function WorkspaceSelector() {
             Para comenzar debes elegir un cliente, proyecto y campaña.
           </p>
           <div className="w-full max-w-sm animate-fade-in-up">
-            {customerError ||
-              projectError ||
-              (campaignError && (
-                <div
-                  className="p-4 mb-4 text-sm text-red-700 rounded-xl bg-red-50 border border-red-100"
-                  role="alert"
-                >
-                  <span className="font-medium">Error!</span> {customerError}{" "}
-                  {projectError} {campaignError}
-                </div>
-              ))}
+            {(customerError || projectError || campaignError) && (
+              <ErrorBanner variant="outlined" prefix="Error!">
+                {customerError} {projectError} {campaignError}
+              </ErrorBanner>
+            )}
             <form className="space-y-4" onSubmit={handleSelection}>
               <div ref={customerRef} className="relative">
                 <Search
