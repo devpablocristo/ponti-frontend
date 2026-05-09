@@ -126,7 +126,7 @@ router.get("/archived", async (req: Request, res: Response) => {
   }
 });
 
-router.put("/:id/archive", async (req: Request, res: Response) => {
+router.post("/:id/archive", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userID;
@@ -159,7 +159,7 @@ router.put("/:id/archive", async (req: Request, res: Response) => {
   }
 });
 
-router.put("/:id/restore", async (req: Request, res: Response) => {
+router.post("/:id/restore", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userID;

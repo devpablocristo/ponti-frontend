@@ -256,7 +256,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await apiClient.put<SuccessResponse<string>>(
+        const response = await apiClient.post<SuccessResponse<string>>(
           "/projects/" + id + "/archive",
           {}
         );
@@ -344,7 +344,7 @@ const useProjects = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await apiClient.put<SuccessResponse<string>>(
+        const response = await apiClient.post<SuccessResponse<string>>(
           "/projects/" + id + "/restore",
           {}
         );

@@ -108,7 +108,7 @@ const useCustomers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await apiClient.put<SuccessResponse<string>>(
+        const response = await apiClient.post<SuccessResponse<string>>(
           "/customers/" + id + "/archive",
           {}
         );
@@ -144,7 +144,7 @@ const useCustomers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await apiClient.put<SuccessResponse<string>>(
+        const response = await apiClient.post<SuccessResponse<string>>(
           "/customers/" + id + "/restore",
           {}
         );
