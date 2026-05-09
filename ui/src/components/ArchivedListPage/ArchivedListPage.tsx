@@ -3,7 +3,9 @@ import { RotateCcw, Trash2 } from "lucide-react";
 
 import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { BaseModal } from "../Modal/BaseModal";
-import { BulkActionBar } from "../crud/BulkActionBar";
+import { BulkSelectionPanel } from "../crud/BulkSelectionPanel";
+import { makeSelectColumn } from "../crud/makeSelectColumn";
+import { ErrorBanner } from "../feedback/ErrorBanner";
 import { Column } from "../../pages/admin/types";
 import {
   ConfirmCopy,
@@ -67,15 +69,9 @@ export function ArchivedListPage<T extends { id: number }>({
   } | null>(null);
   const [copy, setCopy] = useState<ConfirmCopy | null>(null);
 
-  const {
-    isSelected,
-    toggle,
-    toggleAll,
-    clear,
-    allSelected,
-    selectedItems,
-    selectedCount,
-  } = useBulkSelection(data);
+  const selection = useBulkSelection(data);
+  const { toggleAll, clear, allSelected, selectedItems, selectedCount } =
+    selection;
 
   const bulkEnabled = Boolean(entityLabelPlural);
 
@@ -149,24 +145,7 @@ export function ArchivedListPage<T extends { id: number }>({
   };
 
   const selectColumn: Column<T> | null = bulkEnabled
-    ? {
-        key: "id" as keyof T,
-        header: "",
-        align: "center",
-        render: (_value: unknown, item: T) => (
-          <input
-            type="checkbox"
-            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-            checked={isSelected(item.id)}
-            onChange={(e) => {
-              e.stopPropagation();
-              toggle(item.id);
-            }}
-            onClick={(e) => e.stopPropagation()}
-            aria-label={`Seleccionar ${getItemLabel(item)}`}
-          />
-        ),
-      }
+    ? makeSelectColumn<T>(selection, getItemLabel, entityLabel)
     : null;
 
   const actionsColumn: Column<T> = {
@@ -234,41 +213,24 @@ export function ArchivedListPage<T extends { id: number }>({
       {description && (
         <p className="text-sm text-gray-500 mb-4">{description}</p>
       )}
-      {bulkEnabled && (
-        <>
-          {selectedCount > 0 && (
-            <BulkActionBar
-              selectedCount={selectedCount}
-              itemLabel={entityLabelPlural}
-              actions={bulkActions}
-              onClear={clear}
-            />
-          )}
-          {data.length > 0 && (
-            <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                checked={allSelected}
-                onChange={toggleAll}
-                aria-label={`Seleccionar todos los ${entityLabelPlural}`}
-              />
-              <span>Seleccionar todo</span>
-              {selectedCount > 0 && (
-                <span className="ml-auto">
-                  {selectedCount} de {data.length}
-                </span>
-              )}
-            </div>
-          )}
-        </>
+      {bulkEnabled && entityLabelPlural && (
+        <BulkSelectionPanel
+          selectedCount={selectedCount}
+          totalCount={data.length}
+          allSelected={allSelected}
+          onToggleAll={toggleAll}
+          onClear={clear}
+          actions={bulkActions}
+          entityLabelPlural={entityLabelPlural}
+        />
       )}
       <DataTable data={data as T[]} columns={fullColumns} />
       {error && (
-        <div className="p-4 mt-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+        <ErrorBanner className="mt-4">
           <span className="font-medium">Error!</span> {error}
-        </div>
+        </ErrorBanner>
       )}
+
       <BaseModal
         isOpen={isModalOpen}
         isSaving={processing}
