@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import * as XLSX from "xlsx";
 
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -19,6 +19,11 @@ import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "../../../../api/client";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
+import { makeActionsColumn } from "../../../../components/crud/makeActionsColumn";
+import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
+import { useBulkActions } from "../../../../hooks/useBulkActions";
+import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
 import {
   getValueByAliases,
   LABOR_HEADER_ALIASES,
@@ -27,6 +32,8 @@ import {
   parseCsv,
   parsePartialPrice,
 } from "./importUtils";
+
+const ENTITY_LABEL = "la labor";
 
 function renderPriceCell(value: unknown, row: LaborInfo) {
   return (
@@ -47,9 +54,9 @@ export default function ListTasks() {
     error,
     labors,
     archiveLabor,
+    hardDeleteLabor,
     updateLabor,
     saveLabors,
-    getWorkOrdersCount,
     result,
     resultUpdate,
     processing,
@@ -60,11 +67,9 @@ export default function ListTasks() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
   const pagination = usePagination({ perPage: 10 });
-  const { buildPagination, clampPageForTotal, resetPage } = pagination;
+  const { buildPagination, resetPage } = pagination;
   const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
   const {
     filters: columnsFilters,
@@ -87,6 +92,31 @@ export default function ListTasks() {
     "campaign",
   ]);
 
+  const refresh = useCallback(() => {
+    if (projectId) getLabors(projectId);
+  }, [projectId, getLabors]);
+
+  const bulk = useBulkActions<LaborInfo>({
+    items: safeLabors,
+    entityLabelPlural: "labores",
+    archive: archiveLabor,
+    hardDelete: hardDeleteLabor,
+    onAfter: refresh,
+  });
+
+  const handleEdit = useCallback((item: LaborInfo) => {
+    setLabor(item);
+    setModalOpen(true);
+  }, []);
+
+  const { handleArchive, handleHardDelete } = useEntityRowActions<LaborInfo>({
+    entityLabel: ENTITY_LABEL,
+    getLabel: (l) => l.name,
+    archive: archiveLabor,
+    hardDelete: hardDeleteLabor,
+    onAfter: refresh,
+  });
+
   useEffect(() => {
     if (projectId) {
       getLabors(projectId);
@@ -99,8 +129,14 @@ export default function ListTasks() {
     resetPage();
   }, [projectId, resetFilters, resetPage]);
 
+  const selectColumn = useMemo<Column<LaborInfo>>(
+    () => makeSelectColumn<LaborInfo>(bulk, (l) => l.name, "labor"),
+    [bulk],
+  );
+
   const columns = useMemo<Column<LaborInfo>[]>(
     () => [
+      selectColumn,
       {
         key: "name",
         header: "Labor",
@@ -131,8 +167,13 @@ export default function ListTasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("contractor_name"),
       },
+      makeActionsColumn<LaborInfo>({
+        onEdit: handleEdit,
+        onArchive: handleArchive,
+        onHardDelete: handleHardDelete,
+      }),
     ],
-    [getFilterOptionsForColumn]
+    [getFilterOptionsForColumn, handleArchive, handleEdit, handleHardDelete, selectColumn]
   );
 
   useEffect(() => {
@@ -164,38 +205,6 @@ export default function ListTasks() {
       setSuccessMessage(null);
     }
   }, [errorUpdate]);
-
-  const handleDelete = async (item: LaborInfo) => {
-    if (!projectId) return;
-    const count = await getWorkOrdersCount(projectId, item.id);
-    setDeleteTarget({ id: item.id, name: item.name, count });
-    setDeleteModalOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!deleteTarget) return;
-    setErrorMessage("");
-    setSuccessMessage(null);
-    try {
-      await archiveLabor(deleteTarget.id);
-      setSuccessMessage(`Se archivó "${deleteTarget.name}".`);
-      if (projectId) await getLabors(projectId);
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "No se pudo archivar la labor.");
-    }
-    setDeleteModalOpen(false);
-    setDeleteTarget(null);
-
-    setTimeout(() => {
-      const totalAfterDelete = safeLabors.length - 1;
-      clampPageForTotal(totalAfterDelete);
-    }, 200);
-  };
-
-  const handleEdit = (item: LaborInfo) => {
-    setLabor(item);
-    setModalOpen(true);
-  };
 
   const handleSave = () => {
     if (processing) return;
@@ -515,21 +524,14 @@ export default function ListTasks() {
               </label>
             </div>
           </BaseModal>
-          <BaseModal
-            isOpen={deleteModalOpen}
-            onClose={() => {
-              setDeleteModalOpen(false);
-              setDeleteTarget(null);
-            }}
-            title="Archivar labor"
-            message={
-              deleteTarget && deleteTarget.count > 0
-                ? `La labor "${deleteTarget.name}" está en ${deleteTarget.count} orden${deleteTarget.count > 1 ? "es" : ""} de trabajo activa${deleteTarget.count > 1 ? "s" : ""}. Se archivará del catálogo pero las órdenes no se verán afectadas. ¿Continuar?`
-                : `¿Está seguro que desea archivar la labor "${deleteTarget?.name}"?`
-            }
-            primaryButtonText="Archivar"
-            primaryButtonColor="bg-red-600 hover:bg-red-800 focus:ring-red-300"
-            onPrimaryAction={confirmDelete}
+          <BulkSelectionPanel
+            selectedCount={bulk.selectedCount}
+            totalCount={filteredLabors.length}
+            allSelected={bulk.allSelected}
+            onToggleAll={bulk.toggleAll}
+            onClear={bulk.clear}
+            actions={bulk.actions}
+            entityLabelPlural="labores"
           />
           <DataTable
             data={filteredLabors}
@@ -537,8 +539,6 @@ export default function ListTasks() {
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
             enableFilters={true}
-            onDelete={(item) => handleDelete(item)}
-            onEdit={(item) => handleEdit(item)}
             message="No hay labores cargadas en el proyecto"
             pagination={buildPagination(filteredLabors.length)}
           />
