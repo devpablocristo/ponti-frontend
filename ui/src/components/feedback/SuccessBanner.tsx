@@ -1,25 +1,57 @@
 type SuccessBannerProps = {
   message: string | null | undefined;
-  compact?: boolean;
+  /** "simple" (default): caja verde con el mensaje. "alert": con icono. */
+  variant?: "simple" | "alert";
   onDismiss?: () => void;
   className?: string;
 };
 
+/**
+ * Banner inline de éxito. Reemplaza el JSX duplicado en 16+ páginas para
+ * mensajes de éxito persistentes (no toast). Para confirmaciones rápidas
+ * preferir `toast.success(...)` desde lib/toast.
+ */
 export function SuccessBanner({
   message,
-  compact = false,
+  variant = "simple",
   onDismiss,
   className = "",
 }: SuccessBannerProps) {
   if (!message) return null;
 
-  if (compact) {
+  if (variant === "simple") {
     return (
       <div
-        className={`p-3 rounded bg-green-50 text-green-700 text-sm ${className}`}
+        className={`p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 ${
+          onDismiss ? "relative pr-12" : ""
+        } ${className}`}
         role="status"
       >
-        {message}
+        <span className="font-medium">{message}</span>
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="absolute top-2 right-2 text-green-600 hover:text-green-800"
+            aria-label="Cerrar"
+          >
+            <svg
+              className="w-4 h-4"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 14 14"
+            >
+              <path
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+              />
+            </svg>
+          </button>
+        )}
       </div>
     );
   }

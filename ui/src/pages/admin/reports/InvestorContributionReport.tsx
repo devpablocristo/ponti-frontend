@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import InputField from "../../../components/Input/InputField.tsx";
@@ -219,14 +220,7 @@ export function InvestorContributionReport() {
         ] }
       />
 
-      { error && (
-        <div
-          className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50"
-          role="alert"
-        >
-          <span className="font-medium">{ error }</span>
-        </div>
-      ) }
+      <ErrorBanner message={error} />
 
       { !error && (
         <>

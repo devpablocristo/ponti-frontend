@@ -11,6 +11,7 @@ import {
   Home,
 } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { usePDF } from "react-to-pdf";
 
@@ -223,11 +224,7 @@ export function ByFieldOrCropReportV2() {
         ]}
       />
 
-      {error && (
-        <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
+      <ErrorBanner message={error} />
 
       {!error && filtered && (
         <div ref={targetRef} className="space-y-4">

@@ -1,29 +1,66 @@
 type ErrorBannerProps = {
   message: string | null | undefined;
-  /** Si true, render compacto (sin icono ni dismiss) para usar dentro de forms. */
-  compact?: boolean;
-  /** Texto que precede al mensaje (ej: "Error:", "Atención:"). Default "Error:". */
+  /** "simple" (default): caja roja con el mensaje, sin icono. "alert": con icono y opcional prefix. */
+  variant?: "simple" | "alert";
+  /** Texto que precede al mensaje en variant="alert" (ej: "Error:"). */
   prefix?: string;
+  /** Si se pasa, muestra botón X para cerrar. */
   onDismiss?: () => void;
   className?: string;
 };
 
+/**
+ * Banner inline de error. Reemplaza el JSX duplicado en 20+ páginas:
+ *   <div className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+ *     <span className="font-medium">{error}</span>
+ *   </div>
+ *
+ * Por defecto usa la variante "simple" (sin icono) — la dominante en el
+ * codebase. Para banners más enfáticos (con icono y prefix "Error:") usar
+ * `variant="alert"`.
+ */
 export function ErrorBanner({
   message,
-  compact = false,
-  prefix = "Error:",
+  variant = "simple",
+  prefix,
   onDismiss,
   className = "",
 }: ErrorBannerProps) {
   if (!message) return null;
 
-  if (compact) {
+  if (variant === "simple") {
     return (
       <div
-        className={`p-3 rounded bg-red-50 text-red-700 text-sm ${className}`}
+        className={`p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 ${
+          onDismiss ? "relative pr-12" : ""
+        } ${className}`}
         role="alert"
       >
-        {message}
+        <span className="font-medium">{message}</span>
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="absolute top-2 right-2 text-red-600 hover:text-red-800"
+            aria-label="Cerrar"
+          >
+            <svg
+              className="w-4 h-4"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 14 14"
+            >
+              <path
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+              />
+            </svg>
+          </button>
+        )}
       </div>
     );
   }
