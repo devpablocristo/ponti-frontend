@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { RowActions } from "../../../components/crud/RowActions";
+import { Archive, Pencil, Trash2 } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -12,9 +14,12 @@ import ExpandedRow from "./ExpandedRow";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import useCustomers from "../../../hooks/useCustomers";
 import { useSelection } from "../../login/context/useSelection";
+import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
+import { toastError, toastSuccess } from "../../../lib/toast";
+import { getHardDeleteCopy } from "../../../components/Modal/copy";
 import { Column } from "../types";
 
-const columns: Column<ProjectData>[] = [
+const baseColumns: Column<ProjectData>[] = [
   { key: "customer", header: "Cliente/Sociedad" },
   {
     key: "name",
@@ -57,6 +62,7 @@ export function Customers() {
     totalHectares,
     getProjects,
     deleteProject,
+    hardDeleteProject,
     pageInfo: projectPageInfo,
     processing,
     error,
@@ -64,6 +70,7 @@ export function Customers() {
   const { archiveCustomer } = useCustomers();
   const { setCustomer, setProject, setCampaign, setProjectId, setField } =
     useSelection();
+  const confirm = useConfirmDialog();
 
   const {
     selectedCustomer,
@@ -112,6 +119,65 @@ export function Customers() {
   const renderExpandedRow = (rowData: ProjectData) => {
     return <ExpandedRow projectId={rowData.id} />;
   };
+
+  const handleHardDeleteProject = useCallback(
+    async (item: ProjectData) => {
+      const ok = await confirm({
+        ...getHardDeleteCopy("el proyecto", item.name),
+        primaryLabel: getHardDeleteCopy("el proyecto", item.name).primaryButtonText,
+        secondaryLabel: "Cancelar",
+        severity: "danger",
+      });
+      if (!ok) return;
+      try {
+        await hardDeleteProject(Number(item.id));
+        toastSuccess(`Se eliminó "${item.name}" definitivamente`);
+        getProjects(`page=1&per_page=10`);
+      } catch (err) {
+        toastError(
+          err instanceof Error ? err.message : "No se pudo eliminar el proyecto",
+        );
+      }
+    },
+    [confirm, getProjects, hardDeleteProject],
+  );
+
+  const tableColumns = useMemo<Column<ProjectData>[]>(
+    () => [
+      ...baseColumns,
+      {
+        key: "id",
+        header: "",
+        align: "center",
+        render: (_value, item) => (
+          <RowActions
+            actions={[
+              {
+                label: "Editar",
+                icon: Pencil,
+                onClick: () =>
+                  navigate(`/admin/database/customers?id=${item.id}`),
+              },
+              {
+                label: "Archivar",
+                icon: Archive,
+                onClick: () => handlePreFinish(item.id),
+              },
+              {
+                label: "Eliminar",
+                icon: Trash2,
+                variant: "danger",
+                divider: true,
+                onClick: () => handleHardDeleteProject(item),
+              },
+            ]}
+          />
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handleHardDeleteProject, navigate],
+  );
 
   const handlePreFinish = (id: number) => {
     setModalMode("project");
@@ -295,11 +361,9 @@ export function Customers() {
         />
         <DataTable
           data={projects}
-          columns={columns}
+          columns={tableColumns}
           expandableRowRender={renderExpandedRow}
           className={`${processing ? "pointer-events-none opacity-60" : ""}`}
-          onCopy={(item) => navigate(`/admin/database/customers?id=${item.id}`)}
-          onDelete={(item) => handlePreFinish(item.id)}
           pagination={
             projectPageInfo
               ? pagination.buildPagination(projectPageInfo.total, { serverSide: true })
