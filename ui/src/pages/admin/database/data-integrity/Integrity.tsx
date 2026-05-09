@@ -4,6 +4,7 @@ import { AxiosError } from "axios";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import Button from "../../../../components/Button/Button";
+import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { apiClient } from "@/api/client";
 import { ErrorResponse } from "@/api/types";
@@ -207,11 +208,7 @@ export default function Integrity() {
           </div>
         )}
       />
-      {error && (
-        <div className="p-4 mt-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
-          <span className="font-medium">Error!</span> {error}
-        </div>
-      )}
+      <ErrorBanner message={error} prefix="Error!" className="mt-4" />
     </div>
   );
 }
