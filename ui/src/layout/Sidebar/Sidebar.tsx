@@ -150,8 +150,6 @@ const menuArchive = {
   ],
 };
 
-// Mantenido por compatibilidad — el sidebar usa menuArchive (collapsible) en su lugar.
-
 const menuAdminItems: MenuItem[] = [
   {
     name: "Accesos",
