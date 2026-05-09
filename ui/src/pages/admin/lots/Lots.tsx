@@ -1,7 +1,14 @@
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
-import { AlertCircle, ExternalLink } from "lucide-react";
+import { AlertCircle, Archive, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { RowActions } from "../../../components/crud/RowActions";
+import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
+import { toastError, toastSuccess } from "../../../lib/toast";
+import {
+  getArchiveCopy,
+  getHardDeleteCopy,
+} from "../../../components/Modal/copy";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -50,7 +57,11 @@ export function Lots() {
     kpis,
     processingKpis,
     errorKpis,
+    archiveLot,
+    hardDeleteLot,
   } = useLots();
+
+  const confirm = useConfirmDialog();
 
   const {
     selectedCustomer,
@@ -200,9 +211,104 @@ export function Lots() {
     [calculatedKpis, hasColumnFilters, kpis]
   );
 
+  const openEditDrawer = useCallback((item: LotsData) => {
+    setLot({
+      id: item.id,
+      field_id: item.field_id,
+      project_name: item.project_name,
+      field_name: item.field_name,
+      lot_name: item.lot_name,
+      previous_crop_id: item.previous_crop_id,
+      current_crop_id: item.current_crop_id,
+      variety: item.variety,
+      sowed_area: item.sowed_area ?? "",
+      dates: item.dates,
+      season: item.season,
+      updated_at: item.updated_at ?? new Date().toISOString(),
+    });
+    setSuccessMessage("");
+    setErrorMessage("");
+    setDrawerOpen(true);
+  }, []);
+
+  const handleArchiveLot = useCallback(
+    async (item: LotsData) => {
+      const ok = await confirm({
+        ...getArchiveCopy("el lote", item.lot_name),
+        primaryLabel: getArchiveCopy("el lote", item.lot_name).primaryButtonText,
+        secondaryLabel: "Cancelar",
+        severity: "warning",
+      });
+      if (!ok) return;
+      try {
+        await archiveLot(item.id);
+        toastSuccess(`Se archivó "${item.lot_name}"`);
+        reloadFromFirstPage();
+      } catch (err) {
+        toastError(err instanceof Error ? err.message : "No se pudo archivar el lote");
+      }
+    },
+    [archiveLot, confirm, reloadFromFirstPage],
+  );
+
+  const handleHardDeleteLot = useCallback(
+    async (item: LotsData) => {
+      const ok = await confirm({
+        ...getHardDeleteCopy("el lote", item.lot_name),
+        primaryLabel: getHardDeleteCopy("el lote", item.lot_name).primaryButtonText,
+        secondaryLabel: "Cancelar",
+        severity: "danger",
+      });
+      if (!ok) return;
+      try {
+        await hardDeleteLot(item.id);
+        toastSuccess(`Se eliminó "${item.lot_name}" definitivamente`);
+        reloadFromFirstPage();
+      } catch (err) {
+        toastError(err instanceof Error ? err.message : "No se pudo eliminar el lote");
+      }
+    },
+    [confirm, hardDeleteLot, reloadFromFirstPage],
+  );
+
+  const actionsColumn = useMemo<Column<LotsData>>(
+    () => ({
+      key: "id",
+      header: "",
+      align: "center",
+      render: (_value, item) => (
+        <RowActions
+          actions={[
+            {
+              label: "Editar",
+              icon: Pencil,
+              onClick: () => openEditDrawer(item),
+            },
+            {
+              label: "Archivar",
+              icon: Archive,
+              onClick: () => handleArchiveLot(item),
+            },
+            {
+              label: "Eliminar",
+              icon: Trash2,
+              variant: "danger",
+              divider: true,
+              onClick: () => handleHardDeleteLot(item),
+            },
+          ]}
+        />
+      ),
+    }),
+    [handleArchiveLot, handleHardDeleteLot, openEditDrawer],
+  );
+
   const columnsToShow = useMemo(
-    () => allColumns.filter((column) => visibleColumns.includes(column.key)),
-    [allColumns, visibleColumns]
+    () => [
+      ...allColumns.filter((column) => visibleColumns.includes(column.key)),
+      actionsColumn,
+    ],
+    [actionsColumn, allColumns, visibleColumns]
   );
 
   const handleCreateLot = () => {
@@ -376,25 +482,6 @@ export function Lots() {
                 allColumns={allColumns}
               />
             }
-            onEdit={(item) => {
-              setLot({
-                id: item.id,
-                field_id: item.field_id,
-                project_name: item.project_name,
-                field_name: item.field_name,
-                lot_name: item.lot_name,
-                previous_crop_id: item.previous_crop_id,
-                current_crop_id: item.current_crop_id,
-                variety: item.variety,
-                sowed_area: item.sowed_area ?? "",
-                dates: item.dates,
-                season: item.season,
-                updated_at: item.updated_at ?? new Date().toISOString(),
-              });
-              setSuccessMessage("");
-              setErrorMessage("");
-              setDrawerOpen(true);
-            }}
             message="No hay lotes disponibles"
             pagination={pagination.buildPagination(filteredLots.length)}
           />
