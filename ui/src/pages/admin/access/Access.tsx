@@ -3,6 +3,8 @@ import { parseListItemsFromResponse } from "@devpablocristo/core-browser/crud";
 import Header from "../../../components/Header/Header";
 import Button from "../../../components/Button/Button";
 import { apiClient } from "@/api/client";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 
 type Tenant = { id: number; name: string };
 type UserRow = {
@@ -251,17 +253,8 @@ export default function Access() {
           )}
         </div>
 
-        {(error || result) && (
-          <div
-            className={`p-4 text-sm rounded-lg ${
-              error ? "text-red-800 bg-red-50" : "text-green-800 bg-green-50"
-            }`}
-            role="alert"
-          >
-            <span className="font-medium">{error ? "Error!" : "OK:"}</span>{" "}
-            {error || result}
-          </div>
-        )}
+        <ErrorBanner message={error} variant="alert" prefix="Error!" />
+        {!error && <SuccessBanner message={result} variant="alert" />}
       </div>
     </div>
   );

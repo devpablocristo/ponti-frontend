@@ -31,7 +31,7 @@ export function ErrorBanner({
   if (variant === "simple") {
     return (
       <div
-        className={`p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 ${
+        className={`p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 whitespace-pre-line ${
           onDismiss ? "relative pr-12" : ""
         } ${className}`}
         role="alert"
@@ -80,7 +80,7 @@ export function ErrorBanner({
         <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z" />
       </svg>
       <span className="sr-only">Error</span>
-      <div className="flex-1">
+      <div className="flex-1 whitespace-pre-line">
         {prefix && <span className="font-medium">{prefix} </span>}
         {message}
       </div>
