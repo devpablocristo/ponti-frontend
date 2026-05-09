@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { RowActions } from "../../../components/crud/RowActions";
+import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { Archive, Pencil, Trash2 } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
@@ -16,6 +17,7 @@ import { BaseModal } from "../../../components/Modal/BaseModal";
 import useCustomers from "../../../hooks/useCustomers";
 import { useSelection } from "../../login/context/useSelection";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
+import { useBulkActions } from "../../../hooks/useBulkActions";
 import { toastError, toastSuccess } from "../../../lib/toast";
 import { getHardDeleteCopy } from "../../../components/Modal/copy";
 import { Column } from "../types";
@@ -121,6 +123,13 @@ export function Customers() {
     return <ExpandedRow projectId={rowData.id} />;
   };
 
+  const bulk = useBulkActions<ProjectData>({
+    items: projects,
+    entityLabelPlural: "proyectos",
+    hardDelete: (id) => hardDeleteProject(id),
+    onAfter: () => getProjects(`page=1&per_page=10`),
+  });
+
   const handleHardDeleteProject = useCallback(
     async (item: ProjectData) => {
       const ok = await confirm({
@@ -143,8 +152,32 @@ export function Customers() {
     [confirm, getProjects, hardDeleteProject],
   );
 
+  const selectColumn = useMemo<Column<ProjectData>>(
+    () => ({
+      key: "id",
+      header: "",
+      align: "center",
+      width: "40px",
+      render: (_value, item) => (
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          checked={bulk.isSelected(item.id)}
+          onChange={(e) => {
+            e.stopPropagation();
+            bulk.toggle(item.id);
+          }}
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Seleccionar proyecto ${item.name}`}
+        />
+      ),
+    }),
+    [bulk],
+  );
+
   const tableColumns = useMemo<Column<ProjectData>[]>(
     () => [
+      selectColumn,
       ...baseColumns,
       {
         key: "id",
@@ -177,7 +210,7 @@ export function Customers() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handleHardDeleteProject, navigate],
+    [handleHardDeleteProject, navigate, selectColumn],
   );
 
   const handlePreFinish = (id: number) => {
@@ -354,6 +387,15 @@ export function Customers() {
             loading.customers ||
             loading.projects
           }
+        />
+        <BulkSelectionPanel
+          selectedCount={bulk.selectedCount}
+          totalCount={projects.length}
+          allSelected={bulk.allSelected}
+          onToggleAll={bulk.toggleAll}
+          onClear={bulk.clear}
+          actions={bulk.actions}
+          entityLabelPlural="proyectos"
         />
         <DataTable
           data={projects}
