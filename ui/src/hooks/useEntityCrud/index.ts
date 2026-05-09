@@ -1,4 +1,4 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useReducer, type Reducer } from "react";
 
 /**
  * Hook factory genérico para entidades CRUDAR. Centraliza el patrón
@@ -80,7 +80,7 @@ export function useEntityCrud<T, CreateInput = Partial<T>, UpdateInput = Partial
   service: CrudService<T, CreateInput, UpdateInput>,
 ) {
   const [state, dispatch] = useReducer(
-    reducer as React.Reducer<State<T>, Action<T>>,
+    reducer as Reducer<State<T>, Action<T>>,
     INITIAL_STATE as State<T>,
   );
 
