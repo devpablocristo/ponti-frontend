@@ -6,6 +6,7 @@ import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { RowActions } from "../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import { toastError, toastSuccess } from "../../../lib/toast";
@@ -284,25 +285,7 @@ export function Lots() {
   );
 
   const selectColumn = useMemo<Column<LotsData>>(
-    () => ({
-      key: "id",
-      header: "",
-      align: "center",
-      width: "40px",
-      render: (_value: unknown, item: LotsData) => (
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-          checked={bulk.isSelected(item.id)}
-          onChange={(e) => {
-            e.stopPropagation();
-            bulk.toggle(item.id);
-          }}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Seleccionar lote ${item.lot_name}`}
-        />
-      ),
-    }),
+    () => makeSelectColumn<LotsData>(bulk, (l) => l.lot_name, "lote"),
     [bulk],
   );
 

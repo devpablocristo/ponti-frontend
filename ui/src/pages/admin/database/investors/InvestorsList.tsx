@@ -9,6 +9,7 @@ import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { PageHeader } from "../../../../components/layout/PageHeader";
 import { RowActions } from "../../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
+import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import {
   getArchiveCopy,
   getCreateSuccessCopy,
@@ -161,25 +162,7 @@ export default function InvestorsList() {
   );
 
   const selectColumn = useMemo<Column<Investor>>(
-    () => ({
-      key: "id",
-      header: "",
-      align: "center",
-      width: "40px",
-      render: (_value, item) => (
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-          checked={bulk.isSelected(item.id)}
-          onChange={(e) => {
-            e.stopPropagation();
-            bulk.toggle(item.id);
-          }}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Seleccionar inversor ${item.name}`}
-        />
-      ),
-    }),
+    () => makeSelectColumn<Investor>(bulk, (i) => i.name, "inversor"),
     [bulk],
   );
 

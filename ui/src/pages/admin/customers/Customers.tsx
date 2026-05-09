@@ -3,6 +3,7 @@ import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { RowActions } from "../../../components/crud/RowActions";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { Archive, Pencil, Trash2 } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
@@ -153,25 +154,7 @@ export function Customers() {
   );
 
   const selectColumn = useMemo<Column<ProjectData>>(
-    () => ({
-      key: "id",
-      header: "",
-      align: "center",
-      width: "40px",
-      render: (_value, item) => (
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-          checked={bulk.isSelected(item.id)}
-          onChange={(e) => {
-            e.stopPropagation();
-            bulk.toggle(item.id);
-          }}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Seleccionar proyecto ${item.name}`}
-        />
-      ),
-    }),
+    () => makeSelectColumn<ProjectData>(bulk, (p) => p.name, "proyecto"),
     [bulk],
   );
 
