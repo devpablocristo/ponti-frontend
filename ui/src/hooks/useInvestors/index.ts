@@ -11,6 +11,11 @@ export type Investor = {
   archived_at?: string | null;
 };
 
+export type InvestorPayloadInput = {
+  name: string;
+  percentage?: number;
+};
+
 type InvestorPayload = {
   data: Investor[];
   total: number;
@@ -121,6 +126,60 @@ const useInvestors = () => {
     [],
   );
 
+  const createInvestor = React.useCallback(
+    async (input: InvestorPayloadInput): Promise<Investor | null> => {
+      dispatch({ type: "SET_ERROR", payload: "" });
+      dispatch({ type: "START_PROCESSING" });
+      try {
+        const response = await apiClient.post<SuccessResponse<Investor>>(
+          "/investors",
+          input,
+        );
+        if (response.success) {
+          await getInvestors(lastQueryRef.current);
+          return response.data ?? null;
+        }
+        const message = "Ocurrió un error al crear el inversor.";
+        dispatch({ type: "SET_ERROR", payload: message });
+        throw new Error(message);
+      } catch (err) {
+        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+        dispatch({ type: "SET_ERROR", payload: message });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: "STOP_PROCESSING" });
+      }
+    },
+    [getInvestors],
+  );
+
+  const updateInvestor = React.useCallback(
+    async (id: number, input: InvestorPayloadInput): Promise<void> => {
+      dispatch({ type: "SET_ERROR", payload: "" });
+      dispatch({ type: "START_PROCESSING" });
+      try {
+        const response = await apiClient.put<SuccessResponse<string>>(
+          "/investors/" + id,
+          input,
+        );
+        if (response.success) {
+          await getInvestors(lastQueryRef.current);
+          return;
+        }
+        const message = "Ocurrió un error al actualizar el inversor.";
+        dispatch({ type: "SET_ERROR", payload: message });
+        throw new Error(message);
+      } catch (err) {
+        const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+        dispatch({ type: "SET_ERROR", payload: message });
+        throw new Error(message);
+      } finally {
+        dispatch({ type: "STOP_PROCESSING" });
+      }
+    },
+    [getInvestors],
+  );
+
   const archiveInvestor = React.useCallback(
     async (id: number): Promise<void> => {
       dispatch({ type: "SET_ERROR", payload: "" });
@@ -204,6 +263,8 @@ const useInvestors = () => {
   return {
     getInvestors,
     getArchivedInvestors,
+    createInvestor,
+    updateInvestor,
     archiveInvestor,
     restoreInvestor,
     hardDeleteInvestor,
