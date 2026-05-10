@@ -23,7 +23,11 @@ router.get("", async (req: Request, res: Response) => {
     const customerId = parseInt(req.query.customer_id as string) || 0;
     const projectName = (req.query.project_name as string) || "";
 
-    const url = `campaigns?customer_id=${customerId}&project_name=${projectName}`;
+    const params = new URLSearchParams();
+    if (customerId > 0) params.set("customer_id", String(customerId));
+    if (projectName) params.set("project_name", projectName);
+    const queryString = params.toString();
+    const url = queryString ? `campaigns?${queryString}` : "campaigns";
 
     const cachedCampaigns = cache.get(url);
     if (cachedCampaigns) {
