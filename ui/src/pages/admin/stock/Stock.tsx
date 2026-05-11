@@ -17,13 +17,16 @@ import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
 
-const MISSING_INVESTOR_LABEL = "+1 INV.";
+const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
+const MISSING_ENTRY_LABEL = "REV ING.";
 
 function getStockFilterValue(item: GetStockItems, key: keyof GetStockItems) {
   const value = item[key];
 
   if (key === "investor_name" && String(value ?? "").trim() === "") {
-    return MISSING_INVESTOR_LABEL;
+    return item.has_multiple_investors
+      ? MULTIPLE_INVESTORS_LABEL
+      : MISSING_ENTRY_LABEL;
   }
 
   return String(value ?? "");
@@ -466,31 +469,33 @@ export function Stock() {
         ),
       },
       {
-  key: "investor_name",
-  header: "Inversor",
-  filterable: true,
-  padding: "xs",
-  headerPadding: "xs",
-  filterType: "select",
-  filterOptions: getFilterOptionsForColumn(
-    "investor_name",
-    stock,
-    columnsFilters
-  ),
-  render: (value) => {
-    const investorName = String(value ?? "").trim();
+        key: "investor_name",
+        header: "Inversor",
+        filterable: true,
+        padding: "xs",
+        headerPadding: "xs",
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn(
+          "investor_name",
+          stock,
+          columnsFilters
+        ),
+        render: (value, item) => {
+          const investorName = String(value ?? "").trim();
 
-    if (!investorName) {
-      return (
-        <span className="font-semibold text-red-600">
-          {MISSING_INVESTOR_LABEL}
-        </span>
-      );
-    }
+          if (!investorName) {
+            return (
+              <span className="font-semibold text-red-600">
+                {item.has_multiple_investors
+                  ? MULTIPLE_INVESTORS_LABEL
+                  : MISSING_ENTRY_LABEL}
+              </span>
+            );
+          }
 
-    return <span>{investorName}</span>;
-  },
-},
+          return <span>{investorName}</span>;
+        },
+      },
       {
         key: "entry_stock",
         padding: "xs",
