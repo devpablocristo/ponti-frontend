@@ -30,6 +30,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      deployments: write
 
     steps:
       - name: Checkout code
@@ -57,6 +58,13 @@ jobs:
         uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ steps.env.outputs.PROJECT_ID }}
+
+      - name: Build metadata
+        run: |
+          short_sha="${GITHUB_SHA::12}"
+          echo "SERVICE_GIT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          echo "SERVICE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          echo "RELEASE_SERVICE_VERSION=dev-${short_sha}" >> "$GITHUB_ENV"
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -114,7 +122,7 @@ jobs:
             --service-account="${{ steps.env.outputs.CLOUD_RUN_SERVICE_ACCOUNT }}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},SERVICE_NAME=ponti-bff,SERVICE_VERSION=${RELEASE_SERVICE_VERSION},SERVICE_GIT_SHA=${SERVICE_GIT_SHA},SERVICE_BUILD_TIME=${SERVICE_BUILD_TIME},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
 
       - name: "Guardrail: verify BASE_MANAGER_API detagged in deployed revision"
         run: |
@@ -155,6 +163,14 @@ jobs:
             exit 1
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: Resolve Cloud Run revision
+        run: |
+          revision="$(gcloud run services describe "${{ steps.env.outputs.SERVICE_NAME }}" \
+            --project="${{ steps.env.outputs.PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.latestReadyRevisionName)')"
+          echo "CLOUD_RUN_REVISION=$revision" >> "$GITHUB_ENV"
 
       - name: Write Firebase target config (DEV)
         run: |
@@ -205,6 +221,18 @@ jobs:
         env:
           AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
+
+      - name: Record DEV deployment
+        run: python3 scripts/release/deployments.py record
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_ENV: dev
+          DEPLOY_SHA: ${{ github.sha }}
+          DEPLOY_STATUS_LABEL: SMOKE_OK
+          DEPLOY_STATE: success
+          DEPLOY_DESCRIPTION: "Frontend DEV smoke OK ${{ github.sha }}"
+          SERVICE_VERSION: ${{ env.RELEASE_SERVICE_VERSION }}
+          IMAGE_URI: ${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}
 
       - name: Show deployment URLs
         run: |

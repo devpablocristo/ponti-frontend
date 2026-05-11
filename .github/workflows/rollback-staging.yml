@@ -1,0 +1,176 @@
+name: Rollback STAGING to approved candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: "SHA aprobado a restaurar (vacío = último aprobado)"
+        required: false
+        default: ""
+      reason:
+        description: "Motivo / ticket (texto libre)"
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+  deployments: write
+  actions: read
+
+concurrency:
+  group: rollback-frontend-staging
+  cancel-in-progress: false
+
+env:
+  REGION: us-central1
+  REQUIRE_AUTH_SMOKE: "0"
+  HOSTING_SITE_ID: ${{ vars.FIREBASE_HOSTING_SITE_STG || 'ponti-frontend-stg' }}
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+    env:
+      GCP_PROJECT_ID_STG: ${{ vars.GCP_PROJECT_ID_STG }}
+      WIF_PROVIDER_STG: ${{ vars.WIF_PROVIDER_STG }}
+      WIF_SERVICE_ACCOUNT_STG: ${{ vars.WIF_SERVICE_ACCOUNT_STG }}
+      CLOUD_RUN_SERVICE_ACCOUNT_STG: ${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}
+      SERVICE_NAME_STG: ${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}
+      BACKEND_SERVICE_NAME_STG: ${{ vars.CLOUD_RUN_SERVICE_BACKEND_STG || 'ponti-backend' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Resolve rollback target
+        id: target
+        run: python3 scripts/release/deployments.py resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESOLVE_ENV: staging-approved
+          RESOLVE_LABELS: QA_APPROVED
+          RESOLVE_SHA: ${{ inputs.target_sha }}
+          CURRENT_ENV: staging
+          EXCLUDE_CURRENT_SHA: ${{ inputs.target_sha == '' && '1' || '0' }}
+
+      - name: Auth GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER_STG }}
+          service_account: ${{ env.WIF_SERVICE_ACCOUNT_STG }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID_STG }}
+
+      - name: Build metadata
+        run: |
+          target_sha="${{ steps.target.outputs.deploy_sha }}"
+          short_sha="${target_sha::12}"
+          echo "IMAGE_URI=${{ steps.target.outputs.image_uri }}" >> "$GITHUB_ENV"
+          echo "SERVICE_GIT_SHA=${target_sha}" >> "$GITHUB_ENV"
+          echo "SERVICE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          echo "RELEASE_SERVICE_VERSION=stg-rollback-${short_sha}" >> "$GITHUB_ENV"
+
+      - name: Download approved UI artifact
+        run: |
+          rm -rf ui/dist /tmp/ponti-ui-artifact
+          mkdir -p ui/dist /tmp/ponti-ui-artifact
+          gh run download "${{ steps.target.outputs.ui_artifact_run_id }}" \
+            -n "${{ steps.target.outputs.ui_artifact_name }}" \
+            -D /tmp/ponti-ui-artifact
+          tar -xzf "/tmp/ponti-ui-artifact/${{ steps.target.outputs.ui_artifact_name }}.tgz" -C ui/dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Resolve canonical backend API URL
+        id: backend
+        run: |
+          backend_url="$(gcloud run services describe "${BACKEND_SERVICE_NAME_STG}" \
+            --project="${GCP_PROJECT_ID_STG}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.url)')"
+          if [[ -z "$backend_url" ]]; then
+            echo "ERROR: no se pudo resolver status.url del backend STAGING '${BACKEND_SERVICE_NAME_STG}'."
+            exit 1
+          fi
+          base_manager_api="${backend_url%/}/api/v1"
+          if [[ "$base_manager_api" == *"---"* ]]; then
+            echo "ERROR: BASE_MANAGER_API STAGING no puede apuntar a URL taggeada: $base_manager_api"
+            exit 1
+          fi
+          echo "BASE_MANAGER_API=$base_manager_api" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy BFF rollback image to Cloud Run
+        run: |
+          gcloud run deploy "${SERVICE_NAME_STG}" \
+            --project="${GCP_PROJECT_ID_STG}" \
+            --region="${{ env.REGION }}" \
+            --image="$IMAGE_URI" \
+            --service-account="${CLOUD_RUN_SERVICE_ACCOUNT_STG}" \
+            --allow-unauthenticated \
+            --port=3000 \
+            --set-env-vars="NODE_ENV=staging,SERVICE_NAME=ponti-bff,SERVICE_VERSION=${RELEASE_SERVICE_VERSION},SERVICE_GIT_SHA=${SERVICE_GIT_SHA},SERVICE_BUILD_TIME=${SERVICE_BUILD_TIME},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_STG}"
+
+      - name: Resolve API URL and revision
+        run: |
+          service_url="$(gcloud run services describe "${SERVICE_NAME_STG}" \
+            --project="${GCP_PROJECT_ID_STG}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.url)')"
+          revision="$(gcloud run services describe "${SERVICE_NAME_STG}" \
+            --project="${GCP_PROJECT_ID_STG}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.latestReadyRevisionName)')"
+          echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+          echo "CLOUD_RUN_REVISION=$revision" >> "$GITHUB_ENV"
+
+      - name: Write Firebase target config
+        run: |
+          cat > .firebaserc <<EOF
+          {
+            "targets": {
+              "${GCP_PROJECT_ID_STG}": {
+                "hosting": {
+                  "frontend": [
+                    "${HOSTING_SITE_ID}"
+                  ]
+                }
+              }
+            }
+          }
+          EOF
+
+      - name: Deploy approved UI artifact to Firebase Hosting
+        run: |
+          npx -y firebase-tools@15.16.0 deploy \
+            --only hosting:frontend \
+            --project "${GCP_PROJECT_ID_STG}" \
+            --non-interactive
+
+      - name: Resolve Hosting URL
+        run: echo "HOSTING_URL=https://${HOSTING_SITE_ID}.web.app" >> "$GITHUB_ENV"
+
+      - name: Smoke API health
+        run: curl -fsS "$SERVICE_URL/health" >/dev/null
+
+      - name: Smoke release checks
+        run: bash ./scripts/smoke_release.sh "$HOSTING_URL"
+        env:
+          REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
+
+      - name: Record STAGING rollback
+        run: python3 scripts/release/deployments.py record
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_ENV: staging
+          DEPLOY_SHA: ${{ steps.target.outputs.deploy_sha }}
+          DEPLOY_STATUS_LABEL: ROLLED_BACK
+          DEPLOY_STATE: success
+          DEPLOY_DESCRIPTION: "Frontend STAGING rollback to ${{ steps.target.outputs.deploy_sha }}"
+          SERVICE_VERSION: ${{ env.RELEASE_SERVICE_VERSION }}
+          IMAGE_URI: ${{ env.IMAGE_URI }}
+          UI_ARTIFACT_NAME: ${{ steps.target.outputs.ui_artifact_name }}
+          UI_ARTIFACT_RUN_ID: ${{ steps.target.outputs.ui_artifact_run_id }}
+
