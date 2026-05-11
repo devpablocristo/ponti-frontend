@@ -4,7 +4,7 @@ import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { usePDF } from "react-to-pdf";
 
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import Button from "../../../components/Button/Button";
 import ManagementBalanceTable from "./ManagementBalanceTable";
@@ -37,6 +37,7 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
   }
 
   const { metrics } = dashboard;
+  const investorItems = metrics.investor_contributions.items ?? [];
 
   return (
     <div className="flex gap-4">
@@ -67,21 +68,21 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
       <IndicatorCard
         title="Avance de aportes"
         value={
-          metrics.investor_contributions.items
-            ? metrics.investor_contributions.items
-              .map((investor) => `${investor.contributions_progress_pct}%`)
-              .join(" - ")
-            : "N/A"
+          investorItems.length > 0
+            ? investorItems
+                .map((investor) => `${investor.contributions_progress_pct}%`)
+                .join(" - ")
+            : "0%"
         }
         subtext={
-          metrics.investor_contributions.items
-            ? metrics.investor_contributions.items
-              .map(
-                (investor) =>
-                  `${investor.investor_name} ${investor.share_pct}%`
-              )
-              .join(" - ")
-            : "N/A"
+          investorItems.length > 0
+            ? investorItems
+                .map(
+                  (investor) =>
+                    `${investor.investor_name} ${investor.share_pct}%`
+                )
+                .join(" - ")
+            : "Sin aportes cargados"
         }
         color="rose"
       />
@@ -157,7 +158,6 @@ export function Dashboard() {
     projectId,
     selectedCampaignId,
     selectedField,
-    workspaceReady,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const { dashboard, processing, error, getDashboardInfo } = useDashboard();
@@ -224,19 +224,11 @@ export function Dashboard() {
   }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
   useEffect(() => {
-    const hasCustomer = Boolean(selectedCustomer && selectedCustomer.id !== 0);
-    const hasProject = Boolean(projectId && projectId > 0);
-    const hasCampaign = Boolean(selectedCampaignId && selectedCampaignId > 0);
-    if (!hasCustomer || !hasProject || !hasCampaign || !workspaceReady) {
-      getDashboardInfo("");
-      return;
-    }
     getDashboardInfo(buildQueryParams());
   }, [
     selectedCustomer,
     projectId,
     selectedCampaignId,
-    workspaceReady,
     selectedField,
     getDashboardInfo,
     buildQueryParams,
@@ -247,12 +239,6 @@ export function Dashboard() {
       <FilterBar
         filters={filters}
         actions={[
-          {
-            label: "Generar Informe",
-            variant: "primary",
-            disabled: processing || !workspaceReady,
-            onClick: () => getDashboardInfo(buildQueryParams()),
-          },
           {
             label: "Exportar PDF",
             variant: "primary",
@@ -274,7 +260,7 @@ export function Dashboard() {
             <Button
               variant="primary"
               size="sm"
-              disabled={!workspaceReady}
+              disabled={processing}
               onClick={() => getDashboardInfo(buildQueryParams())}
             >
               Reintentar

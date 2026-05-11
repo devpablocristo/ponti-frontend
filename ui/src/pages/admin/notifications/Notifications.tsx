@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {

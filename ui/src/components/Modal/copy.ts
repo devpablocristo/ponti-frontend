@@ -49,7 +49,7 @@ export const getRestoreCopy = (entityLabel: string, itemLabel: string): ConfirmC
 export const getHardDeleteCopy = (entityLabel: string, itemLabel: string): ConfirmCopy => ({
   title: "Confirmar eliminación definitiva",
   message: `¿Eliminar definitivamente ${entityLabel} "${itemLabel}"? Esta acción no se puede deshacer. Si tiene datos relacionados, deberás archivar o eliminar esos primero.`,
-  primaryButtonText: "Eliminar",
+  primaryButtonText: "Eliminar definitivamente",
   secondaryButtonText: "Cancelar",
 });
 
@@ -70,7 +70,7 @@ export const getBulkRestoreCopy = (count: number, entityLabelPlural: string): Co
 export const getBulkHardDeleteCopy = (count: number, entityLabelPlural: string): ConfirmCopy => ({
   title: "Confirmar eliminación definitiva",
   message: `¿Eliminar definitivamente ${count} ${entityLabelPlural}? Esta acción no se puede deshacer. Los items que tengan datos relacionados no se podrán eliminar.`,
-  primaryButtonText: "Eliminar",
+  primaryButtonText: "Eliminar definitivamente",
   secondaryButtonText: "Cancelar",
 });
 

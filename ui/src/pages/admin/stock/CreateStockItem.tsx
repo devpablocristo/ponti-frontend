@@ -138,8 +138,11 @@ export default function CreateStockItem({
 
   useEffect(() => {
     if (!selectedProject) return;
+    const projectInvestors = Array.isArray(selectedProject.investors)
+      ? selectedProject.investors
+      : [];
     setInvestors(
-      selectedProject.investors
+      projectInvestors
         .filter((i) => i.id !== null)
         .map((i) => ({ id: i.id!, name: i.name }))
     );

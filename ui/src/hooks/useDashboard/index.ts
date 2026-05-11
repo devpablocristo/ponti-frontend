@@ -14,16 +14,6 @@ const useDashboard = () => {
   const [error, setError] = useState<string | null>(null);
 
   const getDashboardInfo = React.useCallback(async (queryString: string) => {
-    if (queryString.trim() === "") {
-      dispatch({
-        type: actions.SET_DASHBOARD,
-        payload: null,
-      });
-      setError(null);
-      setProcessing(false);
-      return;
-    }
-
     setProcessing(true);
     setError(null);
     let queryParams = "";

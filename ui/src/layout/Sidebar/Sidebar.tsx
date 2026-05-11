@@ -9,12 +9,29 @@ type MenuItem = {
   route: string;
 };
 
-type SubItem = {
+type SidebarLinkSubItem = {
+  kind?: "link";
   name: string;
   route: string;
 };
 
-const menuReports = {
+type SidebarSectionSubItem = {
+  kind: "section";
+  name: string;
+};
+
+type SubItem = SidebarLinkSubItem | SidebarSectionSubItem;
+
+type SubmenuGroup = {
+  name: string;
+  icon: ReactNode;
+  children: SubItem[];
+};
+
+const isSubmenuLink = (item: SubItem): item is SidebarLinkSubItem =>
+  item.kind !== "section";
+
+const menuReports: SubmenuGroup = {
   name: "Informes",
   icon: (
     <svg
@@ -40,7 +57,7 @@ const menuReports = {
   ],
 };
 
-const menuDatabase = {
+const menuDatabase: SubmenuGroup = {
   name: "Base de Datos",
   icon: (
     <svg
@@ -65,15 +82,44 @@ const menuDatabase = {
     </svg>
   ),
   children: [
-    { name: "Clientes y Sociedades", route: "/admin/database/customers/list" },
-    { name: "Form de Proyectos", route: "/admin/database/customers" },
-    { name: "Inversores", route: "/admin/database/investors" },
-    { name: "Responsables", route: "/admin/database/managers" },
-    { name: "Campañas", route: "/admin/database/campaigns" },
-    { name: "Crear Labores", route: "/admin/database/tasks" },
-    { name: "Crear Insumos", route: "/admin/database/items" },
+    { kind: "section", name: "Clientes y Sociedades" },
+    { name: "Crear", route: "/admin/database/customers" },
+    { name: "Editar", route: "/admin/database/customers/editor" },
+    { name: "Archivados", route: "/admin/database/customers/archived" },
+    { kind: "section", name: "Proyectos" },
+    { name: "Archivados", route: "/admin/database/projects/archived" },
+    { kind: "section", name: "Labores" },
+    { name: "Crear", route: "/admin/database/tasks" },
+    { name: "Editar", route: "/admin/database/tasks/list" },
+    { name: "Archivados", route: "/admin/database/tasks/archived" },
+    { kind: "section", name: "Insumos" },
+    { name: "Crear", route: "/admin/database/items" },
+    { name: "Editar", route: "/admin/database/items/list" },
+    { name: "Archivados", route: "/admin/database/supplies/archived" },
+    { name: "Movimientos Archivados", route: "/admin/products/archived" },
+    { kind: "section", name: "Inversores" },
+    { name: "Crear", route: "/admin/database/investors/create" },
+    { name: "Editar", route: "/admin/database/investors" },
+    { name: "Archivados", route: "/admin/database/investors/archived" },
+    { kind: "section", name: "Responsables" },
+    { name: "Crear", route: "/admin/database/managers/create" },
+    { name: "Editar", route: "/admin/database/managers" },
+    { name: "Archivados", route: "/admin/database/managers/archived" },
+    { kind: "section", name: "Campañas" },
+    { name: "Crear", route: "/admin/database/campaigns/create" },
+    { name: "Editar", route: "/admin/database/campaigns" },
+    { name: "Archivados", route: "/admin/database/campaigns/archived" },
+    { kind: "section", name: "Lotes y Campos" },
+    { name: "Lotes", route: "/admin/lots" },
+    { name: "Lotes Archivados", route: "/admin/database/lots/archived" },
+    { name: "Campos Archivados", route: "/admin/database/fields/archived" },
+    { kind: "section", name: "Órdenes" },
+    { name: "Editar", route: "/admin/work-orders" },
+    { name: "Archivados", route: "/admin/database/work-orders/archived" },
+    { kind: "section", name: "Cargas Generales" },
     { name: "Cargar Dólar Promedio", route: "/admin/database/dollar" },
     { name: "Cargar Comercialización", route: "/admin/database/commerce" },
+    { name: "Integridad de Datos", route: "/admin/database/data-integrity" },
   ],
 };
 
@@ -106,50 +152,6 @@ const menuAIItems: MenuItem[] = [
   },
 ];
 
-const menuArchive = {
-  name: "Archivados",
-  icon: (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 16 16"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M2 4.66667C2 4.29848 2.29848 4 2.66667 4H13.3333C13.7015 4 14 4.29848 14 4.66667V6C14 6.36819 13.7015 6.66667 13.3333 6.66667H2.66667C2.29848 6.66667 2 6.36819 2 6V4.66667Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M3.33333 6.66667V12C3.33333 12.7364 3.93029 13.3333 4.66667 13.3333H11.3333C12.0697 13.3333 12.6667 12.7364 12.6667 12V6.66667"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M6.66667 9.33333H9.33333"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  children: [
-    { name: "Clientes", route: "/admin/database/customers/archived" },
-    { name: "Proyectos", route: "/admin/database/projects/archived" },
-    { name: "Inversores", route: "/admin/database/investors/archived" },
-    { name: "Lotes", route: "/admin/database/lots/archived" },
-    { name: "Insumos", route: "/admin/database/supplies/archived" },
-    { name: "Órdenes", route: "/admin/database/work-orders/archived" },
-    { name: "Campos", route: "/admin/database/fields/archived" },
-    { name: "Responsables", route: "/admin/database/managers/archived" },
-    { name: "Campañas", route: "/admin/database/campaigns/archived" },
-    { name: "Labores", route: "/admin/database/tasks/archived" },
-  ],
-};
-
 const menuAdminItems: MenuItem[] = [
   {
     name: "Accesos",
@@ -181,7 +183,7 @@ const menuItems: MenuItem[] = [
         <path d="M9.66667 10.6666H12.3333C12.5101 10.6666 12.6797 10.5963 12.8047 10.4713C12.9298 10.3463 13 10.1767 13 9.99992V9.33325C13 8.80282 12.7893 8.29411 12.4142 7.91904C12.0391 7.54397 11.5304 7.33325 11 7.33325H9.66667M8.176 4.66659C8.44603 4.96849 8.80137 5.18129 9.19499 5.27683C9.58862 5.37236 10.002 5.34613 10.3804 5.2016C10.7587 5.05707 11.0843 4.80105 11.314 4.46743C11.5437 4.13381 11.6667 3.7383 11.6667 3.33325C11.6667 2.9282 11.5437 2.5327 11.314 2.19908C11.0843 1.86545 10.7587 1.60944 10.3804 1.46491C10.002 1.32038 9.58862 1.29414 9.19499 1.38968C8.80137 1.48521 8.44603 1.69801 8.176 1.99992M1 9.99992V9.33325C1 8.80282 1.21071 8.29411 1.58579 7.91904C1.96086 7.54397 2.46957 7.33325 3 7.33325H5.66667C6.1971 7.33325 6.70581 7.54397 7.08088 7.91904C7.45595 8.29411 7.66667 8.80282 7.66667 9.33325V9.99992C7.66667 10.1767 7.59643 10.3463 7.4714 10.4713C7.34638 10.5963 7.17681 10.6666 7 10.6666H1.66667C1.48986 10.6666 1.32029 10.5963 1.19526 10.4713C1.07024 10.3463 1 10.1767 1 9.99992ZM6.33333 3.33325C6.33333 3.86369 6.12262 4.37239 5.74755 4.74747C5.37247 5.12254 4.86377 5.33325 4.33333 5.33325C3.8029 5.33325 3.29419 5.12254 2.91912 4.74747C2.54405 4.37239 2.33333 3.86369 2.33333 3.33325C2.33333 2.80282 2.54405 2.29411 2.91912 1.91904C3.29419 1.54397 3.8029 1.33325 4.33333 1.33325C4.86377 1.33325 5.37247 1.54397 5.74755 1.91904C6.12262 2.29411 6.33333 2.80282 6.33333 3.33325Z" stroke={color} strokeLinecap="round" />
       </svg>
     ),
-    route: "/admin/customers",
+    route: "/admin/database/customers/list",
   },
   {
     name: "Lotes",
@@ -284,15 +286,11 @@ function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
 interface SidebarSubmenuProps {
   setTitle: (title: string) => void;
   setIsSidebarOpen: () => void;
-  item: {
-    name: string;
-    icon: React.ReactNode;
-    children: SubItem[];
-  };
+  item: SubmenuGroup;
 }
 
 interface SidebarSubItemProps {
-  item: SubItem;
+  item: SidebarLinkSubItem;
   setTitle: (title: string) => void;
   setIsSidebarOpen: () => void;
 }
@@ -316,7 +314,7 @@ function SidebarSubmenuItem({
     <Link
       key={item.route}
       to={item.route}
-      className={`flex items-center w-full h-[32px] pl-9 pr-3 rounded-lg gap-2 text-[13px] leading-5 text-left transition-all duration-200 ${
+      className={`flex min-h-[32px] w-full items-center gap-2 rounded-lg py-1.5 pl-9 pr-3 text-left text-[13px] leading-5 transition-all duration-200 ${
         active
           ? "font-semibold bg-slate-700/40"
           : "hover:bg-slate-800"
@@ -350,7 +348,9 @@ function SidebarSubmenu({
       : null;
     if (stored !== null) return stored === "1";
     return (
-      item.children?.some((child) => location.pathname.startsWith(child.route)) ??
+      item.children?.some(
+        (child) => isSubmenuLink(child) && location.pathname.startsWith(child.route),
+      ) ??
       false
     );
   });
@@ -388,16 +388,22 @@ function SidebarSubmenu({
           />
         </button>
         <div
-          className={`overflow-hidden transition-all duration-200 ${open ? "max-h-96 opacity-100 mt-1" : "max-h-0 opacity-0"}`}
+          className={`overflow-hidden transition-all duration-200 ${open ? "max-h-[1400px] opacity-100 mt-1" : "max-h-0 opacity-0"}`}
         >
-          <ul className="space-y-0.5 pl-0.5">
+          <ul className="space-y-1 pl-0.5">
             {item.children.map((subItem) => (
-              <li key={subItem.route}>
-                <SidebarSubmenuItem
-                  setTitle={setTitle}
-                  item={subItem}
-                  setIsSidebarOpen={setIsSidebarOpen}
-                />
+              <li key={isSubmenuLink(subItem) ? subItem.route : `section-${subItem.name}`}>
+                {isSubmenuLink(subItem) ? (
+                  <SidebarSubmenuItem
+                    setTitle={setTitle}
+                    item={subItem}
+                    setIsSidebarOpen={setIsSidebarOpen}
+                  />
+                ) : (
+                  <div className="px-9 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    {subItem.name}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -533,16 +539,6 @@ const Sidebar: React.FC<SidebarProps> = ({
               />
             </li>
           ))}
-        </ul>
-        <div className="h-3" />
-        <ul className="flex flex-col gap-0.5 font-medium">
-          <li>
-            <SidebarSubmenu
-              setTitle={setTitle}
-              item={menuArchive}
-              setIsSidebarOpen={setIsSidebarOpen}
-            />
-          </li>
         </ul>
       </div>
     </aside>

@@ -95,6 +95,65 @@ router.get("/database-export/:id", async (req, res) => {
   }
 });
 
+router.get("/:project_id/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const project_id = parseInt(req.params.project_id as string) || 0;
+    if (project_id === 0) {
+      res.status(400).json({ message: "Proyecto obligatorio" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data: movements } = await apiClient.get<any>(
+      `/projects/${project_id}/supply-movements/archived`,
+      headers
+    );
+
+    const entries = Array.isArray(movements?.entries)
+      ? movements.entries
+      : Array.isArray(movements?.data)
+        ? movements.data
+        : [];
+
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: movements?.summary,
+        entries,
+        page_info: {
+          total: entries.length,
+          page: 1,
+          per_page: 100,
+          max_page: 1,
+        },
+      },
+    });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 router.get("/:project_id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -224,6 +283,152 @@ router.delete(
     }
   }
 );
+
+router.post("/:id/project/:project_id/archive", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const id = parseInt(req.params.id as string) || 0;
+    if (id === 0) {
+      res.status(400).json({ message: "Id obligatorio" });
+      return;
+    }
+
+    const projectId = parseInt(req.params.project_id as string) || 0;
+    if (projectId === 0) {
+      res.status(400).json({ message: "Proyecto obligatorio" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    await apiClient.post<any>(
+      `/projects/${projectId}/supply-movements/${id}/archive`,
+      {},
+      headers
+    );
+
+    cache.flushAll();
+    res.status(200).json({ success: true });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.post("/:id/project/:project_id/restore", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const id = parseInt(req.params.id as string) || 0;
+    if (id === 0) {
+      res.status(400).json({ message: "Id obligatorio" });
+      return;
+    }
+
+    const projectId = parseInt(req.params.project_id as string) || 0;
+    if (projectId === 0) {
+      res.status(400).json({ message: "Proyecto obligatorio" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    await apiClient.post<any>(
+      `/projects/${projectId}/supply-movements/${id}/restore`,
+      {},
+      headers
+    );
+
+    cache.flushAll();
+    res.status(200).json({ success: true });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.delete("/:id/project/:project_id/hard", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const id = parseInt(req.params.id as string) || 0;
+    if (id === 0) {
+      res.status(400).json({ message: "Id obligatorio" });
+      return;
+    }
+
+    const projectId = parseInt(req.params.project_id as string) || 0;
+    if (projectId === 0) {
+      res.status(400).json({ message: "Proyecto obligatorio" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    await apiClient.delete<any>(
+      `/projects/${projectId}/supply-movements/${id}/hard`,
+      headers
+    );
+
+    cache.flushAll();
+    res.status(200).json({ success: true });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
 
 router.post("/:project_id", async (req: Request, res: Response) => {
   try {

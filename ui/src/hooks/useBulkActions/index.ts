@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { Archive, Trash2, type LucideIcon } from "lucide-react";
+import { Archive, Pencil, type LucideIcon } from "lucide-react";
 
 import { useBulkSelection } from "../useBulkSelection";
 import { useConfirmDialog } from "../useConfirmDialog";
@@ -7,7 +7,6 @@ import { toastError, toastSuccess } from "../../lib/toast";
 import {
   type EntityCopy,
   getBulkArchiveCopy,
-  getBulkHardDeleteCopy,
 } from "../../components/Modal/copy";
 
 type Identifiable = { id: number };
@@ -24,7 +23,7 @@ type UseBulkActionsOptions<T> = {
   /** Copy léxico de la entidad — se deriva el plural para confirm/toast/labels. */
   entity: EntityCopy;
   archive?: (id: number) => Promise<unknown>;
-  hardDelete?: (id: number) => Promise<unknown>;
+  onEdit?: (item: T) => void;
   /** Se llama luego de cualquier operación bulk (refrescar lista, etc). */
   onAfter?: () => void;
 };
@@ -40,7 +39,7 @@ export function useBulkActions<T extends Identifiable>({
   items,
   entity,
   archive,
-  hardDelete,
+  onEdit,
   onAfter,
 }: UseBulkActionsOptions<T>) {
   const selection = useBulkSelection<T>(items);
@@ -81,20 +80,15 @@ export function useBulkActions<T extends Identifiable>({
     );
   }, [archive, entityLabelPlural, runBulk, selectedCount]);
 
-  const handleBulkHardDelete = useCallback(async () => {
-    if (!hardDelete) return;
-    await runBulk(
-      hardDelete,
-      getBulkHardDeleteCopy(selectedCount, entityLabelPlural),
-      "danger",
-      (count) => `Se eliminaron ${count} ${entityLabelPlural}.`,
-      (okN, failed, total) =>
-        `${okN} de ${total} OK; ${failed} fallaron (probablemente por dependencias).`,
-    );
-  }, [entityLabelPlural, hardDelete, runBulk, selectedCount]);
-
   const actions = useMemo<BulkAction[]>(() => {
     const out: BulkAction[] = [];
+    if (onEdit && selectedCount === 1 && selectedItems[0]) {
+      out.push({
+        label: "Editar",
+        icon: Pencil,
+        onClick: () => onEdit(selectedItems[0]),
+      });
+    }
     if (archive) {
       out.push({
         label: `Archivar ${selectedCount}`,
@@ -102,21 +96,18 @@ export function useBulkActions<T extends Identifiable>({
         onClick: handleBulkArchive,
       });
     }
-    if (hardDelete) {
-      out.push({
-        label: `Eliminar ${selectedCount}`,
-        icon: Trash2,
-        variant: "danger",
-        onClick: handleBulkHardDelete,
-      });
-    }
     return out;
-  }, [archive, handleBulkArchive, handleBulkHardDelete, hardDelete, selectedCount]);
+  }, [
+    archive,
+    handleBulkArchive,
+    onEdit,
+    selectedCount,
+    selectedItems,
+  ]);
 
   return {
     ...selection,
     handleBulkArchive,
-    handleBulkHardDelete,
     actions,
   };
 }

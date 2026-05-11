@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
 import useDollar from "../../../../hooks/useDollar";
 import { DollarData } from "../../../../hooks/useDollar/types";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";

@@ -25,8 +25,11 @@ export function DataTable<T>({
   renderActions,
   ...props
 }: LocalDataTableProps<T>) {
+  const safeColumns = Array.isArray(columns) ? columns : [];
+  const safeData = Array.isArray(props.data) ? props.data : [];
+
   const columnsWithActions = useMemo(() => {
-    if (!renderActions) return columns;
+    if (!renderActions) return safeColumns;
 
     const actionsColumn: DataTableColumn<T> = {
       key: "__actions" as keyof T,
@@ -38,10 +41,14 @@ export function DataTable<T>({
       render: (_value, item) => renderActions(item),
     };
 
-    return [...columns, actionsColumn];
-  }, [actionsHeader, columns, renderActions]);
+    return [...safeColumns, actionsColumn];
+  }, [actionsHeader, safeColumns, renderActions]);
 
-  return createElement(BaseDataTable<T>, { ...props, columns: columnsWithActions });
+  return createElement(BaseDataTable<T>, {
+    ...props,
+    data: safeData,
+    columns: columnsWithActions,
+  });
 }
 
 type BuildPaginationOptions = {

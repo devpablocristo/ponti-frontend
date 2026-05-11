@@ -1,7 +1,6 @@
 import { useCallback } from "react";
 
 import { ArchivedListPage } from "../../../../components/ArchivedListPage/ArchivedListPage";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useLabors from "../../../../hooks/useLabors";
@@ -29,15 +28,17 @@ export default function ArchivedTasks() {
     error,
   } = useLabors();
 
-  const { filters, projectId } = useWorkspaceFilters([
+  const { selectedProject } = useWorkspaceFilters([
     "customer",
     "project",
     "campaign",
+    "field",
   ]);
+  const selectedProjectId = selectedProject?.id ?? null;
 
   const refetch = useCallback(async () => {
-    if (projectId) await getArchivedLabors(projectId);
-  }, [getArchivedLabors, projectId]);
+    if (selectedProjectId) await getArchivedLabors(selectedProjectId);
+  }, [getArchivedLabors, selectedProjectId]);
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<LaborInfo>({
@@ -49,23 +50,18 @@ export default function ArchivedTasks() {
   const safeLabors = Array.isArray(labors) ? labors : [];
 
   return (
-    <div>
-      <FilterBar filters={filters} />
-      <div className="mt-4">
-        <ArchivedListPage<LaborInfo>
-          description="Restaurar o eliminar labores archivadas del proyecto seleccionado."
-          columns={columns}
-          data={safeLabors}
-          entity={ENTITY}
-          bulk
-          getItemLabel={(item) => item.name}
-          onRestore={runRestore ?? undefined}
-          onHardDelete={runHardDelete ?? undefined}
-          onMount={refetch}
-          processing={processing || actionProcessing}
-          error={lastError ?? error}
-        />
-      </div>
-    </div>
+    <ArchivedListPage<LaborInfo>
+      description="Restaurar o eliminar labores archivadas del proyecto seleccionado."
+      columns={columns}
+      data={selectedProjectId ? safeLabors : []}
+      entity={ENTITY}
+      bulk
+      getItemLabel={(item) => item.name}
+      onRestore={runRestore ?? undefined}
+      onHardDelete={runHardDelete ?? undefined}
+      onMount={refetch}
+      processing={processing || actionProcessing}
+      error={lastError ?? error}
+    />
   );
 }

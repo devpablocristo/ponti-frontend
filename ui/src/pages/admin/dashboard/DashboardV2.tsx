@@ -3,7 +3,7 @@ import { usePDF } from "react-to-pdf";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useDashboard from "../../../hooks/useDashboard";
@@ -68,9 +68,6 @@ export function DashboardV2() {
   }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
   useEffect(() => {
-    const hasCustomer = Boolean(selectedCustomer && selectedCustomer.id !== 0);
-    const hasProject = Boolean(projectId && projectId > 0);
-    if (!hasCustomer || !hasProject) return;
     getDashboardInfo(buildQueryParams());
   }, [
     selectedCustomer,
@@ -86,11 +83,6 @@ export function DashboardV2() {
       <FilterBar
         filters={filters}
         actions={[
-          {
-            label: "Generar Informe",
-            variant: "primary",
-            onClick: () => getDashboardInfo(buildQueryParams()),
-          },
           {
             label: "Exportar PDF",
             variant: "primary",

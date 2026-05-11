@@ -1,14 +1,15 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { Archive, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
-import { RowActions } from "../../../components/crud/RowActions";
-import { Pencil, Trash2 } from "lucide-react";
+import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
-import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
+import { useBulkActions } from "../../../hooks/useBulkActions";
 import CreateItem from "./CreateItem";
 import ImportSupplyMovements from "./ImportSupplyMovements";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
@@ -50,11 +51,10 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
 export function Products() {
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
-  const confirm = useConfirmDialog();
   const {
     getSupplyMovements,
     supplyMovements,
-    deleteSupplyMovement,
+    archiveSupplyMovement,
     deleteError,
     deleteResult,
     processing,
@@ -87,10 +87,13 @@ export function Products() {
   };
 
   const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (!projectId) return;
-
     const file = event.target.files?.[0] ?? null;
     if (!file) return;
+
+    if (!projectId) {
+      setActionErrorMessage("Seleccione un proyecto antes de importar insumos.");
+      return;
+    }
 
     setActionErrorMessage(null);
     setSuccessMessage(null);
@@ -320,34 +323,6 @@ export function Products() {
           return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
-      {
-        key: "id",
-        header: "",
-        align: "center",
-        render: (_value, item) => {
-          const editBlocked = isInternalMovementEditionBlocked(item.entry_type);
-          return (
-            <RowActions
-              actions={[
-                {
-                  label: "Editar",
-                  icon: Pencil,
-                  disabled: editBlocked,
-                  title: editBlocked ? "Movimiento interno no editable" : undefined,
-                  onClick: () => handleEdit(item),
-                },
-                {
-                  label: "Eliminar",
-                  icon: Trash2,
-                  variant: "danger",
-                  divider: true,
-                  onClick: () => handleDelete(item),
-                },
-              ]}
-            />
-          );
-        },
-      },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [supplyMovements, columnsFilters]
@@ -375,7 +350,7 @@ export function Products() {
 
   useEffect(() => {
     if (deleteResult && projectId) {
-      setSuccessMessage("Movimiento eliminado con éxito.");
+      setSuccessMessage("Movimiento archivado con éxito.");
       setActionErrorMessage(null);
       getSupplyMovements(projectId);
     }
@@ -387,22 +362,6 @@ export function Products() {
       setSuccessMessage(null);
     }
   }, [errorCreation]);
-
-
-  const handleDelete = async (p: SupplyMovement) => {
-    if (!projectId || !p.id) return;
-    setSuccessMessage(null);
-    setActionErrorMessage(null);
-    const ok = await confirm({
-      title: "Confirmar eliminación",
-      message: "¿Eliminar este movimiento? Esta acción no se puede deshacer.",
-      severity: "danger",
-      primaryLabel: "Eliminar",
-    });
-    if (ok) {
-      deleteSupplyMovement(p.id, projectId);
-    }
-  };
 
   const handleEdit = (movement: SupplyMovement) => {
     if (isInternalMovementEditionBlocked(movement.entry_type)) return;
@@ -473,6 +432,37 @@ export function Products() {
     });
   }, [supplyMovements, columnsFilters]);
 
+  const movementEntity = useMemo(
+    () => ({
+      article: "el",
+      singular: "movimiento",
+      plural: "movimientos",
+    }),
+    [],
+  );
+
+  const bulk = useBulkActions<SupplyMovement>({
+    items: filteredMovements,
+    entity: movementEntity,
+    archive: projectId
+      ? (id) => archiveSupplyMovement(id, projectId)
+      : undefined,
+    onEdit: handleEdit,
+    onAfter: () => {
+      if (projectId) getSupplyMovements(projectId);
+    },
+  });
+
+  const selectColumn = useMemo<Column<SupplyMovement>>(
+    () => makeSelectColumn<SupplyMovement>(bulk, (item) => item.supply_name, movementEntity),
+    [bulk, movementEntity],
+  );
+
+  const columnsWithSelection = useMemo(
+    () => [selectColumn, ...columns],
+    [columns, selectColumn],
+  );
+
   const derivedSummary = useMemo(() => {
     let totalKg = 0;
     let totalLt = 0;
@@ -508,7 +498,10 @@ export function Products() {
 
 
   const handleExport = async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      setExportErrorMessage("Seleccione un proyecto antes de exportar insumos.");
+      return;
+    }
 
     try {
       setExportErrorMessage(null);
@@ -545,34 +538,38 @@ export function Products() {
         filters={filters}
         actions={[
           {
-            label: "Exportar Insumos",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            ,
+            label: "Importar",
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId,
-            onClick: () => handleExport(),
-          },
-          {
-            label: "Importar Insumos",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 1.1665V7.83317M7 7.83317L4.33333 5.1665M7 7.83317L9.66667 5.1665M1.66675 9.1665V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H11.0001C11.3537 11.8332 11.6928 11.6927 11.9429 11.4426C12.1929 11.1926 12.3334 10.8535 12.3334 10.4998V9.1665" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>,
-            variant: "primary",
-            isPrimary: true,
-            disabled: !projectId,
             accept:
               ".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel",
             onFileChange: handleImportFileChange,
           },
           {
-            label: "+ Nuevo Insumo",
+            label: "Exportar",
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId,
+            onClick: () => handleExport(),
+          },
+          {
+            label: "Archivados",
+            icon: <Archive className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            href: "/admin/products/archived",
+          },
+          {
+            label: "Nuevo",
+            icon: <Plus className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
             onClick: () => {
+              if (!projectId) {
+                setActionErrorMessage("Seleccione un proyecto antes de crear un insumo.");
+                return;
+              }
               setEditingMovement(null);
               setDrawerOpen(true);
             },
@@ -625,10 +622,19 @@ export function Products() {
             )}
           </>
         )}
+        <BulkSelectionPanel
+          selectedCount={bulk.selectedCount}
+          totalCount={filteredMovements.length}
+          allSelected={bulk.allSelected}
+          onToggleAll={bulk.toggleAll}
+          onClear={bulk.clear}
+          actions={bulk.actions}
+          entity={movementEntity}
+        />
         <DataTable
           data={filteredMovements}
           rowStyle="softZebra"
-          columns={columns}
+          columns={columnsWithSelection}
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
           enableFilters={true}

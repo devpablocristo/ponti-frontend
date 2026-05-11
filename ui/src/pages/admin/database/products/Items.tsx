@@ -4,7 +4,7 @@ import { parsePartialPrice } from "@/lib/importHelpers";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { useConfirmDialog } from "../../../../hooks/useConfirmDialog";
 import { SupplyCreatePayload, Supply } from "../../../../hooks/useSupplies/types";

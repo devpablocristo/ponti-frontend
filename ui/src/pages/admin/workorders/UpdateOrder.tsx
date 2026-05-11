@@ -322,7 +322,7 @@ export default function UpdateOrder({
       stockBySupply.set(stockItem.supply_name, current + Number(stockItem.stock_units));
     }
 
-    return supplies.map((supply) => ({
+    return (Array.isArray(supplies) ? supplies : []).map((supply) => ({
       ...supply,
       availableQty: Number(stockBySupply.get(supply.name) || 0),
       availableUnit: getUnitName(supply.unit_id),
@@ -335,7 +335,7 @@ export default function UpdateOrder({
       setPendingCreatedSupplyName(null);
       return;
     }
-    const createdSupply = supplies.find(
+    const createdSupply = (Array.isArray(supplies) ? supplies : []).find(
       (s) => s.name.trim().toUpperCase() === pendingCreatedSupplyName
     );
     if (!createdSupply) return;
@@ -364,18 +364,25 @@ export default function UpdateOrder({
 
   useEffect(() => {
     if (!selectedProject || !selectedOrder) return;
+    const projectInvestors = Array.isArray(selectedProject.investors)
+      ? selectedProject.investors
+      : [];
+    const projectFields = Array.isArray(selectedProject.fields)
+      ? selectedProject.fields
+      : [];
+
     setInvestors(
-      selectedProject.investors
+      projectInvestors
         .filter((i) => i.id !== null)
         .map((i) => ({ id: i.id!, name: i.name }))
     );
 
-    const foundField = selectedProject.fields.find(
+    const foundField = projectFields.find(
       (f) => String(f.id) === String(selectedOrder.field_id)
     );
 
     if (foundField?.lots) {
-      setLots(foundField.lots);
+      setLots(Array.isArray(foundField.lots) ? foundField.lots : []);
     } else {
       setLots([]);
     }
@@ -417,7 +424,7 @@ export default function UpdateOrder({
     setContractor(selectedOrder.contractor);
     setObservations(selectedOrder.observations);
 
-    const loadedItems = selectedOrder.items.map((item) => ({
+    const loadedItems = (Array.isArray(selectedOrder.items) ? selectedOrder.items : []).map((item) => ({
       item: item.supply_id.toString(),
       totalUsed: item.total_used.toString(),
       dose: item.final_dose.toString(),

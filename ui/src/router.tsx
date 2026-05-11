@@ -11,9 +11,11 @@ import { Tasks } from "./pages/admin/tasks/Tasks";
 import { WorkOrders } from "./pages/admin/workorders/WorkOrders";
 import { Stock } from "./pages/admin/stock/Stock";
 import Customers from "./pages/admin/customers/Customers";
+import CustomersSocietiesV2 from "./pages/admin/customers-v2/CustomersSocietiesV2";
 import Access from "./pages/admin/access/Access";
 import DatabaseCustomers from "./pages/admin/database/customers/Customers";
 import CustomersList from "./pages/admin/database/customers/CustomersList";
+import CustomerEditor from "./pages/admin/database/customers/CustomerEditor";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
 import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
 import ArchivedInvestors from "./pages/admin/database/investors/ArchivedInvestors";
@@ -44,6 +46,7 @@ import InvestorContribution from "./pages/admin/reports/InvestorContributionRepo
 import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionReportV2.tsx";
 import AIAssistant from "./pages/admin/ai-assistant/AIAssistant";
 import Notifications from "./pages/admin/notifications/Notifications";
+import ArchivedSupplyMovements from "./pages/admin/products/ArchivedSupplyMovements";
 
 export default [
   {
@@ -101,6 +104,10 @@ export default [
         element: <Customers />,
       },
       {
+        path: "database/customers-v2",
+        element: <CustomersSocietiesV2 />,
+      },
+      {
         path: "access",
         element: <Access />,
       },
@@ -137,6 +144,14 @@ export default [
         element: <ArchivedCustomers />,
       },
       {
+        path: "database/customers/editor",
+        element: <CustomerEditor />,
+      },
+      {
+        path: "database/customers/:id/editor",
+        element: <CustomerEditor />,
+      },
+      {
         path: "database/customers/:id",
         element: <DatabaseCustomers />,
       },
@@ -146,6 +161,10 @@ export default [
       },
       {
         path: "database/investors",
+        element: <InvestorsList editorOnly />,
+      },
+      {
+        path: "database/investors/create",
         element: <InvestorsList />,
       },
       {
@@ -165,11 +184,19 @@ export default [
         element: <ArchivedWorkOrders />,
       },
       {
+        path: "products/archived",
+        element: <ArchivedSupplyMovements />,
+      },
+      {
         path: "database/fields/archived",
         element: <ArchivedFields />,
       },
       {
         path: "database/managers",
+        element: <ManagersList editorOnly />,
+      },
+      {
+        path: "database/managers/create",
         element: <ManagersList />,
       },
       {
@@ -178,6 +205,10 @@ export default [
       },
       {
         path: "database/campaigns",
+        element: <CampaignsList editorOnly />,
+      },
+      {
+        path: "database/campaigns/create",
         element: <CampaignsList />,
       },
       {
@@ -198,11 +229,11 @@ export default [
       },
       {
         path: "database/items/list",
-        element: <ListItems />,
+        element: <ListItems editorOnly />,
       },
       {
         path: "database/tasks/list",
-        element: <ListTasks />,
+        element: <ListTasks editorOnly />,
       },
       {
         path: "database/tasks/archived",

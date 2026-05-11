@@ -12,6 +12,7 @@ export type Investor = {
   name: string;
   percentage?: number;
   archived_at?: string | null;
+  [key: string]: unknown;
 };
 
 export type InvestorPayloadInput = {

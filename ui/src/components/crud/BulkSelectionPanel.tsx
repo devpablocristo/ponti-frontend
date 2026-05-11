@@ -9,6 +9,8 @@ type BulkSelectionPanelProps = {
   onToggleAll: () => void;
   onClear: () => void;
   actions: BulkAction[];
+  showActionBar?: boolean;
+  showSelectionSummary?: boolean;
   /** Copy léxico de la entidad — se deriva el plural para los textos. */
   entity: EntityCopy;
 };
@@ -24,18 +26,21 @@ export function BulkSelectionPanel({
   onToggleAll,
   onClear,
   actions,
+  showActionBar = true,
+  showSelectionSummary = false,
   entity,
 }: BulkSelectionPanelProps) {
   if (totalCount === 0) return null;
   const plural = entity.plural;
   return (
     <>
-      {selectedCount > 0 && (
+      {showActionBar && selectedCount > 0 && (
         <BulkActionBar
           selectedCount={selectedCount}
           itemLabel={plural}
           onClear={onClear}
           actions={actions}
+          showSelectionSummary={showSelectionSummary}
         />
       )}
       <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">

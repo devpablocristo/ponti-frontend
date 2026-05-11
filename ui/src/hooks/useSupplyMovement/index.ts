@@ -149,6 +149,55 @@ const useSupplyMovements = () => {
     [dispatch]
   );
 
+  const getArchivedSupplyMovements = React.useCallback(
+    async (projectId: number): Promise<void> => {
+      setProcessing(true);
+      setError(null);
+
+      try {
+        const response = await apiClient.get<SuccessResponse<SupplyResponse>>(
+          `/supply_movements/${projectId}/archived`
+        );
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_SUMMARY,
+            payload: response.data.summary ?? {
+              total_kg: 0,
+              total_lt: 0,
+              total_usd: 0,
+            },
+          });
+
+          dispatch({
+            type: actions.SET_SUPPLY_MOVEMENTS,
+            payload: response.data.entries,
+          });
+
+          dispatch({
+            type: actions.SET_PAGE_INFO,
+            payload: {
+              page: response.data.page_info.page,
+              per_page: response.data.page_info.per_page,
+              total: response.data.page_info.total,
+              max_page: response.data.page_info.max_page,
+            },
+          });
+          return;
+        }
+
+        setError("Ocurrio un error en la busqueda de movimientos archivados");
+      } catch (error) {
+        setError(
+          extractErrorMessage(error, "Error desconocido en la busqueda de movimientos archivados.")
+        );
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [dispatch]
+  );
+
   const saveSupplyMovement = React.useCallback(
     async (projectId: number, supplyMovement: SupplyMovementRequest) => {
       setProcessingCreation(true);
@@ -313,6 +362,92 @@ const useSupplyMovements = () => {
     []
   );
 
+  const archiveSupplyMovement = React.useCallback(
+    async (id: number, projectId: number) => {
+      setProcessingDelete(true);
+      setDeleteError(null);
+      setDeleteResult(false);
+
+      try {
+        const response = await apiClient.post<SupplyMovementMutationResponse>(
+          `/supply_movements/${id}/project/${projectId}/archive`,
+          {}
+        );
+
+        if (response.success) {
+          setDeleteResult(true);
+          return;
+        }
+
+        setDeleteError("Ocurrio un error al archivar el movimiento");
+      } catch (error) {
+        setDeleteError(
+          extractErrorMessage(error, "Error desconocido al archivar el movimiento.")
+        );
+      } finally {
+        setProcessingDelete(false);
+      }
+    },
+    []
+  );
+
+  const restoreSupplyMovement = React.useCallback(
+    async (id: number, projectId: number) => {
+      setProcessingDelete(true);
+      setDeleteError(null);
+      setDeleteResult(false);
+
+      try {
+        const response = await apiClient.post<SupplyMovementMutationResponse>(
+          `/supply_movements/${id}/project/${projectId}/restore`,
+          {}
+        );
+
+        if (response.success) {
+          setDeleteResult(true);
+          return;
+        }
+
+        setDeleteError("Ocurrio un error al restaurar el movimiento");
+      } catch (error) {
+        setDeleteError(
+          extractErrorMessage(error, "Error desconocido al restaurar el movimiento.")
+        );
+      } finally {
+        setProcessingDelete(false);
+      }
+    },
+    []
+  );
+
+  const hardDeleteSupplyMovement = React.useCallback(
+    async (id: number, projectId: number) => {
+      setProcessingDelete(true);
+      setDeleteError(null);
+      setDeleteResult(false);
+
+      try {
+        const response = await apiClient.delete<SupplyMovementMutationResponse>(
+          `/supply_movements/${id}/project/${projectId}/hard`
+        );
+
+        if (response.success) {
+          setDeleteResult(true);
+          return;
+        }
+
+        setDeleteError("Ocurrio un error al eliminar definitivamente el movimiento");
+      } catch (error) {
+        setDeleteError(
+          extractErrorMessage(error, "Error desconocido al eliminar definitivamente el movimiento.")
+        );
+      } finally {
+        setProcessingDelete(false);
+      }
+    },
+    []
+  );
+
   const getSupplyMovement = React.useCallback(async (id: number) => {
     setProcessingDetail(true);
     try {
@@ -347,7 +482,11 @@ const useSupplyMovements = () => {
     supplyMovements,
     summary,
     getSupplyMovements,
+    getArchivedSupplyMovements,
     deleteSupplyMovement,
+    archiveSupplyMovement,
+    restoreSupplyMovement,
+    hardDeleteSupplyMovement,
     deleteError,
     deleteResult,
     processingDelete,

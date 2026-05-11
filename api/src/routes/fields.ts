@@ -20,12 +20,12 @@ router.get("", async (req: Request, res: Response) => {
     };
 
     const project_id = parseInt(req.query.project_id as string) || 0;
-    if (project_id === 0) {
-      res.status(400).json({ message: "Proyecto no encontrado" });
-      return;
-    }
-
-    const url = `projects/fields/${project_id}`;
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.per_page as string) || 1000;
+    const url =
+      project_id > 0
+        ? `projects/fields/${project_id}`
+        : `fields?page=${page}&per_page=${perPage}`;
 
     const cachedFields = cache.get(url);
     if (cachedFields) {
@@ -34,16 +34,24 @@ router.get("", async (req: Request, res: Response) => {
     }
 
     const { data: raw } = await apiClient.get<any>(
-      `/projects/${project_id}/fields`,
+      project_id > 0
+        ? `/projects/${project_id}/fields`
+        : `/fields?page=${page}&per_page=${perPage}`,
       headers
     );
 
-    const fields = raw.data ?? raw;
+    const fields = Array.isArray(raw?.data) ? raw.data : raw.data?.data ?? raw;
+    const total =
+      typeof raw?.page_info?.total === "number"
+        ? raw.page_info.total
+        : Array.isArray(fields)
+          ? fields.length
+          : 0;
     const data = {
       success: true,
       data: {
         data: fields,
-        total: Array.isArray(fields) ? fields.length : 0,
+        total,
       },
     };
 

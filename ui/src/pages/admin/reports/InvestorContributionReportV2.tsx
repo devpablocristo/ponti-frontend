@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
 import { usePDF } from "react-to-pdf";
 
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";

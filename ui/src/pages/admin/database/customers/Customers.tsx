@@ -771,12 +771,7 @@ export default function Customers() {
           a los campos pertenecientes al cliente, edítelos y guarde nuevamente
         </SuccessBanner>
       )}
-      <h1 className="text-custom-text ml-2 font-semibold text-xl leading-none">
-        {!id
-          ? "Agregar un nuevo cliente o sociedad"
-          : `Edición del proyecto: ${selectedProject?.name}`}
-      </h1>
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_3fr] gap-2 mt-2">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_3fr] gap-2">
         <LoadingOverlay show={processing || isSaving} />
         <div className="pt-4 pl-1 pr-2 space-y-4">
           <div ref={wrapperRef} className="relative">

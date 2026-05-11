@@ -1,5 +1,5 @@
 import { Wheat } from "lucide-react";
-import type { DashboardData } from "../../../../hooks/useDashboard/types";
+import type { CropItem, DashboardData } from "../../../../hooks/useDashboard/types";
 import { formatNumberAr } from "../../utils";
 import { CropBadgeV2 } from "../../reports/reportV2/CropBadgeV2";
 import { ProgressBar } from "./ProgressBar";
@@ -15,10 +15,14 @@ export function CostByCropCardV2({ dashboard }: { dashboard: DashboardData | nul
     return <EmptyCard />;
   }
 
-  const crops = [...dashboard.crop_incidence.items].sort(
+  const crops = aggregateCrops(dashboard.crop_incidence.items).sort(
     (a, b) => a.crop_id - b.crop_id,
   );
-  const totalHa = n(dashboard.crop_incidence.total.hectares);
+  const totalHa = crops.reduce((sum, crop) => sum + n(crop.hectares), 0);
+  const totalCost = crops.reduce(
+    (sum, crop) => sum + n(crop.cost_per_ha_usd) * n(crop.hectares),
+    0,
+  );
 
   return (
     <div
@@ -78,17 +82,45 @@ export function CostByCropCardV2({ dashboard }: { dashboard: DashboardData | nul
           className="text-right text-sm font-bold tabular-nums"
           style={{ fontFamily: SORA }}
         >
-          {formatNumberAr(dashboard.crop_incidence.total.hectares)} Ha
+          {formatNumberAr(totalHa)} Ha
         </span>
         <span
           className="text-right text-sm font-bold tabular-nums"
           style={{ fontFamily: SORA }}
         >
-          u$s {formatNumberAr(dashboard.crop_incidence.total.avg_cost_per_ha_usd)}
+          u$s {formatNumberAr(totalHa > 0 ? totalCost / totalHa : 0)}
         </span>
       </div>
     </div>
   );
+}
+
+function aggregateCrops(items: CropItem[]): CropItem[] {
+  const byCrop = new Map<number, { item: CropItem; totalCost: number }>();
+
+  for (const item of items) {
+    const hectares = n(item.hectares);
+    const costPerHa = n(item.cost_per_ha_usd);
+    const current = byCrop.get(item.crop_id);
+    if (!current) {
+      byCrop.set(item.crop_id, {
+        item: { ...item, hectares: String(hectares) },
+        totalCost: costPerHa * hectares,
+      });
+      continue;
+    }
+    current.item.hectares = String(n(current.item.hectares) + hectares);
+    current.totalCost += costPerHa * hectares;
+  }
+
+  return Array.from(byCrop.values()).map(({ item, totalCost }) => {
+    const hectares = n(item.hectares);
+    return {
+      ...item,
+      hectares: String(hectares),
+      cost_per_ha_usd: String(hectares > 0 ? totalCost / hectares : 0),
+    };
+  });
 }
 
 function EmptyCard() {

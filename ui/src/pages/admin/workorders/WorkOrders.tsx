@@ -1,12 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Archive, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
+import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { useBulkActions } from "../../../hooks/useBulkActions";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import CreateOrder from "./CreateOrder";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -15,14 +21,23 @@ import Button from "../../../components/Button/Button";
 import UpdateOrder from "./UpdateOrder";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
+import { WORKORDER_ENTITY } from "../entities";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
+import {
+  getValueByAliases,
+  parseCsv,
+  parseImportDate,
+} from "../products/importUtils";
 
 const FILTER_HIERARCHY: Record<string, string[]> = {
   project_name: ["field_name", "lot_name"],
   field_name: ["lot_name"],
 };
+
+const REQUIRED_FILTERS_WARNING =
+  "Seleccione cliente, proyecto, campaña y campo para ver resultados";
 
 type WorkOrdersListResponse = {
   success: true;
@@ -270,8 +285,7 @@ export function WorkOrders() {
 
   const {
     getOrders,
-    deleteOrder,
-    deleteDraftOrder,
+    archiveOrder,
     publishDraftOrder,
     getMetrics,
     metrics,
@@ -283,6 +297,10 @@ export function WorkOrders() {
     error,
   } = useOrders();
 
+  const safeOrders = useMemo(
+    () => (Array.isArray(orders) ? orders : []),
+    [orders],
+  );
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
@@ -290,7 +308,7 @@ export function WorkOrders() {
   const [filterDatasetReady, setFilterDatasetReady] = useState(false);
   const [filterDatasetVersion, setFilterDatasetVersion] = useState(0);
   const globalFilterSourceOrders = useMemo(
-    () => (filterDatasetReady ? filterDatasetOrders : []),
+    () => (filterDatasetReady && Array.isArray(filterDatasetOrders) ? filterDatasetOrders : []),
     [filterDatasetOrders, filterDatasetReady]
   );
 
@@ -605,7 +623,9 @@ export function WorkOrders() {
   const effectiveProjectId = projectId ?? selectedProject?.id ?? routeProjectId;
   const hasWorkOrderScope = Boolean(effectiveProjectId || selectedField);
 
+  const [warningMessage, setWarningMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -742,44 +762,6 @@ export function WorkOrders() {
     setIsModalOpen(true);
   }
 
-  async function handleDeleteDraft(order: OrdersData) {
-    if (!isDigitalOrder(order) || order.status !== "draft") return;
-
-    setIsProcessing(true);
-    setErrorMessage("");
-
-    try {
-      await deleteDraftOrder(order.id);
-      handleOrderCreated();
-    } catch (error) {
-      const status = extractErrorStatus(error);
-
-      if (status === 404) {
-        setErrorMessage("No se encontró el borrador digital.");
-        return;
-      }
-
-      setErrorMessage(
-        extractErrorMessage(error, "No se pudo eliminar la orden digital.")
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  function handlePreDeleteDraft(order: OrdersData) {
-    setModalConfig({
-      title: "Confirmar eliminación",
-      message: `¿Está seguro que desea eliminar la orden ${order.number}?`,
-      primaryButtonText: "Sí, eliminar",
-      secondaryButtonText: "Cancelar",
-      onConfirm: () => {
-        void handleDeleteDraft(order);
-      },
-    });
-    setIsModalOpen(true);
-  }
-
   const [modalConfig, setModalConfig] = useState({
     title: "",
     message: "",
@@ -868,10 +850,11 @@ export function WorkOrders() {
 
   useEffect(() => {
     if (!hasWorkOrderScope) {
-      setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
+      setWarningMessage(REQUIRED_FILTERS_WARNING);
       return;
     }
 
+    setWarningMessage("");
     setErrorMessage("");
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
@@ -894,7 +877,7 @@ export function WorkOrders() {
     setFilterDatasetReady(false);
 
     if (!workOrdersFilterDatasetQuery) {
-      setErrorMessage("Seleccione un proyecto o un campo para cargar filtros");
+      setWarningMessage(REQUIRED_FILTERS_WARNING);
       return;
     }
 
@@ -903,7 +886,7 @@ export function WorkOrders() {
     apiClient.get<WorkOrdersListResponse>(`/work-orders/filter-rows${querySuffix}`)
       .then((response) => {
         if (!active) return;
-        setFilterDatasetOrders(response.data.rows ?? []);
+        setFilterDatasetOrders(Array.isArray(response.data?.rows) ? response.data.rows : []);
         setFilterDatasetReady(true);
       })
       .catch((error) => {
@@ -932,52 +915,6 @@ export function WorkOrders() {
     setDrawerUpdateOpen(false);
     setDrawerOpen(true);
     setOrderToDuplicate(order);
-  };
-
-  const handlePreFinish = (id: number) => {
-    setModalConfig({
-      title: "Confirmar eliminación",
-      message: "¿Está seguro que desea eliminar la orden?",
-      primaryButtonText: "Sí, eliminar",
-      secondaryButtonText: "Cancelar",
-      onConfirm: () => handleFinishConfirmed(id),
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleFinishConfirmed = async (id: number) => {
-    setIsProcessing(true);
-
-    try {
-      await deleteOrder(id);
-      setModalConfig({
-        title: "Confirmación",
-        message: "La orden ha sido eliminada.",
-        primaryButtonText: "Volver",
-        secondaryButtonText: "Volver",
-        onConfirm: () => {
-          navigate("/admin/work-orders");
-        },
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Error al eliminar la orden.";
-      setErrorMessage(message);
-      setModalConfig({
-        title: "Error",
-        message,
-        primaryButtonText: "Volver",
-        secondaryButtonText: "Volver",
-        onConfirm: () => {
-          setIsModalOpen(false);
-        },
-      });
-    } finally {
-      setIsModalOpen(true);
-      setIsProcessing(false);
-    }
   };
 
   const filteredOrders = useMemo(() => {
@@ -1043,13 +980,35 @@ export function WorkOrders() {
   );
 
   const displayedMetrics = hasColumnFilters ? derivedMetrics : metrics;
+  const displayedOrders = hasColumnFilters ? filteredOrders : safeOrders;
+
+  const bulk = useBulkActions<OrdersData>({
+    items: displayedOrders,
+    entity: WORKORDER_ENTITY,
+    archive: archiveOrder,
+    onEdit: handleOpenOrder,
+    onAfter: handleOrderCreated,
+  });
+
+  const selectColumn = useMemo<Column<OrdersData>>(
+    () => makeSelectColumn<OrdersData>(bulk, (order) => order.number, WORKORDER_ENTITY),
+    [bulk],
+  );
+
+  const visibleColumnsWithSelection = useMemo(
+    () => [selectColumn, ...columnsToShow],
+    [columnsToShow, selectColumn],
+  );
 
   const handleExport = async () => {
-    if (!projectId) return;
+    if (!effectiveProjectId) {
+      setErrorMessage("Seleccione un proyecto antes de exportar órdenes.");
+      return;
+    }
 
     try {
       const response = await apiClient.get<Blob>(
-        `/work-orders/export/${projectId}`,
+        `/work-orders/export/${effectiveProjectId}`,
         undefined,
         { responseType: "blob" }
       );
@@ -1058,13 +1017,115 @@ export function WorkOrders() {
 
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ordenes_${projectId}_${new Date().toISOString()}.xlsx`;
+      link.download = `ordenes_${effectiveProjectId}_${new Date().toISOString()}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch {
       setErrorMessage("No se pudo exportar el listado de órdenes.");
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!effectiveProjectId) {
+      setErrorMessage("Seleccione un proyecto antes de importar órdenes.");
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+      setWarningMessage("");
+      setSuccessMessage("");
+
+      const rows = parseCsv(await file.text());
+      if (rows.length === 0) {
+        setErrorMessage("El archivo no tiene órdenes válidas. Use CSV con encabezados.");
+        return;
+      }
+
+      const errors: string[] = [];
+      let imported = 0;
+
+      for (const [index, row] of rows.entries()) {
+        const rowNumber = index + 2;
+        const number = getValueByAliases(row, ["numero", "nro", "n", "number"]);
+        const fieldId = Number(
+          getValueByAliases(row, ["campo_id", "field_id"]) || selectedField?.id || 0,
+        );
+        const lotId = Number(getValueByAliases(row, ["lote_id", "lot_id"]));
+        const cropId = Number(getValueByAliases(row, ["cultivo_id", "crop_id"]));
+        const laborId = Number(getValueByAliases(row, ["labor_id", "labor_id"]));
+        const investorId = Number(getValueByAliases(row, ["inversor_id", "investor_id"]) || 0);
+        const supplyId = Number(getValueByAliases(row, ["insumo_id", "supply_id"]) || 0);
+        const effectiveArea = Number(
+          getValueByAliases(row, ["superficie", "superficie_has", "effective_area"]) || 0,
+        );
+        const totalUsed = Number(
+          getValueByAliases(row, ["consumo", "cantidad", "total_used"]) || 0,
+        );
+        const finalDose = Number(getValueByAliases(row, ["dosis", "dose", "final_dose"]) || 0);
+        const date = parseImportDate(getValueByAliases(row, ["fecha", "date"]));
+
+        if (!number) errors.push(`Fila ${rowNumber}: falta número.`);
+        if (!date) errors.push(`Fila ${rowNumber}: fecha inválida.`);
+        if (!fieldId) errors.push(`Fila ${rowNumber}: falta campo_id.`);
+        if (!lotId) errors.push(`Fila ${rowNumber}: falta lote_id.`);
+        if (!cropId) errors.push(`Fila ${rowNumber}: falta cultivo_id.`);
+        if (!laborId) errors.push(`Fila ${rowNumber}: falta labor_id.`);
+        if (!investorId) errors.push(`Fila ${rowNumber}: falta inversor_id.`);
+        if (!effectiveArea) errors.push(`Fila ${rowNumber}: falta superficie.`);
+        if (supplyId && (!totalUsed || !finalDose)) {
+          errors.push(`Fila ${rowNumber}: insumo_id requiere consumo y dosis.`);
+        }
+
+        const rowHasErrors = errors.some((message) => message.startsWith(`Fila ${rowNumber}:`));
+        if (rowHasErrors) continue;
+
+        await apiClient.post("/work-orders", {
+          number,
+          project_id: effectiveProjectId,
+          field_id: fieldId,
+          lot_id: lotId,
+          crop_id: cropId,
+          labor_id: laborId,
+          contractor: getValueByAliases(row, ["contratista", "contractor"]),
+          observations: getValueByAliases(row, ["observaciones", "observations"]),
+          date,
+          investor_id: investorId,
+          effective_area: effectiveArea,
+          items: supplyId
+            ? [
+                {
+                  supply_id: supplyId,
+                  total_used: totalUsed,
+                  final_dose: finalDose,
+                },
+              ]
+            : [],
+        });
+        imported += 1;
+      }
+
+      if (imported > 0) {
+        setSuccessMessage(
+          errors.length
+            ? `Se importaron ${imported} órdenes. Se omitieron ${errors.length} filas.`
+            : `Se importaron ${imported} órdenes correctamente.`,
+        );
+        handleOrderCreated();
+      }
+
+      if (errors.length > 0) {
+        setErrorMessage(errors.slice(0, 5).join(" "));
+      }
+    } catch (error) {
+      setErrorMessage(
+        extractErrorMessage(error, "No se pudo importar órdenes. Use CSV válido."),
+      );
     }
   };
 
@@ -1079,30 +1140,47 @@ export function WorkOrders() {
         filters={filters}
         actions={[
           {
-            label: "Exportar Órdenes",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            ,
+            label: "Importar",
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId,
+            accept: ".csv,text/csv",
+            onFileChange: handleImport,
+          },
+          {
+            label: "Exportar",
+            icon: <Upload className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
             onClick: () => handleExport(),
           },
           {
-            label: "+ Nueva Orden",
+            label: "Archivados",
+            icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId,
+            href: "/admin/database/work-orders/archived",
+          },
+          {
+            label: "Nuevo",
+            icon: <Plus className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
             onClick: () => {
+              if (!effectiveProjectId) {
+                setErrorMessage("Seleccione un proyecto antes de crear una orden.");
+                return;
+              }
               setDrawerOpen(true);
               setOrderToDuplicate(null);
             },
           },
         ]}
       />
+      <WarningBanner message={warningMessage || null} />
+      <SuccessBanner message={successMessage || null} variant="outlined" />
       <ErrorBanner message={errorMessage} variant="outlined" prefix="Error:" />
-      {!processing && !errorMetrics && orders.length > 0 && (
+      {!processing && !errorMetrics && safeOrders.length > 0 && (
         <div className="my-4">
           <OrdersIndicators
             metrics={displayedMetrics}
@@ -1146,13 +1224,22 @@ export function WorkOrders() {
             </button>
           </div>
         )}
+        <BulkSelectionPanel
+          selectedCount={bulk.selectedCount}
+          totalCount={displayedOrders.length}
+          allSelected={bulk.allSelected}
+          onToggleAll={bulk.toggleAll}
+          onClear={bulk.clear}
+          actions={bulk.actions}
+          entity={WORKORDER_ENTITY}
+        />
         <DataTable
           key={`${projectId}-${selectedField?.id || 0}-${selectedSupplyFilter.id || 0}`}
-          data={hasColumnFilters ? filteredOrders : orders}
+          data={displayedOrders}
           rowStyle="softZebra"
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
-          columns={columnsToShow}
+          columns={visibleColumnsWithSelection}
           actionsHeader="Acciones"
           renderActions={(item) => {
             const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
@@ -1162,40 +1249,19 @@ export function WorkOrders() {
             }
 
             if (!isDraftDigital) {
-              return (
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePreFinish(item.id);
-                  }}
-                >
-                  Eliminar
-                </Button>
-              );
+              return null;
             }
 
             return (
-              <>
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePrePublish(item);
-                  }}
-                >
-                  Publicar
-                </Button>
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePreDeleteDraft(item);
-                  }}
-                >
-                  Eliminar
-                </Button>
-              </>
+              <Button
+                variant="primary"
+                size="xs"
+                onClick={() => {
+                  handlePrePublish(item);
+                }}
+              >
+                Publicar
+              </Button>
             );
           }}
           enableFilters={true}

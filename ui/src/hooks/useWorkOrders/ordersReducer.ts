@@ -42,7 +42,7 @@ const ordersReducer = (state: typeof initialState, action: Action) => {
     case actions.SET_ORDERS:
       return {
         ...state,
-        orders: action.payload,
+        orders: Array.isArray(action.payload) ? action.payload : [],
       };
     case actions.SET_RESULT_CREATION:
       return {

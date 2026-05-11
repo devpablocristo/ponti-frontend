@@ -330,7 +330,7 @@ export default function CreateOrder({
       stockBySupply.set(stockItem.supply_name, current + Number(stockItem.stock_units));
     }
 
-    return supplies.map((supply) => ({
+    return (Array.isArray(supplies) ? supplies : []).map((supply) => ({
       ...supply,
       availableQty: Number(stockBySupply.get(supply.name) || 0),
       availableUnit: getUnitName(supply.unit_id),
@@ -343,7 +343,7 @@ export default function CreateOrder({
       setPendingCreatedSupplyName(null);
       return;
     }
-    const createdSupply = supplies.find(
+    const createdSupply = (Array.isArray(supplies) ? supplies : []).find(
       (s) => s.name.trim().toUpperCase() === pendingCreatedSupplyName
     );
     if (!createdSupply) return;
@@ -372,8 +372,15 @@ export default function CreateOrder({
 
   useEffect(() => {
     if (!selectedProject) return;
+    const projectInvestors = Array.isArray(selectedProject.investors)
+      ? selectedProject.investors
+      : [];
+    const projectFields = Array.isArray(selectedProject.fields)
+      ? selectedProject.fields
+      : [];
+
     setInvestors(
-      selectedProject.investors
+      projectInvestors
         .filter((i) => i.id !== null)
         .map((i) => ({ id: i.id!, name: i.name }))
     );
@@ -382,7 +389,7 @@ export default function CreateOrder({
       setLots([]);
       return;
     }
-    const foundField = selectedProject.fields.find(
+    const foundField = projectFields.find(
       (f) => String(f.id) === String(selectedField.id)
     );
 
@@ -392,7 +399,7 @@ export default function CreateOrder({
         name: foundField.name,
         project_id: projectId || 0,
       });
-      setLots(foundField.lots);
+      setLots(Array.isArray(foundField.lots) ? foundField.lots : []);
     } else {
       setLots([]);
     }
@@ -433,7 +440,10 @@ export default function CreateOrder({
       setLabor(laborObj || null);
 
       if (orderToDuplicate.field_id) {
-        const foundField = selectedProject.fields.find(
+        const projectFields = Array.isArray(selectedProject.fields)
+          ? selectedProject.fields
+          : [];
+        const foundField = projectFields.find(
           (f) => String(f.id) === String(orderToDuplicate.field_id)
         );
         if (foundField) {
@@ -442,14 +452,14 @@ export default function CreateOrder({
             name: foundField.name,
             project_id: projectId || 0,
           });
-          setLots(foundField.lots);
+          setLots(Array.isArray(foundField.lots) ? foundField.lots : []);
         }
       }
 
       setContractor(orderToDuplicate.contractor);
       setObservations(orderToDuplicate.observations);
 
-      const loadedItems: WorkOrderItem[] = orderToDuplicate.items.map((item) => ({
+      const loadedItems: WorkOrderItem[] = (Array.isArray(orderToDuplicate.items) ? orderToDuplicate.items : []).map((item) => ({
         itemId: item.supply_id,
         totalUsed: item.total_used.toString(),
         dose: item.final_dose.toString(),
@@ -768,7 +778,7 @@ export default function CreateOrder({
                   name="field"
                   options={
                     selectedProject
-                      ? selectedProject.fields.map((field) => ({
+                      ? (Array.isArray(selectedProject.fields) ? selectedProject.fields : []).map((field) => ({
                         id: field.id,
                         name: field.name,
                       }))
@@ -776,7 +786,7 @@ export default function CreateOrder({
                   }
                   value={field?.id?.toString() || ""}
                   onChange={(e) => {
-                    const selectedField = selectedProject?.fields.find(
+                    const selectedField = (Array.isArray(selectedProject?.fields) ? selectedProject.fields : []).find(
                       (f) => f.id === Number(e.target.value)
                     );
                     if (selectedField) {
@@ -785,7 +795,7 @@ export default function CreateOrder({
                         name: selectedField.name,
                         project_id: projectId || 0,
                       });
-                      setLots(selectedField.lots);
+                      setLots(Array.isArray(selectedField.lots) ? selectedField.lots : []);
                     }
                   }}
                   disabled={!projectId || processing}

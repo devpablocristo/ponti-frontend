@@ -47,12 +47,16 @@ function reducer<T>(state: State<T>, action: Action<T>): State<T> {
     case "STOP":
       return { ...state, processing: false };
     case "SET_DATA":
-      return { ...state, data: action.data, total: action.total };
+      return {
+        ...state,
+        data: Array.isArray(action.data) ? action.data : [],
+        total: Number(action.total) || 0,
+      };
     case "SET_ARCHIVED":
       return {
         ...state,
-        archivedData: action.data,
-        archivedTotal: action.total,
+        archivedData: Array.isArray(action.data) ? action.data : [],
+        archivedTotal: Number(action.total) || 0,
       };
     case "SET_ERROR":
       return { ...state, error: action.error };

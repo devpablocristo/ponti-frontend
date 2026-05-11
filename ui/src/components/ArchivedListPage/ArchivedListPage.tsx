@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 
+import { apiClient } from "@/api/client";
+import { AppFilterBar as FilterBar } from "../filters/AppFilterBar";
 import { DataTable } from "@devpablocristo/modules-ui-data-display";
 import { BaseModal } from "../Modal/BaseModal";
 import { BulkSelectionPanel } from "../crud/BulkSelectionPanel";
@@ -8,28 +10,25 @@ import { makeSelectColumn } from "../crud/makeSelectColumn";
 import { ErrorBanner } from "../feedback/ErrorBanner";
 import { Column } from "../../pages/admin/types";
 import {
-  articleSingular,
   ConfirmCopy,
   type EntityCopy,
   getBulkHardDeleteCopy,
   getBulkRestoreCopy,
-  getHardDeleteCopy,
-  getRestoreCopy,
 } from "../Modal/copy";
 import { useBulkSelection } from "../../hooks/useBulkSelection";
+import { useWorkspaceFilters } from "../../hooks/useWorkspaceFilters";
 import { toastError, toastSuccess } from "../../lib/toast";
 
-// Genérico para vistas de "X Archivados". Encapsula tabla + columna de acciones
-// (Restaurar, Eliminar definitivamente) + modal de confirmación. Las páginas
-// concretas solo pasan columns + handlers + getItemLabel.
+// Genérico para vistas de "X Archivados". Encapsula tabla + selección masiva
+// (Restaurar, Eliminar definitivamente) + modal de confirmación.
 //
 // Soporta opcionalmente bulk actions: si se pasa entityLabelPlural, agrega
-// checkboxes por fila + barra de acciones masivas (Restaurar N / Eliminar N).
+// checkboxes por fila + barra de acciones masivas (Restaurar N / Eliminar definitivamente N).
 
 type ArchivedListPageProps<T extends { id: number }> = {
   /** Texto descriptivo arriba de la tabla (1 línea). */
   description?: string;
-  /** Columnas de datos (sin la columna de acciones, esa la agrega el componente). */
+  /** Columnas de datos. Las acciones aparecen solo en la barra de selección. */
   columns: Column<T>[];
   /** Datos archivados a mostrar. */
   data: T[];
@@ -42,6 +41,8 @@ type ArchivedListPageProps<T extends { id: number }> = {
   bulk?: boolean;
   /** Cómo extraer el "nombre amigable" de un item para el modal. */
   getItemLabel: (item: T) => string;
+  /** Relación opcional para que los 4 filtros de workspace filtren archivados. */
+  getFilterRelations?: (item: T) => ArchivedFilterRelation[];
   /** Disparar restore para el item seleccionado. Si no se pasa, no hay botón. */
   onRestore?: (item: T) => Promise<void> | void;
   /** Disparar hard-delete para el item seleccionado. Si no se pasa, no hay botón. */
@@ -54,6 +55,208 @@ type ArchivedListPageProps<T extends { id: number }> = {
   error?: string | null;
 };
 
+type ArchivedFilterRelation = {
+  customerId?: number | null;
+  customerName?: string | null;
+  projectId?: number | null;
+  projectName?: string | null;
+  campaignId?: number | null;
+  campaignName?: string | null;
+  fieldId?: number | null;
+  fieldName?: string | null;
+  fieldIds?: number[];
+  fieldNames?: string[];
+};
+
+type ProjectCatalogItem = ArchivedFilterRelation & {
+  aliases: string[];
+  fieldNames: string[];
+};
+
+type RawProjectSummary = {
+  id?: number;
+  name?: string;
+  customer?: string;
+  campaign?: string;
+  managers?: string;
+  investors?: string;
+};
+
+type RawProjectDetail = {
+  name?: string;
+  customer?: { id?: number | null; name?: string | null } | string | null;
+  campaign?: { id?: number | null; name?: string | null } | string | null;
+  managers?: Array<{ id?: number | null; name?: string | null }>;
+  investors?: Array<{ id?: number | null; name?: string | null }>;
+  admin_cost_investors?: Array<{ id?: number | null; name?: string | null }>;
+  fields?: Array<{
+    id?: number | null;
+    name?: string | null;
+    investors?: Array<{ id?: number | null; name?: string | null }>;
+    lots?: Array<{ id?: number | null; name?: string | null }>;
+  }>;
+};
+
+type ProjectListResponse = {
+  data?: {
+    data?: RawProjectSummary[];
+  };
+};
+
+type ProjectDetailResponse = {
+  data?: RawProjectDetail;
+};
+
+const normalizeText = (value: unknown) =>
+  String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+const splitNames = (value: unknown) =>
+  String(value ?? "")
+    .split(/[,;]+/)
+    .map((entry) =>
+      entry
+        .replace(/\s*[-–—]\s*\d+(?:[.,]\d+)?\s*%.*$/u, "")
+        .replace(/\s+\d+(?:[.,]\d+)?\s*%.*$/u, "")
+        .trim(),
+    )
+    .filter(Boolean);
+
+function getNamedValue(value: RawProjectDetail["customer"] | RawProjectDetail["campaign"]) {
+  if (!value) return { id: null, name: "" };
+  if (typeof value === "string") return { id: null, name: value };
+  return { id: value.id ?? null, name: value.name ?? "" };
+}
+
+function relationMatches(
+  relation: ArchivedFilterRelation,
+  selected: {
+    customer?: { id: number; name: string };
+    project?: { id: number; name: string };
+    campaign?: { id: number; name: string };
+    field?: { id: number; name: string };
+  },
+) {
+  if (selected.customer) {
+    const byId = relation.customerId && relation.customerId === selected.customer.id;
+    const byName =
+      relation.customerName &&
+      normalizeText(relation.customerName) === normalizeText(selected.customer.name);
+    if (!byId && !byName) return false;
+  }
+
+  if (selected.project) {
+    const byId = relation.projectId && relation.projectId === selected.project.id;
+    const byName =
+      relation.projectName &&
+      normalizeText(relation.projectName) === normalizeText(selected.project.name);
+    if (!byId && !byName) return false;
+  }
+
+  if (selected.campaign) {
+    const byId = relation.campaignId && relation.campaignId === selected.campaign.id;
+    const byName =
+      relation.campaignName &&
+      normalizeText(relation.campaignName) === normalizeText(selected.campaign.name);
+    if (!byId && !byName) return false;
+  }
+
+  if (selected.field) {
+    const byId = relation.fieldId && relation.fieldId === selected.field.id;
+    const byIds = relation.fieldIds?.includes(selected.field.id);
+    const byName =
+      relation.fieldName &&
+      normalizeText(relation.fieldName) === normalizeText(selected.field.name);
+    const byNames = relation.fieldNames
+      ?.map(normalizeText)
+      .includes(normalizeText(selected.field.name));
+    if (!byId && !byIds && !byName && !byNames) return false;
+  }
+
+  return true;
+}
+
+function inferRelations<T extends { id: number }>(
+  item: T,
+  catalog: ProjectCatalogItem[],
+): ArchivedFilterRelation[] {
+  const record = item as Record<string, unknown>;
+  const numberValue = (...keys: string[]) => {
+    for (const key of keys) {
+      if (typeof record[key] === "number") return record[key] as number;
+    }
+    return null;
+  };
+  const textValue = (...keys: string[]) => {
+    for (const key of keys) {
+      const value = record[key];
+      if (typeof value === "string" && value.trim() !== "") return value;
+    }
+    return "";
+  };
+  const direct: ArchivedFilterRelation = {
+    customerName: textValue(
+      "customer",
+      "customer_name",
+      "customerName",
+      "destination_customer_name",
+      "origin_customer_name",
+    ),
+    projectId: numberValue("project_id", "destination_project_id", "origin_project_id"),
+    projectName: textValue(
+      "project_name",
+      "projectName",
+      "project",
+      "destination_project_name",
+      "origin_project_name",
+    ),
+    campaignName: textValue(
+      "campaign",
+      "campaign_name",
+      "season",
+      "destination_campaign_name",
+      "origin_campaign_name",
+    ),
+    fieldId: numberValue("field_id", "destination_field_id", "origin_field_id"),
+    fieldName: textValue("field_name", "fieldName", "field", "destination_field_name", "origin_field_name"),
+  };
+
+  const hasDirectRelation = Object.values(direct).some((value) => value !== "" && value !== null);
+  const names = [
+    record.name,
+    record.lot_name,
+    record.field_name,
+    record.project_name,
+    record.destination_project_name,
+    record.origin_project_name,
+    record.customer,
+    record.destination_customer_name,
+    record.origin_customer_name,
+    record.campaign,
+    record.destination_campaign_name,
+    record.origin_campaign_name,
+    record.season,
+    record.investor_name,
+    record.supply_name,
+  ].map(normalizeText).filter(Boolean);
+
+  const matches = catalog.filter((project) => {
+    if (direct.projectId && project.projectId === direct.projectId) return true;
+    if (direct.projectName && normalizeText(project.projectName) === normalizeText(direct.projectName)) return true;
+    if (direct.customerName && normalizeText(project.customerName) === normalizeText(direct.customerName)) return true;
+    if (direct.campaignName && normalizeText(project.campaignName) === normalizeText(direct.campaignName)) return true;
+    if (direct.fieldName && project.fieldNames.includes(normalizeText(direct.fieldName))) return true;
+    return names.some((name) => project.aliases.includes(name) || project.fieldNames.includes(name));
+  });
+
+  if (matches.length > 0) return matches;
+  return hasDirectRelation ? [direct] : [];
+}
+
 export function ArchivedListPage<T extends { id: number }>({
   description,
   columns,
@@ -61,13 +264,13 @@ export function ArchivedListPage<T extends { id: number }>({
   entity,
   bulk: bulkEnabled = false,
   getItemLabel,
+  getFilterRelations,
   onRestore,
   onHardDelete,
   onMount,
   processing = false,
   error,
 }: ArchivedListPageProps<T>) {
-  const entityLabel = articleSingular(entity);
   const entityLabelPlural = entity.plural;
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pending, setPending] = useState<{
@@ -75,28 +278,162 @@ export function ArchivedListPage<T extends { id: number }>({
     op: "restore" | "hard";
   } | null>(null);
   const [copy, setCopy] = useState<ConfirmCopy | null>(null);
+  const [projectCatalog, setProjectCatalog] = useState<ProjectCatalogItem[]>([]);
 
-  const selection = useBulkSelection(data);
+  const {
+    filters,
+    selectedCustomer,
+    selectedProject,
+    selectedCampaignId,
+    selectedField,
+    campaigns,
+  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const buildCatalogItem = (
+      summary: RawProjectSummary,
+      detail?: RawProjectDetail,
+    ): ProjectCatalogItem => {
+      const customer = getNamedValue(detail?.customer);
+      const campaign = getNamedValue(detail?.campaign);
+      const fields = detail?.fields ?? [];
+      const fieldNames = fields.map((field) => field.name ?? "").filter(Boolean);
+      const fieldIds = fields
+        .map((field) => field.id)
+        .filter((id): id is number => typeof id === "number");
+
+      const aliases = [
+        summary.name,
+        summary.customer,
+        summary.campaign,
+        customer.name,
+        campaign.name,
+        ...splitNames(summary.managers),
+        ...splitNames(summary.investors),
+        ...(detail?.managers ?? []).map((item) => item.name ?? ""),
+        ...(detail?.investors ?? []).map((item) => item.name ?? ""),
+        ...(detail?.admin_cost_investors ?? []).map((item) => item.name ?? ""),
+        ...fields.map((field) => field.name ?? ""),
+        ...fields.flatMap((field) => (field.investors ?? []).map((item) => item.name ?? "")),
+        ...fields.flatMap((field) => (field.lots ?? []).map((item) => item.name ?? "")),
+      ]
+        .map(normalizeText)
+        .filter(Boolean);
+
+      return {
+        customerId: customer.id,
+        customerName: customer.name || summary.customer || "",
+        projectId: summary.id ?? null,
+        projectName: detail?.name || summary.name || "",
+        campaignId: campaign.id,
+        campaignName: campaign.name || summary.campaign || "",
+        fieldIds,
+        fieldNames,
+        aliases: Array.from(new Set(aliases)),
+      };
+    };
+
+    const loadProjects = async () => {
+      try {
+        const [active, archived] = await Promise.all([
+          apiClient.get<ProjectListResponse>("/projects?page=1&per_page=1000"),
+          apiClient.get<ProjectListResponse>("/projects/archived?page=1&per_page=1000"),
+        ]);
+
+        const summaries = [
+          ...(active.data?.data ?? []),
+          ...(archived.data?.data ?? []),
+        ].filter((project) => typeof project.id === "number");
+
+        const details = await Promise.all(
+          summaries.map(async (project) => {
+            try {
+              const response = await apiClient.get<ProjectDetailResponse>(
+                `/projects/${project.id}`,
+              );
+              return [project.id as number, response.data] as const;
+            } catch {
+              return [project.id as number, undefined] as const;
+            }
+          }),
+        );
+
+        if (cancelled) return;
+
+        const detailsById = new Map(details);
+        setProjectCatalog(
+          summaries.map((project) => buildCatalogItem(project, detailsById.get(project.id as number))),
+        );
+      } catch {
+        if (!cancelled) setProjectCatalog([]);
+      }
+    };
+
+    void loadProjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedCampaign =
+    selectedCampaignId && selectedCampaignId > 0
+      ? campaigns.find((campaign) => campaign.id === selectedCampaignId)
+      : undefined;
+
+  const activeWorkspaceFilter = Boolean(
+    selectedCustomer?.id ||
+      selectedProject?.id ||
+      selectedCampaign?.id ||
+      selectedField?.id,
+  );
+
+  const filteredData = useMemo(() => {
+    if (!activeWorkspaceFilter) return data;
+
+    const selected = {
+      customer:
+        selectedCustomer && selectedCustomer.id > 0
+          ? { id: selectedCustomer.id, name: selectedCustomer.name }
+          : undefined,
+      project:
+        selectedProject && selectedProject.id > 0
+          ? { id: selectedProject.id, name: selectedProject.name }
+          : undefined,
+      campaign: selectedCampaign
+        ? { id: selectedCampaign.id, name: selectedCampaign.name }
+        : undefined,
+      field:
+        selectedField && selectedField.id > 0
+          ? { id: selectedField.id, name: selectedField.name }
+          : undefined,
+    };
+
+    return data.filter((item) => {
+      const relations = getFilterRelations?.(item) ?? inferRelations(item, projectCatalog);
+      if (relations.length === 0) return false;
+      return relations.some((relation) => relationMatches(relation, selected));
+    });
+  }, [
+    activeWorkspaceFilter,
+    data,
+    getFilterRelations,
+    projectCatalog,
+    selectedCampaign,
+    selectedCustomer,
+    selectedField,
+    selectedProject,
+  ]);
+
+  const selection = useBulkSelection(filteredData);
   const { toggleAll, clear, allSelected, selectedItems, selectedCount } =
     selection;
 
   useEffect(() => {
     onMount?.();
-    // intencionalmente sin deps: corre solo al montar.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const openRestore = (item: T) => {
-    setPending({ items: [item], op: "restore" });
-    setCopy(getRestoreCopy(entityLabel, getItemLabel(item)));
-    setIsModalOpen(true);
-  };
-
-  const openHardDelete = (item: T) => {
-    setPending({ items: [item], op: "hard" });
-    setCopy(getHardDeleteCopy(entityLabel, getItemLabel(item)));
-    setIsModalOpen(true);
-  };
+  }, [onMount]);
 
   const openBulkRestore = () => {
     if (selectedItems.length === 0) return;
@@ -134,7 +471,7 @@ export function ArchivedListPage<T extends { id: number }>({
           toastSuccess(
             op === "restore"
               ? `Se restauraron ${ok} ${entityLabelPlural}.`
-              : `Se eliminaron ${ok} ${entityLabelPlural}.`,
+              : `Se eliminaron definitivamente ${ok} ${entityLabelPlural}.`,
           );
         } else {
           toastError(
@@ -153,40 +490,9 @@ export function ArchivedListPage<T extends { id: number }>({
     ? makeSelectColumn<T>(selection, getItemLabel, entity)
     : null;
 
-  const actionsColumn: Column<T> = {
-    key: "id" as keyof T,
-    header: "Acciones",
-    render: (_value: unknown, item: T) => (
-      <div className="flex items-center justify-center gap-3">
-        {onRestore && (
-          <button
-            className="text-green-700 hover:text-green-900"
-            title="Restaurar"
-            onClick={() => openRestore(item)}
-          >
-            <RotateCcw size={16} />
-          </button>
-        )}
-        {onHardDelete && (
-          <button
-            className="text-red-700 hover:text-red-900"
-            title="Eliminar definitivo"
-            onClick={() => openHardDelete(item)}
-          >
-            <Trash2 size={16} />
-          </button>
-        )}
-      </div>
-    ),
-  };
-
   const fullColumns: Column<T>[] = useMemo(
-    () =>
-      selectColumn
-        ? [selectColumn, ...columns, actionsColumn]
-        : [...columns, actionsColumn],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [columns, selectColumn, actionsColumn],
+    () => (selectColumn ? [selectColumn, ...columns] : columns),
+    [columns, selectColumn],
   );
 
   const bulkActions = useMemo(
@@ -198,7 +504,7 @@ export function ArchivedListPage<T extends { id: number }>({
           onClick: openBulkRestore,
         },
         onHardDelete && {
-          label: `Eliminar ${selectedCount}`,
+          label: `Eliminar definitivamente ${selectedCount}`,
           icon: Trash2,
           variant: "danger" as const,
           onClick: openBulkHardDelete,
@@ -215,13 +521,14 @@ export function ArchivedListPage<T extends { id: number }>({
 
   return (
     <div>
+      <FilterBar filters={filters} />
       {description && (
-        <p className="text-sm text-gray-500 mb-4">{description}</p>
+        <p className="mt-4 mb-4 text-sm text-gray-500">{description}</p>
       )}
       {bulkEnabled && (
         <BulkSelectionPanel
           selectedCount={selectedCount}
-          totalCount={data.length}
+          totalCount={filteredData.length}
           allSelected={allSelected}
           onToggleAll={toggleAll}
           onClear={clear}
@@ -229,7 +536,7 @@ export function ArchivedListPage<T extends { id: number }>({
           entity={entity}
         />
       )}
-      <DataTable data={data as T[]} columns={fullColumns} />
+      <DataTable data={filteredData as T[]} columns={fullColumns} />
       {error && (
         <ErrorBanner className="mt-4">
           <span className="font-medium">Error!</span> {error}

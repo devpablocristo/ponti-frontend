@@ -15,6 +15,7 @@ type BulkActionBarProps = {
   itemLabel?: string;
   actions: BulkAction[];
   onClear: () => void;
+  showSelectionSummary?: boolean;
   className?: string;
 };
 
@@ -27,6 +28,7 @@ export function BulkActionBar({
   itemLabel = "items",
   actions,
   onClear,
+  showSelectionSummary = true,
   className = "",
 }: BulkActionBarProps) {
   if (selectedCount === 0) return null;
@@ -37,20 +39,24 @@ export function BulkActionBar({
       role="toolbar"
       aria-label="Acciones masivas"
     >
-      <div className="flex items-center gap-3 text-sm text-blue-900">
-        <span className="font-medium">
-          {selectedCount} {itemLabel} seleccionado{selectedCount === 1 ? "" : "s"}
-        </span>
-        <button
-          type="button"
-          onClick={onClear}
-          className="inline-flex items-center gap-1 text-xs text-blue-700 hover:text-blue-900"
-          aria-label="Limpiar selección"
-        >
-          <X className="h-3 w-3" />
-          Limpiar
-        </button>
-      </div>
+      {showSelectionSummary ? (
+        <div className="flex items-center gap-3 text-sm text-blue-900">
+          <span className="font-medium">
+            {selectedCount} {itemLabel} seleccionado{selectedCount === 1 ? "" : "s"}
+          </span>
+          <button
+            type="button"
+            onClick={onClear}
+            className="inline-flex items-center gap-1 text-xs text-blue-700 hover:text-blue-900"
+            aria-label="Limpiar selección"
+          >
+            <X className="h-3 w-3" />
+            Limpiar
+          </button>
+        </div>
+      ) : (
+        <span />
+      )}
       <div className="flex items-center gap-2">
         {actions.map((action) => {
           const Icon = action.icon;

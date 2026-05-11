@@ -1,16 +1,20 @@
 import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { LoaderCircle, ClockIcon, CheckIcon, FileTextIcon, FileXIcon } from "lucide-react";
+import { Archive, Download, LoaderCircle, ClockIcon, CheckIcon, FileTextIcon, FileXIcon, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
+import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
+import { useBulkActions } from "../../../hooks/useBulkActions";
 import * as XLSX from "xlsx";
 
 import useLabors from "../../../hooks/useLabors";
+import useWorkOrders from "../../../hooks/useWorkOrders";
 import useCategories from "../../../hooks/useCategories";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { BaseModal } from "../../../components/Modal/BaseModal";
@@ -21,6 +25,7 @@ import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
+import { WORKORDER_ENTITY } from "../entities";
 
 const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
@@ -260,6 +265,7 @@ export function Tasks() {
     resultInvoice,
     saveLabors,
   } = useLabors();
+  const { archiveOrder } = useWorkOrders();
 
   const { categories, getCategories } = useCategories();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -666,6 +672,79 @@ export function Tasks() {
     });
   }, [laborGroups, taskFilters]);
 
+  type SelectableLaborGroup = LaborGroupData & { id: number };
+
+  const selectableTasks = useMemo<SelectableLaborGroup[]>(
+    () =>
+      filteredTasks.map((task) => ({
+        ...task,
+        id: task.workorder_id,
+      })),
+    [filteredTasks],
+  );
+
+  const openInvoiceEditor = useCallback((item: LaborGroupData) => {
+    setResultInvoiceMessage(null);
+    setErrorInvoiceMessage(null);
+
+    if (item.invoice_id === 0) {
+      setInvoice({
+        workorder_id: item.workorder_id,
+        investor_id: item.investor_id,
+        invoice_id: 0,
+        invoice_number: "",
+        invoice_company: "",
+        invoice_date: "",
+        invoice_status: "",
+      });
+      setShowInvoiceModal(true);
+      return;
+    }
+
+    const statusOption = invoiceStatusOptions.find(
+      (opt) => opt.name === item.invoice_status
+    );
+
+    setInvoice({
+      workorder_id: item.workorder_id,
+      investor_id: item.investor_id,
+      invoice_id: item.invoice_id,
+      invoice_number: item.invoice_number,
+      invoice_company: item.invoice_company,
+      invoice_date: item.invoice_date ? (item.invoice_date ?? "").split("T")[0] : "",
+      invoice_status: statusOption ? statusOption.id.toString() : "",
+    });
+    setShowInvoiceModal(true);
+  }, []);
+
+  const refreshLabors = useCallback(() => {
+    if (!projectId) return;
+    const query = buildFieldQuery();
+    getLaborGroups(projectId, query);
+    getMetrics(projectId, query);
+  }, [buildFieldQuery, getLaborGroups, getMetrics, projectId]);
+
+  const bulk = useBulkActions<SelectableLaborGroup>({
+    items: selectableTasks,
+    entity: WORKORDER_ENTITY,
+    archive: archiveOrder,
+    onEdit: openInvoiceEditor,
+    onAfter: refreshLabors,
+  });
+
+  const selectColumn = useMemo<Column<SelectableLaborGroup>>(
+    () => makeSelectColumn<SelectableLaborGroup>(bulk, (task) => task.workorder_number, WORKORDER_ENTITY),
+    [bulk],
+  );
+
+  const columnsWithSelection = useMemo<Column<SelectableLaborGroup>[]>(
+    () => [
+      selectColumn,
+      ...(columnsToShow as Column<SelectableLaborGroup>[]),
+    ],
+    [columnsToShow, selectColumn],
+  );
+
   const derivedMetrics: Metrics = useMemo(() => {
     if (!filteredTasks.length) {
       return {
@@ -820,7 +899,10 @@ export function Tasks() {
   };
 
   const handleExport = async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      setExportErrorMessage("Seleccione un proyecto antes de exportar labores.");
+      return;
+    }
 
     try {
       setExportErrorMessage(null);
@@ -861,28 +943,32 @@ export function Tasks() {
         filters={filters}
         actions={[
           {
-            label: "Exportar Labores",
-            icon: (
-              <svg
-                width="14"
-                height="13"
-                viewBox="0 0 14 13"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            ),
+            label: "Importar",
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId,
+            onClick: () => fileInputRef.current?.click(),
+          },
+          {
+            label: "Exportar",
+            icon: <Upload className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
             onClick: () => handleExport(),
+          },
+          {
+            label: "Archivados",
+            icon: <Archive className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            href: "/admin/database/tasks/archived",
+          },
+          {
+            label: "Nuevo",
+            icon: <Plus className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            href: "/admin/database/tasks",
           },
         ]}
       />
@@ -896,49 +982,25 @@ export function Tasks() {
 
       <div className="mt-4 relative">
         <LoadingOverlay show={processing} />
+        <BulkSelectionPanel
+          selectedCount={bulk.selectedCount}
+          totalCount={selectableTasks.length}
+          allSelected={bulk.allSelected}
+          onToggleAll={bulk.toggleAll}
+          onClear={bulk.clear}
+          actions={bulk.actions}
+          entity={WORKORDER_ENTITY}
+        />
         <DataTable
           key={laborGroups.length}
-          data={filteredTasks}
+          data={selectableTasks}
           rowStyle="softZebra"
-          columns={columnsToShow}
+          columns={columnsWithSelection}
           filters={taskFilters}
           onFilterChange={handleFilterChange}
           className={`${processing ? "pointer-events-none opacity-60" : ""}`}
           enableFilters={true}
           message="No hay tareas disponibles"
-          onEdit={(item) => {
-            setResultInvoiceMessage(null);
-            setErrorInvoiceMessage(null);
-
-                        if (item.invoice_id === 0) {
-              setInvoice({
-                workorder_id: item.workorder_id,
-                investor_id: item.investor_id,
-                invoice_id: 0,
-                invoice_number: "",
-                invoice_company: "",
-                invoice_date: "",
-                invoice_status: "",
-              });
-              setShowInvoiceModal(true);
-              return;
-            }
-
-            const statusOption = invoiceStatusOptions.find(
-              (opt) => opt.name === item.invoice_status
-            );
-
-                        setInvoice({
-              workorder_id: item.workorder_id,
-              investor_id: item.investor_id,
-              invoice_id: item.invoice_id,
-              invoice_number: item.invoice_number,
-              invoice_company: item.invoice_company,
-              invoice_date: item.invoice_date ? (item.invoice_date ?? "").split("T")[0] : "",
-              invoice_status: statusOption ? statusOption.id.toString() : "",
-            });
-            setShowInvoiceModal(true);
-          }}
           headerComponent={
             <TaskHeader
               taskAmount={laborGroups.length}

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import * as XLSX from "xlsx";
+import { Download, Plus, Upload } from "lucide-react";
 
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import {
   DataTable,
@@ -20,10 +21,8 @@ import { apiClient } from "../../../../api/client";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
-import { makeActionsColumn } from "../../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
-import { useEntityRowActions } from "../../../../hooks/useEntityRowActions";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import {
   getValueByAliases,
@@ -49,13 +48,16 @@ function renderPriceCell(value: unknown, row: LaborInfo) {
   );
 }
 
-export default function ListTasks() {
+type ListTasksProps = {
+  editorOnly?: boolean;
+};
+
+export default function ListTasks({ editorOnly = false }: ListTasksProps) {
   const {
     getLabors,
     error,
     labors,
     archiveLabor,
-    hardDeleteLabor,
     updateLabor,
     saveLabors,
     result,
@@ -91,30 +93,23 @@ export default function ListTasks() {
     "customer",
     "project",
     "campaign",
+    "field",
   ]);
 
   const refresh = useCallback(() => {
     if (projectId) getLabors(projectId);
   }, [projectId, getLabors]);
 
-  const bulk = useBulkActions<LaborInfo>({
-    items: safeLabors,
-    entity: ENTITY,
-    archive: archiveLabor,
-    hardDelete: hardDeleteLabor,
-    onAfter: refresh,
-  });
-
   const handleEdit = useCallback((item: LaborInfo) => {
     setLabor(item);
     setModalOpen(true);
   }, []);
 
-  const { handleArchive, handleHardDelete } = useEntityRowActions<LaborInfo>({
+  const bulk = useBulkActions<LaborInfo>({
+    items: safeLabors,
     entity: ENTITY,
-    getLabel: (l) => l.name,
     archive: archiveLabor,
-    hardDelete: hardDeleteLabor,
+    onEdit: handleEdit,
     onAfter: refresh,
   });
 
@@ -168,13 +163,8 @@ export default function ListTasks() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("contractor_name"),
       },
-      makeActionsColumn<LaborInfo>({
-        onEdit: handleEdit,
-        onArchive: handleArchive,
-        onHardDelete: handleHardDelete,
-      }),
     ],
-    [getFilterOptionsForColumn, handleArchive, handleEdit, handleHardDelete, selectColumn]
+    [getFilterOptionsForColumn, selectColumn]
   );
 
   useEffect(() => {
@@ -400,15 +390,31 @@ export default function ListTasks() {
         filters={filters}
         actions={[
           {
-            label: "Exportar Labores",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            ,
+            label: "Importar",
+            icon: <Download className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            disabled: !projectId,
+            onClick: () => fileInputRef.current?.click(),
+          },
+          {
+            label: "Exportar",
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
             onClick: () => handleExport(),
+          },
+          {
+            label: "Nueva Labor",
+            icon: <Plus className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            disabled: !projectId,
+            onClick: () => {
+              setLabor(null);
+              setModalOpen(true);
+            },
           },
         ]}
       />
@@ -425,30 +431,32 @@ export default function ListTasks() {
         />
         <div className="flex justify-between items-center">
           <h1 className="text-custom-text font-semibold text-xl leading-none">
-            Lista de labores
+            {editorOnly ? "Editar labores" : "Lista de labores"}
           </h1>
-          <Button
-            variant="primary"
-            size="sm"
-            className="text-sm font-medium flex items-center gap-1"
-            href="/admin/database/tasks"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+          {!editorOnly && (
+            <Button
+              variant="primary"
+              size="sm"
+              className="text-sm font-medium flex items-center gap-1"
+              href="/admin/database/tasks"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            Volver
-          </Button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                />
+              </svg>
+              Volver
+            </Button>
+          )}
         </div>
         <div className="mt-4">
           <BaseModal

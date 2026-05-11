@@ -1,16 +1,15 @@
 import { DataTable, usePagination } from "@/lib/dataDisplay";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
-import { ExternalLink } from "lucide-react";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { Archive, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
-import { makeActionsColumn } from "../../../components/crud/makeActionsColumn";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
-import { useEntityRowActions } from "../../../hooks/useEntityRowActions";
 import { LOT_ENTITY as ENTITY } from "../entities";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
@@ -29,6 +28,11 @@ import {
   mapApiLotIndicators,
 } from "./lotTableUtils";
 import { useLotColumns } from "./useLotColumns";
+import {
+  getValueByAliases,
+  parseCsv,
+  parseImportDate,
+} from "../products/importUtils";
 
 export function Lots() {
   const navigate = useNavigate();
@@ -59,7 +63,6 @@ export function Lots() {
     processingKpis,
     errorKpis,
     archiveLot,
-    hardDeleteLot,
   } = useLots();
 
 
@@ -86,7 +89,11 @@ export function Lots() {
       const query = `project_id=${projectId}`;
       getLots(query);
       getLotsKpis(query);
+      return;
     }
+
+    getLots("");
+    getLotsKpis("");
   }, [getLots, getLotsKpis, projectId, selectedFieldId]);
 
   const reloadFromFirstPage = useCallback(() => {
@@ -167,11 +174,6 @@ export function Lots() {
   ]);
 
   useEffect(() => {
-    if (!selectedCustomer || !projectId || !selectedCampaignId) {
-      setMessage("Seleccione un proyecto, campaña y campo para ver resultados");
-      return;
-    }
-
     setMessage("");
     reloadFromFirstPage();
   }, [
@@ -199,13 +201,6 @@ export function Lots() {
     [columnsFilters, lots]
   );
 
-  const bulk = useBulkActions<LotsData>({
-    items: filteredLots,
-    entity: ENTITY,
-    archive: archiveLot,
-    hardDelete: hardDeleteLot,
-    onAfter: reloadFromFirstPage,
-  });
   const calculatedKpis = useMemo(
     () => calculateLotIndicators(filteredLots),
     [filteredLots]
@@ -239,43 +234,34 @@ export function Lots() {
     setDrawerOpen(true);
   }, []);
 
-  const { handleArchive: handleArchiveLot, handleHardDelete: handleHardDeleteLot } =
-    useEntityRowActions<LotsData>({
-      entity: ENTITY,
-      getLabel: (l) => l.lot_name,
-      archive: archiveLot,
-      hardDelete: hardDeleteLot,
-      onAfter: reloadFromFirstPage,
-    });
+  const bulk = useBulkActions<LotsData>({
+    items: filteredLots,
+    entity: ENTITY,
+    archive: archiveLot,
+    onEdit: openEditDrawer,
+    onAfter: reloadFromFirstPage,
+  });
 
   const selectColumn = useMemo<Column<LotsData>>(
     () => makeSelectColumn<LotsData>(bulk, (l) => l.lot_name, ENTITY),
     [bulk],
   );
 
-  const actionsColumn = useMemo<Column<LotsData>>(
-    () =>
-      makeActionsColumn<LotsData>({
-        onEdit: openEditDrawer,
-        onArchive: handleArchiveLot,
-        onHardDelete: handleHardDeleteLot,
-      }),
-    [handleArchiveLot, handleHardDeleteLot, openEditDrawer],
-  );
-
   const columnsToShow = useMemo(
     () => [
       selectColumn,
       ...allColumns.filter((column) => visibleColumns.includes(column.key)),
-      actionsColumn,
     ],
-    [actionsColumn, allColumns, selectColumn, visibleColumns]
+    [allColumns, selectColumn, visibleColumns]
   );
 
   const handleCreateLot = () => {
     if (selectedField && projectId && selectedCustomer && selectedCampaignId) {
       navigate(`/admin/database/customers/${selectedField.project_id}`);
+      return;
     }
+
+    setErrorMessage("Seleccione cliente, proyecto, campaña y campo antes de crear un lote.");
   };
 
   function handleLotChange<K extends keyof LotsDataUpdate>(
@@ -323,7 +309,10 @@ export function Lots() {
   };
 
   const handleExport = async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      setErrorMessage("Seleccione un proyecto antes de exportar lotes.");
+      return;
+    }
 
     try {
       const response = await apiClient.get<Blob>(
@@ -345,34 +334,156 @@ export function Lots() {
     }
   };
 
+  const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!projectId) {
+      setErrorMessage("Seleccione un proyecto antes de importar lotes.");
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+      setSuccessMessage("");
+
+      const rows = parseCsv(await file.text());
+      if (rows.length === 0) {
+        setErrorMessage("El archivo no tiene lotes válidos. Use CSV con encabezados.");
+        return;
+      }
+
+      const errors: string[] = [];
+      let imported = 0;
+
+      for (const [index, row] of rows.entries()) {
+        const rowNumber = index + 2;
+        const rawId = getValueByAliases(row, ["id", "lot_id", "lote_id"]);
+        const rawName = getValueByAliases(row, ["lote", "lot", "nombre", "lot_name"]);
+        const target = rawId
+          ? lots.find((item) => item.id === Number(rawId))
+          : lots.find(
+              (item) =>
+                item.lot_name.trim().toLowerCase() === rawName.trim().toLowerCase() &&
+                (!selectedFieldId || item.field_id === selectedFieldId),
+            );
+
+        if (!target) {
+          errors.push(`Fila ${rowNumber}: no se encontró el lote "${rawName || rawId}".`);
+          continue;
+        }
+
+        const sowedArea = getValueByAliases(row, [
+          "hectareas",
+          "hectáreas",
+          "superficie",
+          "superficie_has",
+          "sowed_area",
+        ]);
+        const currentCrop = getValueByAliases(row, [
+          "cultivo_actual_id",
+          "current_crop_id",
+        ]);
+        const previousCrop = getValueByAliases(row, [
+          "cultivo_anterior_id",
+          "previous_crop_id",
+        ]);
+        const sowingDate = parseImportDate(
+          getValueByAliases(row, ["fecha_siembra", "sowing_date"]),
+        );
+        const harvestDate = parseImportDate(
+          getValueByAliases(row, ["fecha_cosecha", "harvest_date"]),
+        );
+
+        const payload: LotsDataUpdate = {
+          id: target.id,
+          field_id: target.field_id,
+          project_name: target.project_name,
+          field_name: target.field_name,
+          lot_name: rawName || target.lot_name,
+          previous_crop_id: previousCrop ? Number(previousCrop) : target.previous_crop_id,
+          current_crop_id: currentCrop ? Number(currentCrop) : target.current_crop_id,
+          variety: getValueByAliases(row, ["variedad", "variety"]) || target.variety || "",
+          sowed_area: sowedArea || target.sowed_area || target.hectares || "0",
+          dates:
+            sowingDate || harvestDate
+              ? [
+                  {
+                    sowing_date: sowingDate || target.dates?.[0]?.sowing_date || "",
+                    harvest_date: harvestDate || target.dates?.[0]?.harvest_date || null,
+                    sequence: 1,
+                  },
+                ]
+              : target.dates || [],
+          season: getValueByAliases(row, ["periodo", "campaña", "season"]) || target.season || "",
+          updated_at: target.updated_at ?? new Date().toISOString(),
+        };
+
+        if (!payload.sowed_area || Number(payload.sowed_area) <= 0) {
+          errors.push(`Fila ${rowNumber}: falta superficie/hectáreas.`);
+          continue;
+        }
+
+        await apiClient.put(`/lots/${target.id}`, payload);
+        imported += 1;
+      }
+
+      if (imported > 0) {
+        setSuccessMessage(
+          errors.length
+            ? `Se importaron ${imported} lotes. Se omitieron ${errors.length} filas.`
+            : `Se importaron ${imported} lotes correctamente.`,
+        );
+        reloadFromFirstPage();
+      }
+
+      if (errors.length > 0) {
+        setErrorMessage(errors.slice(0, 5).join(" "));
+      }
+    } catch {
+      setErrorMessage("No se pudo importar lotes. Use CSV válido.");
+    }
+  };
+
   return (
     <div>
       <FilterBar
         filters={filters}
         actions={[
           {
-            label: "Exportar Lotes",
-            icon: <ExternalLink className="h-4 w-4" />,
+            label: "Importar",
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId,
+            accept: ".csv,text/csv",
+            onFileChange: handleImport,
+          },
+          {
+            label: "Exportar",
+            icon: <Upload className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
             onClick: handleExport,
           },
           {
-            label: "+ Nuevo Lote",
+            label: "Archivados",
+            icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled:
-              !projectId ||
-              !selectedCampaignId ||
-              !selectedCustomer ||
-              !selectedField,
+            href: "/admin/database/lots/archived",
+          },
+          {
+            label: "Nuevo",
+            icon: <Plus className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
             onClick: handleCreateLot,
           },
         ]}
       />
 
       <WarningBanner message={message || null} />
+      <SuccessBanner message={successMessage || null} variant="outlined" />
 
       <ErrorBanner message={error} variant="outlined" prefix="Error:" />
 

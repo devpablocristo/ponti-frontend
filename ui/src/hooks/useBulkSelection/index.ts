@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 /**
  * Hook genérico para manejar selección múltiple en tablas.
@@ -8,6 +8,17 @@ import { useCallback, useMemo, useState } from "react";
  */
 export function useBulkSelection<T extends { id: number }>(items: T[]) {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    const visibleIds = new Set(items.map((item) => item.id));
+    setSelectedIds((prev) => {
+      const next = new Set<number>();
+      prev.forEach((id) => {
+        if (visibleIds.has(id)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [items]);
 
   const isSelected = useCallback(
     (id: number) => selectedIds.has(id),
@@ -59,7 +70,7 @@ export function useBulkSelection<T extends { id: number }>(items: T[]) {
     clear,
     allSelected,
     someSelected,
-    selectedCount: selectedIds.size,
+    selectedCount: selectedItems.length,
   };
 }
 

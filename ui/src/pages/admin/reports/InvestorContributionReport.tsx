@@ -3,7 +3,7 @@ import { SquareArrowOutUpRight } from "lucide-react";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import InputField from "../../../components/Input/InputField.tsx";
 import useReporting from "../../../hooks/useReporting";

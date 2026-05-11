@@ -1,4 +1,4 @@
-import { DashboardData } from "../../../hooks/useDashboard/types";
+import { CropItem, DashboardData } from "../../../hooks/useDashboard/types";
 import { cropColors } from "../colors.ts";
 
 interface CostByCropTableProps {
@@ -20,7 +20,18 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
   }
 
   const { crop_incidence } = dashboard;
-  const crops = crop_incidence.items.sort((a, b) => a.crop_id - b.crop_id);
+  const crops = aggregateCrops(crop_incidence.items).sort(
+    (a, b) => a.crop_id - b.crop_id,
+  );
+  const totalHectares = crops.reduce(
+    (sum, crop) => sum + Number(crop.hectares || 0),
+    0,
+  );
+  const totalCost = crops.reduce(
+    (sum, crop) =>
+      sum + Number(crop.cost_per_ha_usd || 0) * Number(crop.hectares || 0),
+    0,
+  );
 
   const getCropBackgroundClass = (cropName: string) => {
     if (!cropName || !cropColors[cropName]) return "bg-gray-50";
@@ -30,7 +41,7 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
 
   const totalRotationPct = Math.round(
     (crops.reduce((sum, crop) => sum + Number(crop.hectares || 0), 0) /
-      Number(crop_incidence.total.hectares || 1)) *
+      Number(totalHectares || 1)) *
       100
   );
 
@@ -67,12 +78,46 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
 
       <div className="grid grid-cols-4 text-sm font-semibold text-slate-700 mt-1 rounded">
         <div className="h-[45px]"></div>
-        <div className="bg-[#E5E7EB] h-[45px] text-center content-center rounded-l-[5px]">{crop_incidence.total.hectares} Has</div>
+        <div className="bg-[#E5E7EB] h-[45px] text-center content-center rounded-l-[5px]">{Math.round(totalHectares)} Has</div>
         <div className="bg-[#E5E7EB] h-[45px] text-center content-center">
           {totalRotationPct}%
         </div>
-        <div className="bg-[#E5E7EB] h-[45px] text-center content-center rounded-r-[5px]">{crop_incidence.total.avg_cost_per_ha_usd} u$/Ha</div>
+        <div className="bg-[#E5E7EB] h-[45px] text-center content-center rounded-r-[5px]">{Math.round(totalHectares > 0 ? totalCost / totalHectares : 0)} u$/Ha</div>
       </div>
     </div>
   );
+}
+
+function aggregateCrops(items: CropItem[]): CropItem[] {
+  const byCrop = new Map<number, { item: CropItem; totalCost: number }>();
+  let totalHectares = 0;
+
+  for (const item of items) {
+    const hectares = Number(item.hectares || 0);
+    const costPerHa = Number(item.cost_per_ha_usd || 0);
+    totalHectares += hectares;
+    const current = byCrop.get(item.crop_id);
+    if (!current) {
+      byCrop.set(item.crop_id, {
+        item: { ...item, hectares: String(hectares) },
+        totalCost: costPerHa * hectares,
+      });
+      continue;
+    }
+    const currentHectares = Number(current.item.hectares || 0) + hectares;
+    current.item.hectares = String(currentHectares);
+    current.totalCost += costPerHa * hectares;
+  }
+
+  return Array.from(byCrop.values()).map(({ item, totalCost }) => {
+    const hectares = Number(item.hectares || 0);
+    return {
+      ...item,
+      hectares: String(Math.round(hectares)),
+      incidence_pct: String(
+        Math.round(totalHectares > 0 ? (hectares / totalHectares) * 100 : 0),
+      ),
+      cost_per_ha_usd: String(Math.round(hectares > 0 ? totalCost / hectares : 0)),
+    };
+  });
 }

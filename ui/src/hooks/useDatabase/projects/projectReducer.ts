@@ -52,13 +52,13 @@ const projectReducer = (state: ProjectState, action: ProjectAction) => {
     case actions.SET_PROJECTS:
       return {
         ...state,
-        projects: action.payload,
+        projects: Array.isArray(action.payload) ? action.payload : [],
       };
 
     case actions.SET_PROJECTS_DROPDOWN:
       return {
         ...state,
-        projectsDropdown: action.payload,
+        projectsDropdown: Array.isArray(action.payload) ? action.payload : [],
       };
 
     case actions.SET_PAGINATION:
