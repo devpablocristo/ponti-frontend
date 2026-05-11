@@ -13,7 +13,6 @@ import { Stock } from "./pages/admin/stock/Stock";
 import Customers from "./pages/admin/customers/Customers";
 import CustomersSocietiesV2 from "./pages/admin/customers-v2/CustomersSocietiesV2";
 import Access from "./pages/admin/access/Access";
-import DatabaseCustomers from "./pages/admin/database/customers/Customers";
 import CustomersList from "./pages/admin/database/customers/CustomersList";
 import CustomerEditor from "./pages/admin/database/customers/CustomerEditor";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
@@ -133,7 +132,7 @@ export default [
       },
       {
         path: "database/customers",
-        element: <DatabaseCustomers />,
+        element: <Navigate to="/admin/database/customers/editor" replace />,
       },
       {
         path: "database/customers/list",
@@ -153,7 +152,7 @@ export default [
       },
       {
         path: "database/customers/:id",
-        element: <DatabaseCustomers />,
+        element: <Navigate to="editor" replace />,
       },
       {
         path: "database/projects/archived",

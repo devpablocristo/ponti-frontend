@@ -9,6 +9,7 @@ import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFil
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
@@ -18,6 +19,7 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { toastError, toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import { CUSTOMER_ENTITY as ENTITY } from "../../entities";
+import { formatNumberAr } from "../../utils";
 
 type CustomerProjectSummary = {
   projects: number;
@@ -43,7 +45,16 @@ type RawProject = {
   campaign?: { id?: number | null; name?: string | null } | string | null;
   campaign_id?: number | null;
   campaign_name?: string | null;
-  fields?: Array<{ id?: number; name?: string } | string> | null;
+  fields?:
+    | Array<
+        | {
+            id?: number;
+            name?: string;
+            lots?: Array<{ hectares?: number | string | null }> | null;
+          }
+        | string
+      >
+    | null;
 };
 
 const emptySummary: CustomerProjectSummary = {
@@ -76,10 +87,58 @@ function campaignName(project: RawProject) {
   return String(key || "");
 }
 
-function fieldNames(project: RawProject) {
-  return (Array.isArray(project.fields) ? project.fields : [])
-    .map((field) => (typeof field === "string" ? field : field.name))
-    .filter(Boolean) as string[];
+function projectMatchesFilters(
+  project: RawProject,
+  selectedProject: { name?: string } | undefined,
+  selectedCampaign: { name?: string } | undefined,
+  selectedField: { id?: number; name?: string } | undefined,
+) {
+  const projectNeedle = normalizeFilter(selectedProject?.name ?? "");
+  const campaignNeedle = normalizeFilter(selectedCampaign?.name ?? "");
+  const fieldNeedle = normalizeFilter(selectedField?.name ?? "");
+
+  const matchesProject =
+    !selectedProject ||
+    normalizeFilter(project.name ?? "").includes(projectNeedle);
+  const matchesCampaign =
+    !selectedCampaign ||
+    normalizeFilter(campaignName(project)).includes(campaignNeedle);
+  const matchesField =
+    !selectedField ||
+    (Array.isArray(project.fields) ? project.fields : []).some((field) => {
+      if (typeof field === "string") return normalizeFilter(field).includes(fieldNeedle);
+      return (
+        field.id === selectedField.id ||
+        normalizeFilter(field.name ?? "").includes(fieldNeedle)
+      );
+    });
+
+  return matchesProject && matchesCampaign && matchesField;
+}
+
+function sumProjectHectares(
+  project: RawProject,
+  selectedField: { id?: number; name?: string } | undefined,
+) {
+  return (Array.isArray(project.fields) ? project.fields : []).reduce((total, field) => {
+    if (typeof field === "string") return total;
+    if (
+      selectedField &&
+      field.id !== selectedField.id &&
+      !normalizeFilter(field.name ?? "").includes(normalizeFilter(selectedField.name ?? ""))
+    ) {
+      return total;
+    }
+
+    const lots = Array.isArray(field.lots) ? field.lots : [];
+    return (
+      total +
+      lots.reduce((subtotal, lot) => {
+        const hectares = Number(String(lot.hectares ?? 0).replace(",", "."));
+        return subtotal + (Number.isFinite(hectares) ? hectares : 0);
+      }, 0)
+    );
+  }, 0);
 }
 
 function summarizeProjects(projects: RawProject[]): CustomerProjectSummary {
@@ -150,9 +209,6 @@ export default function CustomersList() {
 
   const visibleCustomers = useMemo(() => {
     const customerNeedle = normalizeFilter(selectedCustomer?.name ?? "");
-    const projectNeedle = normalizeFilter(selectedProject?.name ?? "");
-    const campaignNeedle = normalizeFilter(selectedCampaign?.name ?? "");
-    const fieldNeedle = normalizeFilter(selectedField?.name ?? "");
 
     return customers.filter((customer) => {
       if (selectedCustomer) {
@@ -168,16 +224,7 @@ export default function CustomersList() {
       if (!hasRelationFilter) return true;
 
       return projects.some((project) => {
-        const matchesProject =
-          !selectedProject ||
-          normalizeFilter(project.name ?? "").includes(projectNeedle);
-        const matchesCampaign =
-          !selectedCampaign ||
-          normalizeFilter(campaignName(project)).includes(campaignNeedle);
-        const matchesField =
-          !selectedField ||
-          fieldNames(project).some((field) => normalizeFilter(field).includes(fieldNeedle));
-        return matchesProject && matchesCampaign && matchesField;
+        return projectMatchesFilters(project, selectedProject, selectedCampaign, selectedField);
       });
     });
   }, [
@@ -187,6 +234,29 @@ export default function CustomersList() {
     selectedCustomer,
     selectedField,
     selectedProject,
+  ]);
+
+  const totalVisibleHectares = useMemo(() => {
+    return visibleCustomers.reduce((total, customer) => {
+      const projects = projectsByCustomer[customer.id] ?? [];
+      const filteredProjects = projects.filter((project) =>
+        projectMatchesFilters(project, selectedProject, selectedCampaign, selectedField),
+      );
+
+      return (
+        total +
+        filteredProjects.reduce(
+          (subtotal, project) => subtotal + sumProjectHectares(project, selectedField),
+          0,
+        )
+      );
+    }, 0);
+  }, [
+    projectsByCustomer,
+    selectedCampaign,
+    selectedField,
+    selectedProject,
+    visibleCustomers,
   ]);
 
   const exportVisibleCustomers = useCallback(() => {
@@ -401,6 +471,13 @@ export default function CustomersList() {
           />
         ) : (
           <>
+            <div className="my-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <IndicatorCard
+                title="Superficie total de hectáreas"
+                value={`${formatNumberAr(totalVisibleHectares)} Has`}
+                color="amber"
+              />
+            </div>
             <BulkSelectionPanel
               selectedCount={bulk.selectedCount}
               totalCount={visibleCustomers.length}

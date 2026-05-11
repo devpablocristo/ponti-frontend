@@ -83,7 +83,6 @@ const menuDatabase: SubmenuGroup = {
   ),
   children: [
     { kind: "section", name: "Clientes y Sociedades" },
-    { name: "Crear", route: "/admin/database/customers" },
     { name: "Editar", route: "/admin/database/customers/editor" },
     { name: "Archivados", route: "/admin/database/customers/archived" },
     { kind: "section", name: "Proyectos" },

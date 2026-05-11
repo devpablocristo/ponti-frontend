@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 import { apiClient } from "@/api/client";
@@ -80,6 +80,7 @@ function normalizeProject(project: Project): Project {
 }
 
 export default function CustomerEditor() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const initialCustomerId = Number(id) || NEW_VALUE;
   const { projectId: contextProjectId } = useSelection();
@@ -527,31 +528,23 @@ export default function CustomerEditor() {
     }
   };
 
-  return (
-    <main className="min-h-full bg-[#F3F6FA] px-5 py-7 lg:px-7">
-      <LoadingOverlay show={loading || saving} />
-      <section className="mx-auto max-w-[1320px] space-y-6">
-        <section className="flex justify-end">
-            <Button
-              variant="primary"
-              iconLeft={<Save className="h-4 w-4" />}
-              disabled={!projectDraft || saving}
-              onClick={handleSave}
-            >
-              Guardar
-            </Button>
-        </section>
+  const handleCancel = () => {
+    navigate("/admin/database/customers/list");
+  };
 
+  return (
+    <div className="space-y-2">
+      <LoadingOverlay show={loading || saving} />
         {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
         {success && <SuccessBanner message={success} onDismiss={() => setSuccess(null)} />}
 
         {projectDraft && (
-          <div>
-            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="mb-4 text-xl font-medium tracking-normal text-slate-950">
+          <div className="space-y-2">
+            <section className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+              <h2 className="mb-2 text-xl font-medium tracking-normal text-slate-950">
                 Proyecto
               </h2>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-5">
                 <InputField
                   label="Cliente / Sociedad"
                   name="project_customer"
@@ -601,7 +594,7 @@ export default function CustomerEditor() {
               </div>
             </section>
 
-            <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <section className="grid grid-cols-1 gap-2 xl:grid-cols-3">
               <EditableList
                 title="Responsables"
                 emptyLabel="Sin responsables"
@@ -677,23 +670,23 @@ export default function CustomerEditor() {
               />
             </section>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex items-center justify-between gap-2">
+            <section className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+              <div className="mb-2 flex items-center justify-between gap-2">
                 <h2 className="text-xl font-medium tracking-normal text-slate-950">
                   Campos
                 </h2>
                 <AddButton label="Agregar campo" onClick={addField} />
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {projectDraft.fields.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
+                  <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-sm text-slate-500">
                     Sin campos cargados.
                   </p>
                 ) : (
                   projectDraft.fields.map((field, fieldIndex) => (
-                    <div key={field.id || fieldIndex} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_180px_1.2fr]">
+                    <div key={field.id || fieldIndex} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                      <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1fr_180px_1.2fr]">
                         <InputField
                           label="Campo"
                           name={`field_${fieldIndex}`}
@@ -758,8 +751,8 @@ export default function CustomerEditor() {
                         </div>
                       </div>
 
-                      <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-                        <div className="mb-3 flex items-center justify-between gap-2">
+                      <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5">
+                        <div className="mb-2 flex items-center justify-between gap-2">
                           <h3 className="text-sm font-semibold text-slate-950">Lotes</h3>
                           <AddButton label="Agregar lote" onClick={() => addLotAt(fieldIndex)} />
                         </div>
@@ -815,10 +808,26 @@ export default function CustomerEditor() {
                 )}
               </div>
             </section>
+            <section className="flex justify-end gap-2 pb-2">
+              <Button
+                variant="light"
+                disabled={saving}
+                onClick={handleCancel}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                iconLeft={<Save className="h-4 w-4" />}
+                disabled={!projectDraft || saving}
+                onClick={handleSave}
+              >
+                Guardar
+              </Button>
+            </section>
           </div>
         )}
-      </section>
-    </main>
+    </div>
   );
 }
 
@@ -838,16 +847,16 @@ function EditableList<T>({
   renderItem,
 }: EditableListProps<T>) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 flex items-center justify-between gap-2">
+    <div className="rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <h3 className="text-base font-medium text-slate-950">
           {title}
         </h3>
         <AddButton label={`Agregar ${title}`} onClick={onAdd} />
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2">
         {items.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-sm text-slate-500">
+          <p className="rounded-lg border border-dashed border-slate-300 bg-white p-2.5 text-sm text-slate-500">
             {emptyLabel}
           </p>
         ) : (
