@@ -13,6 +13,12 @@ export const CUSTOMER_ENTITY: EntityCopy = {
   plural: "clientes",
 };
 
+export const ACTOR_ENTITY: EntityCopy = {
+  article: "el",
+  singular: "actor",
+  plural: "actores",
+};
+
 export const PROJECT_ENTITY: EntityCopy = {
   article: "el",
   singular: "proyecto",

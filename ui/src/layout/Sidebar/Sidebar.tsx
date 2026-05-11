@@ -82,6 +82,9 @@ const menuDatabase: SubmenuGroup = {
     </svg>
   ),
   children: [
+    { kind: "section", name: "Actores" },
+    { name: "Editar", route: "/admin/database/actors" },
+    { name: "Archivados", route: "/admin/database/actors/archived" },
     { kind: "section", name: "Clientes y Sociedades" },
     { name: "Editar", route: "/admin/database/customers/editor" },
     { name: "Archivados", route: "/admin/database/customers/archived" },

@@ -46,6 +46,8 @@ import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionRe
 import AIAssistant from "./pages/admin/ai-assistant/AIAssistant";
 import Notifications from "./pages/admin/notifications/Notifications";
 import ArchivedSupplyMovements from "./pages/admin/products/ArchivedSupplyMovements";
+import ActorsList from "./pages/admin/database/actors/ActorsList";
+import ArchivedActors from "./pages/admin/database/actors/ArchivedActors";
 
 export default [
   {
@@ -133,6 +135,14 @@ export default [
       {
         path: "database/customers",
         element: <Navigate to="/admin/database/customers/editor" replace />,
+      },
+      {
+        path: "database/actors",
+        element: <ActorsList />,
+      },
+      {
+        path: "database/actors/archived",
+        element: <ArchivedActors />,
       },
       {
         path: "database/customers/list",

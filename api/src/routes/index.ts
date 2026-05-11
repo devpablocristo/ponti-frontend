@@ -28,6 +28,7 @@ import dataIntegrity from "./data-integrity";
 import ai from "./ai";
 import admin from "./admin";
 import insights from "./insights";
+import actors from "./actors";
 
 const router: Router = Router();
 export const cache = new NodeCache({ stdTTL: CACHE_TTL_DEFAULT, checkperiod: CACHE_TTL_DEFAULT });
@@ -78,6 +79,7 @@ router.use("/data-integrity", dataIntegrity);
 router.use("/ai", ai);
 router.use("/admin", admin);
 router.use("/insights", insights);
+router.use("/actors", actors);
 
 router.use("/form-options", options);
 
