@@ -1,40 +1,32 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, LoaderCircle, Pencil, Check, AlertCircle, Download, Plus, Upload } from "lucide-react";
-import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
-import { WarningBanner } from "../../../components/feedback/WarningBanner";
-import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
-import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
-import { useBulkSelection } from "../../../hooks/useBulkSelection";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
 import { Summary } from "@/api/types";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import { Column } from "../types";
-import { SUPPLY_ENTITY } from "../entities";
 import SelectField from "../../../components/Input/SelectField";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
-import ImportSupplyMovements from "../products/ImportSupplyMovements";
 
-const MISSING_INVESTOR_LABEL = "+1 INV.";
-
-type SelectableStockItem = GetStockItems & { id: number };
+const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
+const MISSING_ENTRY_LABEL = "REV ING.";
 
 function getStockFilterValue(item: GetStockItems, key: keyof GetStockItems) {
   const value = item[key];
 
   if (key === "investor_name" && String(value ?? "").trim() === "") {
-    return MISSING_INVESTOR_LABEL;
+    return item.has_multiple_investors
+      ? MULTIPLE_INVESTORS_LABEL
+      : MISSING_ENTRY_LABEL;
   }
 
   return String(value ?? "");
@@ -253,7 +245,7 @@ function ItemsIndicators({
   disabledCloseStock: boolean;
 }) {
   return (
-    <div>
+    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <IndicatorCard
           title="Total invertido Kg"
@@ -292,10 +284,6 @@ export function Stock() {
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
-  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
-  const [importDrawerOpen, setImportDrawerOpen] = useState(false);
   const [stockValidationModal, setStockValidationModal] = useState<{
     title: string;
     message: string;
@@ -344,29 +332,6 @@ export function Stock() {
     refreshStock();
   };
 
-  const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) return;
-
-    if (!projectId) {
-      setActionErrorMessage("Seleccione un proyecto antes de importar stock.");
-      return;
-    }
-
-    setActionErrorMessage(null);
-    setSuccessMessage(null);
-    setPendingImportFile(file);
-    setImportDrawerOpen(true);
-  };
-
-  const handleStockImported = (message: string) => {
-    setSuccessMessage(message);
-    setActionErrorMessage(null);
-    setPendingImportFile(null);
-    setImportDrawerOpen(false);
-    handleStockCreated();
-  };
-
   const handleViewConsumingOrders = useCallback(
     (item: GetStockItems) => {
       if (!projectId || !item.supply_id) return;
@@ -405,45 +370,6 @@ export function Stock() {
       });
     });
   }, [stock, columnsFilters]);
-
-  const selectableStock = useMemo<SelectableStockItem[]>(
-    () => filteredStock.filter((item): item is SelectableStockItem => Number(item.id) > 0),
-    [filteredStock],
-  );
-
-  const bulk = useBulkSelection<SelectableStockItem>(selectableStock);
-
-  const bulkActions = useMemo(
-    () => {
-      const actions = [];
-      if (bulk.selectedCount === 1 && bulk.selectedItems[0]) {
-        actions.push({
-          label: "Editar",
-          icon: Pencil,
-          onClick: () => {
-            setStockValidationModal({
-              title: "Editar stock",
-              message:
-                "Para editar este stock usá la columna Stock de campo de la fila seleccionada.",
-            });
-          },
-        });
-      }
-      actions.push({
-        label: `Archivar ${bulk.selectedCount}`,
-        icon: Archive,
-        onClick: () => {
-          setStockValidationModal({
-            title: "Stock calculado",
-            message:
-              "El saldo de stock no se archiva desde esta tabla. Archivá el movimiento de insumo o el cierre que lo generó.",
-          });
-        },
-      });
-      return actions;
-    },
-    [bulk.selectedCount, bulk.selectedItems],
-  );
 
   const derivedSummary: Summary = useMemo(() => {
     let totalKg = 0;
@@ -543,31 +469,33 @@ export function Stock() {
         ),
       },
       {
-  key: "investor_name",
-  header: "Inversor",
-  filterable: true,
-  padding: "xs",
-  headerPadding: "xs",
-  filterType: "select",
-  filterOptions: getFilterOptionsForColumn(
-    "investor_name",
-    stock,
-    columnsFilters
-  ),
-  render: (value) => {
-    const investorName = String(value ?? "").trim();
+        key: "investor_name",
+        header: "Inversor",
+        filterable: true,
+        padding: "xs",
+        headerPadding: "xs",
+        filterType: "select",
+        filterOptions: getFilterOptionsForColumn(
+          "investor_name",
+          stock,
+          columnsFilters
+        ),
+        render: (value, item) => {
+          const investorName = String(value ?? "").trim();
 
-    if (!investorName) {
-      return (
-        <span className="font-semibold text-red-600">
-          {MISSING_INVESTOR_LABEL}
-        </span>
-      );
-    }
+          if (!investorName) {
+            return (
+              <span className="font-semibold text-red-600">
+                {item.has_multiple_investors
+                  ? MULTIPLE_INVESTORS_LABEL
+                  : MISSING_ENTRY_LABEL}
+              </span>
+            );
+          }
 
-    return <span>{investorName}</span>;
-  },
-},
+          return <span>{investorName}</span>;
+        },
+      },
       {
         key: "entry_stock",
         padding: "xs",
@@ -745,24 +673,6 @@ export function Stock() {
     [projectId, stock, columnsFilters, refreshStock, handleViewConsumingOrders]
   );
 
-  const selectColumn = useMemo<Column<SelectableStockItem>>(
-    () =>
-      makeSelectColumn<SelectableStockItem>(
-        bulk,
-        (item) => item.supply_name,
-        SUPPLY_ENTITY,
-      ),
-    [bulk],
-  );
-
-  const columnsWithSelection = useMemo<Column<SelectableStockItem>[]>(
-    () => [
-      selectColumn,
-      ...(columns as Column<SelectableStockItem>[]),
-    ],
-    [columns, selectColumn],
-  );
-
   useEffect(() => {
     if (!projectId || !selectedCustomer || !selectedCampaignId) {
       return;
@@ -841,10 +751,7 @@ export function Stock() {
   };
 
   const handleExport = async () => {
-    if (!projectId) {
-      setExportErrorMessage("Seleccione un proyecto antes de exportar stock.");
-      return;
-    }
+    if (!projectId) return;
 
     try {
       setExportErrorMessage(null);
@@ -879,50 +786,27 @@ export function Stock() {
         filters={filters}
         actions={[
           {
-            label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            label: "Exportar Stock",
+            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            ,
             variant: "primary",
             isPrimary: true,
-            accept:
-              ".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel",
-            onFileChange: handleImportFileChange,
-          },
-          {
-            label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
+            disabled: !projectId,
             onClick: () => handleExport(),
           },
           {
-            label: "Archivados",
-            icon: <Archive className="h-4 w-4" />,
+            label: "+ Ingreso de Stock de Campo",
             variant: "primary",
             isPrimary: true,
-            href: "/admin/products/archived",
-          },
-          {
-            label: "Nuevo",
-            icon: <Plus className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: () => {
-              if (!projectId) {
-                setActionErrorMessage("Seleccione un proyecto antes de crear un movimiento de stock.");
-                return;
-              }
-              if (disabledCloseStock) {
-                setActionErrorMessage("No se puede crear un movimiento sobre un cierre de stock.");
-                return;
-              }
-              setDrawerOpen(true);
-            },
+            disabled: !projectId || disabledCloseStock,
+            onClick: () => setDrawerOpen(true),
           },
         ]}
       />
-      <SuccessBanner message={successMessage} variant="outlined" />
       {!error && projectId && selectedCustomer && selectedCampaignId && (
-        <div className="my-3">
+        <div className="my-4">
           <ItemsIndicators
             summary={derivedSummary}
             selectedDate={selectedDate}
@@ -933,14 +817,19 @@ export function Stock() {
           />
         </div>
       )}
-      <div className="mt-3 relative">
-        <LoadingOverlay show={processing} />
+      <div className="mt-4 relative">
+        {processing && (
+          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
+            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
+          </div>
+        )}
 
-        <ErrorBanner
-          message={actionErrorMessage || exportErrorMessage || error}
-          variant="outlined"
-          prefix="Error:"
-        />
+        {(error || exportErrorMessage) && (
+          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+            <div><span className="font-semibold">Error:</span> {exportErrorMessage || error}</div>
+          </div>
+        )}
         {stockPeriods && stockPeriods.length > 0 && (
           <div className="mb-4">
             <SelectField
@@ -954,7 +843,12 @@ export function Stock() {
             />
           </div>
         )}
-        <WarningBanner message={errorPeriods} className="mb-3" />
+        {errorPeriods && (
+          <div className="flex items-center gap-2 p-3 mb-3 text-sm text-amber-800 rounded-xl bg-amber-50 border border-amber-200">
+            <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
+            <span>{errorPeriods}</span>
+          </div>
+        )}
         {projectId && customers && (
           <CreateStockItem
             drawerOpen={drawerOpen}
@@ -963,39 +857,16 @@ export function Stock() {
             onStockCreated={handleStockCreated}
           />
         )}
-        {projectId && importDrawerOpen && (
-          <ImportSupplyMovements
-            open={importDrawerOpen}
-            file={pendingImportFile}
-            projectId={projectId}
-            onClose={() => {
-              setImportDrawerOpen(false);
-              setPendingImportFile(null);
-            }}
-            onImported={handleStockImported}
-          />
-        )}
         {projectId && selectedCustomer && selectedCampaignId && (
-          <>
-            <BulkSelectionPanel
-              selectedCount={bulk.selectedCount}
-              totalCount={selectableStock.length}
-              allSelected={bulk.allSelected}
-              onToggleAll={bulk.toggleAll}
-              onClear={bulk.clear}
-              actions={bulkActions}
-              entity={SUPPLY_ENTITY}
-            />
-            <DataTable
-              data={selectableStock}
-              columns={columnsWithSelection}
-              message="No hay stock disponible"
-              filters={columnsFilters}
-              onFilterChange={handleFilterChange}
-              enableFilters={true}
-              pagination={pagination.buildPagination(selectableStock.length)}
-            />
-          </>
+          <DataTable
+            data={filteredStock}
+            columns={columns}
+            message="No hay stock disponible"
+            filters={columnsFilters}
+            onFilterChange={handleFilterChange}
+            enableFilters={true}
+            pagination={pagination.buildPagination(filteredStock.length)}
+          />
         )}
         <BaseModal
   isOpen={stockValidationModal !== null}
