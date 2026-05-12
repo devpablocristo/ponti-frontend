@@ -5,12 +5,16 @@ import { LotIndicatorValues } from "../lotTableUtils";
 
 type LotsIndicatorsProps = {
   kpis: LotIndicatorValues;
+  fieldsAmount: number;
+  lotsAmount: number;
   processing: boolean;
   error: string | null;
 };
 
 export function LotsIndicators({
   kpis,
+  fieldsAmount,
+  lotsAmount,
   processing,
   error,
 }: LotsIndicatorsProps) {
@@ -27,7 +31,7 @@ export function LotsIndicators({
           {error}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
           <IndicatorCard
             title="Sup. sembrada"
             value={`${formatNumberAr(kpis.seeded_area)} Has`}
@@ -52,6 +56,16 @@ export function LotsIndicators({
             title="Superficie total"
             value={`${formatNumberAr(kpis.superficie_total)} Has`}
             color="amber"
+          />
+          <IndicatorCard
+            title="Cantidad Total de Campos"
+            value={formatNumberAr(fieldsAmount)}
+            color="blue"
+          />
+          <IndicatorCard
+            title="Cantidad Total de Lotes"
+            value={formatNumberAr(lotsAmount)}
+            color="blue"
           />
         </div>
       )}

@@ -7,8 +7,6 @@ import { LotsData } from "../../../../hooks/useLots/types";
 import { Column } from "../../types";
 
 type LotsHeaderProps = {
-  fieldsAmount: number;
-  lotsAmount: number;
   selectedColumns: Array<keyof LotsData>;
   setSelectedColumns: (columns: Array<keyof LotsData>) => void;
   setVisibleColumns: (columns: Array<keyof LotsData>) => void;
@@ -22,8 +20,6 @@ const tabs = ["Siembra", "Cosecha", "Comercialización"] as const;
 type TabName = (typeof tabs)[number];
 
 export function LotsHeader({
-  fieldsAmount,
-  lotsAmount,
   selectedColumns,
   setSelectedColumns,
   setVisibleColumns,
@@ -50,11 +46,6 @@ export function LotsHeader({
 
   return (
     <div className="flex items-center justify-between rounded-t-xl border-b border-gray-100 bg-white p-4">
-      <div className="text-sm text-gray-900">
-        <span className="font-semibold">Campos:</span> {fieldsAmount}{" "}
-        <span className="font-semibold">Lotes:</span> {lotsAmount}
-      </div>
-
       <div className="inline-flex rounded-md shadow-xs" role="group">
         {tabs.map((tab, index) => (
           <button

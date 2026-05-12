@@ -72,7 +72,6 @@ function Lots() {
     projectId,
     selectedCampaignId,
     selectedField,
-    fields,
     filters,
     seasons,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
@@ -214,6 +213,16 @@ function Lots() {
     () => (hasColumnFilters ? calculatedKpis : mapApiLotIndicators(kpis)),
     [calculatedKpis, hasColumnFilters, kpis]
   );
+  const fieldsAmount = useMemo(
+    () =>
+      new Set(
+        filteredLots
+          .map((item) => item.field_id || item.field_name)
+          .filter(Boolean)
+      ).size,
+    [filteredLots]
+  );
+  const lotsAmount = filteredLots.length;
 
   const openEditDrawer = useCallback((item: LotsData) => {
     setLot({
@@ -485,6 +494,8 @@ function Lots() {
         <div className="my-3">
           <LotsIndicators
             kpis={indicators}
+            fieldsAmount={fieldsAmount}
+            lotsAmount={lotsAmount}
             processing={!hasColumnFilters && processingKpis}
             error={!hasColumnFilters ? errorKpis : null}
           />
@@ -530,8 +541,6 @@ function Lots() {
             enableFilters
             headerComponent={
               <LotsHeader
-                fieldsAmount={fields.length}
-                lotsAmount={lots.length}
                 selectedColumns={selectedColumns}
                 setSelectedColumns={setSelectedColumns}
                 setVisibleColumns={setVisibleColumns}
