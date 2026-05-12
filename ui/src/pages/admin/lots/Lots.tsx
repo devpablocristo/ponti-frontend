@@ -52,6 +52,7 @@ function Lots() {
   const {
     getLots,
     getLotsKpis,
+    clearLots,
     lots,
     crops,
     getCrops,
@@ -93,9 +94,8 @@ function Lots() {
       return;
     }
 
-    getLots("");
-    getLotsKpis("");
-  }, [getLots, getLotsKpis, projectId, selectedFieldId]);
+    clearLots();
+  }, [clearLots, getLots, getLotsKpis, projectId, selectedFieldId]);
 
   const reloadFromFirstPage = useCallback(() => {
     resetPage();
