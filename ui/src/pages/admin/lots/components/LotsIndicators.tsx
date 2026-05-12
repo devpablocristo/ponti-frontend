@@ -63,7 +63,7 @@ export function LotsIndicators({
             color="blue"
           />
           <IndicatorCard
-            title="Cantidad Total de Lotes"
+            title="Cantidad de Lotes por Campo"
             value={formatNumberAr(lotsAmount)}
             color="blue"
           />
