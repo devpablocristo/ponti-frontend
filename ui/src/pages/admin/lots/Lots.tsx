@@ -72,6 +72,7 @@ function Lots() {
     projectId,
     selectedCampaignId,
     selectedField,
+    fields,
     filters,
     seasons,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
@@ -213,15 +214,7 @@ function Lots() {
     () => (hasColumnFilters ? calculatedKpis : mapApiLotIndicators(kpis)),
     [calculatedKpis, hasColumnFilters, kpis]
   );
-  const fieldsAmount = useMemo(
-    () =>
-      new Set(
-        filteredLots
-          .map((item) => item.field_id || item.field_name)
-          .filter(Boolean)
-      ).size,
-    [filteredLots]
-  );
+  const fieldsAmount = fields.length;
   const lotsAmount = filteredLots.length;
 
   const openEditDrawer = useCallback((item: LotsData) => {
