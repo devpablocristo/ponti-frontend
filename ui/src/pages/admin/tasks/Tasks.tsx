@@ -220,7 +220,7 @@ function TaskHeader({
 
 function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing: boolean }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <div>
       {processing ? (
         <InlineSpinner
           label="Cargando indicadores..."
@@ -972,7 +972,7 @@ export function Tasks() {
           },
         ]}
       />
-      <div className="my-4">
+      <div className="my-3">
         {errorMetrics ? (
           <ErrorBanner message={errorMetrics} variant="outlined" prefix="Error:" />
         ) : (
@@ -980,7 +980,7 @@ export function Tasks() {
         )}
       </div>
 
-      <div className="mt-4 relative">
+      <div className="mt-3 relative">
         <LoadingOverlay show={processing} />
         <BulkSelectionPanel
           selectedCount={bulk.selectedCount}

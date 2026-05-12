@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
@@ -97,86 +97,95 @@ export type ActorMergeInput = {
   confirm?: boolean;
 };
 
+export type DuplicateActor = {
+  id: number;
+  display_name: string;
+  actor_kind: ActorKind;
+  roles: ActorRole[];
+};
+
+export type DuplicateCandidate = {
+  group_type: string;
+  group_key: string;
+  actors: DuplicateActor[];
+};
+
 const buildQuery = (queryString?: string) =>
   queryString && queryString !== "" ? `?${queryString}` : "";
 
 const useActors = () => {
-  const service = useMemo<
-    CrudService<Actor, ActorPayloadInput, ActorPayloadInput>
-  >(
+  const service = useMemo<CrudService<Actor, ActorPayloadInput, ActorPayloadInput>>(
     () => ({
       list: async (query) => {
         const response = await apiClient.get<SuccessResponse<ActorPayload>>(
-          "/actors" + buildQuery(query),
+          "/actors" + buildQuery(query)
         );
         return { data: response.data.data, total: response.data.total };
       },
       listArchived: async (query) => {
         const response = await apiClient.get<SuccessResponse<ActorPayload>>(
-          "/actors/archived" + buildQuery(query),
+          "/actors/archived" + buildQuery(query)
         );
         return { data: response.data.data, total: response.data.total };
       },
       get: async (id) => {
-        const response = await apiClient.get<SuccessResponse<Actor>>(
-          `/actors/${id}`,
-        );
+        const response = await apiClient.get<SuccessResponse<Actor>>(`/actors/${id}`);
         return response.data;
       },
       create: async (input) => {
-        const response = await apiClient.post<SuccessResponse<Actor>>(
-          "/actors",
-          input,
-        );
+        const response = await apiClient.post<SuccessResponse<Actor | number>>("/actors", input);
+        if (typeof response.data === "number") {
+          const created = await apiClient.get<SuccessResponse<Actor>>(`/actors/${response.data}`);
+          return created.data;
+        }
         return response.data;
       },
       update: async (id, input) => {
-        await apiClient.put<SuccessResponse<string>>(`/actors/${id}`, input);
-        return { id, ...input } as Actor;
+        const response = await apiClient.put<SuccessResponse<Actor>>(`/actors/${id}`, input);
+        return response.data;
       },
       archive: async (id) => {
-        await apiClient.post<SuccessResponse<string>>(
-          `/actors/${id}/archive`,
-          {},
-        );
+        await apiClient.post<SuccessResponse<string>>(`/actors/${id}/archive`, {});
       },
       restore: async (id) => {
-        await apiClient.post<SuccessResponse<string>>(
-          `/actors/${id}/restore`,
-          {},
-        );
+        await apiClient.post<SuccessResponse<string>>(`/actors/${id}/restore`, {});
       },
       hardDelete: async (id) => {
         await apiClient.delete<SuccessResponse<string>>(`/actors/${id}/hard`);
       },
     }),
-    [],
+    []
   );
 
-  const crud = useEntityCrud<Actor, ActorPayloadInput, ActorPayloadInput>(
-    service,
-  );
+  const crud = useEntityCrud<Actor, ActorPayloadInput, ActorPayloadInput>(service);
 
-  const addRole = async (id: number, role: ActorRole) => {
+  const addRole = useCallback(async (id: number, role: ActorRole) => {
     await apiClient.post<SuccessResponse<string>>(`/actors/${id}/roles`, {
       role,
     });
-  };
+  }, []);
 
-  const addAlias = async (id: number, alias: string, source?: string | null) => {
+  const addAlias = useCallback(async (id: number, alias: string, source?: string | null) => {
     await apiClient.post<SuccessResponse<number>>(`/actors/${id}/aliases`, {
       alias,
       source,
     });
-  };
+  }, []);
 
-  const mergeActors = async (input: ActorMergeInput) => {
+  const mergeActors = useCallback(async (input: ActorMergeInput) => {
     const response = await apiClient.post<SuccessResponse<ActorMergeImpact>>(
       "/actors/merge",
-      input,
+      input
     );
     return response.data;
-  };
+  }, []);
+
+  const getDuplicateCandidates = useCallback(async () => {
+    const response = await apiClient.get<SuccessResponse<DuplicateCandidate[]>>(
+      "/actors/duplicate-candidates"
+    );
+    return response.data;
+  }, []);
 
   return {
     actors: crud.data,
@@ -195,6 +204,7 @@ const useActors = () => {
     hardDeleteActor: crud.hardDelete,
     addActorRole: addRole,
     addActorAlias: addAlias,
+    getDuplicateCandidates,
     mergeActors,
   };
 };

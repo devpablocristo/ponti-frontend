@@ -44,6 +44,7 @@ export class RequestError extends Error {
 export interface Provider {
   id: number;
   name: string;
+  actor_id?: number;
 }
 
 export interface Summary {

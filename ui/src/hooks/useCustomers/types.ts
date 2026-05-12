@@ -1,6 +1,7 @@
 export type CustomerData = {
   id: number;
   name: string;
+  actor_id?: number;
 };
 
 export type CustomerPayload = {

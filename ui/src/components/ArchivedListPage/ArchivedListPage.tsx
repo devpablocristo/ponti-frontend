@@ -523,7 +523,7 @@ export function ArchivedListPage<T extends { id: number }>({
     <div>
       <FilterBar filters={filters} />
       {description && (
-        <p className="mt-4 mb-4 text-sm text-gray-500">{description}</p>
+        <p className="my-3 text-sm text-gray-500">{description}</p>
       )}
       {bulkEnabled && (
         <BulkSelectionPanel

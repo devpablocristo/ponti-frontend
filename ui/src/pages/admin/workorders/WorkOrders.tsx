@@ -223,7 +223,7 @@ function OrdersIndicators({
   processing: boolean;
 }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <div>
       {processing ? (
         <InlineSpinner
           label="Cargando indicadores..."
@@ -1181,14 +1181,14 @@ export function WorkOrders() {
       <SuccessBanner message={successMessage || null} variant="outlined" />
       <ErrorBanner message={errorMessage} variant="outlined" prefix="Error:" />
       {!processing && !errorMetrics && safeOrders.length > 0 && (
-        <div className="my-4">
+        <div className="my-3">
           <OrdersIndicators
             metrics={displayedMetrics}
             processing={processingMetrics}
           />
         </div>
       )}
-      <div className="mt-4 relative">
+      <div className="mt-3 relative">
         <LoadingOverlay show={isProcessing} />
         {selectedProject && (
           <CreateOrder

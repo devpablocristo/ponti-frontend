@@ -4,7 +4,10 @@ import { useNavigate } from "react-router-dom";
 
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
-import { AppFilterBar as FilterBar, FilterOption } from "../../../../components/filters/AppFilterBar";
+import {
+  AppFilterBar as FilterBar,
+  FilterOption,
+} from "../../../../components/filters/AppFilterBar";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
@@ -29,8 +32,7 @@ const kindLabel = (kind?: string) =>
 const roleLabel = (role: string) =>
   ACTOR_ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role;
 
-const csvEscape = (value: unknown) =>
-  `"${String(value ?? "").replace(/"/g, '""')}"`;
+const csvEscape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
 const exportRows = (filename: string, rows: Record<string, unknown>[]) => {
   const headers = Object.keys(rows[0] ?? {});
@@ -77,6 +79,15 @@ const kindOptions: FilterOption[] = ACTOR_KIND_OPTIONS.map((kind) => ({
   name: kind.label,
 }));
 
+const statusOptions: FilterOption[] = [
+  { id: "active", name: "Activos" },
+  { id: "archived", name: "Archivados" },
+];
+
+type ActorsListProps = {
+  rolePreset?: ActorRole;
+};
+
 function parseCsv(text: string) {
   const lines = text
     .split(/\r?\n/)
@@ -85,9 +96,7 @@ function parseCsv(text: string) {
   if (lines.length === 0) return [];
 
   const delimiter = lines[0].includes(";") ? ";" : ",";
-  const headers = lines[0]
-    .split(delimiter)
-    .map((header) => normalize(header).replace(/\s+/g, "_"));
+  const headers = lines[0].split(delimiter).map((header) => normalize(header).replace(/\s+/g, "_"));
 
   return lines.slice(1).map((line) => {
     const values = line.split(delimiter).map((value) => value.replace(/^"|"$/g, "").trim());
@@ -100,12 +109,7 @@ function parseCsv(text: string) {
 
 function rowToActorInput(row: Record<string, string>): ActorPayloadInput | null {
   const displayName =
-    row.display_name ||
-    row.nombre ||
-    row.nombre_visible ||
-    row.actor ||
-    row.name ||
-    "";
+    row.display_name || row.nombre || row.nombre_visible || row.actor || row.name || "";
   if (!displayName.trim()) return null;
 
   const rawKind = normalize(row.actor_kind || row.tipo || row.kind);
@@ -116,7 +120,7 @@ function rowToActorInput(row: Record<string, string>): ActorPayloadInput | null 
     .split(/[|,;]+/)
     .map((role) => normalize(role))
     .filter((role): role is ActorRole =>
-      ACTOR_ROLE_OPTIONS.some((option) => option.value === role),
+      ACTOR_ROLE_OPTIONS.some((option) => option.value === role)
     );
 
   return {
@@ -177,9 +181,7 @@ const columns: Column<Actor>[] = [
     header: "Aliases",
     wrap: true,
     render: (_value, actor) =>
-      actor.aliases?.length
-        ? actor.aliases.map((alias) => alias.alias).join(", ")
-        : "—",
+      actor.aliases?.length ? actor.aliases.map((alias) => alias.alias).join(", ") : "—",
   },
   {
     key: "primary_email",
@@ -193,57 +195,32 @@ const columns: Column<Actor>[] = [
   },
 ];
 
-export default function ActorsList() {
+export default function ActorsList({ rolePreset }: ActorsListProps) {
   const navigate = useNavigate();
   const [selectedActorId, setSelectedActorId] = useState<number | null>(null);
-  const [selectedRole, setSelectedRole] = useState<ActorRole | "">("");
+  const [selectedRole, setSelectedRole] = useState<ActorRole | "">(rolePreset ?? "");
   const [selectedKind, setSelectedKind] = useState<ActorKind | "">("");
-  const {
-    actors,
-    processing,
-    error,
-    getActors,
-    createActor,
-    updateActor,
-    archiveActor,
-    addActorRole,
-    addActorAlias,
-  } = useActors();
+  const [selectedStatus, setSelectedStatus] = useState<"active" | "archived">("active");
+  const { actors, processing, error, getActors, createActor, updateActor, archiveActor } =
+    useActors();
 
-  const refresh = useCallback(() => getActors("page=1&per_page=1000"), [getActors]);
+  const refresh = useCallback(() => {
+    const params = new URLSearchParams({ page: "1", per_page: "1000" });
+    if (selectedRole) params.set("role", selectedRole);
+    return getActors(params.toString());
+  }, [getActors, selectedRole]);
 
   const saveActor = useCallback(
-    async (id: number, input: ActorPayloadInput, current?: Actor | null) => {
+    async (id: number, input: ActorPayloadInput) => {
       await updateActor(id, input);
-
-      const currentRoles = new Set(current?.roles ?? []);
-      await Promise.all(
-        (input.roles ?? [])
-          .filter((role) => !currentRoles.has(role))
-          .map((role) => addActorRole(id, role)),
-      );
-
-      const currentAliases = new Set(
-        (current?.aliases ?? []).map((alias) => normalize(alias.alias)),
-      );
-      await Promise.all(
-        (input.aliases ?? [])
-          .filter((alias) => !currentAliases.has(normalize(alias.alias)))
-          .map((alias) => addActorAlias(id, alias.alias, alias.source)),
-      );
     },
-    [addActorAlias, addActorRole, updateActor],
+    [updateActor]
   );
 
   const drawer = useEntityFormDrawer<Actor, ActorPayloadInput>({
     buildSuccessLabel: (input) => `el actor "${input.display_name}"`,
     create: createActor,
-    update: (id, input) =>
-      saveActor(
-        id,
-        input,
-        actors.find((actor) => actor.id === id),
-      ),
+    update: (id, input) => saveActor(id, input),
     fallbackErrorMessage: "No se pudo guardar el actor",
     onAfter: refresh,
   });
@@ -269,7 +246,7 @@ export default function ActorsList() {
       await Promise.all(inputs.map((input) => createActor(input)));
       refresh();
     },
-    [createActor, refresh],
+    [createActor, refresh]
   );
 
   const handleExport = useCallback(() => {
@@ -286,7 +263,7 @@ export default function ActorsList() {
         Aliases: actor.aliases?.map((alias) => alias.alias).join(" | ") ?? "",
         Email: actor.primary_email ?? "",
         Telefono: actor.primary_phone ?? "",
-      })),
+      }))
     );
   }, [rows]);
 
@@ -302,15 +279,18 @@ export default function ActorsList() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (rolePreset) {
+      setSelectedRole(rolePreset);
+    }
+  }, [rolePreset]);
+
   const selectColumn = useMemo<Column<Actor>>(
     () => makeSelectColumn<Actor>(bulk, (actor) => actor.display_name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
-  const tableColumns = useMemo<Column<Actor>[]>(
-    () => [selectColumn, ...columns],
-    [selectColumn],
-  );
+  const tableColumns = useMemo<Column<Actor>[]>(() => [selectColumn, ...columns], [selectColumn]);
 
   return (
     <div className="relative">
@@ -342,8 +322,10 @@ export default function ActorsList() {
             placeholder: "Buscar",
             value: selectedRole ? roleLabel(selectedRole) : "Todos los roles",
             options: roleOptions,
+            disabled: Boolean(rolePreset),
             onChange: () => {},
             setData: (data) => {
+              if (rolePreset) return;
               const option = data as FilterOption | undefined;
               setSelectedRole((option?.id as ActorRole | undefined) ?? "");
             },
@@ -363,11 +345,30 @@ export default function ActorsList() {
             },
             allLabel: "Todos los tipos",
           },
+          {
+            type: "search",
+            name: "estado",
+            label: "Estado",
+            placeholder: "Buscar",
+            value: selectedStatus === "archived" ? "Archivados" : "Activos",
+            options: statusOptions,
+            onChange: () => {},
+            setData: (data) => {
+              const option = data as FilterOption | undefined;
+              const status = (option?.id as "active" | "archived" | undefined) ?? "active";
+              setSelectedStatus(status);
+              if (status === "archived") {
+                navigate("/admin/database/actors/archived");
+              }
+            },
+            allLabel: "Activos",
+            allowAll: false,
+          },
         ]}
         actions={[
           {
             label: "Importar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -375,7 +376,7 @@ export default function ActorsList() {
           },
           {
             label: "Exportar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: handleExport,

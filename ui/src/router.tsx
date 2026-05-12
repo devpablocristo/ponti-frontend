@@ -48,6 +48,7 @@ import Notifications from "./pages/admin/notifications/Notifications";
 import ArchivedSupplyMovements from "./pages/admin/products/ArchivedSupplyMovements";
 import ActorsList from "./pages/admin/database/actors/ActorsList";
 import ArchivedActors from "./pages/admin/database/actors/ArchivedActors";
+import DuplicateActors from "./pages/admin/database/actors/DuplicateActors";
 
 export default [
   {
@@ -139,6 +140,30 @@ export default [
       {
         path: "database/actors",
         element: <ActorsList />,
+      },
+      {
+        path: "database/actors/clientes",
+        element: <ActorsList rolePreset="cliente" />,
+      },
+      {
+        path: "database/actors/inversores",
+        element: <ActorsList rolePreset="inversor" />,
+      },
+      {
+        path: "database/actors/responsables",
+        element: <ActorsList rolePreset="responsable" />,
+      },
+      {
+        path: "database/actors/proveedores",
+        element: <ActorsList rolePreset="proveedor" />,
+      },
+      {
+        path: "database/actors/contratistas",
+        element: <ActorsList rolePreset="contratista" />,
+      },
+      {
+        path: "database/actors/duplicates",
+        element: <DuplicateActors />,
       },
       {
         path: "database/actors/archived",

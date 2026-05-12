@@ -488,7 +488,7 @@ export function Lots() {
       <ErrorBanner message={error} variant="outlined" prefix="Error:" />
 
       {!message && !error ? (
-        <div className="my-4">
+        <div className="my-3">
           <LotsIndicators
             kpis={indicators}
             processing={!hasColumnFilters && processingKpis}
@@ -497,7 +497,7 @@ export function Lots() {
         </div>
       ) : null}
 
-      <div className="relative mt-4">
+      <div className="relative mt-3">
         <LoadingOverlay show={processing} />
 
         <LotDrawer

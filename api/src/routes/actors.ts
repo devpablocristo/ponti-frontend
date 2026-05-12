@@ -89,6 +89,24 @@ router.get("/archived", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/duplicate-candidates", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const { data } = await apiClient.get<any>(
+      "/actors/duplicate-candidates",
+      buildHeaders(userId),
+    );
+    res.status(200).json({ success: true, data });
+  } catch (error: any) {
+    respondError(res, error);
+  }
+});
+
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -121,8 +139,19 @@ router.post("", async (req: Request, res: Response) => {
       req.body,
       buildHeaders(userId),
     );
+    const actorId =
+      typeof data === "number"
+        ? data
+        : typeof data?.id === "number"
+          ? data.id
+          : null;
+    const hydrated =
+      actorId !== null
+        ? (await apiClient.get<any>(`/actors/${actorId}`, buildHeaders(userId)))
+            .data
+        : data;
     setImmediate(() => cache.flushAll());
-    res.status(201).json({ success: true, data });
+    res.status(201).json({ success: true, data: hydrated });
   } catch (error: any) {
     respondError(res, error);
   }
@@ -138,8 +167,12 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     const { id } = req.params;
     await apiClient.put<any>(`/actors/${id}`, req.body, buildHeaders(userId));
+    const { data } = await apiClient.get<any>(
+      `/actors/${id}`,
+      buildHeaders(userId),
+    );
     setImmediate(() => cache.flushAll());
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    res.status(200).json({ success: true, data });
   } catch (error: any) {
     respondError(res, error);
   }
@@ -154,7 +187,11 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    await apiClient.post<any>(`/actors/${id}/archive`, {}, buildHeaders(userId));
+    await apiClient.post<any>(
+      `/actors/${id}/archive`,
+      {},
+      buildHeaders(userId),
+    );
     setImmediate(() => cache.flushAll());
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
@@ -171,7 +208,11 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
     }
 
     const { id } = req.params;
-    await apiClient.post<any>(`/actors/${id}/restore`, {}, buildHeaders(userId));
+    await apiClient.post<any>(
+      `/actors/${id}/restore`,
+      {},
+      buildHeaders(userId),
+    );
     setImmediate(() => cache.flushAll());
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {

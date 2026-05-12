@@ -10,6 +10,7 @@ import {
 export type Manager = {
   id: number;
   name: string;
+  actor_id?: number;
   archived_at?: string | null;
 };
 

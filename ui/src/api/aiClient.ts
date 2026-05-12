@@ -17,12 +17,25 @@ const getBaseUrl = (): string => {
   return url && url.length > 0 ? url : "/api/v1/ai";
 };
 
+const getTenantId = (): string => {
+  if (typeof window === "undefined") return "";
+  return (
+    window.localStorage.getItem("ponti:tenant_id") ||
+    window.localStorage.getItem("tenant_id") ||
+    ""
+  );
+};
+
 const buildHeaders = (projectId: string): Record<string, string> => {
   const token = getAccessToken();
+  const tenantId = getTenantId();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-PROJECT-ID": projectId,
   };
+  if (tenantId) {
+    headers["X-TENANT-ID"] = tenantId;
+  }
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
@@ -82,11 +95,15 @@ export async function pontiAssistantChatStream(
   signal?: AbortSignal
 ): Promise<void> {
   const token = getAccessToken();
+  const tenantId = getTenantId();
   const h: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "text/event-stream",
     "X-PROJECT-ID": headers.projectId,
   };
+  if (tenantId) {
+    h["X-TENANT-ID"] = tenantId;
+  }
   if (token) {
     h.Authorization = `Bearer ${token}`;
   }

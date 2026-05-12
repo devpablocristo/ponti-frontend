@@ -1,6 +1,7 @@
 import React from "react";
 
 import Menu from "./Menu";
+import TenantSwitcher from "./TenantSwitcher";
 
 interface NavbarProps {
   username: string;
@@ -59,10 +60,13 @@ const Navbar: React.FC<NavbarProps> = ({
             {title}
           </h1>
         </div>
-        <Menu
-          setIsLogoutModalOpen={setIsLogoutModalOpen}
-          username={username}
-        />
+        <div className="flex items-center gap-4">
+          <TenantSwitcher />
+          <Menu
+            setIsLogoutModalOpen={setIsLogoutModalOpen}
+            username={username}
+          />
+        </div>
       </div>
     </nav>
   );

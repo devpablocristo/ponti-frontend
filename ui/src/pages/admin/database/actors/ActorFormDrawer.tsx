@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 
 import EntityFormDrawer from "../../../../components/crud/EntityFormDrawer";
 import InputField from "../../../../components/Input/InputField";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import {
   Actor,
+  ActorAlias,
+  ActorIdentifier,
   ActorKind,
   ActorPayloadInput,
   ActorRole,
@@ -22,16 +25,12 @@ type ActorFormDrawerProps = {
 
 const textOrEmpty = (value: unknown) => String(value ?? "");
 
-const splitList = (value: string) =>
-  value
-    .split(/[,;\n]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-const selectedIdentifier = (actor: Actor | null) =>
-  actor?.identifiers?.find((identifier) => identifier.is_primary) ??
-  actor?.identifiers?.[0] ??
-  null;
+const emptyIdentifier = (): ActorIdentifier => ({
+  country: "AR",
+  identifier_type: "",
+  identifier_value: "",
+  is_primary: false,
+});
 
 export default function ActorFormDrawer({
   open,
@@ -48,10 +47,8 @@ export default function ActorFormDrawer({
   const [primaryPhone, setPrimaryPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [roles, setRoles] = useState<ActorRole[]>([]);
-  const [aliasesText, setAliasesText] = useState("");
-  const [identifierCountry, setIdentifierCountry] = useState("AR");
-  const [identifierType, setIdentifierType] = useState("");
-  const [identifierValue, setIdentifierValue] = useState("");
+  const [aliases, setAliases] = useState<ActorAlias[]>([]);
+  const [identifiers, setIdentifiers] = useState<ActorIdentifier[]>([]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [documentType, setDocumentType] = useState("");
@@ -65,17 +62,14 @@ export default function ActorFormDrawer({
 
   useEffect(() => {
     if (!open) return;
-    const identifier = selectedIdentifier(actor);
     setActorKind(actor?.actor_kind ?? "unknown");
     setDisplayName(actor?.display_name ?? "");
     setPrimaryEmail(actor?.primary_email ?? "");
     setPrimaryPhone(actor?.primary_phone ?? "");
     setNotes(actor?.notes ?? "");
     setRoles(actor?.roles ?? []);
-    setAliasesText((actor?.aliases ?? []).map((item) => item.alias).join(", "));
-    setIdentifierCountry(identifier?.country ?? "AR");
-    setIdentifierType(identifier?.identifier_type ?? "");
-    setIdentifierValue(identifier?.identifier_value ?? "");
+    setAliases((actor?.aliases ?? []).map((item) => ({ ...item })));
+    setIdentifiers((actor?.identifiers ?? []).map((item) => ({ ...item })));
     setFirstName(actor?.person_profile?.first_name ?? "");
     setLastName(actor?.person_profile?.last_name ?? "");
     setDocumentType(actor?.person_profile?.document_type ?? "");
@@ -88,21 +82,38 @@ export default function ActorFormDrawer({
     setValidation(null);
   }, [actor, open]);
 
-  const existingAliasSet = useMemo(
-    () =>
-      new Set(
-        (actor?.aliases ?? []).map((item) =>
-          item.alias.trim().toLocaleLowerCase(),
-        ),
-      ),
-    [actor],
-  );
-
   const toggleRole = (role: ActorRole) => {
     setRoles((current) =>
-      current.includes(role)
-        ? current.filter((item) => item !== role)
-        : [...current, role],
+      current.includes(role) ? current.filter((item) => item !== role) : [...current, role]
+    );
+  };
+
+  const updateAlias = (index: number, value: string) => {
+    setAliases((current) =>
+      current.map((alias, currentIndex) =>
+        currentIndex === index ? { ...alias, alias: value } : alias
+      )
+    );
+  };
+
+  const updateIdentifier = (
+    index: number,
+    field: keyof ActorIdentifier,
+    value: string | boolean
+  ) => {
+    setIdentifiers((current) =>
+      current.map((identifier, currentIndex) =>
+        currentIndex === index ? { ...identifier, [field]: value } : identifier
+      )
+    );
+  };
+
+  const markPrimaryIdentifier = (index: number) => {
+    setIdentifiers((current) =>
+      current.map((identifier, currentIndex) => ({
+        ...identifier,
+        is_primary: currentIndex === index,
+      }))
     );
   };
 
@@ -114,21 +125,25 @@ export default function ActorFormDrawer({
       return;
     }
 
-    const aliases = splitList(aliasesText)
-      .filter((alias) => !isEdit || !existingAliasSet.has(alias.toLocaleLowerCase()))
-      .map((alias) => ({ alias, source: isEdit ? "ui_edit" : "ui_create" }));
+    const cleanAliases = aliases
+      .map((alias) => ({
+        alias: alias.alias.trim(),
+        source: alias.source ?? (isEdit ? "ui_edit" : "ui_create"),
+      }))
+      .filter((alias) => alias.alias);
 
-    const identifiers =
-      !isEdit && identifierType.trim() && identifierValue.trim()
-        ? [
-            {
-              country: identifierCountry.trim() || "AR",
-              identifier_type: identifierType.trim(),
-              identifier_value: identifierValue.trim(),
-              is_primary: true,
-            },
-          ]
-        : [];
+    const cleanIdentifiers = identifiers
+      .map((identifier) => ({
+        country: identifier.country.trim() || "AR",
+        identifier_type: identifier.identifier_type.trim(),
+        identifier_value: identifier.identifier_value.trim(),
+        is_primary: Boolean(identifier.is_primary),
+      }))
+      .filter((identifier) => identifier.identifier_type && identifier.identifier_value);
+
+    if (cleanIdentifiers.length > 0 && !cleanIdentifiers.some((item) => item.is_primary)) {
+      cleanIdentifiers[0].is_primary = true;
+    }
 
     const input: ActorPayloadInput = {
       actor_kind: actorKind,
@@ -137,8 +152,8 @@ export default function ActorFormDrawer({
       primary_phone: primaryPhone.trim() || null,
       notes: notes.trim() || null,
       roles,
-      aliases,
-      identifiers,
+      aliases: cleanAliases,
+      identifiers: cleanIdentifiers,
       person_profile:
         actorKind === "natural_person"
           ? {
@@ -177,9 +192,7 @@ export default function ActorFormDrawer({
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-slate-600">
-            Tipo de actor
-          </label>
+          <label className="mb-1.5 block text-xs font-medium text-slate-600">Tipo de actor</label>
           <select
             className="input-base block w-full px-3.5 py-2 text-sm"
             value={actorKind}
@@ -272,9 +285,7 @@ export default function ActorFormDrawer({
 
       {actorKind === "organization" && (
         <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-slate-800">
-            Empresa / Sociedad
-          </h3>
+          <h3 className="mb-3 text-sm font-semibold text-slate-800">Empresa / Sociedad</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <InputField
               label="Razón social"
@@ -317,45 +328,129 @@ export default function ActorFormDrawer({
       )}
 
       <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-800">
-          Identificador principal
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <InputField
-            label="País"
-            name="identifier_country"
-            value={identifierCountry}
-            disabled={isEdit}
-            onChange={(event) => setIdentifierCountry(event.target.value)}
-            size="sm"
-          />
-          <InputField
-            label="Tipo"
-            name="identifier_type"
-            value={identifierType}
-            disabled={isEdit}
-            placeholder="CUIT, DNI, RUT"
-            onChange={(event) => setIdentifierType(event.target.value)}
-            size="sm"
-          />
-          <InputField
-            label="Valor"
-            name="identifier_value"
-            value={identifierValue}
-            disabled={isEdit}
-            onChange={(event) => setIdentifierValue(event.target.value)}
-            size="sm"
-          />
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-slate-800">Identificadores</h3>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            onClick={() => setIdentifiers((current) => [...current, emptyIdentifier()])}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Agregar
+          </button>
+        </div>
+        <div className="space-y-3">
+          {identifiers.length === 0 && (
+            <div className="rounded-md border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500">
+              Sin identificadores
+            </div>
+          )}
+          {identifiers.map((identifier, index) => (
+            <div
+              key={identifier.id ?? index}
+              className="grid grid-cols-1 gap-3 rounded-md border border-slate-100 bg-slate-50 p-3 sm:grid-cols-[0.7fr_1fr_1.4fr_auto_auto]"
+            >
+              <InputField
+                label="País"
+                name={`identifier_country_${index}`}
+                value={identifier.country}
+                onChange={(event) => updateIdentifier(index, "country", event.target.value)}
+                size="sm"
+              />
+              <InputField
+                label="Tipo"
+                name={`identifier_type_${index}`}
+                value={identifier.identifier_type}
+                placeholder="CUIT, DNI, RUT"
+                onChange={(event) => updateIdentifier(index, "identifier_type", event.target.value)}
+                size="sm"
+              />
+              <InputField
+                label="Valor"
+                name={`identifier_value_${index}`}
+                value={identifier.identifier_value}
+                onChange={(event) =>
+                  updateIdentifier(index, "identifier_value", event.target.value)
+                }
+                size="sm"
+              />
+              <label className="flex items-end gap-2 pb-2 text-xs font-medium text-slate-600">
+                <Checkbox
+                  tone="form"
+                  checked={Boolean(identifier.is_primary)}
+                  onChange={() => markPrimaryIdentifier(index)}
+                />
+                Principal
+              </label>
+              <button
+                type="button"
+                className="mb-1 self-end rounded-md border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                onClick={() =>
+                  setIdentifiers((current) =>
+                    current.filter((_item, currentIndex) => currentIndex !== index)
+                  )
+                }
+                title="Quitar identificador"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
         </div>
       </section>
 
-      <InputField
-        label="Aliases"
-        name="aliases"
-        value={aliasesText}
-        onChange={(event) => setAliasesText(event.target.value)}
-        size="sm"
-      />
+      <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-slate-800">Aliases</h3>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            onClick={() =>
+              setAliases((current) => [
+                ...current,
+                { alias: "", source: isEdit ? "ui_edit" : "ui_create" },
+              ])
+            }
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Agregar
+          </button>
+        </div>
+        <div className="space-y-3">
+          {aliases.length === 0 && (
+            <div className="rounded-md border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500">
+              Sin aliases
+            </div>
+          )}
+          {aliases.map((alias, index) => (
+            <div
+              key={alias.id ?? index}
+              className="grid grid-cols-[1fr_auto] gap-3 rounded-md border border-slate-100 bg-slate-50 p-3"
+            >
+              <InputField
+                label="Alias"
+                name={`alias_${index}`}
+                value={alias.alias}
+                onChange={(event) => updateAlias(index, event.target.value)}
+                size="sm"
+              />
+              <button
+                type="button"
+                className="mb-1 self-end rounded-md border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                onClick={() =>
+                  setAliases((current) =>
+                    current.filter((_item, currentIndex) => currentIndex !== index)
+                  )
+                }
+                title="Quitar alias"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <InputField
         label="Notas"
         name="notes"

@@ -112,7 +112,7 @@ function DashboardContent({
   return (
     <div className={className}>
       {includeFilters && (
-        <div className="grid grid-cols-1 gap-3 my-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="my-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           {selectedFilters.map((filter) => (
             <div
               key={filter.label}
@@ -129,11 +129,11 @@ function DashboardContent({
         </div>
       )}
 
-      <div className="my-4">
+      <div className="my-3">
         <DashboardIndicators dashboard={dashboard} />
       </div>
 
-      <div className="w-full py-4">
+      <div className="w-full py-3">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="w-full md:w-1/2">
             <ManagementBalanceTable dashboard={dashboard} />

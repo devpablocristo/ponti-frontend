@@ -10,6 +10,7 @@ import {
 export type Investor = {
   id: number;
   name: string;
+  actor_id?: number;
   percentage?: number;
   archived_at?: string | null;
   [key: string]: unknown;

@@ -1,4 +1,4 @@
-import axios, { isAxiosError } from "axios";
+import { isAxiosError } from "axios";
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
@@ -42,9 +42,10 @@ const getProjectId = (req: Request): string | null => {
   return null;
 };
 
-const buildHeaders = (userId: string, projectId: string) => ({
+const buildHeaders = (userId: string, tenantId: string, projectId: string) => ({
   "X-API-KEY": configService.apiKey,
   "X-User-Id": userId,
+  "X-Tenant-Id": tenantId,
   "X-Project-Id": projectId,
 });
 
@@ -64,6 +65,15 @@ const requireProject = (req: Request, res: Response): string | null => {
     return null;
   }
   return projectId;
+};
+
+const requireTenant = (_req: Request, res: Response): string | null => {
+  const tenantId = requestContext.getTenantId();
+  if (!tenantId) {
+    res.status(400).json({ message: "Tenant obligatorio" });
+    return null;
+  }
+  return tenantId;
 };
 
 const handleError = (res: Response, error: unknown, opts?: HandleErrorOptions) => {
@@ -90,9 +100,11 @@ router.post("/chat", async (req: Request, res: Response) => {
   if (!userId) return;
   const projectId = requireProject(req, res);
   if (!projectId) return;
+  const tenantId = requireTenant(req, res);
+  if (!tenantId) return;
 
   try {
-    const headers = buildHeaders(userId, projectId);
+    const headers = buildHeaders(userId, tenantId, projectId);
     const { data } = await apiClient.post<any>("/ai/chat", req.body, headers);
     res.status(200).json(data);
   } catch (error) {
@@ -105,6 +117,8 @@ router.post("/chat/stream", async (req: Request, res: Response) => {
   if (!userId) return;
   const projectId = requireProject(req, res);
   if (!projectId) return;
+  const tenantId = requireTenant(req, res);
+  if (!tenantId) return;
 
   try {
     await proxyManagerChatStreamPost(req, res, {
@@ -112,6 +126,7 @@ router.post("/chat/stream", async (req: Request, res: Response) => {
       path: "/ai/chat/stream",
       apiKey: configService.apiKey,
       userId,
+      tenantId,
       projectId,
       jsonBody: req.body,
       authorization: requestContext.getAuthorization(),
@@ -136,9 +151,11 @@ router.get("/chat/conversations", async (req: Request, res: Response) => {
   if (!userId) return;
   const projectId = requireProject(req, res);
   if (!projectId) return;
+  const tenantId = requireTenant(req, res);
+  if (!tenantId) return;
 
   try {
-    const headers = buildHeaders(userId, projectId);
+    const headers = buildHeaders(userId, tenantId, projectId);
     const limitRaw = typeof req.query.limit === "string" ? req.query.limit.trim() : "";
     const limit = limitRaw ? `?limit=${encodeURIComponent(limitRaw)}` : "";
     const { data } = await apiClient.get<any>(`/ai/chat/conversations${limit}`, headers);
@@ -153,9 +170,11 @@ router.get("/chat/conversations/:conversation_id", async (req: Request, res: Res
   if (!userId) return;
   const projectId = requireProject(req, res);
   if (!projectId) return;
+  const tenantId = requireTenant(req, res);
+  if (!tenantId) return;
 
   try {
-    const headers = buildHeaders(userId, projectId);
+    const headers = buildHeaders(userId, tenantId, projectId);
     const { conversation_id } = req.params;
     const { data } = await apiClient.get<any>(
       `/ai/chat/conversations/${encodeURIComponent(conversation_id)}`,

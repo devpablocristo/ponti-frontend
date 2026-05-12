@@ -138,14 +138,14 @@ function DashboardV2Content({
 }) {
   if (!dashboard) {
     return (
-      <div className="p-4 my-4 text-sm text-slate-600 rounded-lg bg-slate-50">
+      <div className="my-3 rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
         No hay datos disponibles
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {includeContext && (
         <div className="flex flex-wrap gap-2">
           {contextChips.map((chip) => (

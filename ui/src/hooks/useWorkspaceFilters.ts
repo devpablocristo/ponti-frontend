@@ -8,6 +8,7 @@ import useFields from "./useFields";
 export interface Customer {
   id: number;
   name: string;
+  actor_id?: number;
 }
 
 export interface Project {
