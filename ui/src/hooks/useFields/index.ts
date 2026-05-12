@@ -8,8 +8,6 @@ import {
   useEntityCrud,
 } from "../useEntityCrud";
 
-export type { Field };
-
 const buildQuery = (queryString?: string) =>
   queryString && queryString !== "" ? `?${queryString}` : "";
 

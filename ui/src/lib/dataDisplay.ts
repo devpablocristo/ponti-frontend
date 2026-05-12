@@ -7,12 +7,9 @@ import {
 } from "react";
 import {
   DataTable as BaseDataTable,
-  SubTable,
   type DataTableColumn,
   type DataTableProps,
 } from "@devpablocristo/modules-ui-data-display";
-
-export { SubTable };
 
 type LocalDataTableProps<T> = DataTableProps<T> & {
   actionsHeader?: string;
@@ -25,10 +22,11 @@ export function DataTable<T>({
   renderActions,
   ...props
 }: LocalDataTableProps<T>) {
-  const safeColumns = Array.isArray(columns) ? columns : [];
   const safeData = Array.isArray(props.data) ? props.data : [];
 
   const columnsWithActions = useMemo(() => {
+    const safeColumns = Array.isArray(columns) ? columns : [];
+
     if (!renderActions) return safeColumns;
 
     const actionsColumn: DataTableColumn<T> = {
@@ -42,7 +40,7 @@ export function DataTable<T>({
     };
 
     return [...safeColumns, actionsColumn];
-  }, [actionsHeader, safeColumns, renderActions]);
+  }, [actionsHeader, columns, renderActions]);
 
   return createElement(BaseDataTable<T>, {
     ...props,

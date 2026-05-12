@@ -35,7 +35,7 @@ export interface FilterItem {
   setData: (value: unknown) => void;
 }
 
-export interface ActionButton {
+interface ActionButton {
   label: string;
   variant?:
     | "primary"
@@ -490,6 +490,3 @@ export function AppFilterBar({
     </div>
   );
 }
-
-export const FilterBar = AppFilterBar;
-export default AppFilterBar;

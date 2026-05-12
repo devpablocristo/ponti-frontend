@@ -6,7 +6,7 @@ import { ErrorBanner } from "../feedback/ErrorBanner";
 import { LoadingOverlay } from "../feedback/LoadingOverlay";
 import { SuccessBanner } from "../feedback/SuccessBanner";
 
-export type EntityFormDrawerProps = {
+type EntityFormDrawerProps = {
   open: boolean;
   onClose: () => void;
   /** Título mostrado en el header (ej: "Nuevo Inversor", "Editar Cliente"). */
@@ -112,5 +112,3 @@ export function EntityFormDrawer({
     </Drawer>
   );
 }
-
-export default EntityFormDrawer;

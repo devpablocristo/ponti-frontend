@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import * as XLSX from "xlsx";
 import { Download, Plus, Upload } from "lucide-react";
 
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import {
   DataTable,
@@ -32,6 +31,8 @@ import {
   parseCsv,
   parsePartialPrice,
 } from "./importUtils";
+import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../../fileTransfer";
+import { readSpreadsheetRows } from "../../spreadsheetReader";
 
 import { LABOR_ENTITY as ENTITY } from "../../entities";
 
@@ -216,14 +217,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         { responseType: "blob" }
       );
 
-      const url = window.URL.createObjectURL(response);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `labores_${projectId}_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response, buildTimestampedFilename("labores", "xlsx", projectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de labores.");
     }
@@ -243,10 +237,10 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
 
     const lowerName = file.name.toLowerCase();
     const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+    const isExcel = lowerName.endsWith(".xlsx");
 
     if (!isCsv && !isExcel) {
-      setErrorMessage("Formato no soportado. Use .xlsx, .xls o .csv.");
+      setErrorMessage("Formato no soportado. Use .xlsx o .csv.");
       return;
     }
 
@@ -259,32 +253,11 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         const text = await file.text();
         parsedRows = parseCsv(text);
       } else {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array" });
-        const sheetNames = workbook.SheetNames || [];
-        const preferred =
-          sheetNames.find((n) => normalizeText(n).includes("labor")) ??
-          sheetNames[0];
-
-        const trySheets = [
-          preferred,
-          ...sheetNames.filter((n) => n !== preferred),
-        ].filter(Boolean) as string[];
-
-        let jsonRows: Record<string, unknown>[] = [];
-        for (const sheetName of trySheets) {
-          const sheet = workbook.Sheets[sheetName];
-          if (!sheet) continue;
-          const candidate = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-            sheet,
-            { defval: "" }
-          );
-          if (candidate.length > 0) {
-            jsonRows = candidate;
-            break;
-          }
-        }
-        parsedRows = jsonRows.map(normalizeSpreadsheetRow);
+        parsedRows = (
+          await readSpreadsheetRows(file, {
+            preferredSheetNameIncludes: ["labor"],
+          })
+        ).map(normalizeSpreadsheetRow);
       }
 
       if (parsedRows.length === 0) {
@@ -373,7 +346,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         setSuccessMessage(`Se importaron ${laborsToSave.length} labores con éxito.`);
       }
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx o .csv.");
     }
   };
 
@@ -382,11 +355,11 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+        accept={SPREADSHEET_ACCEPT}
         onChange={handleImportLaborsFromFile}
         className="hidden"
       />
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {

@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 
 import { apiClient } from "@/api/client";
-import { AppFilterBar as FilterBar } from "../filters/AppFilterBar";
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import { AppFilterBar } from "../filters/AppFilterBar";
+import { DataTable } from "@/lib/dataDisplay";
 import { BaseModal } from "../Modal/BaseModal";
 import { BulkSelectionPanel } from "../crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../crud/makeSelectColumn";
@@ -521,7 +521,7 @@ export function ArchivedListPage<T extends { id: number }>({
 
   return (
     <div>
-      <FilterBar filters={filters} />
+      <AppFilterBar filters={filters} />
       {description && (
         <p className="my-3 text-sm text-gray-500">{description}</p>
       )}

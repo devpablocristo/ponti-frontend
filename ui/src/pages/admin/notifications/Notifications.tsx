@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {
@@ -123,13 +123,13 @@ const Notifications = () => {
     void fetchInsights();
   }, [fetchInsights]);
 
-  const isResolved = (i: InsightItem) => i.status === "resolved";
-  const isUnread = (i: InsightItem) => !i.read_at && !isResolved(i);
+  const isResolved = useCallback((i: InsightItem) => i.status === "resolved", []);
+  const isUnread = useCallback((i: InsightItem) => !i.read_at && !isResolved(i), [isResolved]);
 
-  const unreadCount = useMemo(() => insights.filter(isUnread).length, [insights]);
+  const unreadCount = useMemo(() => insights.filter(isUnread).length, [insights, isUnread]);
   const highSeverityCount = useMemo(
     () => insights.filter((i) => isUnread(i) && severityWeight(i.severity) >= 3).length,
-    [insights],
+    [insights, isUnread],
   );
 
   const optimistic = (id: string, patch: Partial<InsightItem>) => {
@@ -224,7 +224,7 @@ const Notifications = () => {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <FilterBar filters={filters} />
+      <AppFilterBar filters={filters} />
 
       <div className="flex items-center justify-between">
         <div>

@@ -1,4 +1,4 @@
-import EntityFormDrawer from "../../../../components/crud/EntityFormDrawer";
+import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import { Crop, LotDate, LotsDataUpdate } from "../../../../hooks/useLots/types";

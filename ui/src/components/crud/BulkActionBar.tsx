@@ -83,4 +83,3 @@ export function BulkActionBar({
   );
 }
 
-export default BulkActionBar;

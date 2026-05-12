@@ -4,7 +4,7 @@ import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { usePDF } from "react-to-pdf";
 
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import Button from "../../../components/Button/Button";
 import ManagementBalanceTable from "./ManagementBalanceTable";
@@ -236,7 +236,7 @@ export function Dashboard() {
 
   return (
     <div>
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {

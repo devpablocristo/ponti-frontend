@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { apiClient } from "@/api/client";
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
@@ -13,6 +13,7 @@ import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
+import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
 import { CustomerData } from "../../../../hooks/useCustomers/types";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
@@ -279,13 +280,10 @@ export default function CustomersList() {
       ),
     ].join("\n");
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `clientes_${new Date().toISOString()}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      buildTimestampedFilename("clientes", "csv"),
+    );
   }, [visibleCustomers, summaries]);
 
   const importCustomers = useCallback(
@@ -416,7 +414,7 @@ export default function CustomersList() {
 
   return (
     <div>
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {

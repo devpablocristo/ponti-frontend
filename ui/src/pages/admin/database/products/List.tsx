@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Plus, Upload } from "lucide-react";
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
@@ -20,6 +20,7 @@ import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPan
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { SUPPLY_ENTITY as ENTITY } from "../../entities";
+import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 
 const renderPriceCell = (value: unknown, row: Supply) => (
   <div className="flex items-center gap-2">
@@ -291,15 +292,7 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
         { responseType: "blob" }
       );
 
-      const url = window.URL.createObjectURL(response);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `insumosbd_${projectId}_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response, buildTimestampedFilename("insumosbd", "xlsx", projectId));
     } catch {
       // error exporting products
     }
@@ -307,7 +300,7 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
 
   return (
     <div className="w-full mx-auto">
-      <FilterBar filters={filters} actions={[
+      <AppFilterBar filters={filters} actions={[
         {
           label: "Importar",
           icon: <Download className="h-4 w-4" />,

@@ -45,7 +45,7 @@ test("ordenes respeta filtro por insumo y conserva paginacion server-side", asyn
     .first();
   await expect(supplyFilterBanner).toBeVisible();
   await expect(supplyFilterBanner).toContainText(supplyName);
-  await expect(page.getByText("Cantidad de Órdenes Ingresadas")).toBeVisible();
+  await expect(page.getByText("Cantidad Total de Órdenes")).toBeVisible();
   await expect(page.getByText(/Mostrar\s*1-10\s*de\s*\d+/)).toBeVisible();
 });
 

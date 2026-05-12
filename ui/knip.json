@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignore": [
+    "e2e/helpers/auth.ts",
+    "scripts/generate-ai-types.mjs",
+    "src/test/setup.ts"
+  ]
+}

@@ -20,14 +20,6 @@ export const getAccessToken = (): string | null => {
   return authTokenStorage.getAccessToken();
 };
 
-export const setAccessToken = (token: string) => {
-  authTokenStorage.setAccessToken(token);
-};
-
-export const setRefreshToken = (token: string) => {
-  authTokenStorage.setRefreshToken(token);
-};
-
 export const getRefreshToken = (): string | null => {
   return authTokenStorage.getRefreshToken();
 };

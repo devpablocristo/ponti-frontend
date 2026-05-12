@@ -1,8 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
   normalizeText,
-  detectSeparator,
-  parseCsvLine,
   parseCsv,
   parseImportDate,
   toCanonicalMovementType,
@@ -32,63 +30,6 @@ describe("normalizeText", () => {
   });
 });
 
-describe("detectSeparator", () => {
-  it("returns comma when commas dominate", () => {
-    expect(detectSeparator("a,b,c,d")).toBe(",");
-  });
-
-  it("returns semicolon when semicolons dominate", () => {
-    expect(detectSeparator("a;b;c;d")).toBe(";");
-  });
-
-  it("returns comma when counts are equal (default)", () => {
-    expect(detectSeparator("a;b,c")).toBe(",");
-  });
-
-  it("handles line with no separators", () => {
-    expect(detectSeparator("single_column")).toBe(",");
-  });
-
-  it("detects semicolon in typical es-AR Excel export header", () => {
-    expect(
-      detectSeparator("Ingreso;Fecha;Remito;Proveedor;Inversor;Insumo;Cantidad")
-    ).toBe(";");
-  });
-});
-
-describe("parseCsvLine", () => {
-  it("splits by comma by default", () => {
-    expect(parseCsvLine("a,b,c")).toEqual(["a", "b", "c"]);
-  });
-
-  it("splits by semicolon when specified", () => {
-    expect(parseCsvLine("a;b;c", ";")).toEqual(["a", "b", "c"]);
-  });
-
-  it("handles quoted values with commas inside", () => {
-    expect(parseCsvLine('"hello, world",b,c')).toEqual([
-      "hello, world",
-      "b",
-      "c",
-    ]);
-  });
-
-  it("handles escaped quotes inside quoted values", () => {
-    expect(parseCsvLine('"he said ""hi""",b')).toEqual([
-      'he said "hi"',
-      "b",
-    ]);
-  });
-
-  it("handles semicolons inside quoted values with semicolon separator", () => {
-    expect(parseCsvLine('"a;b";c;d', ";")).toEqual(["a;b", "c", "d"]);
-  });
-
-  it("trims whitespace around values", () => {
-    expect(parseCsvLine("  a , b , c  ")).toEqual(["a", "b", "c"]);
-  });
-});
-
 describe("parseCsv", () => {
   it("parses a simple comma-separated CSV", () => {
     const csv = "name,qty\nGlifosato,100\nUrea,50";
@@ -106,6 +47,18 @@ describe("parseCsv", () => {
       { insumo: "Glifosato", cantidad: "100", proveedor: "AgroMax" },
       { insumo: "Urea", cantidad: "50", proveedor: "SemAr" },
     ]);
+  });
+
+  it("handles quoted separators and escaped quotes", () => {
+    const csv = 'name,notes\nGlifosato,"he said ""hi"", with comma"';
+    expect(parseCsv(csv)).toEqual([
+      { name: "Glifosato", notes: 'he said "hi", with comma' },
+    ]);
+  });
+
+  it("handles semicolons inside quoted values", () => {
+    const csv = 'name;notes\nGlifosato;"a;b"';
+    expect(parseCsv(csv)).toEqual([{ name: "Glifosato", notes: "a;b" }]);
   });
 
   it("normalizes headers via normalizeText", () => {

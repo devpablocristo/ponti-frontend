@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import useDollar from "../../../../hooks/useDollar";
 import { DollarData } from "../../../../hooks/useDollar/types";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
@@ -134,7 +134,7 @@ export default function DollarForm() {
 
   return (
     <div className="w-full mx-auto">
-      <FilterBar filters={filters} />
+      <AppFilterBar filters={filters} />
       <div className="mt-4 p-6 w-full mx-auto bg-white rounded-lg shadow-md">
         {processing && (
           <div className="flex items-center justify-center w-full h-full">

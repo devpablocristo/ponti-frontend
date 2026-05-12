@@ -74,4 +74,3 @@ export function useBulkSelection<T extends { id: number }>(items: T[]) {
   };
 }
 
-export default useBulkSelection;

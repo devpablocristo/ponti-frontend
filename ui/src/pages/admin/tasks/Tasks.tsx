@@ -7,14 +7,13 @@ import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
-import * as XLSX from "xlsx";
 
 import useLabors from "../../../hooks/useLabors";
 import useWorkOrders from "../../../hooks/useWorkOrders";
 import useCategories from "../../../hooks/useCategories";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { BaseModal } from "../../../components/Modal/BaseModal";
@@ -26,6 +25,8 @@ import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
 import { WORKORDER_ENTITY } from "../entities";
+import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../fileTransfer";
+import { readSpreadsheetRows } from "../spreadsheetReader";
 
 const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
@@ -134,14 +135,12 @@ const invoiceStatusOptions = [
   { id: 3, name: "Facturada" },
 ];
 
-function TaskHeader({
-  taskAmount,
+function LaborsHeader({
   selectedColumns,
   setSelectedColumns,
   setVisibleColumns,
   allColumns,
 }: {
-  taskAmount: number;
   selectedColumns: Array<keyof LaborGroupData>;
   setSelectedColumns: (columns: Array<keyof LaborGroupData>) => void;
   setVisibleColumns: (columns: Array<keyof LaborGroupData>) => void;
@@ -150,10 +149,7 @@ function TaskHeader({
   const [showColumnsModal, setShowColumnsModal] = useState(false);
 
   return (
-    <div className="flex justify-between items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
-      <div className="text-sm text-gray-900">
-        <span className="font-semibold">Tareas:</span> {taskAmount}
-      </div>
+    <div className="flex justify-end items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
       <Button
         variant="primary"
         size="sm"
@@ -218,7 +214,15 @@ function TaskHeader({
   );
 }
 
-function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing: boolean }) {
+function TasksIndicators({
+  metrics,
+  processing,
+  laborsAmount,
+}: {
+  metrics: Metrics;
+  processing: boolean;
+  laborsAmount: number;
+}) {
   return (
     <div>
       {processing ? (
@@ -227,7 +231,7 @@ function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing
           spinnerClassName="text-custom-btn"
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <IndicatorCard
             title="Superficie total"
             value={formatNumberAr(metrics.surface_ha) + " Has"}
@@ -242,6 +246,11 @@ function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing
             title="Total u$ / Neto"
             value={"u$ " + formatNumberAr(metrics.net_total_cost)}
             color="red"
+          />
+          <IndicatorCard
+            title="Cantidad Total de Labores"
+            value={formatNumberAr(laborsAmount)}
+            color="blue"
           />
         </div>
       )}
@@ -273,6 +282,7 @@ export function Tasks() {
   const [importError, setImportError] = useState<string | null>(null);
 
   const pagination = usePagination({ perPage: 10 });
+  const resetPage = pagination.resetPage;
   const [taskFilters, setTaskFilters] = useState<Record<string, unknown>>({});
   const [invoice, setInvoice] = useState<InvoiceData>({
     workorder_id: 0,
@@ -636,11 +646,11 @@ export function Tasks() {
 
     const query = buildFieldQuery();
     setVisibleColumns(latestAllColumnKeysRef.current);
-    pagination.resetPage();
+    resetPage();
     getLaborGroups(projectId, query);
     getMetrics(projectId, query);
     getCategories("");
-  }, [projectId, buildFieldQuery, getLaborGroups, getMetrics, getCategories]);
+  }, [projectId, buildFieldQuery, getLaborGroups, getMetrics, getCategories, resetPage]);
 
   const filteredTasks = useMemo(() => {
     return laborGroups.filter((task) => {
@@ -794,10 +804,10 @@ export function Tasks() {
 
     const lowerName = file.name.toLowerCase();
     const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+    const isExcel = lowerName.endsWith(".xlsx");
 
     if (!isCsv && !isExcel) {
-      setImportError("Formato no soportado. Use .xlsx, .xls o .csv.");
+      setImportError("Formato no soportado. Use .xlsx o .csv.");
       return;
     }
 
@@ -810,14 +820,7 @@ export function Tasks() {
         const text = await file.text();
         parsedRows = parseCsv(text);
       } else {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array" });
-        const firstSheetName = workbook.SheetNames[0];
-        const firstSheet = workbook.Sheets[firstSheetName];
-        const jsonRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, {
-          defval: "",
-        });
-        parsedRows = jsonRows.map(normalizeSpreadsheetRow);
+        parsedRows = (await readSpreadsheetRows(file)).map(normalizeSpreadsheetRow);
       }
 
       if (parsedRows.length === 0) {
@@ -894,7 +897,7 @@ export function Tasks() {
         setImportMessage(`Se importaron ${laborsToSave.length} labores con éxito.`);
       }
     } catch {
-      setImportError("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
+      setImportError("No se pudo leer el archivo. Use .xlsx o .csv.");
     }
   };
 
@@ -910,15 +913,7 @@ export function Tasks() {
         responseType: "blob",
       });
 
-      const url = window.URL.createObjectURL(response);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `labores_${projectId}_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response, buildTimestampedFilename("labores", "xlsx", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el listado de labores.");
     }
@@ -927,7 +922,7 @@ export function Tasks() {
   // Handler para resetear página al aplicar filtros
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setTaskFilters(filters);
-    pagination.resetPage();
+    resetPage();
   };
 
   return (
@@ -935,11 +930,11 @@ export function Tasks() {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+        accept={SPREADSHEET_ACCEPT}
         onChange={handleImportLaborsFromFile}
         className="hidden"
       />
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {
@@ -976,7 +971,11 @@ export function Tasks() {
         {errorMetrics ? (
           <ErrorBanner message={errorMetrics} variant="outlined" prefix="Error:" />
         ) : (
-          <TasksIndicators metrics={derivedMetrics} processing={processing} />
+          <TasksIndicators
+            metrics={derivedMetrics}
+            processing={processing}
+            laborsAmount={filteredTasks.length}
+          />
         )}
       </div>
 
@@ -1000,10 +999,9 @@ export function Tasks() {
           onFilterChange={handleFilterChange}
           className={`${processing ? "pointer-events-none opacity-60" : ""}`}
           enableFilters={true}
-          message="No hay tareas disponibles"
+          message="No hay labores disponibles"
           headerComponent={
-            <TaskHeader
-              taskAmount={laborGroups.length}
+            <LaborsHeader
               selectedColumns={selectedColumns}
               setSelectedColumns={setSelectedColumns}
               setVisibleColumns={setVisibleColumns}

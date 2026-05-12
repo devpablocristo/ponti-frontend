@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { Users } from "lucide-react";
 import { formatNumberAr } from "../../utils";
 
-export interface InvestorSlice {
+interface InvestorSlice {
   investor_id: number;
   name: string;
   amount: number;

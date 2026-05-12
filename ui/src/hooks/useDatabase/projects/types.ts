@@ -31,7 +31,7 @@ type Data = {
   name: string;
 };
 
-export type Field = {
+type Field = {
   id: number;
   name: string;
   lease_type_name?: string;

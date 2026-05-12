@@ -3,7 +3,7 @@ import { SquareArrowOutUpRight } from "lucide-react";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import SelectField from "../../../components/Input/SelectField";
 import useReporting from "../../../hooks/useReporting";
@@ -83,7 +83,7 @@ const rowsToRender: RowToRender[] = [
   },
 ];
 
-export function SummaryResultsReport() {
+function SummaryResultsReport() {
   const [selectedCrop, setSelectedCrop] = useState<string>("0");
 
   const {
@@ -140,7 +140,7 @@ export function SummaryResultsReport() {
     <div className="relative">
       <LoadingOverlay show={loading.projects || loading.campaigns || processing} />
 
-      <FilterBar
+      <AppFilterBar
         filters={ filters }
         actions={ [
           {

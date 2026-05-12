@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { usePDF } from "react-to-pdf";
 
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -107,7 +107,7 @@ function aggregateInvestorAmounts(
   return result;
 }
 
-export function InvestorContributionReportV2() {
+function InvestorContributionReportV2() {
   const {
     filters,
     projectId,
@@ -277,7 +277,7 @@ export function InvestorContributionReportV2() {
     <div className="relative">
       <LoadingOverlay show={loading.projects || loading.campaigns || processing} />
 
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {

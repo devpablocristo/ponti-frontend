@@ -38,4 +38,3 @@ export function DismissButton({ tone, onClick }: DismissButtonProps) {
   );
 }
 
-export default DismissButton;

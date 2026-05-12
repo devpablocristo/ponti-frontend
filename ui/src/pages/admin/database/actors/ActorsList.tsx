@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
 import {
-  AppFilterBar as FilterBar,
+  AppFilterBar,
   FilterOption,
 } from "../../../../components/filters/AppFilterBar";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
@@ -25,29 +25,13 @@ import { Column } from "../../types";
 import { ACTOR_ENTITY as ENTITY } from "../../entities";
 import ActorFormDrawer from "./ActorFormDrawer";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
+import { downloadCsvRows } from "../../fileTransfer";
 
 const kindLabel = (kind?: string) =>
   ACTOR_KIND_OPTIONS.find((option) => option.value === kind)?.label ?? "Sin definir";
 
 const roleLabel = (role: string) =>
   ACTOR_ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role;
-
-const csvEscape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
-
-const exportRows = (filename: string, rows: Record<string, unknown>[]) => {
-  const headers = Object.keys(rows[0] ?? {});
-  const csv = [
-    headers.join(","),
-    ...rows.map((row) => headers.map((header) => csvEscape(row[header])).join(",")),
-  ].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-};
 
 const normalize = (value: unknown) =>
   String(value ?? "")
@@ -250,7 +234,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
   );
 
   const handleExport = useCallback(() => {
-    exportRows(
+    downloadCsvRows(
       `actores_${new Date().toISOString()}.csv`,
       rows.map((actor) => ({
         Actor: actor.display_name,
@@ -297,7 +281,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
       <LoadingOverlay show={processing} />
       {error && <ErrorBanner message={error} variant="outlined" prefix="Error:" />}
 
-      <FilterBar
+      <AppFilterBar
         filters={[
           {
             type: "search",

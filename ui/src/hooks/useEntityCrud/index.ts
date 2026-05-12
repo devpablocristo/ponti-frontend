@@ -200,4 +200,3 @@ export function useEntityCrud<T, CreateInput = never, UpdateInput = never>(
   };
 }
 
-export default useEntityCrud;

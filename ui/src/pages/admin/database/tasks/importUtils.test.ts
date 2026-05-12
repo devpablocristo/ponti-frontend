@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  detectSeparator,
   getValueByAliases,
   LABOR_HEADER_ALIASES,
   parseCsv,
@@ -8,11 +7,6 @@ import {
 } from "./importUtils";
 
 describe("task import utils", () => {
-  it("detects semicolon-separated CSV files", () => {
-    expect(detectSeparator("labor;precio;contratista")).toBe(";");
-    expect(detectSeparator("labor,precio,contratista")).toBe(",");
-  });
-
   it("parses semicolon-separated task CSV rows", () => {
     const rows = parseCsv(
       ["Labor;Rubro;Precio;Estado Precio;Contratista", "Siembra;1;12,5;Parcial;ACME"].join(

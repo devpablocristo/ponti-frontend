@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
 import Button from "../../../components/Button/Button";
 import Drawer from "../../../components/Drawer/Drawer";
 import useProjects from "../../../hooks/useDatabase/projects";
@@ -19,6 +18,7 @@ import {
   MAX_IMPORT_FILE_SIZE_MB,
 } from "./importUtils";
 import { SuccessResponse } from "@/api/types";
+import { readSpreadsheetRows } from "../spreadsheetReader";
 
 const HEADER_ALIASES = {
   movementType: ["ingreso", "tipo_ingreso", "movement_type"],
@@ -246,12 +246,12 @@ export default function ImportSupplyMovements({
 
       const lowerName = file.name.toLowerCase();
       const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-      const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+      const isExcel = lowerName.endsWith(".xlsx");
 
       if (!isCsv && !isExcel) {
         if (!cancelled) {
           setPreviewRows([]);
-          setParseError("Formato no soportado. Use .xlsx, .xls o .csv.");
+          setParseError("Formato no soportado. Use .xlsx o .csv.");
           setParsedFileKey(fileKey);
         }
         return;
@@ -263,30 +263,11 @@ export default function ImportSupplyMovements({
         if (isCsv) {
           parsedRows = parseCsv(await file.text());
         } else {
-          const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
-          const sheetNames = workbook.SheetNames || [];
-          const preferredSheetNames = [
-            ...sheetNames.filter((name) => normalizeText(name).includes("insumo")),
-            ...sheetNames.filter((name) => normalizeText(name).includes("remito")),
-            ...sheetNames,
-          ].filter((name, index, arr) => arr.indexOf(name) === index);
-
-          for (const sheetName of preferredSheetNames) {
-            const sheet = workbook.Sheets[sheetName];
-            if (!sheet) continue;
-            const candidate = XLSX.utils
-              .sheet_to_json<Record<string, unknown>>(sheet, {
-                defval: "",
-                raw: false,
-                dateNF: "yyyy-mm-dd",
-              })
-              .map(normalizeSpreadsheetRow);
-
-            if (candidate.length > 0) {
-              parsedRows = candidate;
-              break;
-            }
-          }
+          parsedRows = (
+            await readSpreadsheetRows(file, {
+              preferredSheetNameIncludes: ["insumo", "remito"],
+            })
+          ).map(normalizeSpreadsheetRow);
         }
 
         if (parsedRows.length === 0) {
@@ -623,7 +604,7 @@ export default function ImportSupplyMovements({
       } catch {
         if (!cancelled) {
           setPreviewRows([]);
-          setParseError("No se pudo leer el archivo. Use .xlsx, .xls o .csv válidos.");
+          setParseError("No se pudo leer el archivo. Use .xlsx o .csv válidos.");
           setParsedFileKey(fileKey);
         }
       }

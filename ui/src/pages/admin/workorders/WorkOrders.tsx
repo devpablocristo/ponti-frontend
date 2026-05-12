@@ -12,7 +12,7 @@ import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
 import { useBulkActions } from "../../../hooks/useBulkActions";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import CreateOrder from "./CreateOrder";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -25,6 +25,7 @@ import { WORKORDER_ENTITY } from "../entities";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
+import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import {
   getValueByAliases,
   parseCsv,
@@ -128,14 +129,20 @@ function getOrderBaseNumber(orderNumber: string | number) {
   return String(orderNumber).trim().split(".")[0];
 }
 
+function countUniqueOrderBaseNumbers(orders: OrdersData[]) {
+  return new Set(
+    orders
+      .map((order) => getOrderBaseNumber(order.number))
+      .filter(Boolean)
+  ).size;
+}
+
 function OrdersHeader({
-  ordersAmount,
   selectedColumns,
   setSelectedColumns,
   setVisibleColumns,
   allColumns,
 }: {
-  ordersAmount: number;
   selectedColumns: Array<keyof OrdersData>;
   setSelectedColumns: (columns: Array<keyof OrdersData>) => void;
   setVisibleColumns: (columns: Array<keyof OrdersData>) => void;
@@ -144,11 +151,7 @@ function OrdersHeader({
   const [showColumnsModal, setShowColumnsModal] = useState(false);
 
   return (
-    <div className="flex justify-between items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
-      <div className="text-sm text-gray-900">
-        <span className="font-semibold">Cantidad de Órdenes Ingresadas:</span> {formatNumberAr(ordersAmount)}
-      </div>
-
+    <div className="flex justify-end items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
       <Button
         variant="primary"
         size="sm"
@@ -218,9 +221,11 @@ function OrdersHeader({
 function OrdersIndicators({
   metrics,
   processing,
+  ordersAmount,
 }: {
   metrics: Metrics;
   processing: boolean;
+  ordersAmount: number;
 }) {
   return (
     <div>
@@ -230,7 +235,7 @@ function OrdersIndicators({
           spinnerClassName="text-custom-btn"
         />
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <IndicatorCard
             title="Sup. ejecutada"
             value={formatNumberAr(metrics.surface_ha) + " Has"}
@@ -250,6 +255,11 @@ function OrdersIndicators({
             title="Costos directos"
             value={"u$ " + formatNumberAr(metrics.direct_cost)}
             color="red"
+          />
+          <IndicatorCard
+            title="Cantidad Total de Órdenes"
+            value={formatNumberAr(ordersAmount)}
+            color="blue"
           />
         </div>
       )}
@@ -375,6 +385,14 @@ export function WorkOrders() {
     },
     [columnsFilters, filterOrders, globalFilterSourceOrders]
   );
+
+  const handleOpenOrder = useCallback((order: OrdersData) => {
+    setSelectedOrderRow({
+      id: order.id,
+      isDigital: isDigitalOrder(order),
+    });
+    setDrawerUpdateOpen(true);
+  }, []);
 
   const columns: Column<OrdersData>[] = React.useMemo(() => {
     return [
@@ -611,6 +629,7 @@ export function WorkOrders() {
   );
 
   const pagination = usePagination({ perPage: 10 });
+  const resetPage = pagination.resetPage;
 
   const {
     projectId,
@@ -629,14 +648,6 @@ export function WorkOrders() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  function handleOpenOrder(order: OrdersData) {
-    setSelectedOrderRow({
-      id: order.id,
-      isDigital: isDigitalOrder(order),
-    });
-    setDrawerUpdateOpen(true);
-  }
 
   const workOrdersBaseQuery = useMemo(() => {
     const params: Record<string, string> = {};
@@ -675,11 +686,11 @@ export function WorkOrders() {
 
 
   const handleOrderCreated = useCallback(() => {
-    pagination.resetPage();
+    resetPage();
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
     setFilterDatasetVersion((version) => version + 1);
-  }, [getOrders, getMetrics, workOrdersQuery]);
+  }, [getOrders, getMetrics, resetPage, workOrdersQuery]);
 
 
   async function handlePublishOrder(order: OrdersData) {
@@ -845,8 +856,8 @@ export function WorkOrders() {
     setColumnsFilters({});
     setFilterDatasetOrders([]);
     setFilterDatasetReady(false);
-    pagination.resetPage();
-  }, [effectiveProjectId, selectedField, selectedCampaignId, selectedCustomer?.id, selectedSupplyFilter.id]);
+    resetPage();
+  }, [effectiveProjectId, selectedField, selectedCampaignId, selectedCustomer?.id, selectedSupplyFilter.id, resetPage]);
 
   useEffect(() => {
     if (!hasWorkOrderScope) {
@@ -953,12 +964,8 @@ export function WorkOrders() {
   const derivedMetrics: Metrics = useMemo(() => {
     const toNum = (v: unknown) => Number(v) || 0;
     let surface_ha = 0, liters = 0, kilograms = 0, direct_cost = 0;
-    const orderBaseNumbers = new Set<string>();
 
     filteredOrders.forEach((order) => {
-      const baseNumber = getOrderBaseNumber(order.number);
-      if (baseNumber) orderBaseNumbers.add(baseNumber);
-
       surface_ha += toNum(order.surface_ha);
 
       const consumption = String(order.consumption || "").trim();
@@ -971,7 +978,13 @@ export function WorkOrders() {
       direct_cost += toNum(order.total_cost);
     });
 
-    return { surface_ha, liters, kilograms, direct_cost, orders_count: orderBaseNumbers.size };
+    return {
+      surface_ha,
+      liters,
+      kilograms,
+      direct_cost,
+      orders_count: countUniqueOrderBaseNumbers(filteredOrders),
+    };
   }, [filteredOrders]);
 
   const hasColumnFilters = useMemo(
@@ -981,6 +994,16 @@ export function WorkOrders() {
 
   const displayedMetrics = hasColumnFilters ? derivedMetrics : metrics;
   const displayedOrders = hasColumnFilters ? filteredOrders : safeOrders;
+  const displayedRowsTotal = hasColumnFilters
+    ? filteredOrders.length
+    : pageInfo?.total ?? safeOrders.length;
+  const displayedOrdersCount = hasColumnFilters
+    ? derivedMetrics.orders_count
+    : countUniqueOrderBaseNumbers(
+        filterDatasetReady && filterDatasetOrders.length > 0
+          ? filterDatasetOrders
+          : safeOrders
+      );
 
   const bulk = useBulkActions<OrdersData>({
     items: displayedOrders,
@@ -1013,15 +1036,7 @@ export function WorkOrders() {
         { responseType: "blob" }
       );
 
-      const url = window.URL.createObjectURL(response);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `ordenes_${effectiveProjectId}_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response, buildTimestampedFilename("ordenes", "xlsx", effectiveProjectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de órdenes.");
     }
@@ -1131,12 +1146,12 @@ export function WorkOrders() {
 
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
-    pagination.resetPage();
+    resetPage();
   };
 
   return (
     <div>
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {
@@ -1185,6 +1200,7 @@ export function WorkOrders() {
           <OrdersIndicators
             metrics={displayedMetrics}
             processing={processingMetrics}
+            ordersAmount={displayedOrdersCount}
           />
         </div>
       )}
@@ -1267,7 +1283,6 @@ export function WorkOrders() {
           enableFilters={true}
           headerComponent={
             <OrdersHeader
-              ordersAmount={Number(displayedMetrics.orders_count) || 0}
               selectedColumns={selectedColumns}
               setSelectedColumns={setSelectedColumns}
               setVisibleColumns={setVisibleColumns}
@@ -1276,7 +1291,7 @@ export function WorkOrders() {
           }
           message="No hay ordenes disponibles"
           pagination={pagination.buildPagination(
-            hasColumnFilters ? filteredOrders.length : pageInfo?.total ?? filteredOrders.length,
+            displayedRowsTotal,
             { serverSide: !hasColumnFilters }
           )}
         />

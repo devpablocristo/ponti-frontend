@@ -34,4 +34,3 @@ export function Checkbox({ tone = "select", className = "", ...rest }: CheckboxP
   );
 }
 
-export default Checkbox;

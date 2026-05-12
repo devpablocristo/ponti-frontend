@@ -1,11 +1,11 @@
 import { PageInfo, Provider, Summary } from "@/api/types";
 
-export interface BatchFailure {
+interface BatchFailure {
   index?: number;
   message?: string;
 }
 
-export interface BatchSupplyMovementError {
+interface BatchSupplyMovementError {
   error_detail?: string;
 }
 
@@ -40,7 +40,7 @@ export interface UpdateSupplyMovementRequest {
   provider?: Provider;
 }
 
-export interface SupplyMovementItem {
+interface SupplyMovementItem {
   quantity: number;
   movement_type: string;
   movement_date: Date;

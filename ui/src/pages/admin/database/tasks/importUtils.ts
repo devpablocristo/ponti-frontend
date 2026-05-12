@@ -1,12 +1,10 @@
 import {
   normalizeText as _normalizeText,
   parsePartialPrice as _parsePartialPrice,
-  type ParsedPartialPrice as _ParsedPartialPrice,
 } from "@/lib/importHelpers";
 
 export const normalizeText = _normalizeText;
 export const parsePartialPrice = _parsePartialPrice;
-export type ParsedPartialPrice = _ParsedPartialPrice;
 
 export const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
@@ -24,13 +22,13 @@ export const LABOR_HEADER_ALIASES = {
   ],
 } as const;
 
-export function detectSeparator(firstLine: string) {
+function detectSeparator(firstLine: string) {
   const commaCount = (firstLine.match(/,/g) ?? []).length;
   const semicolonCount = (firstLine.match(/;/g) ?? []).length;
   return semicolonCount > commaCount ? ";" : ",";
 }
 
-export function parseCsvLine(line: string, separator = ",") {
+function parseCsvLine(line: string, separator = ",") {
   const values: string[] = [];
   let current = "";
   let insideQuotes = false;

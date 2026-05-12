@@ -40,4 +40,3 @@ export function InlineSpinner({
   );
 }
 
-export default InlineSpinner;

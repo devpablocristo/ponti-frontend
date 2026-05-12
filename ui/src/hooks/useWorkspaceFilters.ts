@@ -28,7 +28,7 @@ export interface Field {
   project_id: number;
 }
 
-export interface FilterBarFilter {
+interface FilterBarFilter {
   type: "search" | "select";
   name: string;
   label: string;

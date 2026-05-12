@@ -1,5 +1,4 @@
 /** @type {import('tailwindcss').Config} */
-const { mtConfig } = require("@material-tailwind/react");
 const typography = require("@tailwindcss/typography");
 
 export default {
@@ -65,5 +64,5 @@ export default {
       ],
     },
   },
-  plugins: [mtConfig(), typography],
+  plugins: [typography],
 };

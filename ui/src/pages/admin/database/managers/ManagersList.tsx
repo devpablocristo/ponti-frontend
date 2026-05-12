@@ -5,7 +5,7 @@ import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
@@ -22,28 +22,10 @@ import { Project, ProjectData } from "../../../../hooks/useDatabase/projects/typ
 import { Column } from "../../types";
 import { MANAGER_ENTITY as ENTITY } from "../../entities";
 import ManagerFormDrawer from "./ManagerFormDrawer";
+import { downloadCsvRows } from "../../fileTransfer";
 
 const toFilterOptions = (values: string[]) =>
   values.map((value, index) => ({ id: `${value}-${index}`, name: value }));
-
-const exportRows = (filename: string, rows: Record<string, unknown>[]) => {
-  const headers = Object.keys(rows[0] ?? {});
-  const csv = [
-    headers.join(","),
-    ...rows.map((row) =>
-      headers
-        .map((header) => `"${String(row[header] ?? "").replace(/"/g, '""')}"`)
-        .join(","),
-    ),
-  ].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-};
 
 type ManagerProjectRelation = {
   customer: string;
@@ -320,7 +302,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
   );
 
   const handleExport = useCallback(() => {
-    exportRows(
+    downloadCsvRows(
       `responsables_${new Date().toISOString()}.csv`,
       rows.map((row) => ({
         Nombre: row.name,
@@ -405,7 +387,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
       <div className="relative">
         <LoadingOverlay show={processing || projectsProcessing || loadingDetails} />
         {(error || projectsError) && <ErrorBanner message={error || projectsError} />}
-        <FilterBar
+        <AppFilterBar
           filters={[
             {
               type: "search",

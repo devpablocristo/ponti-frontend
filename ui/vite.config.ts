@@ -45,17 +45,12 @@ export default defineConfig(({ mode }: ConfigEnv) => {
               return "vendor-react";
             }
 
-            if (
-              id.includes("@material-tailwind/") ||
-              id.includes("@heroicons/") ||
-              id.includes("flowbite") ||
-              id.includes("lucide-react")
-            ) {
+            if (id.includes("lucide-react")) {
               return "vendor-ui";
             }
 
             if (
-              id.includes("xlsx") ||
+              id.includes("read-excel-file") ||
               id.includes("react-to-pdf") ||
               id.includes("jspdf") ||
               id.includes("html2canvas")

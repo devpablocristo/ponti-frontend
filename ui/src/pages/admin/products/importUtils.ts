@@ -10,13 +10,13 @@ export function normalizeText(value: string) {
     .replace(/^_+|_+$/g, "");
 }
 
-export function detectSeparator(firstLine: string): string {
+function detectSeparator(firstLine: string): string {
   const commaCount = (firstLine.match(/,/g) ?? []).length;
   const semicolonCount = (firstLine.match(/;/g) ?? []).length;
   return semicolonCount > commaCount ? ";" : ",";
 }
 
-export function parseCsvLine(line: string, separator: string = ",") {
+function parseCsvLine(line: string, separator: string = ",") {
   const values: string[] = [];
   let current = "";
   let insideQuotes = false;

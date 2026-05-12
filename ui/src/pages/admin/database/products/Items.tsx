@@ -4,7 +4,7 @@ import { parsePartialPrice } from "@/lib/importHelpers";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { useConfirmDialog } from "../../../../hooks/useConfirmDialog";
 import { SupplyCreatePayload, Supply } from "../../../../hooks/useSupplies/types";
@@ -12,10 +12,11 @@ import useSupplies from "../../../../hooks/useSupplies";
 import useCategories from "../../../../hooks/useCategories";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
-import * as XLSX from "xlsx";
 import { units } from "../../../../constants/units";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { SPREADSHEET_ACCEPT } from "../../fileTransfer";
+import { readSpreadsheetRows } from "../../spreadsheetReader";
 
 interface Row {
   id: number;
@@ -584,10 +585,10 @@ export default function Items() {
 
     const lowerName = file.name.toLowerCase();
     const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+    const isExcel = lowerName.endsWith(".xlsx");
 
     if (!isCsv && !isExcel) {
-      setErrorMessage("Formato no soportado. Use .xlsx, .xls o .csv.");
+      setErrorMessage("Formato no soportado. Use .xlsx o .csv.");
       return;
     }
 
@@ -597,35 +598,11 @@ export default function Items() {
         const text = await file.text();
         parsedRows = parseCsv(text);
       } else {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array" });
-        // Prefer a meaningful sheet (stock exports often have an empty first sheet).
-        const sheetNames = workbook.SheetNames || [];
-        const preferred =
-          sheetNames.find((n) => normalizeText(n).includes("stock")) ??
-          sheetNames.find((n) => normalizeText(n).includes("insumo")) ??
-          sheetNames[0];
-
-        const trySheets = [
-          preferred,
-          ...sheetNames.filter((n) => n !== preferred),
-        ].filter(Boolean) as string[];
-
-        let jsonRows: Record<string, unknown>[] = [];
-        for (const sheetName of trySheets) {
-          const sheet = workbook.Sheets[sheetName];
-          if (!sheet) continue;
-          const candidate = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-            sheet,
-            { defval: "" }
-          );
-          if (candidate.length > 0) {
-            jsonRows = candidate;
-            break;
-          }
-        }
-
-        parsedRows = jsonRows.map(normalizeSpreadsheetRow);
+        parsedRows = (
+          await readSpreadsheetRows(file, {
+            preferredSheetNameIncludes: ["stock", "insumo"],
+          })
+        ).map(normalizeSpreadsheetRow);
       }
 
       if (parsedRows.length === 0) {
@@ -761,13 +738,13 @@ export default function Items() {
       // No duplicates — load directly into form
       loadNewRows(importedRows, importWarnings);
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx o .csv.");
     }
   };
 
   return (
     <div className="w-full mx-auto">
-      <FilterBar filters={filters} />
+      <AppFilterBar filters={filters} />
       <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
         <ErrorBanner
           message={errorMessage || null}
@@ -787,7 +764,7 @@ export default function Items() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              accept={SPREADSHEET_ACCEPT}
               onChange={handleImportFromFile}
               className="hidden"
             />

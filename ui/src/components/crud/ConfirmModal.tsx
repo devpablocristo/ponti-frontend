@@ -99,4 +99,3 @@ export function ConfirmModal({
   );
 }
 
-export default ConfirmModal;

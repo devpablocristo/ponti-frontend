@@ -3,7 +3,7 @@ import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import useCategories from "../../../../hooks/useCategories";
 import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";
@@ -12,7 +12,6 @@ import { apiClient } from "../../../../api/client";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
-import * as XLSX from "xlsx";
 import {
   getValueByAliases,
   LABOR_HEADER_ALIASES,
@@ -21,6 +20,8 @@ import {
   parseCsv,
   parsePartialPrice,
 } from "./importUtils";
+import { SPREADSHEET_ACCEPT } from "../../fileTransfer";
+import { readSpreadsheetRows } from "../../spreadsheetReader";
 
 interface Labor {
   id: number;
@@ -277,10 +278,10 @@ export default function TasksForm() {
 
     const lowerName = file.name.toLowerCase();
     const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    const isExcel = lowerName.endsWith(".xlsx") || lowerName.endsWith(".xls");
+    const isExcel = lowerName.endsWith(".xlsx");
 
     if (!isCsv && !isExcel) {
-      setErrorMessage("Formato no soportado. Use .xlsx, .xls o .csv.");
+      setErrorMessage("Formato no soportado. Use .xlsx o .csv.");
       return;
     }
 
@@ -290,32 +291,11 @@ export default function TasksForm() {
         const text = await file.text();
         parsedRows = parseCsv(text);
       } else {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array" });
-        const sheetNames = workbook.SheetNames || [];
-        const preferred =
-          sheetNames.find((n) => normalizeText(n).includes("labor")) ??
-          sheetNames[0];
-
-        const trySheets = [
-          preferred,
-          ...sheetNames.filter((n) => n !== preferred),
-        ].filter(Boolean) as string[];
-
-        let jsonRows: Record<string, unknown>[] = [];
-        for (const sheetName of trySheets) {
-          const sheet = workbook.Sheets[sheetName];
-          if (!sheet) continue;
-          const candidate = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-            sheet,
-            { defval: "" }
-          );
-          if (candidate.length > 0) {
-            jsonRows = candidate;
-            break;
-          }
-        }
-        parsedRows = jsonRows.map(normalizeSpreadsheetRow);
+        parsedRows = (
+          await readSpreadsheetRows(file, {
+            preferredSheetNameIncludes: ["labor"],
+          })
+        ).map(normalizeSpreadsheetRow);
       }
 
       if (parsedRows.length === 0) {
@@ -439,13 +419,13 @@ export default function TasksForm() {
         setErrorMessage("No se encontraron filas importables en el archivo.");
       }
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .xlsx, .xls o .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx o .csv.");
     }
   };
 
   return (
     <div className="w-full mx-auto">
-      <FilterBar filters={filters} />
+      <AppFilterBar filters={filters} />
       <div className="w-full p-6 mt-4 bg-white rounded-lg shadow-md">
         <ErrorBanner
           message={errorMessage || null}
@@ -465,7 +445,7 @@ export default function TasksForm() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              accept={SPREADSHEET_ACCEPT}
               onChange={handleImportLaborsFromFile}
               className="hidden"
             />

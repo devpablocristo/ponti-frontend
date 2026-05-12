@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-import EntityFormDrawer from "../../../../components/crud/EntityFormDrawer";
+import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import InputField from "../../../../components/Input/InputField";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import {

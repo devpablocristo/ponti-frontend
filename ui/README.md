@@ -15,10 +15,7 @@ La UI consume paquetes publicados desde `core` y `modules`:
 - `@devpablocristo/core-authn`
 - `@devpablocristo/core-browser`
 - `@devpablocristo/core-http`
-- `@devpablocristo/modules-ai-console`
 - `@devpablocristo/modules-ui-data-display`
-- `@devpablocristo/modules-ui-filters`
-- `@devpablocristo/modules-ui-forms`
 
 No usa ya una copia local de `src/modules/ai-console`.
 
@@ -48,5 +45,5 @@ yarn build
 
 Notas operativas:
 
-- `@material-tailwind/react` quedó actualizado a la línea beta que declara soporte para React `>=18`, alineado con React 19.
-- El chunk `vendor-export` sigue siendo pesado porque agrupa dependencias de exportación (`xlsx`, `jspdf`, `html2canvas`, etc.), pero ya no ensucia el build con warning porque quedó particionado y con `chunkSizeWarningLimit` explícito.
+- El chunk `vendor-export` agrupa dependencias de exportación/importación (`read-excel-file`, `jspdf`, `html2canvas`, etc.) para aislar peso fuera del chunk principal.
+- Las importaciones aceptan `.xlsx` y `.csv`. Se retiró soporte `.xls` binario legacy junto con `xlsx` para evitar dependencias sin parche de seguridad.

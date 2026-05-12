@@ -7,7 +7,7 @@ import { useCallback, useState } from "react";
 // Las páginas que reusan este hook NO deberían volver a tener su propio estado
 // de processing/error — ya viene resuelto.
 
-export type ArchiveAction<T> = (item: T) => Promise<void>;
+type ArchiveAction<T> = (item: T) => Promise<void>;
 
 export type UseArchiveActionsOptions = {
   /** Función para refrescar la lista después de cada acción exitosa. */

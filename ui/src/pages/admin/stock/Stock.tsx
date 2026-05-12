@@ -4,8 +4,10 @@ import { LoaderCircle, Pencil, Check, AlertCircle, Upload, Plus } from "lucide-r
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
 import { Summary } from "@/api/types";
@@ -16,6 +18,7 @@ import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
+import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 
 const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
 const MISSING_ENTRY_LABEL = "REV ING.";
@@ -64,7 +67,7 @@ const EditableCell = ({
     }
 
     if (projectId === null) {
-      alert("Error al guardar");
+      onValidationError("Seleccioná un proyecto antes de guardar stock de campo.");
       return;
     }
 
@@ -92,7 +95,7 @@ const EditableCell = ({
 
   useEffect(() => {
     if (errorStock) {
-      alert(errorStock);
+      onValidationError(errorStock);
       return;
     }
     if (resultStock) {
@@ -100,7 +103,7 @@ const EditableCell = ({
       onSaved?.();
       return;
     }
-  }, [errorStock, resultStock, onSaved]);
+  }, [errorStock, resultStock, onSaved, onValidationError]);
 
   if (editing) {
     return (
@@ -277,6 +280,7 @@ function ItemsIndicators({
 export function Stock() {
   const navigate = useNavigate();
   const pagination = usePagination({ perPage: 10 });
+  const resetPage = pagination.resetPage;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -284,6 +288,8 @@ export function Stock() {
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [stockValidationModal, setStockValidationModal] = useState<{
     title: string;
     message: string;
@@ -328,7 +334,7 @@ export function Stock() {
 
   const handleStockCreated = () => {
     if (!projectId) return;
-    pagination.resetPage();
+    resetPage();
     refreshStock();
   };
 
@@ -557,7 +563,11 @@ export function Stock() {
             item={item}
             value={typeof value === "string" || typeof value === "number" ? value : ""}
             projectId={projectId}
-            onSaved={refreshStock}
+            onSaved={() => {
+              setActionErrorMessage(null);
+              setSuccessMessage("Stock de campo actualizado con éxito.");
+              refreshStock();
+            }}
             onValidationError={(message) =>
               setStockValidationModal({
                 title: "No se pudo cargar stock de campo",
@@ -678,7 +688,7 @@ export function Stock() {
       return;
     }
 
-    pagination.resetPage();
+    resetPage();
     setPeriod("0");
     setStockPeriods([{ id: 0, name: "Activo" }]);
 
@@ -686,7 +696,7 @@ export function Stock() {
     getPeriods(projectId);
     setDisabledCloseStock(false);
     setSelectedDate("");
-  }, [getStock, getPeriods, projectId, selectedCustomer, selectedCampaignId]);
+  }, [getStock, getPeriods, projectId, resetPage, selectedCustomer, selectedCampaignId]);
 
   useEffect(() => {
     if (periods && periods.length > 0) {
@@ -705,7 +715,7 @@ export function Stock() {
   useEffect(() => {
     if (!projectId) return;
 
-    pagination.resetPage();
+    resetPage();
 
     const periodNumber = Number(period);
     if (periodNumber === 0) {
@@ -718,17 +728,18 @@ export function Stock() {
     getStock(projectId, stockPeriods[periodNumber]?.name || "");
     setSelectedDate(stockPeriods[periodNumber]?.name || "");
     setDisabledCloseStock(true);
-  }, [period, stockPeriods, getStock, projectId]);
+  }, [period, stockPeriods, getStock, projectId, resetPage]);
 
   useEffect(() => {
     if (errorCloseStock) {
-      alert(errorCloseStock);
+      setActionErrorMessage(errorCloseStock);
     }
   }, [errorCloseStock]);
 
   useEffect(() => {
     if (resultCloseStock && projectId) {
-      alert(resultCloseStock);
+      setActionErrorMessage(null);
+      setSuccessMessage(resultCloseStock);
       getStock(projectId, "");
       getPeriods(projectId);
       setEnabledCloseStock(false);
@@ -761,15 +772,7 @@ export function Stock() {
         { responseType: "blob" }
       );
 
-      const url = window.URL.createObjectURL(response);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `stock_${projectId}_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response, buildTimestampedFilename("stock", "xlsx", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el stock.");
     }
@@ -777,12 +780,12 @@ export function Stock() {
 
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
-    pagination.resetPage();
+    resetPage();
   };
 
   return (
     <div>
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {
@@ -822,12 +825,12 @@ export function Stock() {
           </div>
         )}
 
-        {(error || exportErrorMessage) && (
-          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
-            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-            <div><span className="font-semibold">Error:</span> {exportErrorMessage || error}</div>
-          </div>
-        )}
+        <SuccessBanner message={successMessage} variant="outlined" />
+        <ErrorBanner
+          message={actionErrorMessage || exportErrorMessage || error}
+          variant="outlined"
+          prefix="Error:"
+        />
         {stockPeriods && stockPeriods.length > 0 && (
           <div className="mb-4">
             <SelectField

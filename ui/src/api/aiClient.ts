@@ -2,7 +2,6 @@ import { request } from "@devpablocristo/core-http/fetch";
 import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 import type {
   PontiChatRequest,
-  PontiChatResponse,
   PontiChatStreamSseEvent,
   PontiConversationDetail,
   PontiConversationSummary,
@@ -41,18 +40,6 @@ const buildHeaders = (projectId: string): Record<string, string> => {
   }
   return headers;
 };
-
-export async function pontiAssistantChat(
-  payload: PontiChatRequest,
-  headers: AskHeaders
-): Promise<PontiChatResponse> {
-  return request<PontiChatResponse>("/chat", {
-    method: "POST",
-    body: payload,
-    headers: buildHeaders(headers.projectId),
-    baseURLs: [getBaseUrl()],
-  });
-}
 
 function parseSseBlocks(buffer: string): { events: PontiChatStreamSseEvent[]; rest: string } {
   const events: PontiChatStreamSseEvent[] = [];

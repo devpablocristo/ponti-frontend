@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 
 import Navbar from "./Navbar/Navbar";
 import Sidebar from "./Sidebar/Sidebar";
+import { getSidebarTitle } from "./Sidebar/sidebarTitle";
 import { BaseModal } from "../components/Modal/BaseModal";
 import { AuthProvider } from "../pages/login/context/AuthProvider";
 import { useAuth } from "../pages/login/context/useAuth";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 import { SelectionProvider } from "../pages/login/context/SelectionContext";
 import { TenantProvider } from "../pages/login/context/TenantContext";
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const auth = useAuth();
 
   const isSmallScreen = window.innerWidth < 768;
@@ -24,6 +26,10 @@ const MainLayout: React.FC = () => {
       navigate("/login");
     }
   }, [auth?.isAuthenticated, auth?.loading, navigate]);
+
+  useEffect(() => {
+    setTitle(getSidebarTitle(location.pathname));
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleResize = () => {

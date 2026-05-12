@@ -1,5 +1,5 @@
 import { DataTable, usePagination } from "@/lib/dataDisplay";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { Archive, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
@@ -33,8 +33,9 @@ import {
   parseCsv,
   parseImportDate,
 } from "../products/importUtils";
+import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 
-export function Lots() {
+function Lots() {
   const navigate = useNavigate();
   const pagination = usePagination({ perPage: 10 });
   const resetPage = pagination.resetPage;
@@ -321,14 +322,7 @@ export function Lots() {
         { responseType: "blob" }
       );
 
-      const url = window.URL.createObjectURL(response);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `lotes_${projectId}_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response, buildTimestampedFilename("lotes", "xlsx", projectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de lotes.");
     }
@@ -447,7 +441,7 @@ export function Lots() {
 
   return (
     <div>
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {

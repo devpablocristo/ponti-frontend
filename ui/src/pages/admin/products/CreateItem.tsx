@@ -19,7 +19,7 @@ import {
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import { DEFAULT_ITEM_ROW_COUNT, replaceSupplyIdsWithNames } from "../utils";
 import Drawer from "../../../components/Drawer/Drawer";
-import EntityFormDrawer from "../../../components/crud/EntityFormDrawer";
+import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import {

@@ -102,4 +102,3 @@ export function SuccessBanner({
   );
 }
 
-export default SuccessBanner;

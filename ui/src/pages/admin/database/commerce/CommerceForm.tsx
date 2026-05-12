@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import useCommercializations from "../../../../hooks/useCommercializations";
@@ -189,7 +189,7 @@ useEffect(() => {
 
   return (
     <div className="w-full mx-auto">
-      <FilterBar filters={filters} />
+      <AppFilterBar filters={filters} />
       <div className="mt-4 p-6 w-full mx-auto bg-white rounded-lg shadow-md">
         <h1 className="text-custom-text font-semibold text-xl leading-none">
           Datos de comercialización por cultivo

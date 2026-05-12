@@ -60,4 +60,3 @@ export function BulkSelectionPanel({
   );
 }
 
-export default BulkSelectionPanel;

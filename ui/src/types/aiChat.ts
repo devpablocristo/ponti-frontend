@@ -10,7 +10,7 @@ export type PontiRouteHint =
   | "stock"
   | "reports";
 
-export type PontiWorkspaceContext = {
+type PontiWorkspaceContext = {
   customer_id?: number | null;
   customer_name?: string | null;
   project_id?: number | null;
@@ -28,24 +28,6 @@ export type PontiChatRequest = {
   preferred_language?: "es" | "en";
   confirmed_actions?: string[];
   workspace?: PontiWorkspaceContext | null;
-};
-
-export type PontiChatTextBlock = { type: "text"; text: string };
-
-export type PontiChatBlock = PontiChatTextBlock | Record<string, unknown>;
-
-export type PontiChatResponse = {
-  request_id: string;
-  output_kind: string;
-  content_language: "es" | "en";
-  chat_id: string;
-  reply: string;
-  tokens_used: number;
-  tool_calls: string[];
-  pending_confirmations: string[];
-  blocks: PontiChatBlock[];
-  routed_agent: string;
-  routing_source: string;
 };
 
 export type PontiConversationSummary = {

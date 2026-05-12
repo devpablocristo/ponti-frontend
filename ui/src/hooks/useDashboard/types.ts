@@ -5,7 +5,7 @@ export interface DashboardData {
   operational_indicators: OperationalIndicators;
 }
 
-export interface Metrics {
+interface Metrics {
   sowing: SowingMetric;
   harvest: HarvestMetric;
   costs: CostsMetric;
@@ -13,53 +13,53 @@ export interface Metrics {
   operating_result: OperatingResultMetric;
 }
 
-export interface SowingMetric {
+interface SowingMetric {
   progress_pct: string;
   hectares: string;
   total_hectares: string;
 }
 
-export interface HarvestMetric {
+interface HarvestMetric {
   progress_pct: string;
   hectares: string;
   total_hectares: string;
 }
 
-export interface CostsMetric {
+interface CostsMetric {
   progress_pct: string;
   executed_usd: string;
   budget_usd: string;
 }
 
-export interface InvestorContributions {
+interface InvestorContributions {
   items: InvestorItem[];
 }
 
-export interface InvestorItem {
+interface InvestorItem {
   investor_id: number;
   investor_name: string;
   share_pct: string;
   contributions_progress_pct: string;
 }
 
-export interface OperatingResultMetric {
+interface OperatingResultMetric {
   margin_pct: string;
   result_usd: string;
   total_costs_usd: string;
 }
 
-export interface ManagementBalance {
+interface ManagementBalance {
   totals: BalanceTotals;
   items: BalanceItem[];
 }
 
-export interface BalanceTotals {
+interface BalanceTotals {
   executed_usd: string;
   invested_usd: string;
   stock_usd: string;
 }
 
-export interface BalanceItem {
+interface BalanceItem {
   category: string;
   label: string;
   executed_usd: string;
@@ -68,7 +68,7 @@ export interface BalanceItem {
   order: number;
 }
 
-export interface CropIncidence {
+interface CropIncidence {
   items: CropItem[];
   total: CropTotal;
 }
@@ -81,12 +81,12 @@ export interface CropItem {
   incidence_pct: string;
 }
 
-export interface CropTotal {
+interface CropTotal {
   hectares: string;
   avg_cost_per_ha_usd: string;
 }
 
-export interface OperationalIndicators {
+interface OperationalIndicators {
   items: OperationalItem[];
 }
 

@@ -29,7 +29,7 @@ export type ActorIdentifier = {
   is_primary?: boolean;
 };
 
-export type ActorPersonProfile = {
+type ActorPersonProfile = {
   first_name?: string | null;
   last_name?: string | null;
   birth_date?: string | null;
@@ -37,7 +37,7 @@ export type ActorPersonProfile = {
   document_number?: string | null;
 };
 
-export type ActorOrganizationProfile = {
+type ActorOrganizationProfile = {
   legal_name?: string | null;
   trade_name?: string | null;
   legal_entity_type?: string | null;
@@ -90,14 +90,14 @@ export type ActorMergeImpact = {
   confirmed: boolean;
 };
 
-export type ActorMergeInput = {
+type ActorMergeInput = {
   target_actor_id: number;
   source_actor_ids: number[];
   reason?: string;
   confirm?: boolean;
 };
 
-export type DuplicateActor = {
+type DuplicateActor = {
   id: number;
   display_name: string;
   actor_kind: ActorKind;

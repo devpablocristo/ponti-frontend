@@ -1,7 +1,0 @@
-import { Navigate } from "react-router-dom";
-
-export function Customers() {
-  return <Navigate to="/admin/database/customers/list" replace />;
-}
-
-export default Customers;

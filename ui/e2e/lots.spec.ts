@@ -28,16 +28,23 @@ test("lotes carga datos reales, comercializacion y paginacion compartida", async
   await expect(tableHead.getByText("Arriendo")).toBeVisible();
   await expect(tableHead.getByText("Activo Total")).toBeVisible();
   await expect(tableHead.getByText("Resultado Operativo")).toBeVisible();
-  await expect(page.getByText("u$ 150").first()).toBeVisible();
-  await expect(page.getByText("u$ 433").first()).toBeVisible();
-  await expect(page.getByText("u$ -433").first()).toBeVisible();
+  const lot54Row = page.getByRole("row", { name: /LOTE 54 / }).first();
+  await expect(lot54Row.getByText("u$ 150")).toBeVisible();
+  await expect(lot54Row.getByText("u$ 433")).toBeVisible();
+  await expect(lot54Row.getByText("u$ 1.098")).toBeVisible();
 
   await page.getByRole("button", { name: "2" }).click();
   await expect(page.getByText(/Mostrar\s*11-20\s*de\s*21/)).toBeVisible();
   await expect(page.getByText("LOTE 52").first()).toBeVisible();
 
-  await page.getByTitle("Editar").first().click();
-  await expect(page.getByRole("heading", { name: /JUJUY \(MEALLA\/ACHERAL\)/ })).toBeVisible();
+  await page.getByRole("checkbox", { name: "Seleccionar lote LOTE 52" }).check();
+  await page
+    .getByRole("toolbar", { name: "Acciones masivas" })
+    .getByRole("button", { name: "Editar" })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: /JUJUY \(MEALLA\/ACHERAL\).*LOTE 52/ })
+  ).toBeVisible();
   await expect(page.locator('input[name="sowingDate1"]')).toBeVisible();
   await expect(page.locator('input[name="variety"]')).toBeVisible();
 });

@@ -7,7 +7,7 @@ import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel"
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import CreateItem from "./CreateItem";
@@ -18,6 +18,7 @@ import { Summary } from "@/api/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
+import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../fileTransfer";
 
 function ItemsIndicators({ summary }: { summary?: Summary }) {
   const safeSummary = summary ?? {
@@ -324,7 +325,6 @@ export function Products() {
         },
       },
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [supplyMovements, columnsFilters]
   );
 
@@ -511,15 +511,7 @@ export function Products() {
         { responseType: "blob" }
       );
 
-      const url = window.URL.createObjectURL(response);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `insumos_${projectId}_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response, buildTimestampedFilename("insumos", "xlsx", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el listado de insumos.");
     }
@@ -534,7 +526,7 @@ export function Products() {
 
   return (
     <div>
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {
@@ -542,8 +534,7 @@ export function Products() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            accept:
-              ".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel",
+            accept: SPREADSHEET_ACCEPT,
             onFileChange: handleImportFileChange,
           },
           {

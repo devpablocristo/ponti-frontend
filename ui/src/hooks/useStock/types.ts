@@ -1,15 +1,3 @@
-export interface StockData {
-  name: string;
-  category: string;
-  quantityEntered: string;
-  quantityConsumed: string;
-  totalStock: string;
-  realStock: string;
-  difference: string;
-  pricePerUnit: string;
-  totalNet: string;
-}
-
 export interface GetStocksResponse {
   items: GetStockItems[];
   net_total_usd: number;

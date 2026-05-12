@@ -3,7 +3,7 @@ import { CalendarRange, Download, Plus, Upload } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
-import { AppFilterBar as FilterBar } from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
@@ -19,6 +19,7 @@ import { Column } from "../../types";
 import { CAMPAIGN_ENTITY as ENTITY } from "../../entities";
 import CampaignFormDrawer from "./CampaignFormDrawer";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
+import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTransfer";
 
 const baseColumns: Column<Campaign>[] = [
   { key: "name", header: "Nombre" },
@@ -64,15 +65,12 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
   const handleExport = useCallback(() => {
     const csv = [
       "Nombre",
-      ...campaigns.map((campaign) => `"${campaign.name.replace(/"/g, '""')}"`),
+      ...campaigns.map((campaign) => csvEscape(campaign.name)),
     ].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `campanias_${new Date().toISOString()}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      buildTimestampedFilename("campanias", "csv"),
+    );
   }, [campaigns]);
 
   const handleImport = useCallback(
@@ -114,7 +112,7 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
 
   return (
     <div>
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {

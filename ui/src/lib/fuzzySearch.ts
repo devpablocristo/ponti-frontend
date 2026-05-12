@@ -73,5 +73,3 @@ export function fuzzySearchOptions<T extends FuzzySearchable>(
     .slice(0, limit)
     .map((item) => item.option);
 }
-
-export { normalizeSearchText };

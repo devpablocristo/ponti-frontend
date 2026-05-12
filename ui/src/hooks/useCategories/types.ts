@@ -9,10 +9,3 @@ export type TypeData = {
   name: string;
 };
 
-export type PayloadCategories = {
-  categories: CategoryData[];
-};
-
-export type PayloadTypes = {
-  types: TypeData[];
-};

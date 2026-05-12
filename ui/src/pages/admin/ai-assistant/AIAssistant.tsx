@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {
@@ -161,7 +161,7 @@ const AIAssistant = () => {
       setStreamDraft(null);
       setLoading(false);
     });
-  }, [headers]);
+  }, [headers, workspace]);
 
   const refreshList = useCallback(async () => {
     if (!headers) return;
@@ -318,7 +318,7 @@ const AIAssistant = () => {
 
   return (
     <div className="flex flex-col gap-4 px-6 py-4">
-      <FilterBar filters={filters} />
+      <AppFilterBar filters={filters} />
 
       {!headers && (
         <p className="text-sm text-amber-700">Seleccioná un proyecto para usar el asistente.</p>

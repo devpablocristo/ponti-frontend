@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import React, { ReactNode, useEffect, useState } from "react";
 
 import { Link, useLocation } from "react-router-dom";
+import { getSidebarTitle } from "./sidebarTitle";
 
 type MenuItem = {
   name: string;
@@ -367,9 +368,9 @@ function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
 
   useEffect(() => {
     if (active) {
-      setTitle(item.name);
+      setTitle(getSidebarTitle(item.route));
     }
-  }, [active, item.name, setTitle]);
+  }, [active, item.route, setTitle]);
 
   return (
     <Link
@@ -379,7 +380,7 @@ function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
       } leading-5`}
       style={{ color: active ? "#34D399" : "#94A3B8" }}
       onClick={() => {
-        setTitle(item.name);
+        setTitle(getSidebarTitle(item.route));
         if (window.innerWidth < 768) setIsSidebarOpen();
       }}
       onMouseEnter={(e) => {
@@ -417,9 +418,9 @@ function SidebarSubmenuItem({ item, setTitle, setIsSidebarOpen }: SidebarSubItem
 
   useEffect(() => {
     if (active) {
-      setTitle(item.name);
+      setTitle(getSidebarTitle(item.route));
     }
-  }, [active, item.name, setTitle]);
+  }, [active, item.route, setTitle]);
 
   return (
     <Link
@@ -430,7 +431,7 @@ function SidebarSubmenuItem({ item, setTitle, setIsSidebarOpen }: SidebarSubItem
       }`}
       style={{ color: active ? "#34D399" : "#94A3B8" }}
       onClick={() => {
-        setTitle(item.name);
+        setTitle(getSidebarTitle(item.route));
         if (window.innerWidth < 768) setIsSidebarOpen();
       }}
       onMouseEnter={(e) => {

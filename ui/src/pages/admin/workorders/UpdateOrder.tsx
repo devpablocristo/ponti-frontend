@@ -17,7 +17,7 @@ import { getUnitName, units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Drawer from "../../../components/Drawer/Drawer";
-import EntityFormDrawer from "../../../components/crud/EntityFormDrawer";
+import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 
