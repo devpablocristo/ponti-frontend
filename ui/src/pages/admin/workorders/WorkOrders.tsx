@@ -999,7 +999,8 @@ export function WorkOrders() {
     : pageInfo?.total ?? safeOrders.length;
   const displayedOrdersCount = hasColumnFilters
     ? derivedMetrics.orders_count
-    : countUniqueOrderBaseNumbers(
+    : Number(metrics.orders_count) ||
+      countUniqueOrderBaseNumbers(
         filterDatasetReady && filterDatasetOrders.length > 0
           ? filterDatasetOrders
           : safeOrders
