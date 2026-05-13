@@ -303,14 +303,14 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
       <AppFilterBar filters={filters} actions={[
         {
           label: "Importar",
-          icon: <Download className="h-4 w-4" />,
+          icon: <Upload className="h-4 w-4" />,
           variant: "primary",
           isPrimary: true,
           disabled: true,
         },
         {
           label: "Exportar",
-          icon: <Upload className="h-4 w-4" />,
+          icon: <Download className="h-4 w-4" />,
           variant: "primary",
           isPrimary: true,
           disabled: !projectId,

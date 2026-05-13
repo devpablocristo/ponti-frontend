@@ -146,6 +146,36 @@ const useLots = () => {
     [dispatch]
   );
 
+  const createLot = React.useCallback(
+    async (lot: LotsDataUpdate) => {
+      setProcessing(true);
+      setUpdateLotError(null);
+      dispatch({
+        type: actions.SET_RESULT,
+        payload: "",
+      });
+
+      try {
+        const response = await apiClient.post<LotMutationResponse>("/lots", lot);
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_RESULT,
+            payload: "Se ha creado el lote con éxito!",
+          });
+          return;
+        }
+
+        setUpdateLotError("Ocurrió un error en la creación del lote");
+      } catch (error) {
+        setUpdateLotError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [dispatch]
+  );
+
   const getArchivedLots = React.useCallback(
     async (queryString: string) => {
       setProcessing(true);
@@ -259,6 +289,7 @@ const useLots = () => {
   return {
     lots,
     pageInfo,
+    createLot,
     updateLot,
     updateTons,
     getLots,

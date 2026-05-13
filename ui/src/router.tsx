@@ -30,7 +30,6 @@ import Lots from "./pages/admin/lots/Lots";
 import Items from "./pages/admin/database/products/Items";
 import DollarForm from "./pages/admin/database/dollar/DollarForm";
 import CommerceForm from "./pages/admin/database/commerce/CommerceForm";
-import WorkspaceSelectorPage from "./pages/login/WorkspaceSelector";
 import ListItems from "./pages/admin/database/products/List";
 import ListTasks from "./pages/admin/database/tasks/List";
 import ArchivedTasks from "./pages/admin/database/tasks/ArchivedTasks";
@@ -60,11 +59,7 @@ export default [
   },
   {
     path: "workspace",
-    element: (
-      <BaseLayout>
-        <WorkspaceSelectorPage />
-      </BaseLayout>
-    ),
+    element: <Navigate to="/admin/dashboard" replace />,
   },
   {
     path: "/admin",

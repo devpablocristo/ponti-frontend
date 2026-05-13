@@ -11,7 +11,9 @@ import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
+import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
+import Drawer from "../../../../components/Drawer/Drawer";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
@@ -21,6 +23,8 @@ import { toastError, toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import { CUSTOMER_ENTITY as ENTITY } from "../../entities";
 import { formatNumberAr } from "../../utils";
+import ArchivedCustomers from "./ArchivedCustomers";
+import CustomerEditor from "./CustomerEditor";
 
 type CustomerProjectSummary = {
   projects: number;
@@ -179,6 +183,8 @@ async function loadProjectDetails(projects: RawProject[]) {
 
 export default function CustomersList() {
   const navigate = useNavigate();
+  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const {
     customers,
     processing,
@@ -419,7 +425,7 @@ export default function CustomersList() {
         actions={[
           {
             label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -427,7 +433,7 @@ export default function CustomersList() {
           },
           {
             label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: exportVisibleCustomers,
@@ -437,17 +443,40 @@ export default function CustomersList() {
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            href: "/admin/database/customers/archived",
+            onClick: () => setArchivedDrawerOpen(true),
           },
           {
             label: "Nuevo",
             icon: <Plus className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            href: "/admin/database/customers/editor",
+            onClick: () => setCreateDrawerOpen(true),
           },
         ]}
       />
+
+      <Drawer
+        open={createDrawerOpen}
+        onClose={() => setCreateDrawerOpen(false)}
+        maxWidth="max-w-6xl"
+      >
+        <div className="flex h-full flex-col gap-4">
+          <header>
+            <h2 className="text-lg font-semibold text-slate-900">Nuevo cliente</h2>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <CustomerEditor embedded onClose={() => setCreateDrawerOpen(false)} />
+          </div>
+        </div>
+      </Drawer>
+
+      <ArchivedDrawer
+        open={archivedDrawerOpen}
+        title="Clientes archivados"
+        onClose={() => setArchivedDrawerOpen(false)}
+      >
+        <ArchivedCustomers />
+      </ArchivedDrawer>
 
       <div className="relative">
         <LoadingOverlay show={processing || summariesLoading} />
@@ -461,7 +490,7 @@ export default function CustomersList() {
               <Button
                 variant="primary"
                 iconLeft={<Plus className="h-4 w-4" />}
-                href="/admin/database/customers/editor"
+                onClick={() => setCreateDrawerOpen(true)}
               >
                 Nuevo Cliente
               </Button>

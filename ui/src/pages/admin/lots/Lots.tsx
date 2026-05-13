@@ -6,11 +6,11 @@ import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import { LOT_ENTITY as ENTITY } from "../entities";
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
 import useLots from "../../../hooks/useLots";
@@ -35,14 +35,16 @@ import {
 } from "../products/importUtils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
+import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
+import ArchivedLots from "../database/lots/ArchivedLots";
 
 function Lots() {
-  const navigate = useNavigate();
   const pagination = usePagination({ perPage: 10 });
   const resetPage = pagination.resetPage;
 
   const [lot, setLot] = useState<LotsDataUpdate | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -56,6 +58,7 @@ function Lots() {
     lots,
     crops,
     getCrops,
+    createLot,
     updateLot,
     updateLotError,
     result,
@@ -70,6 +73,7 @@ function Lots() {
 
   const {
     selectedCustomer,
+    selectedProject,
     projectId,
     selectedCampaignId,
     selectedField,
@@ -252,12 +256,41 @@ function Lots() {
   );
 
   const handleCreateLot = () => {
-    if (selectedField && projectId && selectedCustomer && selectedCampaignId) {
-      navigate(`/admin/database/customers/${selectedField.project_id}`);
+    const warning = getGuardedWorkspaceActionWarning(
+      {
+        customerId: selectedCustomer?.id,
+        projectId,
+        campaignId: selectedCampaignId,
+        fieldId: selectedFieldId,
+      },
+      ["customer", "project", "campaign", "field"],
+      "crear",
+      "un lote",
+    );
+
+    if (warning) {
+      setMessage(warning);
       return;
     }
 
-    setErrorMessage("Seleccione cliente, proyecto, campaña y campo antes de crear un lote.");
+    setMessage("");
+    setSuccessMessage("");
+    setErrorMessage("");
+    setLot({
+      id: 0,
+      field_id: selectedFieldId ?? 0,
+      project_name: selectedProject?.name ?? "",
+      field_name: selectedField?.name ?? "",
+      lot_name: "",
+      previous_crop_id: 0,
+      current_crop_id: 0,
+      variety: "",
+      sowed_area: "",
+      dates: [],
+      season: seasons.find((season) => season.id === selectedCampaignId)?.name ?? "",
+      updated_at: new Date().toISOString(),
+    });
+    setDrawerOpen(true);
   };
 
   function handleLotChange<K extends keyof LotsDataUpdate>(
@@ -301,16 +334,22 @@ function Lots() {
 
     setSuccessMessage("");
     setErrorMessage("");
-    updateLot({ ...lot });
+    if (lot.id > 0) {
+      updateLot({ ...lot });
+      return;
+    }
+
+    createLot({ ...lot });
   };
 
   const handleExport = async () => {
     if (!projectId) {
-      setErrorMessage("Seleccione un proyecto antes de exportar lotes.");
+      setMessage("Para exportar lotes, seleccioná un proyecto.");
       return;
     }
 
     try {
+      setMessage("");
       const response = await apiClient.get<Blob>(
         `/lots/export/${projectId}`,
         undefined,
@@ -328,11 +367,12 @@ function Lots() {
     if (!file) return;
 
     if (!projectId) {
-      setErrorMessage("Seleccione un proyecto antes de importar lotes.");
+      setMessage("Para importar lotes, seleccioná un proyecto.");
       return;
     }
 
     try {
+      setMessage("");
       setErrorMessage("");
       setSuccessMessage("");
 
@@ -441,7 +481,7 @@ function Lots() {
         actions={[
           {
             label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -449,7 +489,7 @@ function Lots() {
           },
           {
             label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: handleExport,
@@ -459,7 +499,7 @@ function Lots() {
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            href: "/admin/database/lots/archived",
+            onClick: () => setArchivedDrawerOpen(true),
           },
           {
             label: "Nuevo",
@@ -474,7 +514,7 @@ function Lots() {
       <WarningBanner message={message || null} />
       <SuccessBanner message={successMessage || null} variant="outlined" />
 
-      <ErrorBanner message={error} variant="outlined" prefix="Error:" />
+      <ErrorBanner message={errorMessage || error} variant="outlined" prefix="Error:" />
 
       {!message && !error ? (
         <div className="my-3">
@@ -506,6 +546,14 @@ function Lots() {
           onLotChange={handleLotChange}
           onSave={handleSave}
         />
+
+        <ArchivedDrawer
+          open={archivedDrawerOpen}
+          title="Lotes archivados"
+          onClose={() => setArchivedDrawerOpen(false)}
+        >
+          <ArchivedLots />
+        </ArchivedDrawer>
 
         {!message && !error && (
           <BulkSelectionPanel

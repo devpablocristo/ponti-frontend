@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, Pencil, Check, AlertCircle, Upload, Plus } from "lucide-react";
+import { LoaderCircle, Pencil, Check, AlertCircle, Download, Plus } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
+import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
 import { Summary } from "@/api/types";
@@ -20,6 +21,7 @@ import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
+import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 
 const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
 const MISSING_ENTRY_LABEL = "REV ING.";
@@ -290,6 +292,7 @@ export function Stock() {
     null
   );
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [stockValidationModal, setStockValidationModal] = useState<{
     title: string;
@@ -767,9 +770,13 @@ export function Stock() {
   };
 
   const handleExport = async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      setWarningMessage("Para exportar stock, seleccioná un proyecto.");
+      return;
+    }
 
     try {
+      setWarningMessage(null);
       setExportErrorMessage(null);
       const response = await apiClient.get<Blob>(
         `/stock/export/${projectId}`,
@@ -794,22 +801,38 @@ export function Stock() {
         filters={filters}
         actions={[
           {
-            label: "Exportar Stock",
-            icon: <Upload className="h-4 w-4" />,
+            label: "Exportar",
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId,
             onClick: () => handleExport(),
           },
           {
-            label: "Ingreso de Stock de Campo",
+            label: "Nuevo",
             icon: <Plus className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId || disabledCloseStock,
-            onClick: () => setDrawerOpen(true),
+            disabled: disabledCloseStock,
+            onClick: () => {
+              const warning = getGuardedWorkspaceActionWarning(
+                { projectId },
+                ["project"],
+                "crear",
+                "un ingreso de stock",
+              );
+              if (warning) {
+                setWarningMessage(warning);
+                return;
+              }
+              setWarningMessage(null);
+              setDrawerOpen(true);
+            },
           },
         ]}
+      />
+      <WarningBanner
+        message={warningMessage}
+        onDismiss={() => setWarningMessage(null)}
       />
       {!error && (
         <div className="my-3">

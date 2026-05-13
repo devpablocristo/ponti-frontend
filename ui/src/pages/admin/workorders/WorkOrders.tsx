@@ -8,6 +8,7 @@ import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
@@ -27,11 +28,13 @@ import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall"
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
+import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import {
   getValueByAliases,
   parseCsv,
   parseImportDate,
 } from "../products/importUtils";
+import ArchivedWorkOrders from "../database/work-orders/ArchivedWorkOrders";
 
 const FILTER_HIERARCHY: Record<string, string[]> = {
   project_name: ["field_name", "lot_name"],
@@ -287,6 +290,7 @@ export function WorkOrders() {
   } | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [drawerUpdateOpen, setDrawerUpdateOpen] = useState(false);
   const [orderToDuplicate, setOrderToDuplicate] =
     useState<WorkorderData | null>(null);
@@ -991,11 +995,12 @@ export function WorkOrders() {
 
   const handleExport = async () => {
     if (!effectiveProjectId) {
-      setErrorMessage("Seleccione un proyecto antes de exportar órdenes.");
+      setWarningMessage("Para exportar órdenes, seleccioná un proyecto.");
       return;
     }
 
     try {
+      setWarningMessage("");
       const response = await apiClient.get<Blob>(
         `/work-orders/export/${effectiveProjectId}`,
         undefined,
@@ -1013,7 +1018,7 @@ export function WorkOrders() {
     if (!file) return;
 
     if (!effectiveProjectId) {
-      setErrorMessage("Seleccione un proyecto antes de importar órdenes.");
+      setWarningMessage("Para importar órdenes, seleccioná un proyecto.");
       return;
     }
 
@@ -1122,7 +1127,7 @@ export function WorkOrders() {
         actions={[
           {
             label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -1130,7 +1135,7 @@ export function WorkOrders() {
           },
           {
             label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => handleExport(),
@@ -1140,7 +1145,7 @@ export function WorkOrders() {
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            href: "/admin/database/work-orders/archived",
+            onClick: () => setArchivedDrawerOpen(true),
           },
           {
             label: "Nuevo",
@@ -1148,10 +1153,17 @@ export function WorkOrders() {
             variant: "primary",
             isPrimary: true,
             onClick: () => {
-              if (!effectiveProjectId) {
-                setErrorMessage("Seleccione un proyecto antes de crear una orden.");
+              const warning = getGuardedWorkspaceActionWarning(
+                { projectId: effectiveProjectId },
+                ["project"],
+                "crear",
+                "una orden",
+              );
+              if (warning) {
+                setWarningMessage(warning);
                 return;
               }
+              setWarningMessage("");
               setDrawerOpen(true);
               setOrderToDuplicate(null);
             },
@@ -1192,6 +1204,13 @@ export function WorkOrders() {
             onOrderDuplicated={handleOrderDuplicated}
           />
         )}
+        <ArchivedDrawer
+          open={archivedDrawerOpen}
+          title="Órdenes archivadas"
+          onClose={() => setArchivedDrawerOpen(false)}
+        >
+          <ArchivedWorkOrders />
+        </ArchivedDrawer>
         {selectedSupplyFilter.id && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
             <span>

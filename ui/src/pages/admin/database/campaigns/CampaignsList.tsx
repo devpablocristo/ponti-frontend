@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo } from "react";
-import { CalendarRange, Download, Plus, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Archive, CalendarRange, Download, Plus, Upload } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
@@ -7,6 +7,7 @@ import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
@@ -18,6 +19,7 @@ import useCampaigns, {
 import { Column } from "../../types";
 import { CAMPAIGN_ENTITY as ENTITY } from "../../entities";
 import CampaignFormDrawer from "./CampaignFormDrawer";
+import ArchivedCampaigns from "./ArchivedCampaigns";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTransfer";
 
@@ -30,6 +32,7 @@ type CampaignsListProps = {
 };
 
 export default function CampaignsList({ editorOnly = false }: CampaignsListProps) {
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const {
     campaigns,
     processing,
@@ -117,7 +120,7 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
         actions={[
           {
             label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -125,7 +128,7 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
           },
           {
             label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: handleExport,
@@ -136,6 +139,13 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
             variant: "primary",
             isPrimary: true,
             onClick: drawer.openCreate,
+          },
+          {
+            label: "Archivados",
+            icon: <Archive className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            onClick: () => setArchivedDrawerOpen(true),
           },
         ]}
       />
@@ -186,6 +196,13 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
         onClose={drawer.close}
         onSubmit={drawer.handleSubmit}
       />
+      <ArchivedDrawer
+        open={archivedDrawerOpen}
+        title="Campañas archivadas"
+        onClose={() => setArchivedDrawerOpen(false)}
+      >
+        <ArchivedCampaigns />
+      </ArchivedDrawer>
     </div>
   );
 }

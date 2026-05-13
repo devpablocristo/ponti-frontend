@@ -364,7 +364,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         actions={[
           {
             label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
@@ -372,7 +372,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
           },
           {
             label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,

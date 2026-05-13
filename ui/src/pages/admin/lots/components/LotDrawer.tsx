@@ -60,9 +60,9 @@ export function LotDrawer({
   onLotChange,
   onSave,
 }: LotDrawerProps) {
-  const title = lot
+  const title = lot?.id
     ? `${lot.project_name} (${lot.field_name ?? selectedFieldName}: ${lot.lot_name})`
-    : "Editar lote";
+    : "Nuevo lote";
 
   return (
     <EntityFormDrawer

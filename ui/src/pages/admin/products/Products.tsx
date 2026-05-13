@@ -3,7 +3,9 @@ import { Archive, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
+import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -20,6 +22,8 @@ import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
 import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
+import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
+import ArchivedSupplyMovements from "./ArchivedSupplyMovements";
 
 function ItemsIndicators({ summary }: { summary?: Summary }) {
   const safeSummary = summary ?? {
@@ -65,6 +69,7 @@ export function Products() {
   } = useSupplyMovements();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const pagination = usePagination({ perPage: 10 });
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [editingMovement, setEditingMovement] = useState<SupplyMovement | null>(null);
@@ -72,6 +77,7 @@ export function Products() {
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(
     null
   );
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
@@ -93,10 +99,11 @@ export function Products() {
     if (!file) return;
 
     if (!projectId) {
-      setActionErrorMessage("Seleccione un proyecto antes de importar insumos.");
+      setWarningMessage("Para importar movimientos de insumos, seleccioná un proyecto.");
       return;
     }
 
+    setWarningMessage(null);
     setActionErrorMessage(null);
     setSuccessMessage(null);
     setPendingImportFile(file);
@@ -507,11 +514,12 @@ export function Products() {
 
   const handleExport = async () => {
     if (!projectId) {
-      setExportErrorMessage("Seleccione un proyecto antes de exportar insumos.");
+      setWarningMessage("Para exportar movimientos de insumos, seleccioná un proyecto.");
       return;
     }
 
     try {
+      setWarningMessage(null);
       setExportErrorMessage(null);
       const response = await apiClient.get<Blob>(
         `/supply_movements/export/${projectId}`,
@@ -539,7 +547,7 @@ export function Products() {
         actions={[
           {
             label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: SPREADSHEET_ACCEPT,
@@ -547,7 +555,7 @@ export function Products() {
           },
           {
             label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => handleExport(),
@@ -557,7 +565,7 @@ export function Products() {
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            href: "/admin/products/archived",
+            onClick: () => setArchivedDrawerOpen(true),
           },
           {
             label: "Nuevo",
@@ -565,16 +573,27 @@ export function Products() {
             variant: "primary",
             isPrimary: true,
             onClick: () => {
-              if (!projectId) {
-                setActionErrorMessage("Seleccione un proyecto antes de crear un insumo.");
+              const warning = getGuardedWorkspaceActionWarning(
+                { projectId },
+                ["project"],
+                "crear",
+                "un movimiento de insumos",
+              );
+              if (warning) {
+                setWarningMessage(warning);
                 return;
               }
+              setWarningMessage(null);
               setEditingMovement(null);
               setDrawerOpen(true);
             },
 
           },
         ]}
+      />
+      <WarningBanner
+        message={warningMessage}
+        onDismiss={() => setWarningMessage(null)}
       />
       <SuccessBanner message={successMessage} variant="outlined" />
       {!error && (
@@ -621,6 +640,13 @@ export function Products() {
             )}
           </>
         )}
+        <ArchivedDrawer
+          open={archivedDrawerOpen}
+          title="Movimientos archivados"
+          onClose={() => setArchivedDrawerOpen(false)}
+        >
+          <ArchivedSupplyMovements />
+        </ArchivedDrawer>
         <BulkSelectionPanel
           selectedCount={bulk.selectedCount}
           totalCount={filteredMovements.length}

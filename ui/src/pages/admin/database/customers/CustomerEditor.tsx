@@ -79,7 +79,15 @@ function normalizeProject(project: Project): Project {
   };
 }
 
-export default function CustomerEditor() {
+type CustomerEditorProps = {
+  embedded?: boolean;
+  onClose?: () => void;
+};
+
+export default function CustomerEditor({
+  embedded = false,
+  onClose,
+}: CustomerEditorProps = {}) {
   const navigate = useNavigate();
   const { id } = useParams();
   const initialCustomerId = Number(id) || NEW_VALUE;
@@ -529,11 +537,15 @@ export default function CustomerEditor() {
   };
 
   const handleCancel = () => {
+    if (embedded) {
+      onClose?.();
+      return;
+    }
     navigate("/admin/database/customers/list");
   };
 
   return (
-    <div className="space-y-2">
+    <div className={embedded ? "space-y-2 pr-1" : "space-y-2"}>
       <LoadingOverlay show={loading || saving} />
         {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
         {success && <SuccessBanner message={success} onDismiss={() => setSuccess(null)} />}

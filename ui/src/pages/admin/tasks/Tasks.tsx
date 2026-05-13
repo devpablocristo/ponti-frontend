@@ -3,8 +3,10 @@ import { Archive, Download, LoaderCircle, ClockIcon, CheckIcon, FileTextIcon, Fi
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
+import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 
@@ -28,6 +30,10 @@ import { WORKORDER_ENTITY } from "../entities";
 import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../fileTransfer";
 import { readSpreadsheetRows } from "../spreadsheetReader";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
+import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
+import Drawer from "../../../components/Drawer/Drawer";
+import ArchivedTasks from "../database/tasks/ArchivedTasks";
+import TasksForm from "../database/tasks/TasksForm";
 
 const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
@@ -298,6 +304,9 @@ export function Tasks() {
   const [resultInvoiceMessage, setResultInvoiceMessage] = useState<string | null>(null);
     const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
 
   const {
     filters,
@@ -805,7 +814,7 @@ export function Tasks() {
     if (!file) return;
 
     if (!projectId) {
-      setImportError("Por favor, seleccione un proyecto antes de importar.");
+      setWarningMessage("Para importar labores, seleccioná un proyecto.");
       return;
     }
 
@@ -906,11 +915,12 @@ export function Tasks() {
 
   const handleExport = async () => {
     if (!projectId) {
-      setExportErrorMessage("Seleccione un proyecto antes de exportar labores.");
+      setWarningMessage("Para exportar labores, seleccioná un proyecto.");
       return;
     }
 
     try {
+      setWarningMessage(null);
       setExportErrorMessage(null);
       const response = await apiClient.get<Blob>(`/labors/export/${projectId}`, undefined, {
         responseType: "blob",
@@ -942,14 +952,14 @@ export function Tasks() {
         actions={[
           {
             label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => fileInputRef.current?.click(),
           },
           {
             label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => handleExport(),
@@ -959,17 +969,55 @@ export function Tasks() {
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            href: "/admin/database/tasks/archived",
+            onClick: () => setArchivedDrawerOpen(true),
           },
           {
             label: "Nuevo",
             icon: <Plus className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            href: "/admin/database/tasks",
+            onClick: () => {
+              const warning = getGuardedWorkspaceActionWarning(
+                { projectId },
+                ["project"],
+                "crear",
+                "una labor",
+              );
+              if (warning) {
+                setWarningMessage(warning);
+                return;
+              }
+              setWarningMessage(null);
+              setCreateDrawerOpen(true);
+            },
           },
         ]}
       />
+      <WarningBanner
+        message={warningMessage}
+        onDismiss={() => setWarningMessage(null)}
+      />
+      <Drawer
+        open={createDrawerOpen}
+        onClose={() => setCreateDrawerOpen(false)}
+        maxWidth="max-w-6xl"
+      >
+        <div className="flex h-full flex-col gap-4">
+          <header>
+            <h2 className="text-lg font-semibold text-slate-900">Nueva labor</h2>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+            <TasksForm />
+          </div>
+        </div>
+      </Drawer>
+      <ArchivedDrawer
+        open={archivedDrawerOpen}
+        title="Labores archivadas"
+        onClose={() => setArchivedDrawerOpen(false)}
+      >
+        <ArchivedTasks />
+      </ArchivedDrawer>
       <div className="my-3">
         {errorMetrics ? (
           <ErrorBanner message={errorMetrics} variant="outlined" prefix="Error:" />

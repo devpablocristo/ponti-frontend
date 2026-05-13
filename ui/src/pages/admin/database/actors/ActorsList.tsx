@@ -9,6 +9,7 @@ import {
   FilterOption,
 } from "../../../../components/filters/AppFilterBar";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
+import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
@@ -26,6 +27,7 @@ import { ACTOR_ENTITY as ENTITY } from "../../entities";
 import ActorFormDrawer from "./ActorFormDrawer";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
 import { downloadCsvRows } from "../../fileTransfer";
+import ArchivedActors from "./ArchivedActors";
 
 const kindLabel = (kind?: string) =>
   ACTOR_KIND_OPTIONS.find((option) => option.value === kind)?.label ?? "Sin definir";
@@ -185,6 +187,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
   const [selectedRole, setSelectedRole] = useState<ActorRole | "">(rolePreset ?? "");
   const [selectedKind, setSelectedKind] = useState<ActorKind | "">("");
   const [selectedStatus, setSelectedStatus] = useState<"active" | "archived">("active");
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const { actors, processing, error, getActors, createActor, updateActor, archiveActor } =
     useActors();
 
@@ -352,7 +355,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         actions={[
           {
             label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -360,7 +363,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
           },
           {
             label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: handleExport,
@@ -370,7 +373,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            onClick: () => navigate("/admin/database/actors/archived"),
+            onClick: () => setArchivedDrawerOpen(true),
           },
           {
             label: "Nuevo",
@@ -420,6 +423,13 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         onClose={drawer.close}
         onSubmit={drawer.handleSubmit}
       />
+      <ArchivedDrawer
+        open={archivedDrawerOpen}
+        title="Actores archivados"
+        onClose={() => setArchivedDrawerOpen(false)}
+      >
+        <ArchivedActors />
+      </ArchivedDrawer>
     </div>
   );
 }

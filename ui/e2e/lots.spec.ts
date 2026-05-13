@@ -48,3 +48,22 @@ test("lotes carga datos reales, comercializacion y paginacion compartida", async
   await expect(page.locator('input[name="sowingDate1"]')).toBeVisible();
   await expect(page.locator('input[name="variety"]')).toBeVisible();
 });
+
+test("nuevo lote sin campo especifico muestra warning estándar", async ({ page }) => {
+  const lotsResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      response.url().includes("/api/v1/lots?") &&
+      response.url().includes("project_id=30") &&
+      response.ok()
+  );
+
+  await page.goto("/admin/lots");
+  await lotsResponse;
+
+  await page.getByRole("button", { name: "Nuevo" }).click();
+  await expect(
+    page.getByText("Para crear un lote, seleccioná un campo específico."),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Nuevo lote" })).not.toBeVisible();
+});

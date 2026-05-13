@@ -19,7 +19,7 @@ function Login() {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate("/workspace");
+      navigate("/admin/dashboard");
     }
   }, [isAuthenticated, loading, navigate]);
 

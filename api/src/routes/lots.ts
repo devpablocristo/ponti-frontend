@@ -212,6 +212,55 @@ router.get("/metrics", async (req: Request, res: Response) => {
   }
 });
 
+router.post("", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const requestData = {
+      name: req.body.lot_name,
+      field_id: Number(req.body.field_id),
+      hectares: parseFloat(req.body.sowed_area),
+      season: req.body.season,
+      current_crop_id: req.body.current_crop_id,
+      previous_crop_id: req.body.previous_crop_id,
+      variety: req.body.variety,
+      dates: req.body.dates,
+    };
+
+    const { data } = await apiClient.post<unknown>("/lots", requestData, headers);
+
+    setImmediate(invalidateLotsCache);
+
+    res.status(201).json({
+      success: true,
+      data,
+      message: "Lote creado exitosamente",
+    });
+  } catch (error: unknown) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 router.get("/export/:id", async (req, res) => {
   try {
     const userId = req.user?.userID;

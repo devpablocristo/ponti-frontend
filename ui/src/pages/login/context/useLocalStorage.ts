@@ -28,6 +28,13 @@ export const clearLocalStorage = () => {
   authTokenStorage.clear();
 };
 
+export const clearWorkspaceSelectionStorage = () => {
+  ["customer", "project", "project_id", "campaign", "field"].forEach((key) => {
+    localStorage.removeItem(`ponti:${key}`);
+    localStorage.removeItem(key);
+  });
+};
+
 export const setLocalStorage = (token: TokenPair) => {
   authTokenStorage.setTokens(token);
 };

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Plus, Upload, Users } from "lucide-react";
+import { Archive, Download, Plus, Upload, Users } from "lucide-react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
@@ -9,6 +9,7 @@ import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
@@ -22,6 +23,7 @@ import { Project, ProjectData } from "../../../../hooks/useDatabase/projects/typ
 import { Column } from "../../types";
 import { INVESTOR_ENTITY as ENTITY } from "../../entities";
 import InvestorFormDrawer from "./InvestorFormDrawer";
+import ArchivedInvestors from "./ArchivedInvestors";
 import { downloadCsvRows } from "../../fileTransfer";
 
 const toFilterOptions = (values: string[]) =>
@@ -222,6 +224,7 @@ type InvestorsListProps = {
 };
 
 export default function InvestorsList({ editorOnly = false }: InvestorsListProps) {
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState("");
@@ -524,7 +527,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
           actions={[
             {
               label: "Importar",
-              icon: <Download className="h-4 w-4" />,
+              icon: <Upload className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
               accept: ".csv,text/csv",
@@ -532,7 +535,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
             },
             {
               label: "Exportar",
-              icon: <Upload className="h-4 w-4" />,
+              icon: <Download className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
               onClick: handleExport,
@@ -543,6 +546,13 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               variant: "primary",
               isPrimary: true,
               onClick: drawer.openCreate,
+            },
+            {
+              label: "Archivados",
+              icon: <Archive className="h-4 w-4" />,
+              variant: "primary",
+              isPrimary: true,
+              onClick: () => setArchivedDrawerOpen(true),
             },
           ]}
         />
@@ -589,6 +599,13 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
         onClose={drawer.close}
         onSubmit={drawer.handleSubmit}
       />
+      <ArchivedDrawer
+        open={archivedDrawerOpen}
+        title="Inversores archivados"
+        onClose={() => setArchivedDrawerOpen(false)}
+      >
+        <ArchivedInvestors />
+      </ArchivedDrawer>
     </div>
   );
 }

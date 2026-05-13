@@ -10,3 +10,8 @@ export function toastError(message: string) {
   sonnerToast.error(message);
 }
 
+/** Notificación de advertencia */
+export function toastWarning(message: string) {
+  sonnerToast.warning(message);
+}
+

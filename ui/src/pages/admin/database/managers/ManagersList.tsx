@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Download, Plus, Upload, UserCog } from "lucide-react";
+import { Archive, Download, Plus, Upload, UserCog } from "lucide-react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
@@ -9,6 +9,7 @@ import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
@@ -22,6 +23,7 @@ import { Project, ProjectData } from "../../../../hooks/useDatabase/projects/typ
 import { Column } from "../../types";
 import { MANAGER_ENTITY as ENTITY } from "../../entities";
 import ManagerFormDrawer from "./ManagerFormDrawer";
+import ArchivedManagers from "./ArchivedManagers";
 import { downloadCsvRows } from "../../fileTransfer";
 
 const toFilterOptions = (values: string[]) =>
@@ -172,6 +174,7 @@ type ManagersListProps = {
 };
 
 export default function ManagersList({ editorOnly = false }: ManagersListProps) {
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState("");
@@ -455,7 +458,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
           actions={[
             {
               label: "Importar",
-              icon: <Download className="h-4 w-4" />,
+              icon: <Upload className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
               accept: ".csv,text/csv",
@@ -463,7 +466,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
             },
             {
               label: "Exportar",
-              icon: <Upload className="h-4 w-4" />,
+              icon: <Download className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
               onClick: handleExport,
@@ -474,6 +477,13 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
               variant: "primary",
               isPrimary: true,
               onClick: drawer.openCreate,
+            },
+            {
+              label: "Archivados",
+              icon: <Archive className="h-4 w-4" />,
+              variant: "primary",
+              isPrimary: true,
+              onClick: () => setArchivedDrawerOpen(true),
             },
           ]}
         />
@@ -520,6 +530,13 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
         onClose={drawer.close}
         onSubmit={drawer.handleSubmit}
       />
+      <ArchivedDrawer
+        open={archivedDrawerOpen}
+        title="Responsables archivados"
+        onClose={() => setArchivedDrawerOpen(false)}
+      >
+        <ArchivedManagers />
+      </ArchivedDrawer>
     </div>
   );
 }
