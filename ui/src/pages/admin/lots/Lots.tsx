@@ -34,6 +34,7 @@ import {
   parseImportDate,
 } from "../products/importUtils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 
 function Lots() {
   const navigate = useNavigate();
@@ -52,7 +53,6 @@ function Lots() {
   const {
     getLots,
     getLotsKpis,
-    clearLots,
     lots,
     crops,
     getCrops,
@@ -80,22 +80,15 @@ function Lots() {
   const selectedFieldId = selectedField?.id;
 
   const loadCurrentLots = useCallback(() => {
-    if (selectedFieldId) {
-      const query = `field_id=${selectedFieldId}`;
-      getLots(query);
-      getLotsKpis(query);
-      return;
-    }
-
-    if (projectId) {
-      const query = `project_id=${projectId}`;
-      getLots(query);
-      getLotsKpis(query);
-      return;
-    }
-
-    clearLots();
-  }, [clearLots, getLots, getLotsKpis, projectId, selectedFieldId]);
+    const query = buildWorkspaceQuery({
+      customerId: selectedCustomer?.id,
+      projectId,
+      campaignId: selectedCampaignId,
+      fieldId: selectedFieldId,
+    });
+    getLots(query);
+    getLotsKpis(query);
+  }, [getLots, getLotsKpis, projectId, selectedCampaignId, selectedCustomer?.id, selectedFieldId]);
 
   const reloadFromFirstPage = useCallback(() => {
     resetPage();

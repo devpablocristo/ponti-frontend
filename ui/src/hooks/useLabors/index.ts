@@ -12,6 +12,7 @@ import {
 import { PaginatedResponse, SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { withQuery } from "@/lib/workspaceQuery";
 
 type LaborGroupsResponse = SuccessResponse<PaginatedResponse<LaborGroupData>>;
 type LaborsResponse = SuccessResponse<LaborInfo[]>;
@@ -76,7 +77,7 @@ const useLabors = () => {
   const [errorMetrics, setErrorMetrics] = useState<string | null>(null);
 
   const getLaborGroups = React.useCallback(
-    async (projectId: number, query: string) => {
+    async (query: string) => {
       setProcessing(true);
       setError(null);
 
@@ -86,7 +87,7 @@ const useLabors = () => {
       });
 
       try {
-        const response = await apiClient.get<LaborGroupsResponse>(`/labors/${projectId}${query}`);
+        const response = await apiClient.get<LaborGroupsResponse>(withQuery("/labors/group", query));
 
         if (response.success) {
           dispatch({
@@ -117,13 +118,13 @@ const useLabors = () => {
   );
 
   const getMetrics = React.useCallback(
-    async (projectId: number, queryString: string) => {
+    async (queryString: string) => {
       setProcessingMetrics(true);
       setErrorMetrics(null);
 
       try {
         const response = await apiClient.get<SuccessResponse<Metrics>>(
-          `/labors/metrics/${projectId}` + queryString
+          withQuery("/labors/metrics", queryString)
         );
 
         if (response.success) {

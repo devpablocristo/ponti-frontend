@@ -4,6 +4,7 @@ import { apiClient } from "@/api/client";
 import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
 import { SuccessResponse } from "@/api/types";
+import { withQuery } from "@/lib/workspaceQuery";
 import {
   BatchErrorPayload,
   SupplyMovement,
@@ -100,13 +101,13 @@ const useSupplyMovements = () => {
   const [deleteResult, setDeleteResult] = useState(false);
 
   const getSupplyMovements = React.useCallback(
-    async (projectId: number): Promise<void> => {
+    async (query: string): Promise<void> => {
       setProcessing(true);
       setError(null);
 
       try {
         const response = await apiClient.get<SuccessResponse<SupplyResponse>>(
-          `/supply_movements/${projectId}`
+          withQuery("/supply_movements", query)
         );
 
         if (response.success) {

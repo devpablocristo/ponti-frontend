@@ -3,9 +3,16 @@ import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
 import { parsePartialPriceFlag } from "../utils/partialPrice";
+import { parseFieldProjectQueryParams } from "../utils/queryParams";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
+
+const appendPositiveInt = (params: URLSearchParams, key: string, value: number) => {
+  if (Number.isFinite(value) && value > 0) {
+    params.set(key, String(value));
+  }
+};
 
 router.get("", async (req: Request, res: Response) => {
   try {
@@ -15,14 +22,21 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const projectId = parseInt(req.query.project_id as string) || 0;
-    if (projectId === 0) {
-      res.status(400).json({ message: "Proyecto obligatorio" });
-      return;
-    }
-
     const mode = req.query.mode === "pending" ? "pending" : "all";
-    const cacheKey = `supplies:${projectId}:mode:${mode}`;
+    const ids = parseFieldProjectQueryParams(req.query);
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.per_page as string) || 1000;
+
+    const params = new URLSearchParams();
+    appendPositiveInt(params, "customer_id", ids.customerId);
+    appendPositiveInt(params, "project_id", ids.projectId);
+    appendPositiveInt(params, "campaign_id", ids.campaignId);
+    appendPositiveInt(params, "field_id", ids.fieldId);
+    params.set("page", String(page));
+    params.set("per_page", String(perPage));
+    params.set("mode", mode);
+
+    const cacheKey = `supplies:query:${params.toString()}`;
 
     const cachedSupplies = cache.get(cacheKey);
     if (cachedSupplies) {
@@ -34,16 +48,6 @@ router.get("", async (req: Request, res: Response) => {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": String(userId),
     };
-
-    const page = parseInt(req.query.page as string) || 1;
-    const perPage = parseInt(req.query.per_page as string) || 1000;
-
-    const params = new URLSearchParams({
-      project_id: String(projectId),
-      page: String(page),
-      per_page: String(perPage),
-      mode,
-    });
 
     const { data: backendResp } = await apiClient.get<any>(
       `/supplies?${params.toString()}`,

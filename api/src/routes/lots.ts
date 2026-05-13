@@ -107,14 +107,8 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const { fieldId, projectId } = getLotQueryFilters(req);
-    if (fieldId === 0 && projectId === 0) {
-      res.status(400).json({ message: "Campo o proyecto obligatorio" });
-      return;
-    }
-
+    const lotIds = getLotQueryFilters(req);
     const { page, perPage } = parsePaginationQueryParams(req.query);
-    const lotIds = { fieldId, projectId };
     const key = buildLotsListCacheKey(lotIds, { page, perPage });
 
     const cachedLots = cache.get<LotListPayload>(key);
@@ -128,10 +122,8 @@ router.get("", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const { data: lots } = await apiClient.get<LotListResponse>(
-      `/lots?${buildLotsQueryParams(lotIds, { page, perPage })}`,
-      headers
-    );
+    const query = buildLotsQueryParams(lotIds, { page, perPage });
+    const { data: lots } = await apiClient.get<LotListResponse>(`/lots?${query}`, headers);
 
     if (!lots) {
       throw new Error("Respuesta vacía del servicio de lotes");
@@ -172,13 +164,7 @@ router.get("/metrics", async (req: Request, res: Response) => {
       return;
     }
 
-    const { fieldId, projectId } = getLotQueryFilters(req);
-    if (fieldId === 0 && projectId === 0) {
-      res.status(400).json({ message: "Campo o proyecto obligatorio" });
-      return;
-    }
-
-    const lotIds = { fieldId, projectId };
+    const lotIds = getLotQueryFilters(req);
     const key = buildLotsMetricsCacheKey(lotIds);
 
     const cachedLots = cache.get<LotMetricsPayload>(key);
@@ -192,8 +178,9 @@ router.get("/metrics", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
+    const query = buildLotsQueryParams(lotIds);
     const { data: metrics } = await apiClient.get<LotMetricsResponse>(
-      `/lots/metrics?${buildLotsQueryParams(lotIds)}`,
+      query ? `/lots/metrics?${query}` : "/lots/metrics",
       headers
     );
 

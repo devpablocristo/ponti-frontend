@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 import { installAuthenticatedSession } from "./helpers/auth";
 
-const supplyName = "2-4D ESTER DEFERON ETIL EXIL X 20 LTS";
+const supplyIDWithOrders = 550;
+const supplyName = "ACEITE METILADO PALA OLEO X 20 LT";
 
 test.beforeEach(async ({ page }) => {
   await installAuthenticatedSession(page);
@@ -12,7 +13,8 @@ test("stock muestra insumos del proyecto", async ({ page }) => {
   const stockResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "GET" &&
-      response.url().includes("/api/v1/stock/30") &&
+      response.url().includes("/api/v1/stock?") &&
+      response.url().includes("project_id=30") &&
       response.ok()
   );
 
@@ -29,12 +31,12 @@ test("ordenes respeta filtro por insumo y conserva paginacion server-side", asyn
       response.request().method() === "GET" &&
       response.url().includes("/api/v1/work-orders?") &&
       response.url().includes("project_id=30") &&
-      response.url().includes("supply_id=549") &&
+      response.url().includes(`supply_id=${supplyIDWithOrders}`) &&
       response.ok()
   );
 
   await page.goto(
-    `/admin/work-orders?project_id=30&supply_id=549&supply_name=${encodeURIComponent(supplyName)}`
+    `/admin/work-orders?project_id=30&supply_id=${supplyIDWithOrders}&supply_name=${encodeURIComponent(supplyName)}`
   );
   await ordersResponse;
 

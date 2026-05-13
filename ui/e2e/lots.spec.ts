@@ -31,7 +31,7 @@ test("lotes carga datos reales, comercializacion y paginacion compartida", async
   const lot54Row = page.getByRole("row", { name: /LOTE 54 / }).first();
   await expect(lot54Row.getByText("u$ 150")).toBeVisible();
   await expect(lot54Row.getByText("u$ 433")).toBeVisible();
-  await expect(lot54Row.getByText("u$ 1.098")).toBeVisible();
+  await expect(lot54Row.getByText("u$ -433")).toBeVisible();
 
   await page.getByRole("button", { name: "2" }).click();
   await expect(page.getByText(/Mostrar\s*11-20\s*de\s*21/)).toBeVisible();

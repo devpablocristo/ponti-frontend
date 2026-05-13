@@ -30,19 +30,37 @@ function createE2EToken(): string {
 
 export async function installAuthenticatedSession(page: Page) {
   const token = createE2EToken();
+  let tenantId = process.env.E2E_TENANT_ID ?? "";
+
+  if (!tenantId) {
+    const response = await page.request.get("/api/v1/me/context", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok()) {
+      const payload = (await response.json()) as {
+        current_tenant_id?: string;
+        tenants?: Array<{ id?: string }>;
+      };
+      tenantId = payload.current_tenant_id || payload.tenants?.find((tenant) => tenant.id)?.id || "";
+    }
+  }
 
   await page.addInitScript(
-    ({ e2eToken, selectedWorkspace }) => {
+    ({ e2eToken, selectedWorkspace, selectedTenantId }) => {
       const prefix = `ponti:${window.location.host}:`;
 
       localStorage.setItem(`${prefix}access_token`, e2eToken);
       localStorage.setItem(`${prefix}refresh_token`, e2eToken);
+      if (selectedTenantId) {
+        localStorage.setItem("ponti:tenant_id", selectedTenantId);
+        localStorage.setItem("tenant_id", selectedTenantId);
+      }
       localStorage.setItem(`${prefix}customer`, JSON.stringify(selectedWorkspace.customer));
       localStorage.setItem(`${prefix}project`, JSON.stringify(selectedWorkspace.project));
       localStorage.setItem(`${prefix}project_id`, JSON.stringify(selectedWorkspace.projectId));
       localStorage.setItem(`${prefix}campaign`, JSON.stringify(selectedWorkspace.campaign));
       localStorage.removeItem(`${prefix}field`);
     },
-    { e2eToken: token, selectedWorkspace: workspace }
+    { e2eToken: token, selectedWorkspace: workspace, selectedTenantId: tenantId }
   );
 }

@@ -42,14 +42,15 @@ export const parseWorkOrderScope = (
 });
 
 export const hasWorkOrderScope = (scope: WorkOrderQueryScope) =>
-  scope.fieldId > 0 || scope.projectId > 0;
+  scope.customerId > 0 ||
+  scope.campaignId > 0 ||
+  scope.projectId > 0 ||
+  scope.fieldId > 0;
 
 export const buildWorkOrderScopeParams = (scope: WorkOrderQueryScope) => {
   const params = new URLSearchParams();
 
-  if (scope.fieldId > 0) {
-    params.set("field_id", String(scope.fieldId));
-  } else if (scope.projectId > 0) {
+  if (scope.projectId > 0) {
     params.set("project_id", String(scope.projectId));
   }
 
@@ -59,6 +60,10 @@ export const buildWorkOrderScopeParams = (scope: WorkOrderQueryScope) => {
 
   if (scope.campaignId > 0) {
     params.set("campaign_id", String(scope.campaignId));
+  }
+
+  if (scope.fieldId > 0) {
+    params.set("field_id", String(scope.fieldId));
   }
 
   if (scope.supplyId > 0) {

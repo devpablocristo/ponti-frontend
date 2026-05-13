@@ -2,10 +2,47 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
+import { parseFieldProjectQueryParams } from "../utils/queryParams";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
 const router: Router = Router();
+
+const appendPositiveInt = (params: URLSearchParams, key: string, value: number) => {
+  if (Number.isFinite(value) && value > 0) {
+    params.set(key, String(value));
+  }
+};
+
+const buildWorkspaceParams = (req: Request) => {
+  const ids = parseFieldProjectQueryParams(req.query);
+  const params = new URLSearchParams();
+  appendPositiveInt(params, "customer_id", ids.customerId);
+  appendPositiveInt(params, "project_id", ids.projectId);
+  appendPositiveInt(params, "campaign_id", ids.campaignId);
+  appendPositiveInt(params, "field_id", ids.fieldId);
+  return params;
+};
+
+const movementListPayload = (movements: any) => {
+  if (!Array.isArray(movements?.entries)) {
+    return null;
+  }
+  const entries = movements.entries;
+  return {
+    success: true,
+    data: {
+      summary: movements.summary,
+      entries,
+      page_info: {
+        total: entries.length,
+        page: 1,
+        per_page: 100,
+        max_page: 1,
+      },
+    },
+  };
+};
 
 router.get("/export/:id", async (req, res) => {
   try {
@@ -91,6 +128,64 @@ router.get("/database-export/:id", async (req, res) => {
     res.status(500).json({
       success: false,
       error: { status: 500, details: "Error al exportar insumos" },
+    });
+  }
+});
+
+router.get("", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const params = buildWorkspaceParams(req);
+    const query = params.toString();
+    const cacheKey = `movements:workspace:${query}`;
+    const cachedMovements = cache.get(cacheKey);
+    if (cachedMovements) {
+      res.status(200).json(cachedMovements);
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data: movements } = await apiClient.get<any>(
+      query ? `/supply-movements?${query}` : "/supply-movements",
+      headers
+    );
+
+    const data = movementListPayload(movements);
+    if (!data) {
+      res.status(502).json({
+        success: false,
+        message: "Respuesta inválida del backend (supply-movements)",
+        error: { status: 502, details: "Se esperaba movements.entries como array" },
+      });
+      return;
+    }
+
+    if (data.data.entries.length > 0) {
+      cache.set(cacheKey, data);
+    }
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
     });
   }
 });

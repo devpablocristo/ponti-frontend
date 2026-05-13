@@ -7,6 +7,51 @@ import { cache } from ".";
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
 
+const getAuthHeaders = (userId: string) => ({
+  "X-API-KEY": configService.apiKey,
+  "X-User-Id": userId,
+});
+
+const parsePositiveInt = (value: unknown) => {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const appendPositiveInt = (params: URLSearchParams, key: string, value: unknown) => {
+  const parsed = parsePositiveInt(value);
+  if (parsed > 0) params.set(key, String(parsed));
+};
+
+const buildLaborWorkspaceParams = (
+  req: Request,
+  options: { projectId?: number; includePagination?: boolean; includeUsdMonth?: boolean } = {},
+) => {
+  const params = new URLSearchParams();
+
+  if (options.projectId && options.projectId > 0) {
+    params.set("project_id", String(options.projectId));
+  }
+  appendPositiveInt(params, "customer_id", req.query.customer_id);
+  appendPositiveInt(params, "project_id", req.query.project_id);
+  appendPositiveInt(params, "campaign_id", req.query.campaign_id);
+  appendPositiveInt(params, "field_id", req.query.field_id);
+
+  if (options.includeUsdMonth) {
+    params.set("usd_month", String(new Date().getMonth() + 1));
+  }
+  if (options.includePagination) {
+    params.set("page", String(parsePositiveInt(req.query.page) || 1));
+    params.set("per_page", String(parsePositiveInt(req.query.per_page) || 1000));
+  }
+
+  return params;
+};
+
+const pathWithQuery = (path: string, params: URLSearchParams) => {
+  const query = params.toString();
+  return query ? `${path}?${query}` : path;
+};
+
 router.post("/invoice", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -189,28 +234,12 @@ router.get("/metrics/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-
-    const field_id = parseInt(req.query.field_id as string) || 0;
-    const project_id = parseInt(req.params.id as string) || 0;
-
-    if (field_id === 0 && project_id === 0) {
-      res.status(400).json({ message: "Campo o proyecto obligatorio" });
-      return;
-    }
-
-    let query = "";
-    if (field_id > 0) {
-      query = `?field_id=${field_id}`;
-    } else if (project_id > 0) {
-      query = `?project_id=${project_id}`;
-    }
+    const headers = getAuthHeaders(userId);
+    const projectId = parsePositiveInt(req.params.id);
+    const params = buildLaborWorkspaceParams(req, { projectId });
 
     const { data: metrics } = await apiClient.get<any>(
-      `/labors/metrics${query}`,
+      pathWithQuery("/labors/metrics", params),
       headers,
     );
 
@@ -220,6 +249,38 @@ router.get("/metrics/:id", async (req: Request, res: Response) => {
     };
 
     res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.get("/metrics", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const { data: metrics } = await apiClient.get<any>(
+      pathWithQuery("/labors/metrics", buildLaborWorkspaceParams(req)),
+      getAuthHeaders(userId),
+    );
+
+    res.status(200).json({
+      success: true,
+      data: metrics,
+    });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
     if ("error" in err) {
@@ -368,6 +429,56 @@ router.get(
     }
   },
 );
+
+router.get("/group", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const params = buildLaborWorkspaceParams(req, {
+      includePagination: true,
+      includeUsdMonth: true,
+    });
+    const cacheKey = `labors:group:${params.toString()}`;
+    const cachedLabors = cache.get(cacheKey);
+    if (cachedLabors) {
+      res.status(200).json(cachedLabors);
+      return;
+    }
+
+    const { data: labors } = await apiClient.get<any>(
+      pathWithQuery("/labors/group", params),
+      getAuthHeaders(userId),
+    );
+
+    const data = {
+      success: true,
+      data: {
+        data: labors.data,
+        page_info: labors.page_info,
+      },
+    };
+
+    setImmediate(() => cache.set(cacheKey, data));
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
 
 router.get("/:id", async (req: Request, res: Response) => {
   try {

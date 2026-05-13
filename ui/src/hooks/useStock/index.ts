@@ -6,6 +6,7 @@ import * as actions from "./actions";
 import { SuccessResponse } from "@/api/types";
 import { GetStocksResponse } from "./types";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { withQuery } from "@/lib/workspaceQuery";
 
 type StockMutationResponse = SuccessResponse<unknown>;
 
@@ -27,13 +28,20 @@ const useStock = () => {
   const [periods, setPeriods] = useState<string[] | null>(null);
 
   const getStock = React.useCallback(
-    async (projectId: number, cutOffDate: string): Promise<void> => {
+    async (queryOrProjectId: string | number, cutOffDate: string): Promise<void> => {
       setProcessing(true);
       setError(null);
 
       try {
+        const params =
+          typeof queryOrProjectId === "number"
+            ? new URLSearchParams({ project_id: String(queryOrProjectId) })
+            : new URLSearchParams(queryOrProjectId);
+        if (cutOffDate) {
+          params.set("cutoff_date", cutOffDate);
+        }
         const response = await apiClient.get<SuccessResponse<GetStocksResponse>>(
-          `/stock/${projectId}?cutoff_date=${cutOffDate}`
+          withQuery("/stock", params.toString())
         );
 
         if (response.success) {

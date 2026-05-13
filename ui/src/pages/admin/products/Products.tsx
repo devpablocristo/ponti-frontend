@@ -19,6 +19,7 @@ import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
 import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../fileTransfer";
+import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 
 function ItemsIndicators({ summary }: { summary?: Summary }) {
   const safeSummary = summary ?? {
@@ -328,18 +329,27 @@ export function Products() {
     [supplyMovements, columnsFilters]
   );
 
-  const { projectId, filters, customers } = useWorkspaceFilters([
+  const { projectId, filters, customers, selectedCustomer, selectedCampaignId, selectedField } = useWorkspaceFilters([
     "customer",
     "project",
     "campaign",
     "field",
   ]);
 
-  useEffect(() => {
-    if (!projectId) return;
-    getSupplyMovements(projectId);
+  const supplyMovementQuery = useMemo(
+    () =>
+      buildWorkspaceQuery({
+        customerId: selectedCustomer?.id,
+        projectId,
+        campaignId: selectedCampaignId,
+        fieldId: selectedField?.id,
+      }),
+    [projectId, selectedCampaignId, selectedCustomer?.id, selectedField?.id]
+  );
 
-  }, [getSupplyMovements, projectId]);
+  useEffect(() => {
+    getSupplyMovements(supplyMovementQuery);
+  }, [getSupplyMovements, supplyMovementQuery]);
 
   useEffect(() => {
     if (deleteError) {
@@ -349,12 +359,12 @@ export function Products() {
   }, [deleteError]);
 
   useEffect(() => {
-    if (deleteResult && projectId) {
+    if (deleteResult) {
       setSuccessMessage("Movimiento archivado con éxito.");
       setActionErrorMessage(null);
-      getSupplyMovements(projectId);
+      getSupplyMovements(supplyMovementQuery);
     }
-  }, [deleteResult, projectId, getSupplyMovements]);
+  }, [deleteResult, getSupplyMovements, supplyMovementQuery]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -372,17 +382,15 @@ export function Products() {
   };
 
   const handleProductCreated = () => {
-    if (!projectId) return;
     pagination.resetPage();
-    getSupplyMovements(projectId);
+    getSupplyMovements(supplyMovementQuery);
   };
 
   const handleImported = (message: string) => {
-    if (!projectId) return;
     setSuccessMessage(message);
     setActionErrorMessage(null);
     pagination.resetPage();
-    getSupplyMovements(projectId);
+    getSupplyMovements(supplyMovementQuery);
     setPendingImportFile(null);
     setImportDrawerOpen(false);
   };
@@ -449,7 +457,7 @@ export function Products() {
       : undefined,
     onEdit: handleEdit,
     onAfter: () => {
-      if (projectId) getSupplyMovements(projectId);
+      getSupplyMovements(supplyMovementQuery);
     },
   });
 
@@ -595,7 +603,7 @@ export function Products() {
                 setEditingMovement(null);
                 setSuccessMessage("Movimiento actualizado con éxito.");
                 setActionErrorMessage(null);
-                if (projectId) getSupplyMovements(projectId);
+                getSupplyMovements(supplyMovementQuery);
               }}
             />
 

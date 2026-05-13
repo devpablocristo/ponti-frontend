@@ -27,6 +27,7 @@ import { formatNumberAr, normalizeDate } from "../utils";
 import { WORKORDER_ENTITY } from "../entities";
 import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../fileTransfer";
 import { readSpreadsheetRows } from "../spreadsheetReader";
+import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 
 const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
@@ -298,26 +299,37 @@ export function Tasks() {
     const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
 
-  const { filters, projectId, selectedField } = useWorkspaceFilters([
+  const {
+    filters,
+    projectId,
+    selectedCustomer,
+    selectedCampaignId,
+    selectedField,
+  } = useWorkspaceFilters([
     "customer",
     "project",
     "campaign",
     "field",
   ]);
 
-  const buildFieldQuery = useCallback(() => {
-    if (!selectedField) return "";
-    return `?field_id=${selectedField.id}`;
-  }, [selectedField]);
+  const laborQuery = useMemo(
+    () =>
+      buildWorkspaceQuery({
+        customerId: selectedCustomer?.id,
+        projectId,
+        campaignId: selectedCampaignId,
+        fieldId: selectedField?.id,
+      }),
+    [projectId, selectedCampaignId, selectedCustomer?.id, selectedField?.id]
+  );
 
   useEffect(() => {
-    if (resultInvoice && projectId) {
+    if (resultInvoice) {
       setResultInvoiceMessage(resultInvoice);
-      const query = buildFieldQuery();
-      getLaborGroups(projectId, query);
-      getMetrics(projectId, query);
+      getLaborGroups(laborQuery);
+      getMetrics(laborQuery);
     }
-  }, [resultInvoice, projectId, buildFieldQuery, getLaborGroups, getMetrics]);
+  }, [resultInvoice, laborQuery, getLaborGroups, getMetrics]);
 
   useEffect(() => {
     if (errorInvoice) {
@@ -642,15 +654,12 @@ export function Tasks() {
   );
 
   useEffect(() => {
-    if (!projectId) return;
-
-    const query = buildFieldQuery();
     setVisibleColumns(latestAllColumnKeysRef.current);
     resetPage();
-    getLaborGroups(projectId, query);
-    getMetrics(projectId, query);
+    getLaborGroups(laborQuery);
+    getMetrics(laborQuery);
     getCategories("");
-  }, [projectId, buildFieldQuery, getLaborGroups, getMetrics, getCategories, resetPage]);
+  }, [laborQuery, getLaborGroups, getMetrics, getCategories, resetPage]);
 
   const filteredTasks = useMemo(() => {
     return laborGroups.filter((task) => {
@@ -728,11 +737,9 @@ export function Tasks() {
   }, []);
 
   const refreshLabors = useCallback(() => {
-    if (!projectId) return;
-    const query = buildFieldQuery();
-    getLaborGroups(projectId, query);
-    getMetrics(projectId, query);
-  }, [buildFieldQuery, getLaborGroups, getMetrics, projectId]);
+    getLaborGroups(laborQuery);
+    getMetrics(laborQuery);
+  }, [getLaborGroups, getMetrics, laborQuery]);
 
   const bulk = useBulkActions<SelectableLaborGroup>({
     items: selectableTasks,
@@ -882,12 +889,8 @@ export function Tasks() {
 
       await saveLabors(laborsToSave, projectId);
 
-      let query = "";
-      if (selectedField) {
-        query += `?field_id=${selectedField.id}`;
-      }
-      getLaborGroups(projectId, query);
-      getMetrics(projectId, query);
+      getLaborGroups(laborQuery);
+      getMetrics(laborQuery);
 
       if (importErrors.length > 0) {
         setImportMessage(

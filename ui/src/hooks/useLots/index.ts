@@ -9,14 +9,6 @@ import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
 type LotMutationResponse = SuccessResponse<unknown>;
 
-const emptyLotKpis: LotKPIs = {
-  seeded_area: "0",
-  harvested_area: "0",
-  yield_tn_per_ha: "0",
-  cost_per_hectare: "0",
-  superficie_total: "0",
-};
-
 const useLots = () => {
   const [{ lots, pageInfo, crops, result, kpis }, dispatch] = useLotsReducer();
   const [processing, setProcessing] = useState(false);
@@ -97,17 +89,6 @@ const useLots = () => {
     },
     [dispatch]
   );
-
-  const clearLots = React.useCallback(() => {
-    setError(null);
-    setErrorKpis(null);
-    dispatch({ type: actions.SET_LOTS, payload: [] });
-    dispatch({
-      type: actions.SET_PAGE_INFO,
-      payload: { page: 1, per_page: 10, total: 0, max_page: 1 },
-    });
-    dispatch({ type: actions.SET_KPIS, payload: emptyLotKpis });
-  }, [dispatch]);
 
   const getCrops = React.useCallback(async () => {
     setProcessing(true);
@@ -281,7 +262,6 @@ const useLots = () => {
     updateLot,
     updateTons,
     getLots,
-    clearLots,
     getArchivedLots,
     archiveLot,
     restoreLot,

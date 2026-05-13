@@ -26,6 +26,7 @@ import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import {
   getValueByAliases,
   parseCsv,
@@ -36,9 +37,6 @@ const FILTER_HIERARCHY: Record<string, string[]> = {
   project_name: ["field_name", "lot_name"],
   field_name: ["lot_name"],
 };
-
-const REQUIRED_FILTERS_WARNING =
-  "Seleccione cliente, proyecto, campaña y campo para ver resultados";
 
 type WorkOrdersListResponse = {
   success: true;
@@ -640,7 +638,6 @@ export function WorkOrders() {
     filters,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const effectiveProjectId = projectId ?? selectedProject?.id ?? routeProjectId;
-  const hasWorkOrderScope = Boolean(effectiveProjectId || selectedField);
 
   const [warningMessage, setWarningMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -650,29 +647,13 @@ export function WorkOrders() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const workOrdersBaseQuery = useMemo(() => {
-    const params: Record<string, string> = {};
-
-    if (selectedCustomer && selectedCustomer.id !== 0) {
-      params.customer_id = String(selectedCustomer.id);
-    }
-
-    if (effectiveProjectId) {
-      params.project_id = String(effectiveProjectId);
-    }
-
-    if (selectedCampaignId) {
-      params.campaign_id = String(selectedCampaignId);
-    }
-
-    if (selectedField && selectedField.id !== 0) {
-      params.field_id = String(selectedField.id);
-    }
-
-    if (selectedSupplyFilter.id) {
-      params.supply_id = String(selectedSupplyFilter.id);
-    }
-
-    return new URLSearchParams(params).toString();
+    return buildWorkspaceQuery({
+      customerId: selectedCustomer?.id,
+      projectId: effectiveProjectId,
+      campaignId: selectedCampaignId,
+      fieldId: selectedField?.id,
+      extra: { supply_id: selectedSupplyFilter.id },
+    });
   }, [effectiveProjectId, selectedCampaignId, selectedCustomer, selectedField, selectedSupplyFilter.id]);
 
   const workOrdersQuery = useMemo(() => {
@@ -860,39 +841,24 @@ export function WorkOrders() {
   }, [effectiveProjectId, selectedField, selectedCampaignId, selectedCustomer?.id, selectedSupplyFilter.id, resetPage]);
 
   useEffect(() => {
-    if (!hasWorkOrderScope) {
-      setWarningMessage(REQUIRED_FILTERS_WARNING);
-      return;
-    }
-
     setWarningMessage("");
     setErrorMessage("");
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
   }, [
-    hasWorkOrderScope,
     workOrdersQuery,
     getOrders,
     getMetrics,
   ]);
 
   useEffect(() => {
-    if (!hasWorkOrderScope) {
-      setFilterDatasetOrders([]);
-      setFilterDatasetReady(false);
-      return;
-    }
-
     let active = true;
     setFilterDatasetOrders([]);
     setFilterDatasetReady(false);
 
-    if (!workOrdersFilterDatasetQuery) {
-      setWarningMessage(REQUIRED_FILTERS_WARNING);
-      return;
-    }
-
-    const querySuffix = `?${workOrdersFilterDatasetQuery}`;
+    const querySuffix = workOrdersFilterDatasetQuery
+      ? `?${workOrdersFilterDatasetQuery}`
+      : "";
 
     apiClient.get<WorkOrdersListResponse>(`/work-orders/filter-rows${querySuffix}`)
       .then((response) => {
@@ -916,7 +882,6 @@ export function WorkOrders() {
       active = false;
     };
   }, [
-    hasWorkOrderScope,
     workOrdersFilterDatasetQuery,
     filterDatasetVersion,
   ]);

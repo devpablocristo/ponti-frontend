@@ -19,6 +19,7 @@ import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 
 const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
 const MISSING_ENTRY_LABEL = "REV ING.";
@@ -307,7 +308,7 @@ export function Stock() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { projectId, filters, selectedCustomer, selectedCampaignId, customers } =
+  const { projectId, filters, selectedCustomer, selectedCampaignId, selectedField, customers } =
     useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const {
@@ -324,13 +325,23 @@ export function Stock() {
     periods,
   } = useStock();
 
+  const stockQuery = useMemo(
+    () =>
+      buildWorkspaceQuery({
+        customerId: selectedCustomer?.id,
+        projectId,
+        campaignId: selectedCampaignId,
+        fieldId: selectedField?.id,
+      }),
+    [projectId, selectedCampaignId, selectedCustomer?.id, selectedField?.id]
+  );
+
   const refreshStock = useCallback(() => {
-    if (!projectId) return;
     getStock(
-      projectId,
+      stockQuery,
       period === "0" ? "" : stockPeriods[Number(period)]?.name || ""
     );
-  }, [getStock, period, projectId, stockPeriods]);
+  }, [getStock, period, stockPeriods, stockQuery]);
 
   const handleStockCreated = () => {
     if (!projectId) return;
@@ -340,16 +351,14 @@ export function Stock() {
 
   const handleViewConsumingOrders = useCallback(
     (item: GetStockItems) => {
-      if (!projectId || !item.supply_id) return;
+      if (!item.supply_id) return;
 
-      const params = new URLSearchParams({
-        project_id: String(projectId),
-        supply_id: String(item.supply_id),
-        supply_name: item.supply_name,
-      });
+      const params = new URLSearchParams(stockQuery);
+      params.set("supply_id", String(item.supply_id));
+      params.set("supply_name", item.supply_name);
       navigate(`/admin/work-orders?${params.toString()}`);
     },
-    [navigate, projectId]
+    [navigate, stockQuery]
   );
 
   const filteredStock = useMemo(() => {
@@ -684,19 +693,17 @@ export function Stock() {
   );
 
   useEffect(() => {
-    if (!projectId || !selectedCustomer || !selectedCampaignId) {
-      return;
-    }
-
     resetPage();
     setPeriod("0");
     setStockPeriods([{ id: 0, name: "Activo" }]);
 
-    getStock(projectId, "");
-    getPeriods(projectId);
-    setDisabledCloseStock(false);
+    getStock(stockQuery, "");
+    if (projectId) {
+      getPeriods(projectId);
+    }
+    setDisabledCloseStock(!projectId);
     setSelectedDate("");
-  }, [getStock, getPeriods, projectId, resetPage, selectedCustomer, selectedCampaignId]);
+  }, [getStock, getPeriods, projectId, resetPage, stockQuery]);
 
   useEffect(() => {
     if (periods && periods.length > 0) {
@@ -713,22 +720,20 @@ export function Stock() {
   }, [periods]);
 
   useEffect(() => {
-    if (!projectId) return;
-
     resetPage();
 
     const periodNumber = Number(period);
     if (periodNumber === 0) {
-      getStock(projectId, "");
-      setDisabledCloseStock(false);
+      getStock(stockQuery, "");
+      setDisabledCloseStock(!projectId);
       setSelectedDate("");
       return;
     }
 
-    getStock(projectId, stockPeriods[periodNumber]?.name || "");
+    getStock(stockQuery, stockPeriods[periodNumber]?.name || "");
     setSelectedDate(stockPeriods[periodNumber]?.name || "");
     setDisabledCloseStock(true);
-  }, [period, stockPeriods, getStock, projectId, resetPage]);
+  }, [period, stockPeriods, getStock, projectId, resetPage, stockQuery]);
 
   useEffect(() => {
     if (errorCloseStock) {
@@ -740,13 +745,13 @@ export function Stock() {
     if (resultCloseStock && projectId) {
       setActionErrorMessage(null);
       setSuccessMessage(resultCloseStock);
-      getStock(projectId, "");
+      getStock(stockQuery, "");
       getPeriods(projectId);
       setEnabledCloseStock(false);
       setDisabledCloseStock(false);
       setSelectedDate("");
     }
-  }, [resultCloseStock, projectId, getStock, getPeriods]);
+  }, [resultCloseStock, projectId, getStock, getPeriods, stockQuery]);
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
@@ -806,12 +811,12 @@ export function Stock() {
           },
         ]}
       />
-      {!error && projectId && selectedCustomer && selectedCampaignId && (
+      {!error && (
         <div className="my-3">
           <ItemsIndicators
             summary={derivedSummary}
             selectedDate={selectedDate}
-            disabledCloseStock={disabledCloseStock}
+            disabledCloseStock={disabledCloseStock || !projectId}
             onDateChange={handleDateChange}
             enabledCloseStock={enabledCloseStock}
             setEnabledCloseStock={setEnabledCloseStock}
@@ -858,17 +863,15 @@ export function Stock() {
             onStockCreated={handleStockCreated}
           />
         )}
-        {projectId && selectedCustomer && selectedCampaignId && (
-          <DataTable
-            data={filteredStock}
-            columns={columns}
-            message="No hay stock disponible"
-            filters={columnsFilters}
-            onFilterChange={handleFilterChange}
-            enableFilters={true}
-            pagination={pagination.buildPagination(filteredStock.length)}
-          />
-        )}
+        <DataTable
+          data={filteredStock}
+          columns={columns}
+          message="No hay stock disponible"
+          filters={columnsFilters}
+          onFilterChange={handleFilterChange}
+          enableFilters={true}
+          pagination={pagination.buildPagination(filteredStock.length)}
+        />
         <BaseModal
   isOpen={stockValidationModal !== null}
   onClose={() => setStockValidationModal(null)}

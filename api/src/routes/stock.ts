@@ -2,9 +2,31 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
+import { parseFieldProjectQueryParams } from "../utils/queryParams";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
+
+const appendPositiveInt = (params: URLSearchParams, key: string, value: number) => {
+  if (Number.isFinite(value) && value > 0) {
+    params.set(key, String(value));
+  }
+};
+
+const buildWorkspaceParams = (req: Request) => {
+  const ids = parseFieldProjectQueryParams(req.query);
+  const params = new URLSearchParams();
+  appendPositiveInt(params, "customer_id", ids.customerId);
+  appendPositiveInt(params, "project_id", ids.projectId);
+  appendPositiveInt(params, "campaign_id", ids.campaignId);
+  appendPositiveInt(params, "field_id", ids.fieldId);
+
+  const cutOffDate = req.query.cutoff_date as string;
+  if (cutOffDate && cutOffDate !== "") {
+    params.set("cutoff_date", cutOffDate);
+  }
+  return params;
+};
 
 router.get("/export/:id", async (req, res) => {
   try {
@@ -88,6 +110,58 @@ router.get("/periods/:id", async (req: Request, res: Response) => {
 
     if (Array.isArray(periods) && periods.length > 0) {
       setImmediate(() => cache.set(`stock:periods:${projectId}`, data));
+    }
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.get("", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const params = buildWorkspaceParams(req);
+    const queryString = params.toString();
+    const cachedStock = cache.get(`stock:workspace:${queryString}`);
+    if (cachedStock) {
+      res.status(200).json(cachedStock);
+      return;
+    }
+
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+
+    const { data: stock } = await apiClient.get<any>(
+      queryString ? `/stocks/summary?${queryString}` : "/stocks/summary",
+      headers
+    );
+
+    const data = {
+      success: true,
+      data: stock,
+    };
+
+    if (Array.isArray(stock?.items) && stock.items.length > 0) {
+      setImmediate(() => cache.set(`stock:workspace:${queryString}`, data));
     }
 
     res.status(200).json(data);
