@@ -235,7 +235,7 @@ export default function SupplyDropdown({
                   close();
                 }}
               >
-                + Crear nuevo insumo
+                + Crear Nuevo Insumo
               </li>
             )}
             {filtered.map((option, idx) => (

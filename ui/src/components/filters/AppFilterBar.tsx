@@ -1,13 +1,8 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, Search } from "lucide-react";
 
+import { ToolbarActionButton } from "../Button/ToolbarActionButton";
+import type { AppButtonVariant } from "../Button/AppButton";
 import { fuzzySearchOptions } from "../../lib/fuzzySearch";
 
 export interface FilterOption {
@@ -37,17 +32,7 @@ export interface FilterItem {
 
 interface ActionButton {
   label: string;
-  variant?:
-    | "primary"
-    | "success"
-    | "secondary"
-    | "outlineGreen"
-    | "danger"
-    | "warning"
-    | "light"
-    | "dark"
-    | "outlineGray"
-    | "outlinePonti";
+  variant?: AppButtonVariant;
   icon?: ReactNode;
   disabled?: boolean;
   onClick?: () => void;
@@ -69,98 +54,20 @@ function sizeClass(size: "sm" | "md") {
   return size === "sm" ? "px-3.5 py-2 text-sm" : "px-3.5 py-2.5 text-sm";
 }
 
-function buttonClass(variant?: ActionButton["variant"], isPrimary?: boolean) {
-  const resolved = variant ?? (isPrimary ? "success" : "outlineGreen");
-  const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-all duration-200 active:scale-[0.97]";
-
-  switch (resolved) {
-    case "secondary":
-      return `${base} bg-slate-100 text-slate-700 shadow-sm hover:bg-slate-200`;
-    case "danger":
-      return `${base} bg-red-600 text-white shadow-sm hover:bg-red-700`;
-    case "warning":
-      return `${base} bg-amber-500 text-white shadow-sm hover:bg-amber-600`;
-    case "light":
-      return `${base} border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50`;
-    case "dark":
-      return `${base} bg-slate-800 text-white shadow-sm hover:bg-slate-900`;
-    case "outlineGray":
-      return `${base} border border-slate-200 bg-white text-slate-700 hover:bg-slate-50`;
-    case "outlineGreen":
-    case "outlinePonti":
-      return `${base} border border-custom-btn bg-transparent text-custom-btn hover:bg-primary-50`;
-    case "success":
-      return `${base} bg-custom-btn text-white shadow-sm hover:bg-custom-btn/85`;
-    default:
-      return `${base} bg-primary-700 text-white shadow-sm hover:bg-primary-800`;
-  }
-}
-
-function ActionButtonView({
-  action,
-  size,
-}: {
-  action: ActionButton;
-  size: "sm" | "md";
-}) {
-  const classes = `${buttonClass(action.variant, action.isPrimary)} ${sizeClass(
-    size,
-  )} whitespace-nowrap ${
-    action.disabled ? "cursor-not-allowed opacity-50 active:scale-100" : ""
-  }`;
-
-  if (action.onFileChange) {
-    return (
-      <label
-        className={`${classes} relative overflow-hidden ${
-          action.disabled ? "pointer-events-none" : ""
-        }`.trim()}
-      >
-        <input
-          type="file"
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-          accept={action.accept}
-          disabled={action.disabled}
-          onClick={(event) => {
-            event.currentTarget.value = "";
-          }}
-          onChange={(event) => {
-            action.onFileChange?.(event);
-            requestAnimationFrame(() => {
-              event.target.value = "";
-            });
-          }}
-        />
-        {action.icon ? <span>{action.icon}</span> : null}
-        <span>{action.label}</span>
-      </label>
-    );
-  }
-
-  if (action.href) {
-    return (
-      <a
-        href={action.href}
-        className={classes}
-        aria-disabled={action.disabled ? "true" : undefined}
-      >
-        {action.icon ? <span>{action.icon}</span> : null}
-        <span>{action.label}</span>
-      </a>
-    );
-  }
-
+function ActionButtonView({ action, size }: { action: ActionButton; size: "sm" | "md" }) {
   return (
-    <button
-      type="button"
-      className={classes}
+    <ToolbarActionButton
+      label={action.label}
+      variant={action.variant}
+      icon={action.icon}
       disabled={action.disabled}
-      onClick={action.disabled ? undefined : action.onClick}
-    >
-      {action.icon ? <span>{action.icon}</span> : null}
-      <span>{action.label}</span>
-    </button>
+      onClick={action.onClick}
+      accept={action.accept}
+      onFileChange={action.onFileChange}
+      href={action.href}
+      isPrimary={action.isPrimary}
+      size={size}
+    />
   );
 }
 
@@ -190,9 +97,7 @@ function SearchInput({
   return (
     <div className="w-full">
       {label ? (
-        <label className="mb-1.5 block text-xs font-medium text-slate-600">
-          {label}
-        </label>
+        <label className="mb-1.5 block text-xs font-medium text-slate-600">{label}</label>
       ) : null}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -208,9 +113,7 @@ function SearchInput({
           onFocus={onFocus}
           placeholder={placeholder}
           className={`input-base block w-full pl-9 pr-8 ${sizeClass(size)} ${
-            disabled
-              ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400"
-              : ""
+            disabled ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : ""
           }`}
         />
         <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
@@ -233,11 +136,7 @@ function ResponsiveActionContainer({
       {open ? (
         <div className="mb-3 flex flex-col items-end gap-2">
           {actions.map((action) => (
-            <ActionButtonView
-              key={`floating-action-${action.label}`}
-              action={action}
-              size={size}
-            />
+            <ActionButtonView key={`floating-action-${action.label}`} action={action} size={size} />
           ))}
         </div>
       ) : null}
@@ -274,7 +173,7 @@ function FilterSuggestions({
   const hasOptions = options.length > 0;
 
   return (
-    <ul className="absolute top-full z-20 mt-1 max-h-[240px] w-full overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+    <ul className="absolute top-full z-[70] mt-1 max-h-[240px] w-full overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
       {allowAll ? (
         <li
           className="cursor-pointer px-3.5 py-2.5 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-50"
@@ -334,12 +233,13 @@ export function AppFilterBar({
   const optionsByFilter = useMemo(() => {
     return filters.reduce<Record<string, FilterOption[]>>((acc, filter) => {
       const value = suggestionsVisible[filter.name]
-        ? searchByFilter[filter.name] ?? ""
+        ? (searchByFilter[filter.name] ?? "")
         : String(filter.value ?? "");
       const allLabel = filter.allLabel ?? "Todos los registros";
-      const query = value === allLabel || value.startsWith("Todos los ") || value.startsWith("Todas las ")
-        ? ""
-        : value;
+      const query =
+        value === allLabel || value.startsWith("Todos los ") || value.startsWith("Todas las ")
+          ? ""
+          : value;
       acc[filter.name] = fuzzySearchOptions(query, filter.options ?? []);
       return acc;
     }, {});
@@ -379,12 +279,13 @@ export function AppFilterBar({
 
   const handleSuggestionClick = useCallback(
     (filter: FilterItem, option: FilterOption) => {
-      filter.setData(option.id === 0 ? undefined : option);
-      filter.onChange(option.name);
+      const isAllOption = option.id === 0;
+      filter.setData(isAllOption ? undefined : option);
+      filter.onChange(isAllOption ? "" : option.name);
       setSearchByFilter((prev) => ({ ...prev, [filter.name]: "" }));
       hideSuggestions(filter.name);
     },
-    [hideSuggestions],
+    [hideSuggestions]
   );
 
   const createHandleKeyDown = useCallback(
@@ -411,11 +312,11 @@ export function AppFilterBar({
 
       setHighlightedIndex((prev) => ({ ...prev, [filter.name]: nextIndex }));
     },
-    [handleSuggestionClick, hideSuggestions, highlightedIndex, optionsByFilter],
+    [handleSuggestionClick, hideSuggestions, highlightedIndex, optionsByFilter]
   );
 
   return (
-    <div className={`w-full ${className}`.trim()}>
+    <div className={`relative z-[60] w-full ${className}`.trim()}>
       <div className="flex flex-col items-start justify-between gap-3 px-1 py-2 sm:flex-row sm:items-end sm:gap-4">
         <div className="flex w-full flex-col gap-4 sm:flex-1 sm:flex-row">
           {filters.map((filter) => {
@@ -435,7 +336,7 @@ export function AppFilterBar({
                     placeholder="Buscar"
                     value={
                       suggestionsVisible[filter.name]
-                        ? searchByFilter[filter.name] ?? ""
+                        ? (searchByFilter[filter.name] ?? "")
                         : String(filter.value ?? "")
                     }
                     size={inputSize}
@@ -474,11 +375,7 @@ export function AppFilterBar({
           <>
             <div className="hidden items-center justify-end gap-2 sm:flex">
               {actions.map((action) => (
-                <ActionButtonView
-                  key={`action-${action.label}`}
-                  action={action}
-                  size={inputSize}
-                />
+                <ActionButtonView key={`action-${action.label}`} action={action} size={inputSize} />
               ))}
             </div>
             <div className="sm:hidden">

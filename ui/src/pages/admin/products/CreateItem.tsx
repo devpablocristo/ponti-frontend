@@ -5,7 +5,7 @@ import SelectField from "../../../components/Input/SelectField";
 import { Checkbox } from "../../../components/Input/Checkbox";
 import useSupplies from "../../../hooks/useSupplies";
 import useStock from "../../../hooks/useStock";
-import { Trash } from "lucide-react";
+import { Plus, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
 import useProviders from "../../../hooks/useProviders";
@@ -18,15 +18,12 @@ import {
 
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import { DEFAULT_ITEM_ROW_COUNT, replaceSupplyIdsWithNames } from "../utils";
-import Drawer from "../../../components/Drawer/Drawer";
+import { IconActionButton } from "../../../components/Button/IconActionButton";
+import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
-import {
-  Campaign,
-  Customer,
-  Project,
-} from "../../../hooks/useWorkspaceFilters";
+import { Campaign, Customer, Project } from "../../../hooks/useWorkspaceFilters";
 import useCampaigns from "../../../hooks/useCampaigns";
 import { getUnitName, units } from "../../../constants/units";
 import useCategories from "../../../hooks/useCategories";
@@ -56,8 +53,7 @@ const getTypeOptionFromEntryType = (entryType?: string | null) => {
   return typeOptions.find((option) => option.name === entryType) || null;
 };
 
-const formatAvailableQty = (value: number) =>
-  value.toFixed(2).replace(/\.?0+$/, "");
+const formatAvailableQty = (value: number) => value.toFixed(2).replace(/\.?0+$/, "");
 
 const DEVOLUTION_TYPE_ID = 4;
 
@@ -77,7 +73,6 @@ export default function CreateItem({
   onProductCreated: () => void;
   editingMovement: SupplyMovement | null;
   onEditSaved: () => void;
-
 }) {
   const {
     resultCreation,
@@ -98,9 +93,7 @@ export default function CreateItem({
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [project, setProject] = useState<Project | null>(null);
 
-  const [selectedProjectDestination, setSelectedProjectDestination] = useState<
-    number | null
-  >(null);
+  const [selectedProjectDestination, setSelectedProjectDestination] = useState<number | null>(null);
 
   const { getSupplies, supplies } = useSupplies();
   const { getStock, stock } = useStock();
@@ -109,12 +102,8 @@ export default function CreateItem({
 
   const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState("");
-  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
-    null
-  );
-  const [investors, setInvestors] = useState<{ id: number; name: string }[]>(
-    []
-  );
+  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(null);
+  const [investors, setInvestors] = useState<{ id: number; name: string }[]>([]);
 
   const [queryProvider, setQueryProvider] = useState("");
   const [provider, setProvider] = useState<Entity>();
@@ -128,14 +117,10 @@ export default function CreateItem({
     }[]
   >(emptyItems);
   const [itemErrors, setItemErrors] = useState<Record<number, string>>({});
-  const [lastSubmittedRowIndexes, setLastSubmittedRowIndexes] = useState<number[]>(
-    []
-  );
+  const [lastSubmittedRowIndexes, setLastSubmittedRowIndexes] = useState<number[]>([]);
   const [openCreateSupply, setOpenCreateSupply] = useState(false);
   const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
-  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
-    null
-  );
+  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(null);
   const latestItemsRef = useRef(items);
   const latestSuppliesRef = useRef(supplies);
   const latestProjectIdRef = useRef(projectId);
@@ -265,8 +250,7 @@ export default function CreateItem({
               value={category}
               onChange={(e) => {
                 const selectedCategory = categories.find(
-                  (c: { id: number; type_id?: number }) =>
-                    c.id === Number(e.target.value)
+                  (c: { id: number; type_id?: number }) => c.id === Number(e.target.value)
                 );
                 setCategory(e.target.value);
                 setType(selectedCategory?.type_id?.toString() || "");
@@ -281,12 +265,12 @@ export default function CreateItem({
               value={type}
               options={types}
               disabled
-              onChange={() => { }}
+              onChange={() => {}}
               size="sm"
             />
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="primary" onClick={onCancel} disabled={saving}>
+            <div className="drawer-footer-actions justify-end pt-4">
+              <Button variant="secondary" onClick={onCancel} disabled={saving}>
                 Cancelar
               </Button>
               <Button
@@ -312,7 +296,7 @@ export default function CreateItem({
                   );
                 }}
               >
-                {saving ? "Guardando..." : "Guardar insumo"}
+                {saving ? "Guardando..." : "Guardar Insumo"}
               </Button>
             </div>
           </>
@@ -338,9 +322,7 @@ export default function CreateItem({
 
   useEffect(() => {
     if (customer && project) {
-      getCampaigns(
-        `customer_id=${customer.id}&project_name=${project.name}&limit=100`
-      );
+      getCampaigns(`customer_id=${customer.id}&project_name=${project.name}&limit=100`);
     }
   }, [customer, project, getCampaigns]);
 
@@ -348,9 +330,9 @@ export default function CreateItem({
     if (errorCreation) {
       const message =
         typeof errorCreationPayload?.error?.details === "string" &&
-          errorCreationPayload.error.details.trim() !== ""
+        errorCreationPayload.error.details.trim() !== ""
           ? errorCreationPayload.error.details
-          : errorCreation ?? "";
+          : (errorCreation ?? "");
       setError(replaceSupplyIdsWithNames(message, supplies));
       setSuccessMessage(null);
     }
@@ -365,67 +347,63 @@ export default function CreateItem({
     latestGetProvidersRef.current = getProviders;
   }, [items, supplies, projectId, onProductCreated, getStock, getProviders]);
 
-useEffect(() => {
-  if (lastSubmittedRowIndexes.length === 0) return;
-  if (resultCreation.supply_movements.length === 0) return;
+  useEffect(() => {
+    if (lastSubmittedRowIndexes.length === 0) return;
+    if (resultCreation.supply_movements.length === 0) return;
 
-  const expectedCount = lastSubmittedRowIndexes.length;
-  const successfulMovements = resultCreation.supply_movements.filter(
-    (movement) => movement.is_saved
-  );
-  const allSaved =
-    resultCreation.supply_movements.length === expectedCount &&
-    successfulMovements.length === expectedCount;
+    const expectedCount = lastSubmittedRowIndexes.length;
+    const successfulMovements = resultCreation.supply_movements.filter(
+      (movement) => movement.is_saved
+    );
+    const allSaved =
+      resultCreation.supply_movements.length === expectedCount &&
+      successfulMovements.length === expectedCount;
 
-  const errors: string[] = [];
-  const nextItemErrors: Record<number, string> = {};
+    const errors: string[] = [];
+    const nextItemErrors: Record<number, string> = {};
 
-  resultCreation.supply_movements.forEach((movement, responseIndex) => {
-    if (movement.error_detail !== "") {
-      const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
-      const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
-      const detailWithNames = replaceSupplyIdsWithNames(
-        detail,
-        latestSuppliesRef.current
-      );
-      errors.push(detailWithNames);
-      nextItemErrors[uiRowIndex] = detailWithNames;
-    }
-  });
-
-  if (errors.length > 0 || !allSaved) {
-    const fallbackMessage =
-      errors.length > 0
-        ? errors.join("\n")
-        : "No se pudo guardar el movimiento. Revisá que no haya insumos duplicados u otros errores de validación.";
-
-    setError(replaceSupplyIdsWithNames(fallbackMessage, latestSuppliesRef.current));
-    setItemErrors(nextItemErrors);
-    setSuccessMessage(null);
-
-    if (successfulMovements.length > 0) {
-      latestOnProductCreatedRef.current();
-      if (latestProjectIdRef.current) {
-        latestGetStockRef.current(latestProjectIdRef.current, "");
+    resultCreation.supply_movements.forEach((movement, responseIndex) => {
+      if (movement.error_detail !== "") {
+        const uiRowIndex = lastSubmittedRowIndexes[responseIndex] ?? responseIndex;
+        const detail = movement.error_detail.replace("VALIDATION_ERROR: ", "");
+        const detailWithNames = replaceSupplyIdsWithNames(detail, latestSuppliesRef.current);
+        errors.push(detailWithNames);
+        nextItemErrors[uiRowIndex] = detailWithNames;
       }
-      latestGetProvidersRef.current("");
+    });
+
+    if (errors.length > 0 || !allSaved) {
+      const fallbackMessage =
+        errors.length > 0
+          ? errors.join("\n")
+          : "No se pudo guardar el movimiento. Revisá que no haya insumos duplicados u otros errores de validación.";
+
+      setError(replaceSupplyIdsWithNames(fallbackMessage, latestSuppliesRef.current));
+      setItemErrors(nextItemErrors);
+      setSuccessMessage(null);
+
+      if (successfulMovements.length > 0) {
+        latestOnProductCreatedRef.current();
+        if (latestProjectIdRef.current) {
+          latestGetStockRef.current(latestProjectIdRef.current, "");
+        }
+        latestGetProvidersRef.current("");
+      }
+
+      return;
     }
 
-    return;
-  }
+    setError(null);
+    setItemErrors({});
+    setSuccessMessage("Movimiento guardado correctamente");
+    latestOnProductCreatedRef.current();
+    clearForm();
 
-  setError(null);
-  setItemErrors({});
-  setSuccessMessage("Movimiento guardado correctamente");
-  latestOnProductCreatedRef.current();
-  clearForm();
-
-  if (latestProjectIdRef.current) {
-    latestGetStockRef.current(latestProjectIdRef.current, "");
-  }
-  latestGetProvidersRef.current("");
-}, [resultCreation, lastSubmittedRowIndexes]);
-
+    if (latestProjectIdRef.current) {
+      latestGetStockRef.current(latestProjectIdRef.current, "");
+    }
+    latestGetProvidersRef.current("");
+  }, [resultCreation, lastSubmittedRowIndexes]);
 
   useEffect(() => {
     if (projectId) {
@@ -458,11 +436,7 @@ useEffect(() => {
     const requiresAvailableStock = type?.id === 2 || type?.id === DEVOLUTION_TYPE_ID;
 
     return supplies
-      .filter(
-        (s) =>
-          !requiresAvailableStock ||
-          Number(stockBySupply.get(s.name) || 0) > 0
-      )
+      .filter((s) => !requiresAvailableStock || Number(stockBySupply.get(s.name) || 0) > 0)
       .map((s) => ({
         id: s.id,
         name: s.name,
@@ -480,76 +454,69 @@ useEffect(() => {
     );
   }, [selectedProject]);
 
-useEffect(() => {
-  if (!drawerOpen) return;
-  if (editingMovement) return;
+  useEffect(() => {
+    if (!drawerOpen) return;
+    if (editingMovement) return;
 
-  clearForm();
-}, [drawerOpen, editingMovement]);
+    clearForm();
+  }, [drawerOpen, editingMovement]);
 
-useEffect(() => {
-  if (!drawerOpen || !editingMovement) return;
+  useEffect(() => {
+    if (!drawerOpen || !editingMovement) return;
 
-  setError(null);
-  setSuccessMessage(null);
-  setItemErrors({});
+    setError(null);
+    setSuccessMessage(null);
+    setItemErrors({});
 
-  const matchedType = getTypeOptionFromEntryType(editingMovement.entry_type);
-  setType(matchedType);
+    const matchedType = getTypeOptionFromEntryType(editingMovement.entry_type);
+    setType(matchedType);
 
-  const isInternalMovement = matchedType?.id === 2;
+    const isInternalMovement = matchedType?.id === 2;
 
-  setCustomer(null);
-  setProject(null);
-  setCampaign(null);
-  setSelectedProjectDestination(null);
+    setCustomer(null);
+    setProject(null);
+    setCampaign(null);
+    setSelectedProjectDestination(null);
 
-  if (isInternalMovement) {
-    if (editingMovement.destination_project_id) {
-      setSelectedProjectDestination(editingMovement.destination_project_id);
+    if (isInternalMovement) {
+      if (editingMovement.destination_project_id) {
+        setSelectedProjectDestination(editingMovement.destination_project_id);
+      }
+
+      if (editingMovement.destination_customer_name) {
+        const matchedCustomer = customers.find(
+          (c) => c.name === editingMovement.destination_customer_name
+        );
+        if (matchedCustomer) setCustomer(matchedCustomer);
+      }
     }
 
-    if (editingMovement.destination_customer_name) {
-      const matchedCustomer = customers.find(
-        (c) => c.name === editingMovement.destination_customer_name
-      );
-      if (matchedCustomer) setCustomer(matchedCustomer);
-    }
-  }
+    setOrderNumber(editingMovement.reference_number || "");
+    setDate(String(editingMovement.entry_date || "").slice(0, 10));
 
-  setOrderNumber(editingMovement.reference_number || "");
-  setDate(String(editingMovement.entry_date || "").slice(0, 10));
+    const matchedProvider = (providers || []).find((p) => p.name === editingMovement.provider_name);
+    setProvider(matchedProvider);
+    setQueryProvider(editingMovement.provider_name || "");
 
-  const matchedProvider = (providers || []).find(
-    (p) => p.name === editingMovement.provider_name
-  );
-  setProvider(matchedProvider);
-  setQueryProvider(editingMovement.provider_name || "");
+    const matchedInvestor = investors.find((i) => i.name === editingMovement.investor_name);
+    setInvestor(matchedInvestor || null);
 
-  const matchedInvestor = investors.find(
-    (i) => i.name === editingMovement.investor_name
-  );
-  setInvestor(matchedInvestor || null);
+    const matchedSupply = supplies.find((s) => s.name === editingMovement.supply_name);
 
-  const matchedSupply = supplies.find(
-    (s) => s.name === editingMovement.supply_name
-  );
+    const firstItem = {
+      item: matchedSupply ? String(matchedSupply.id) : "",
+      quantity: String(editingMovement.quantity ?? "")
+        .replace(/[^\d.,]/g, "")
+        .replace(",", "."),
+    };
 
-  const firstItem = {
-    item: matchedSupply ? String(matchedSupply.id) : "",
-    quantity: String(editingMovement.quantity ?? "")
-      .replace(/[^\d.,]/g, "")
-      .replace(",", "."),
-  };
-
-  const nextItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
-    item: "",
-    quantity: "",
-  }));
-  nextItems[0] = firstItem;
-  setItems(nextItems);
-}, [drawerOpen, editingMovement, providers, investors, supplies, customers]);
-
+    const nextItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
+      item: "",
+      quantity: "",
+    }));
+    nextItems[0] = firstItem;
+    setItems(nextItems);
+  }, [drawerOpen, editingMovement, providers, investors, supplies, customers]);
 
   useEffect(() => {
     if (!drawerOpen || !editingMovement) return;
@@ -586,15 +553,7 @@ useEffect(() => {
         setSelectedProjectDestination(matchedCampaign.project_id);
       }
     }
-  }, [
-    drawerOpen,
-    editingMovement,
-    projectsDropdown,
-    campaigns,
-    project,
-    campaign,
-  ]);
-
+  }, [drawerOpen, editingMovement, projectsDropdown, campaigns, project, campaign]);
 
   const handleItemChange = (i: number, field: string, value: string) => {
     setItemErrors((prev) => {
@@ -603,9 +562,7 @@ useEffect(() => {
       delete clone[i];
       return clone;
     });
-    setItems((prev) =>
-      prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
-    );
+    setItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
   };
 
   const handlePreSave = () => {
@@ -641,22 +598,18 @@ useEffect(() => {
 
     const itemsWithAnyValue = items
       .map((item, index) => ({ item, index }))
-      .filter(({ item }) => item.item || item.quantity)
+      .filter(({ item }) => item.item || item.quantity);
 
     if (isEditing && itemsWithAnyValue.length !== 1) {
       setError("En edición debe haber exactamente un insumo cargado.");
       return;
     }
-    ;
-
     if (itemsWithAnyValue.length === 0) {
       errors.push("Debe cargar al menos un insumo");
       return;
     }
 
-    const hasPartial = itemsWithAnyValue.some(
-      ({ item }) => !item.item || !item.quantity
-    );
+    const hasPartial = itemsWithAnyValue.some(({ item }) => !item.item || !item.quantity);
 
     if (hasPartial) {
       errors.push("No se completaron todos los campos de los items cargados");
@@ -712,7 +665,6 @@ useEffect(() => {
       return;
     }
 
-
     setLastSubmittedRowIndexes(itemsWithAnyValue.map(({ index }) => index));
     setItemErrors({});
 
@@ -760,297 +712,292 @@ useEffect(() => {
     };
 
     saveSupplyMovement(projectId, payload);
-
   };
 
   return (
     <>
-    <EntityFormDrawer
-      open={drawerOpen}
-      onClose={() => setDrawerOpen(false)}
-      title={isEditing ? "Editar Insumo" : "Ingreso de Insumo"}
-      processing={processing || processingCreation}
-      onSubmit={handlePreSave}
-      submitLabel={isEditing ? "Guardar cambios" : "Guardar"}
-    >
-      <>
-              <div className="grid grid-cols-3 gap-4">
-                <SelectField
-                  label="Tipo de ingreso"
-                  name="type"
-                  options={typeOptions}
-                  value={type?.id?.toString() || ""}
-                  onChange={(e) => {
-                    const selectedType = typeOptions.find(
-                      (type) => type.id === Number(e.target.value)
-                    );
-                    if (selectedType) {
-                      setType(selectedType);
-                    }
-                  }}
-                  disabled={processing}
-                  size="sm"
-                />
-                <InputField
-                  label="Fecha"
-                  name="date"
-                  type="date"
-                  value={date || ""}
-                  onChange={(e) => {
-                    const inputValue = e.target.value;
-                    if (inputValue) {
-                      const dateParts = inputValue.split("-");
-                      if (dateParts[0] && dateParts[0].length > 4) {
-                        dateParts[0] = dateParts[0].slice(0, 4);
-                        const formattedDate = dateParts.join("-");
-                        setDate(formattedDate);
-                      } else {
-                        setDate(inputValue);
-                      }
-                    } else {
-                      setDate("");
-                    }
-                  }}
-                  size="sm"
-                />
-                <InputField
-                  label="Numero / Nombre"
-                  placeholder="Numero / Nombre"
-                  name="nroName"
-                  type="text"
-                  value={orderNumber || ""}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  size="sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <InputField
-                  label="Proyecto"
-                  name="project"
-                  type="text"
-                  value={selectedProject?.name || ""}
-                  onChange={() => { }}
-                  disabled
-                  size="sm"
-                />
-
-                <div className="space-y-2">
-                  <SelectField
-                    label="Proveedor existente"
-                    placeholder="Seleccionar proveedor"
-                    name="provider"
-                    options={providers || []}
-                    value={provider?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedProvider = providers?.find(
-                        (p) => p.id === Number(e.target.value)
-                      );
-                      setProvider(selectedProvider);
-                      setQueryProvider(selectedProvider?.name || "");
-                    }}
-                    size="sm"
-                  />
-                  <InputField
-                    label="O escribir proveedor nuevo"
-                    placeholder="Nombre del proveedor"
-                    name="providerName"
-                    type="text"
-                    value={queryProvider}
-                    onChange={(e) => {
-                      setQueryProvider(e.target.value);
-                      setProvider(undefined);
-                    }}
-                    size="sm"
-                  />
-                </div>
-                <SelectField
-                  label="Inversor"
-                  placeholder="Selecciona el inversor"
-                  name="investor"
-                  options={investors}
-                  value={investor?.id?.toString() || ""}
-                  onChange={(e) => {
-                    const selectedInvestor = investors.find(
-                      (i) => i.id === Number(e.target.value)
-                    );
-                    if (selectedInvestor) {
-                      setInvestor(selectedInvestor);
-                    }
-                  }}
-                  size="sm"
-                />
-              </div>
-
-              {type?.id === 2 && (
-                <div className="grid grid-cols-3 gap-4">
-                  <SelectField
-                    label="Cliente destino"
-                    name="customer"
-                    options={customers}
-                    value={customer?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedCustomer = customers.find(
-                        (customer) => customer.id === Number(e.target.value)
-                      );
-                      if (selectedCustomer) {
-                        setCustomer(selectedCustomer);
-                      }
-                    }}
-                    size="sm"
-                  />
-                  <SelectField
-                    label="Proyecto destino"
-                    name="projectDestination"
-                    options={projectsDropdown}
-                    value={project?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedProject = projectsDropdown.find(
-                        (project) => project.id === Number(e.target.value)
-                      );
-                      if (selectedProject) {
-                        setProject(selectedProject);
-                      }
-                    }}
-                    disabled={processing || !customers}
-                    size="sm"
-                  />
-                  <SelectField
-                    label="Campaña"
-                    name="campaign"
-                    options={campaigns}
-                    value={campaign?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedCampaign = campaigns.find(
-                        (campaign) => campaign.id === Number(e.target.value)
-                      );
-                      if (selectedCampaign) {
-                        setCampaign(selectedCampaign);
-                        setSelectedProjectDestination(
-                          selectedCampaign.project_id
-                        );
-                      }
-                    }}
-                    size="sm"
-                  />
-                </div>
-              )}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <div></div>
-                  <Button
-                    variant="primary"
-                    size="xs"
-                    onClick={() => {
-                      setItemIndexToUpdate(null);
-                      setOpenCreateSupply(true);
-                    }}
-                    className="max-w-fit"
-                  >
-                    + Crear nuevo insumo
-                  </Button>
-                </div>
-                <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
-                  <span className="font-sm text-gray-900">Insumo</span>
-                  <span className="font-sm text-gray-900">Cantidad</span>
-                  <div></div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
-                  {items.map((item, i) => (
-                    <div
-                      key={i}
-                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                    >
-                      <div className="sm:col-span-1">
-                        <SupplyDropdown
-                          options={availableSupplies.map((s) => ({
-                            id: s.id,
-                            name: s.name,
-                            badge: (
-                              <span className="ml-1 text-xs text-gray-400 font-normal">
-                                <span className={s.qty < 0 ? "text-red-600" : undefined}>
-                                  {formatAvailableQty(s.qty)}
-                                </span>{" "}
-                                {s.unit}
-                              </span>
-                            ),
-                          }))}
-                          value={item.item ? Number(item.item) : null}
-                          onSelect={(option) => handleItemChange(i, "item", String(option.id))}
-                          onCreateNew={() => {
-                            setItemIndexToUpdate(i);
-                            setOpenCreateSupply(true);
-                          }}
-                          hasError={!!itemErrors[i]}
-                        />
-                      </div>
-                      <div className="sm:col-span-1">
-                        <InputField
-                          label=""
-                          placeholder="Lt/Kg/Bolsas"
-                          name={`quantity${i}`}
-                          type="text"
-                          value={item.quantity}
-                          inputClassName={
-                            itemErrors[i]
-                              ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                              : ""
-                          }
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, ".");
-                            if (/^\d*\.?\d{0,3}$/.test(value)) {
-                              handleItemChange(i, "quantity", value);
-                            }
-                          }}
-                          size="sm"
-                        />
-                        {itemErrors[i] && (
-                          <p className="mt-1 text-xs text-red-600">{itemErrors[i]}</p>
-                        )}
-                      </div>
-                      <div>
-                        <Button
-                          variant="primary"
-                          size="xs"
-                          onClick={() => {
-                            const newItems = [...items];
-                            newItems.splice(i, 1);
-                            setItems(newItems);
-                          }}
-                          className="text-blue-500 hover:underline max-w-fit"
-                        >
-                          <Trash size={12} />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {!isEditing && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        setItems([...items, { item: "", quantity: "" }]);
-                      }}
-                      className="max-w-fit"
-                    >
-                      Agregar insumo +
-                    </Button>
-                  )}
-
-                </div>
-              </div>
-              <ErrorBanner message={error} prefix="Error:" />
-              <SuccessBanner
-                message={successMessage || null}
-                variant="alert"
-                onDismiss={() => setSuccessMessage("")}
+      <EntityFormDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title={isEditing ? "Editar Insumo" : "Ingreso de Insumo"}
+        processing={processing || processingCreation}
+        onSubmit={handlePreSave}
+        submitLabel={isEditing ? "Guardar cambios" : "Guardar"}
+      >
+        <>
+          <section className="drawer-section">
+            <div className="grid grid-cols-3 gap-4">
+              <SelectField
+                label="Tipo de ingreso"
+                name="type"
+                options={typeOptions}
+                value={type?.id?.toString() || ""}
+                onChange={(e) => {
+                  const selectedType = typeOptions.find(
+                    (type) => type.id === Number(e.target.value)
+                  );
+                  if (selectedType) {
+                    setType(selectedType);
+                  }
+                }}
+                disabled={processing}
+                size="sm"
               />
-      </>
-    </EntityFormDrawer>
-    <Drawer open={openCreateSupply} onClose={() => setOpenCreateSupply(false)}>
-      <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-4">Crear nuevo insumo</h2>
+              <InputField
+                label="Fecha"
+                name="date"
+                type="date"
+                value={date || ""}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  if (inputValue) {
+                    const dateParts = inputValue.split("-");
+                    if (dateParts[0] && dateParts[0].length > 4) {
+                      dateParts[0] = dateParts[0].slice(0, 4);
+                      const formattedDate = dateParts.join("-");
+                      setDate(formattedDate);
+                    } else {
+                      setDate(inputValue);
+                    }
+                  } else {
+                    setDate("");
+                  }
+                }}
+                size="sm"
+              />
+              <InputField
+                label="Numero / Nombre"
+                placeholder="Numero / Nombre"
+                name="nroName"
+                type="text"
+                value={orderNumber || ""}
+                onChange={(e) => setOrderNumber(e.target.value)}
+                size="sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <InputField
+                label="Proyecto"
+                name="project"
+                type="text"
+                value={selectedProject?.name || ""}
+                onChange={() => {}}
+                disabled
+                size="sm"
+              />
+
+              <div className="space-y-2">
+                <SelectField
+                  label="Proveedor existente"
+                  placeholder="Seleccionar proveedor"
+                  name="provider"
+                  options={providers || []}
+                  value={provider?.id?.toString() || ""}
+                  onChange={(e) => {
+                    const selectedProvider = providers?.find(
+                      (p) => p.id === Number(e.target.value)
+                    );
+                    setProvider(selectedProvider);
+                    setQueryProvider(selectedProvider?.name || "");
+                  }}
+                  size="sm"
+                />
+                <InputField
+                  label="O escribir proveedor nuevo"
+                  placeholder="Nombre del proveedor"
+                  name="providerName"
+                  type="text"
+                  value={queryProvider}
+                  onChange={(e) => {
+                    setQueryProvider(e.target.value);
+                    setProvider(undefined);
+                  }}
+                  size="sm"
+                />
+              </div>
+              <SelectField
+                label="Inversor"
+                placeholder="Selecciona el inversor"
+                name="investor"
+                options={investors}
+                value={investor?.id?.toString() || ""}
+                onChange={(e) => {
+                  const selectedInvestor = investors.find((i) => i.id === Number(e.target.value));
+                  if (selectedInvestor) {
+                    setInvestor(selectedInvestor);
+                  }
+                }}
+                size="sm"
+              />
+            </div>
+          </section>
+
+          {type?.id === 2 && (
+            <section className="drawer-section grid grid-cols-3 gap-4">
+              <SelectField
+                label="Cliente destino"
+                name="customer"
+                options={customers}
+                value={customer?.id?.toString() || ""}
+                onChange={(e) => {
+                  const selectedCustomer = customers.find(
+                    (customer) => customer.id === Number(e.target.value)
+                  );
+                  if (selectedCustomer) {
+                    setCustomer(selectedCustomer);
+                  }
+                }}
+                size="sm"
+              />
+              <SelectField
+                label="Proyecto destino"
+                name="projectDestination"
+                options={projectsDropdown}
+                value={project?.id?.toString() || ""}
+                onChange={(e) => {
+                  const selectedProject = projectsDropdown.find(
+                    (project) => project.id === Number(e.target.value)
+                  );
+                  if (selectedProject) {
+                    setProject(selectedProject);
+                  }
+                }}
+                disabled={processing || !customers}
+                size="sm"
+              />
+              <SelectField
+                label="Campaña"
+                name="campaign"
+                options={campaigns}
+                value={campaign?.id?.toString() || ""}
+                onChange={(e) => {
+                  const selectedCampaign = campaigns.find(
+                    (campaign) => campaign.id === Number(e.target.value)
+                  );
+                  if (selectedCampaign) {
+                    setCampaign(selectedCampaign);
+                    setSelectedProjectDestination(selectedCampaign.project_id);
+                  }
+                }}
+                size="sm"
+              />
+            </section>
+          )}
+          <section className="drawer-section">
+            <div className="drawer-section-header">
+              <span className="drawer-section-title">Insumos</span>
+              <Button
+                variant="light"
+                size="xs"
+                iconLeft={<Plus className="h-3.5 w-3.5" />}
+                onClick={() => {
+                  setItemIndexToUpdate(null);
+                  setOpenCreateSupply(true);
+                }}
+              >
+                Crear Nuevo Insumo
+              </Button>
+            </div>
+            <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
+              <span className="font-sm text-gray-900">Insumo</span>
+              <span className="font-sm text-gray-900">Cantidad</span>
+              <div></div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
+              {items.map((item, i) => (
+                <div
+                  key={i}
+                  className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                >
+                  <div className="sm:col-span-1">
+                    <SupplyDropdown
+                      options={availableSupplies.map((s) => ({
+                        id: s.id,
+                        name: s.name,
+                        badge: (
+                          <span className="ml-1 text-xs text-gray-400 font-normal">
+                            <span className={s.qty < 0 ? "text-red-600" : undefined}>
+                              {formatAvailableQty(s.qty)}
+                            </span>{" "}
+                            {s.unit}
+                          </span>
+                        ),
+                      }))}
+                      value={item.item ? Number(item.item) : null}
+                      onSelect={(option) => handleItemChange(i, "item", String(option.id))}
+                      onCreateNew={() => {
+                        setItemIndexToUpdate(i);
+                        setOpenCreateSupply(true);
+                      }}
+                      hasError={!!itemErrors[i]}
+                    />
+                  </div>
+                  <div className="sm:col-span-1">
+                    <InputField
+                      label=""
+                      placeholder="Lt/Kg/Bolsas"
+                      name={`quantity${i}`}
+                      type="text"
+                      value={item.quantity}
+                      inputClassName={
+                        itemErrors[i]
+                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/,/g, ".");
+                        if (/^\d*\.?\d{0,3}$/.test(value)) {
+                          handleItemChange(i, "quantity", value);
+                        }
+                      }}
+                      size="sm"
+                    />
+                    {itemErrors[i] && <p className="mt-1 text-xs text-red-600">{itemErrors[i]}</p>}
+                  </div>
+                  <div>
+                    <IconActionButton
+                      label="Eliminar insumo"
+                      icon={<Trash size={14} />}
+                      tone="danger"
+                      onClick={() => {
+                        const newItems = [...items];
+                        newItems.splice(i, 1);
+                        setItems(newItems);
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {!isEditing && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  iconLeft={<Plus className="h-4 w-4" />}
+                  onClick={() => {
+                    setItems([...items, { item: "", quantity: "" }]);
+                  }}
+                  className="max-w-fit"
+                >
+                  Agregar Insumo
+                </Button>
+              )}
+            </div>
+          </section>
+          <ErrorBanner message={error} prefix="Error:" />
+          <SuccessBanner
+            message={successMessage || null}
+            variant="alert"
+            onDismiss={() => setSuccessMessage("")}
+          />
+        </>
+      </EntityFormDrawer>
+      <DrawerShell
+        open={openCreateSupply}
+        onClose={() => setOpenCreateSupply(false)}
+        title="Crear Nuevo Insumo"
+      >
         <CreateSupplyInline
           projectId={projectId}
           onCreated={async (createdName) => {
@@ -1063,8 +1010,7 @@ useEffect(() => {
           }}
           onCancel={() => setOpenCreateSupply(false)}
         />
-      </div>
-    </Drawer>
+      </DrawerShell>
     </>
   );
 }

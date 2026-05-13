@@ -11,4 +11,5 @@ export type CustomerPayload = {
 
 export type CustomerPayloadInput = {
   name: string;
+  actor_id?: number | null;
 };

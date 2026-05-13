@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, Pencil, Check, AlertCircle, Download, Plus } from "lucide-react";
+import { LoaderCircle, Pencil, Check, AlertCircle, Plus, Upload } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
@@ -9,11 +9,13 @@ import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
+import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
 import { Summary } from "@/api/types";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import { Column } from "../types";
+import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeNumber } from "../utils";
@@ -51,7 +53,7 @@ const EditableCell = ({
   onSaved?: () => void;
   onValidationError: (message: string) => void;
 }) => {
-  const [editing, setEditing] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editValue, setEditValue] = useState(value ?? "");
   const savingRef = useRef(false);
   const { updateStock, processingStock, errorStock, resultStock } = useStock();
@@ -102,79 +104,52 @@ const EditableCell = ({
       return;
     }
     if (resultStock) {
-      setEditing(false);
+      setDrawerOpen(false);
       onSaved?.();
       return;
     }
   }, [errorStock, resultStock, onSaved, onValidationError]);
 
-  if (editing) {
-    return (
-      <div className="flex items-center gap-2">
+  return (
+    <>
+      <div className="flex items-center justify-between w-full min-w-[80px]">
         <input
           type="number"
           min="0"
-          step="any"
-          className="block w-full min-w-[80px] p-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:ring-blue-500 focus:border-blue-500"
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          disabled={processingStock}
-          onBlur={save}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              save();
-            }
-            if (e.key === "Escape") {
-              setEditing(false);
-            }
-          }}
+          className="block w-full p-2 text-gray-800 border border-gray-300 rounded-lg bg-gray-100 text-sm"
+          value={value}
+          onChange={() => { }}
+          disabled={true}
         />
-        {processingStock ? (
-          <LoaderCircle className="animate-spin w-4 h-4 text-blue-500" />
-        ) : (
-          <button
-            className="text-green-600 hover:text-green-800"
-            onClick={save}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </button>
-        )}
+        <button
+          className="app-action-button-icon"
+          style={{ minWidth: 24, minHeight: 24 }}
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Editar"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
       </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-between w-full min-w-[80px]">
-      <input
-        type="number"
-        min="0"
-        className="block w-full p-2 text-gray-800 border border-gray-300 rounded-lg bg-gray-100 text-sm"
-        value={value}
-        onChange={() => { }}
-        disabled={true}
-      />
-      <button
-        className="text-blue-600 hover:text-blue-800 flex items-center p-1"
-        style={{ minWidth: 24, minHeight: 24 }}
-        onClick={() => setEditing(true)}
-        aria-label="Editar"
+      <EntityFormDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="Editar stock de campo"
+        subtitle={item.supply_name}
+        submitLabel="Guardar"
+        processing={processingStock}
+        onSubmit={save}
       >
-        <Pencil className="h-3.5 w-3.5" />
-      </button>
-    </div>
+        <InputField
+          label="Stock de campo"
+          name={`real-stock-${item.id}`}
+          type="number"
+          placeholder="Stock de campo"
+          value={editValue}
+          disabled={processingStock}
+          onChange={(e) => setEditValue(e.target.value)}
+        />
+      </EntityFormDrawer>
+    </>
   );
 };
 
@@ -802,7 +777,7 @@ export function Stock() {
         actions={[
           {
             label: "Exportar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => handleExport(),
@@ -917,7 +892,7 @@ export function Stock() {
             .split("-")
             .reverse()
             .join("/")}?`}
-          primaryButtonText={"Sí, cerrar"}
+          primaryButtonText={"Sí, Cerrar"}
           secondaryButtonText={"Cancelar"}
           onPrimaryAction={() => {
             handleCloseStock();

@@ -1,0 +1,10 @@
+Error: [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+
+Locator: getByRole('heading', { name: /LOTE|Nuevo lote/ })
+Expected: visible
+Timeout: 2000ms
+Error: element(s) not found
+
+Call log:
+[2m  - Expect "toBeVisible" with timeout 2000ms[22m
+[2m  - waiting for getByRole('heading', { name: /LOTE|Nuevo lote/ })[22m

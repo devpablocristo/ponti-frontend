@@ -12,11 +12,13 @@ export type Project = {
   managers: Data[];
   investors: {
     id: number | null;
+    actor_id?: number | null;
     name: string;
     percentage: number;
   }[];
   admin_cost_investors: {
     id: number | null;
+    actor_id?: number | null;
     name: string;
     percentage: number;
   }[];
@@ -28,6 +30,7 @@ export type Project = {
 
 type Data = {
   id: number | null;
+  actor_id?: number | null;
   name: string;
 };
 
@@ -40,6 +43,7 @@ type Field = {
   lease_type_value: number | string | null;
   investors: {
     id: number;
+    actor_id?: number | null;
     name: string;
     percentage: number;
   }[];

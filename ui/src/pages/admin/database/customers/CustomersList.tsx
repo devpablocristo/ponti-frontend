@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
 import { DataTable } from "@/lib/dataDisplay";
@@ -12,8 +11,7 @@ import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
-import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
-import Drawer from "../../../../components/Drawer/Drawer";
+import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
@@ -26,10 +24,13 @@ import { formatNumberAr } from "../../utils";
 import ArchivedCustomers from "./ArchivedCustomers";
 import CustomerEditor from "./CustomerEditor";
 
-type CustomerProjectSummary = {
-  projects: number;
-  campaigns: number;
-  fields: number;
+type CustomerProjectRow = {
+  id: string;
+  customerId: number;
+  customerName: string;
+  projectName: string;
+  campaignCount: number;
+  fieldCount: number;
 };
 
 type ProjectSummaryResponse = {
@@ -60,12 +61,6 @@ type RawProject = {
         | string
       >
     | null;
-};
-
-const emptySummary: CustomerProjectSummary = {
-  projects: 0,
-  campaigns: 0,
-  fields: 0,
 };
 
 function campaignKey(project: RawProject) {
@@ -146,25 +141,6 @@ function sumProjectHectares(
   }, 0);
 }
 
-function summarizeProjects(projects: RawProject[]): CustomerProjectSummary {
-  const campaigns = new Set<string | number>();
-  let fields = 0;
-
-  for (const project of projects) {
-    const key = campaignKey(project);
-    if (key) campaigns.add(key);
-
-    const projectFields = Array.isArray(project.fields) ? project.fields : [];
-    fields += projectFields.length;
-  }
-
-  return {
-    projects: projects.length,
-    campaigns: campaigns.size,
-    fields,
-  };
-}
-
 async function loadProjectDetails(projects: RawProject[]) {
   return Promise.all(
     projects.map(async (project) => {
@@ -182,8 +158,8 @@ async function loadProjectDetails(projects: RawProject[]) {
 }
 
 export default function CustomersList() {
-  const navigate = useNavigate();
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const {
     customers,
@@ -193,9 +169,8 @@ export default function CustomersList() {
     createCustomer,
     archiveCustomer,
   } = useCustomers();
-  const [summaries, setSummaries] = useState<Record<number, CustomerProjectSummary>>({});
   const [projectsByCustomer, setProjectsByCustomer] = useState<Record<number, RawProject[]>>({});
-  const [summariesLoading, setSummariesLoading] = useState(false);
+  const [projectsLoading, setProjectsLoading] = useState(false);
   const {
     filters,
     selectedCustomer,
@@ -266,19 +241,52 @@ export default function CustomersList() {
     visibleCustomers,
   ]);
 
-  const exportVisibleCustomers = useCallback(() => {
-    const rows = visibleCustomers.map((customer) => {
-      const summary = summaries[customer.id] ?? emptySummary;
-      return {
-        "Cliente / Sociedad": customer.name,
-        Proyectos: summary.projects,
-        Campañas: summary.campaigns,
-        Campos: summary.fields,
-      };
+  const visibleProjectRows = useMemo<CustomerProjectRow[]>(() => {
+    return visibleCustomers.flatMap((customer) => {
+      const projects = (projectsByCustomer[customer.id] ?? []).filter((project) =>
+        projectMatchesFilters(project, selectedProject, selectedCampaign, selectedField)
+      );
+
+      if (projects.length === 0) {
+        return [
+          {
+            id: `customer-${customer.id}-empty`,
+            customerId: customer.id,
+            customerName: customer.name,
+            projectName: "Sin proyecto",
+            campaignCount: 0,
+            fieldCount: 0,
+          },
+        ];
+      }
+
+      return projects.map((project, index) => ({
+        id: `customer-${customer.id}-project-${project.id ?? index}`,
+        customerId: customer.id,
+        customerName: customer.name,
+        projectName: project.name ?? "Sin proyecto",
+        campaignCount: campaignName(project) ? 1 : 0,
+        fieldCount: Array.isArray(project.fields) ? project.fields.length : 0,
+      }));
     });
+  }, [
+    projectsByCustomer,
+    selectedCampaign,
+    selectedField,
+    selectedProject,
+    visibleCustomers,
+  ]);
+
+  const exportVisibleCustomers = useCallback(() => {
+    const rows = visibleProjectRows.map((row) => ({
+      Cliente: row.customerName,
+      Proyecto: row.projectName,
+      "Cantidad de Campañas": row.campaignCount,
+      "Cantidad de Campos": row.fieldCount,
+    }));
 
     const csv = [
-      ["Cliente / Sociedad", "Proyectos", "Campañas", "Campos"].join(","),
+      ["Cliente", "Proyecto", "Cantidad de Campañas", "Cantidad de Campos"].join(","),
       ...rows.map((row) =>
         Object.values(row)
           .map((value) => `"${String(value).replace(/"/g, '""')}"`)
@@ -288,9 +296,9 @@ export default function CustomersList() {
 
     downloadBlob(
       new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      buildTimestampedFilename("clientes", "csv"),
+      buildTimestampedFilename("clientes_proyectos", "csv"),
     );
-  }, [visibleCustomers, summaries]);
+  }, [visibleProjectRows]);
 
   const importCustomers = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -329,12 +337,11 @@ export default function CustomersList() {
 
     const loadSummaries = async () => {
       if (customers.length === 0) {
-        setSummaries({});
         setProjectsByCustomer({});
         return;
       }
 
-      setSummariesLoading(true);
+      setProjectsLoading(true);
       try {
         const entries = await Promise.all(
           customers.map(async (customer) => {
@@ -356,18 +363,10 @@ export default function CustomersList() {
         if (!cancelled) {
           const projectsMap = Object.fromEntries(entries);
           setProjectsByCustomer(projectsMap);
-          setSummaries(
-            Object.fromEntries(
-              entries.map(([customerId, projects]) => [
-                customerId,
-                summarizeProjects(projects),
-              ]),
-            ),
-          );
         }
       } finally {
         if (!cancelled) {
-          setSummariesLoading(false);
+          setProjectsLoading(false);
         }
       }
     };
@@ -383,39 +382,26 @@ export default function CustomersList() {
     items: visibleCustomers,
     entity: ENTITY,
     archive: archiveCustomer,
-    onEdit: (customer) => navigate(`/admin/database/customers/${customer.id}/editor`),
+    onEdit: (customer) => setEditingCustomerId(customer.id),
     onAfter: refresh,
   });
 
-  const selectColumn = useMemo<Column<CustomerData>>(
-    () => makeSelectColumn<CustomerData>(bulk, (c) => c.name, ENTITY),
-    [bulk],
-  );
-
-  const tableColumns = useMemo<Column<CustomerData>[]>(
+  const tableColumns = useMemo<Column<CustomerProjectRow>[]>(
     () => [
-      selectColumn,
-      { key: "name", header: "Cliente / Sociedad" },
+      { key: "customerName", header: "Cliente" },
+      { key: "projectName", header: "Proyecto" },
       {
-        key: "id",
-        header: "Proyectos",
+        key: "campaignCount",
+        header: "Cantidad de campañas",
         align: "center",
-        render: (_value, item) => summaries[item.id]?.projects ?? 0,
       },
       {
-        key: "id",
-        header: "Campañas",
+        key: "fieldCount",
+        header: "Cantidad de campos",
         align: "center",
-        render: (_value, item) => summaries[item.id]?.campaigns ?? 0,
-      },
-      {
-        key: "id",
-        header: "Campos",
-        align: "center",
-        render: (_value, item) => summaries[item.id]?.fields ?? 0,
       },
     ],
-    [selectColumn, summaries],
+    [],
   );
 
   return (
@@ -425,7 +411,7 @@ export default function CustomersList() {
         actions={[
           {
             label: "Importar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -433,7 +419,7 @@ export default function CustomersList() {
           },
           {
             label: "Exportar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: exportVisibleCustomers,
@@ -455,20 +441,25 @@ export default function CustomersList() {
         ]}
       />
 
-      <Drawer
+      <DrawerShell
         open={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
-        maxWidth="max-w-6xl"
+        title="Nuevo Cliente"
       >
-        <div className="flex h-full flex-col gap-4">
-          <header>
-            <h2 className="text-lg font-semibold text-slate-900">Nuevo cliente</h2>
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            <CustomerEditor embedded onClose={() => setCreateDrawerOpen(false)} />
-          </div>
-        </div>
-      </Drawer>
+        <CustomerEditor embedded onClose={() => setCreateDrawerOpen(false)} />
+      </DrawerShell>
+
+      <DrawerShell
+        open={editingCustomerId !== null}
+        onClose={() => setEditingCustomerId(null)}
+        title="Editar Cliente"
+      >
+        <CustomerEditor
+          embedded
+          customerId={editingCustomerId}
+          onClose={() => setEditingCustomerId(null)}
+        />
+      </DrawerShell>
 
       <ArchivedDrawer
         open={archivedDrawerOpen}
@@ -479,7 +470,7 @@ export default function CustomersList() {
       </ArchivedDrawer>
 
       <div className="relative">
-        <LoadingOverlay show={processing || summariesLoading} />
+        <LoadingOverlay show={processing || projectsLoading} />
         {error && <ErrorBanner message={error} />}
         {!processing && visibleCustomers.length === 0 ? (
           <EmptyState
@@ -514,7 +505,7 @@ export default function CustomersList() {
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable data={visibleCustomers} columns={tableColumns} />
+            <DataTable data={visibleProjectRows} columns={tableColumns} />
           </>
         )}
       </div>

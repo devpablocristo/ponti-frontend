@@ -458,7 +458,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
           actions={[
             {
               label: "Importar",
-              icon: <Upload className="h-4 w-4" />,
+              icon: <Download className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
               accept: ".csv,text/csv",
@@ -466,7 +466,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
             },
             {
               label: "Exportar",
-              icon: <Download className="h-4 w-4" />,
+              icon: <Upload className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
               onClick: handleExport,

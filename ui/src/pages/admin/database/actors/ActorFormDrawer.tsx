@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
+import Button from "../../../../components/Button/Button";
+import { IconActionButton } from "../../../../components/Button/IconActionButton";
 import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import InputField from "../../../../components/Input/InputField";
 import { Checkbox } from "../../../../components/Input/Checkbox";
@@ -188,7 +190,6 @@ export default function ActorFormDrawer({
       errorMessage={validation ?? errorMessage ?? null}
       onSubmit={handleSubmit}
       submitLabel={isEdit ? "Guardar cambios" : "Crear actor"}
-      maxWidth="max-w-2xl"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
@@ -330,14 +331,14 @@ export default function ActorFormDrawer({
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-slate-800">Identificadores</h3>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          <Button
+            variant="light"
+            size="xs"
+            iconLeft={<Plus className="h-3.5 w-3.5" />}
             onClick={() => setIdentifiers((current) => [...current, emptyIdentifier()])}
           >
-            <Plus className="h-3.5 w-3.5" />
             Agregar
-          </button>
+          </Button>
         </div>
         <div className="space-y-3">
           {identifiers.length === 0 && (
@@ -382,18 +383,18 @@ export default function ActorFormDrawer({
                 />
                 Principal
               </label>
-              <button
-                type="button"
-                className="mb-1 self-end rounded-md border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              <IconActionButton
+                label="Quitar identificador"
+                icon={<Trash2 className="h-4 w-4" />}
+                tone="danger"
+                className="mb-1 self-end"
                 onClick={() =>
                   setIdentifiers((current) =>
                     current.filter((_item, currentIndex) => currentIndex !== index)
                   )
                 }
                 title="Quitar identificador"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              />
             </div>
           ))}
         </div>
@@ -402,9 +403,10 @@ export default function ActorFormDrawer({
       <section className="rounded-lg border border-slate-200 bg-white p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-slate-800">Aliases</h3>
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          <Button
+            variant="light"
+            size="xs"
+            iconLeft={<Plus className="h-3.5 w-3.5" />}
             onClick={() =>
               setAliases((current) => [
                 ...current,
@@ -412,9 +414,8 @@ export default function ActorFormDrawer({
               ])
             }
           >
-            <Plus className="h-3.5 w-3.5" />
             Agregar
-          </button>
+          </Button>
         </div>
         <div className="space-y-3">
           {aliases.length === 0 && (
@@ -434,18 +435,18 @@ export default function ActorFormDrawer({
                 onChange={(event) => updateAlias(index, event.target.value)}
                 size="sm"
               />
-              <button
-                type="button"
-                className="mb-1 self-end rounded-md border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              <IconActionButton
+                label="Quitar alias"
+                icon={<Trash2 className="h-4 w-4" />}
+                tone="danger"
+                className="mb-1 self-end"
                 onClick={() =>
                   setAliases((current) =>
                     current.filter((_item, currentIndex) => currentIndex !== index)
                   )
                 }
                 title="Quitar alias"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              />
             </div>
           ))}
         </div>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, Download, Plus, Upload } from "lucide-react";
+import { Archive, Download, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
@@ -156,25 +156,10 @@ function OrdersHeader({
       <Button
         variant="primary"
         size="sm"
-        iconLeft={
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 4a1 1 0 011-1h2a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM17 4a1 1 0 011-1h2a1 1 0 011 1v16a1 1 0 01-1 1h-2a1 1 0 01-1-1V4zM10 10h4M10 14h4"
-            />
-          </svg>
-        }
+        iconLeft={<SlidersHorizontal className="mr-2 h-4 w-4" />}
         onClick={() => setShowColumnsModal(true)}
       >
-        Configurar columnas
+        Configurar Columnas
       </Button>
       <BaseModal
         isOpen={showColumnsModal}
@@ -749,7 +734,7 @@ export function WorkOrders() {
             message:
         `¿Está seguro que desea publicar la orden ${order.number}?\n\n` +
         "Si la orden contiene insumos pendientes de completar, la publicación será bloqueada.",
-      primaryButtonText: "Sí, publicar",
+      primaryButtonText: "Sí, Publicar",
       secondaryButtonText: "Cancelar",
       onConfirm: () => {
         void handlePublishOrder(order);
@@ -1127,7 +1112,7 @@ export function WorkOrders() {
         actions={[
           {
             label: "Importar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -1135,7 +1120,7 @@ export function WorkOrders() {
           },
           {
             label: "Exportar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => handleExport(),

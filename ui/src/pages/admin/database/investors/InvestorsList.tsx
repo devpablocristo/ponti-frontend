@@ -527,7 +527,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
           actions={[
             {
               label: "Importar",
-              icon: <Upload className="h-4 w-4" />,
+              icon: <Download className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
               accept: ".csv,text/csv",
@@ -535,7 +535,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
             },
             {
               label: "Exportar",
-              icon: <Download className="h-4 w-4" />,
+              icon: <Upload className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
               onClick: handleExport,

@@ -1,0 +1,239 @@
+import {
+  type CSSProperties,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
+
+import {
+  type EntityNameOption,
+  findEntityMatches,
+  normalizeEntityName,
+} from "../../lib/entityNameMatcher";
+import { fuzzySearchOptions } from "../../lib/fuzzySearch";
+
+type SmartEntityInputSize = "sm" | "md" | "lg" | "xs";
+type DropdownPosition = {
+  top: number;
+  left: number;
+  width: number;
+};
+
+type SmartEntityInputProps<T extends EntityNameOption> = {
+  label: string;
+  name: string;
+  value: string;
+  options: T[];
+  entityLabel: string;
+  onChange: (value: string) => void;
+  onSelectExisting: (option: T) => void;
+  allowCreate?: boolean;
+  disabled?: boolean;
+  required?: boolean;
+  placeholder?: string;
+  selectedOptionId?: number | string | null;
+  createConfirmed?: boolean;
+  onConfirmCreate?: (value: string) => void;
+  size?: SmartEntityInputSize;
+  className?: string;
+};
+
+export function SmartEntityInput<T extends EntityNameOption>({
+  label,
+  name,
+  value,
+  options,
+  entityLabel: _entityLabel,
+  onChange,
+  onSelectExisting,
+  allowCreate = true,
+  disabled = false,
+  required = false,
+  placeholder,
+  selectedOptionId: _selectedOptionId = null,
+  createConfirmed: _createConfirmed = false,
+  onConfirmCreate,
+  size = "md",
+  className = "",
+}: SmartEntityInputProps<T>) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const [open, setOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [dropdownPosition, setDropdownPosition] = useState<DropdownPosition | null>(null);
+  const sizeClasses =
+    size === "xs"
+      ? "text-xs py-1.5 px-3"
+      : size === "sm"
+        ? "text-sm py-2 px-3.5"
+        : size === "lg"
+          ? "text-base py-3 px-4"
+          : "text-sm py-2.5 px-3.5";
+
+  const matches = useMemo(() => findEntityMatches(value, options), [options, value]);
+
+  const hasValue = normalizeEntityName(value).length > 0;
+  const canCreateNew = hasValue && !matches.exactMatch && matches.canCreate;
+  const showCreateAction = allowCreate;
+  const visibleOptions = useMemo(
+    () => fuzzySearchOptions(searchText, options),
+    [options, searchText]
+  );
+  const showDropdown = open && !disabled && (visibleOptions.length > 0 || showCreateAction);
+  const dropdownStyle: CSSProperties | undefined = dropdownPosition
+    ? {
+        position: "fixed",
+        top: dropdownPosition.top,
+        left: dropdownPosition.left,
+        width: dropdownPosition.width,
+        zIndex: 300,
+      }
+    : undefined;
+
+  const updateDropdownPosition = useCallback(() => {
+    const rect = inputRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setDropdownPosition({
+      top: rect.bottom + 6,
+      left: rect.left,
+      width: rect.width,
+    });
+  }, []);
+
+  const openDropdown = () => {
+    setSearchText("");
+    updateDropdownPosition();
+    setOpen(true);
+  };
+
+  useLayoutEffect(() => {
+    if (open) {
+      updateDropdownPosition();
+    }
+  }, [open, updateDropdownPosition, value, options.length]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleUpdate = () => updateDropdownPosition();
+    window.addEventListener("resize", handleUpdate);
+    window.addEventListener("scroll", handleUpdate, true);
+
+    return () => {
+      window.removeEventListener("resize", handleUpdate);
+      window.removeEventListener("scroll", handleUpdate, true);
+    };
+  }, [open, updateDropdownPosition]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [open]);
+
+  const handleSelectExisting = (option: T) => {
+    onSelectExisting(option);
+    setSearchText("");
+    setOpen(false);
+  };
+
+  const dropdown =
+    showDropdown && dropdownStyle ? (
+      <div
+        ref={dropdownRef}
+        data-testid={`${name}-smart-entity-dropdown`}
+        className="overflow-hidden rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
+        style={dropdownStyle}
+      >
+        {visibleOptions.length > 0 ? (
+          <div className="max-h-64 overflow-y-auto">
+            {visibleOptions.map((match) => (
+              <button
+                key={String(match.id ?? match.name)}
+                type="button"
+                className="flex w-full items-center border-b border-slate-100 px-3 py-2.5 text-left text-slate-900 transition last:border-b-0 hover:bg-primary-50"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => handleSelectExisting(match)}
+              >
+                <span className="min-w-0 truncate">{match.name}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {showCreateAction ? (
+          <button
+            type="button"
+            className={`flex w-full items-center justify-center px-3 py-2.5 text-sm font-semibold transition ${
+              canCreateNew
+                ? "bg-primary-700 text-white hover:bg-primary-800"
+                : "cursor-not-allowed bg-slate-100 text-slate-400"
+            }`}
+            disabled={!canCreateNew}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => {
+              if (!canCreateNew) return;
+              onConfirmCreate?.(value);
+              setOpen(false);
+            }}
+          >
+            Nuevo
+          </button>
+        ) : null}
+      </div>
+    ) : null;
+
+  return (
+    <div
+      ref={rootRef}
+      className={`relative ${className}`.trim()}
+    >
+      <label className="mb-1.5 block text-xs font-medium text-slate-600" htmlFor={name}>
+        {label}
+      </label>
+      <input
+        ref={inputRef}
+        id={name}
+        autoComplete="off"
+        role="combobox"
+        aria-expanded={showDropdown}
+        type="text"
+        name={name}
+        value={value}
+        onChange={(event) => {
+          setSearchText(event.target.value);
+          onChange(event.target.value);
+          updateDropdownPosition();
+          setOpen(true);
+        }}
+        onFocus={openDropdown}
+        onMouseDown={openDropdown}
+        onClick={openDropdown}
+        placeholder={placeholder}
+        disabled={disabled}
+        required={required}
+        className={`input-base block ${
+          disabled ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : ""
+        } ${sizeClasses}`}
+      />
+
+      {dropdown ? createPortal(dropdown, document.body) : null}
+    </div>
+  );
+}
+
+export default SmartEntityInput;

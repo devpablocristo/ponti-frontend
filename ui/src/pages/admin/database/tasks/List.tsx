@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { Download, Plus, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Upload } from "lucide-react";
 
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
@@ -12,7 +12,6 @@ import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
 import useLabors from "../../../../hooks/useLabors";
-import { BaseModal } from "../../../../components/Modal/BaseModal";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import useCategories from "../../../../hooks/useCategories";
@@ -21,18 +20,10 @@ import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
+import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { Checkbox } from "../../../../components/Input/Checkbox";
-import {
-  getValueByAliases,
-  LABOR_HEADER_ALIASES,
-  normalizeSpreadsheetRow,
-  normalizeText,
-  parseCsv,
-  parsePartialPrice,
-} from "./importUtils";
-import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../../fileTransfer";
-import { readSpreadsheetRows } from "../../spreadsheetReader";
+import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 
 import { LABOR_ENTITY as ENTITY } from "../../entities";
 
@@ -48,6 +39,16 @@ function renderPriceCell(value: unknown, row: LaborInfo) {
     </div>
   );
 }
+
+const newLabor = (): LaborInfo => ({
+  id: 0,
+  name: "",
+  category_id: 0,
+  price: "",
+  contractor_name: "",
+  category_name: "",
+  is_partial_price: false,
+});
 
 type ListTasksProps = {
   editorOnly?: boolean;
@@ -66,7 +67,6 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     processing,
     errorUpdate,
   } = useLabors();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { categories, getCategories } = useCategories();
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -198,8 +198,28 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     }
   }, [errorUpdate]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (processing) return;
+    if (!labor || !projectId) return;
+
+    if (!labor.id) {
+      const payload: LaborToSave = {
+        name: labor.name.trim(),
+        category_id: Number(labor.category_id || 0),
+        price: labor.price,
+        contractor_name: labor.contractor_name.trim(),
+        is_partial_price: Boolean(labor.is_partial_price),
+      };
+
+      const saved = await saveLabors([payload], projectId);
+      if (saved) {
+        setModalOpen(false);
+        setLabor(null);
+        getLabors(projectId);
+      }
+      return;
+    }
+
     if (labor && projectId) {
       updateLabor(projectId, labor);
       setModalOpen(false);
@@ -223,156 +243,14 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     }
   };
 
-  const handleImportLaborsFromFile = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    if (!projectId) {
-      setErrorMessage("Por favor, seleccione un proyecto antes de importar.");
-      return;
-    }
-
-    const lowerName = file.name.toLowerCase();
-    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    const isExcel = lowerName.endsWith(".xlsx");
-
-    if (!isCsv && !isExcel) {
-      setErrorMessage("Formato no soportado. Use .xlsx o .csv.");
-      return;
-    }
-
-    try {
-      setErrorMessage("");
-      setSuccessMessage(null);
-
-      let parsedRows: Record<string, string>[] = [];
-      if (isCsv) {
-        const text = await file.text();
-        parsedRows = parseCsv(text);
-      } else {
-        parsedRows = (
-          await readSpreadsheetRows(file, {
-            preferredSheetNameIncludes: ["labor"],
-          })
-        ).map(normalizeSpreadsheetRow);
-      }
-
-      if (parsedRows.length === 0) {
-        setErrorMessage("El archivo no tiene datos válidos. Verifique encabezados y filas.");
-        return;
-      }
-
-      const categoryByName = new Map(
-        safeCategories.map((c) => [normalizeText(c.name), c])
-      );
-
-      const laborsToSave: LaborToSave[] = [];
-      const importErrors: string[] = [];
-
-      parsedRows.forEach((rawRow, idx) => {
-        const rowNumber = idx + 2;
-        const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
-        const categoryRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.category).trim();
-        const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
-        const priceStatusRaw = getValueByAliases(
-          rawRow,
-          LABOR_HEADER_ALIASES.priceStatus
-        ).trim();
-        const contractor = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.contractor).trim();
-        const parsedPartial = parsePartialPrice(priceStatusRaw);
-
-        if (!name && !categoryRaw && !priceRaw && !contractor) return;
-
-        const categoryByText = categoryByName.get(normalizeText(categoryRaw));
-        const categoryId = categoryByText?.id ?? Number(categoryRaw);
-        const priceValue = Number(priceRaw.replace(/\$/g, "").replace(",", "."));
-
-        if (!name) importErrors.push(`Fila ${rowNumber}: falta "Labor".`);
-        if (!categoryId || Number.isNaN(categoryId))
-          importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
-        if (!priceRaw || Number.isNaN(priceValue) || priceValue <= 0)
-          importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
-        if (!contractor)
-          importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
-        if (parsedPartial.provided && !parsedPartial.valid) {
-          importErrors.push(
-            `Fila ${rowNumber}: "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
-          );
-        }
-
-        if (
-          name &&
-          categoryId &&
-          !Number.isNaN(categoryId) &&
-          !Number.isNaN(priceValue) &&
-          priceValue > 0 &&
-          contractor &&
-          (!parsedPartial.provided || parsedPartial.valid)
-        ) {
-          laborsToSave.push({
-            name,
-            category_id: categoryId,
-            price: String(priceValue),
-            contractor_name: contractor,
-            is_partial_price: parsedPartial.valid ? parsedPartial.value : false,
-          });
-        }
-      });
-
-      if (laborsToSave.length === 0) {
-        setErrorMessage(
-          importErrors.length > 0
-            ? importErrors.slice(0, 8).join(" ")
-            : "No se encontraron filas importables en el archivo."
-        );
-        return;
-      }
-
-      const saved = await saveLabors(laborsToSave, projectId);
-      if (!saved) {
-        return;
-      }
-
-      getLabors(projectId);
-
-      if (importErrors.length > 0) {
-        setSuccessMessage(
-          `Se importaron ${laborsToSave.length} labores. Se omitieron ${importErrors.length} filas con error.`
-        );
-      } else {
-        setSuccessMessage(`Se importaron ${laborsToSave.length} labores con éxito.`);
-      }
-    } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .xlsx o .csv.");
-    }
-  };
-
   return (
     <div className="w-full mx-auto">
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={SPREADSHEET_ACCEPT}
-        onChange={handleImportLaborsFromFile}
-        className="hidden"
-      />
       <AppFilterBar
         filters={filters}
         actions={[
           {
-            label: "Importar",
-            icon: <Upload className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            disabled: !projectId,
-            onClick: () => fileInputRef.current?.click(),
-          },
-          {
             label: "Exportar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
@@ -385,7 +263,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
             isPrimary: true,
             disabled: !projectId,
             onClick: () => {
-              setLabor(null);
+              setLabor(newLabor());
               setModalOpen(true);
             },
           },
@@ -432,15 +310,16 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
           )}
         </div>
         <div className="mt-4">
-          <BaseModal
-            isOpen={modalOpen}
+          <EntityFormDrawer
+            open={modalOpen}
             onClose={() => {
               setModalOpen(false);
               setLabor(null);
             }}
-            title={`Edicion de labor ${labor?.name || ""}`}
-            primaryButtonText="Guardar"
-            onPrimaryAction={handleSave}
+            title={labor?.id ? `Edicion de labor ${labor.name || ""}` : "Nueva Labor"}
+            submitLabel="Guardar"
+            processing={processing}
+            onSubmit={handleSave}
           >
             <div className="flex flex-col gap-1">
               <InputField
@@ -504,7 +383,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
                 Precio parcial (tentativo)
               </label>
             </div>
-          </BaseModal>
+          </EntityFormDrawer>
           <BulkSelectionPanel
             selectedCount={bulk.selectedCount}
             totalCount={filteredLabors.length}

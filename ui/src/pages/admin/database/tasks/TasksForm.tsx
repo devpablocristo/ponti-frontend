@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Download } from "lucide-react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
@@ -38,7 +39,15 @@ interface PendingLaborImport {
   warnings: string[];
 }
 
-export default function TasksForm() {
+type TasksFormProps = {
+  hideWorkspaceFilters?: boolean;
+  onCancel?: () => void;
+};
+
+export default function TasksForm({
+  hideWorkspaceFilters = false,
+  onCancel,
+}: TasksFormProps = {}) {
   const { saveLabors, result, error, processing, labors, getLabors } = useLabors();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -423,10 +432,18 @@ export default function TasksForm() {
     }
   };
 
+  const isEmbedded = hideWorkspaceFilters;
+
   return (
     <div className="w-full mx-auto">
-      <AppFilterBar filters={filters} />
-      <div className="w-full p-6 mt-4 bg-white rounded-lg shadow-md">
+      {!hideWorkspaceFilters && <AppFilterBar filters={filters} />}
+      <div
+        className={
+          isEmbedded
+            ? "w-full"
+            : "w-full p-6 mt-4 bg-white rounded-lg shadow-md"
+        }
+      >
         <ErrorBanner
           message={errorMessage || null}
           variant="alert"
@@ -437,11 +454,13 @@ export default function TasksForm() {
           variant="alert"
           onDismiss={() => setSuccessMessage("")}
         />
-        <div className="flex justify-between items-center">
-          <h1 className="text-custom-text font-semibold text-xl leading-none">
-            Agregar labores
-          </h1>
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-3">
+          {!isEmbedded && (
+            <h1 className="text-custom-text font-semibold text-xl leading-none">
+              Agregar labores
+            </h1>
+          )}
+          <div className="ml-auto flex items-center gap-2">
             <input
               ref={fileInputRef}
               type="file"
@@ -452,11 +471,13 @@ export default function TasksForm() {
             <Button
               variant="primary"
               size="sm"
-              className="text-sm font-medium"
+              className="text-sm font-medium flex items-center gap-1"
               onClick={() => fileInputRef.current?.click()}
             >
-              Importar labores
+              <Download className="h-4 w-4" />
+              Importar Labores
             </Button>
+            {!isEmbedded && (
             <Button
               variant="primary"
               size="sm"
@@ -477,8 +498,9 @@ export default function TasksForm() {
                   d="M4 6h16M4 10h16M4 14h16M4 18h16"
                 />
               </svg>
-              Ver listado
+              Ver Listado
             </Button>
+            )}
           </div>
         </div>
         {processing ? (
@@ -591,7 +613,11 @@ export default function TasksForm() {
       <div className="flex justify-between flex-wrap gap-4 my-4">
         <div />
         <div className="flex gap-4 my-2 justify-end">
-          <Button variant="primary" className="text-base font-medium">
+          <Button
+            variant="secondary"
+            className="text-base font-medium"
+            onClick={onCancel ?? cleanForm}
+          >
             Cancelar
           </Button>
           <Button
@@ -617,10 +643,10 @@ export default function TasksForm() {
             ? `El archivo contiene ${pendingImport.duplicates.length} labor${pendingImport.duplicates.length > 1 ? "es" : ""} que ya existe${pendingImport.duplicates.length > 1 ? "n" : ""} en la lista.${pendingImport.newRows.length > 0 ? `\n\nAdemás hay ${pendingImport.newRows.length} labor${pendingImport.newRows.length > 1 ? "es" : ""} nueva${pendingImport.newRows.length > 1 ? "s" : ""}.` : ""}`
             : ""
         }
-        primaryButtonText={overwriting ? "Actualizando..." : "Sobreescribir existentes"}
+        primaryButtonText={overwriting ? "Actualizando..." : "Sobreescribir Existentes"}
         primaryButtonColor="bg-blue-600 hover:bg-blue-700 focus:ring-blue-300"
         onPrimaryAction={handleOverwrite}
-        secondaryButtonText="Solo nuevos"
+        secondaryButtonText="Solo Nuevos"
         onSecondaryAction={handleSkipDuplicates}
         isSaving={overwriting}
       />

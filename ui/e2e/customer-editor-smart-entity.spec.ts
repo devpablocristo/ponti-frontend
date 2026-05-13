@@ -1,0 +1,162 @@
+import { expect, test, type Page } from "@playwright/test";
+
+import { installAuthenticatedSession } from "./helpers/auth";
+
+const customers = [
+  { id: 17, actor_id: 201, name: "AGRO LAJITAS 25-26" },
+  { id: 22, actor_id: 202, name: "EL SUEÑO 25-26" },
+  { id: 31, actor_id: 203, name: "AGRO TUC" },
+];
+
+const actors = [
+  { id: 201, display_name: "AGRO LAJITAS 25-26", roles: ["cliente"] },
+  { id: 202, display_name: "EL SUEÑO 25-26", roles: ["cliente"] },
+  { id: 203, display_name: "AGRO TUC", roles: ["cliente"] },
+  { id: 101, display_name: "JUAN PEREZ", roles: ["responsable"] },
+  { id: 102, display_name: "SOLEDAD GOMEZ", roles: ["inversor"] },
+  { id: 103, display_name: "LA ARRENDATARIA SRL", roles: ["arrendatario"] },
+];
+
+async function mockCustomerEditorApis(page: Page, options: { failActors?: boolean } = {}) {
+  await page.route("**/api/v1/customers**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        data: { data: customers, total: customers.length },
+      }),
+    });
+  });
+
+  await page.route("**/api/v1/actors**", async (route) => {
+    if (options.failActors) {
+      await route.fulfill({
+        status: 500,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "actors failed" }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        data: { data: actors, total: actors.length },
+      }),
+    });
+  });
+
+  await page.route("**/api/v1/projects/customers/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true, data: { data: [] } }),
+    });
+  });
+
+  await page.route("**/api/v1/projects?**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true, data: { data: [] } }),
+    });
+  });
+
+  await page.route("**/api/v1/campaigns**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true, data: { data: [], total: 0 } }),
+    });
+  });
+
+  await page.route("**/api/v1/fields**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true, data: { data: [], total: 0 } }),
+    });
+  });
+
+  await page.route("**/api/v1/crops**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        success: true,
+        data: [
+          { id: 1, name: "SOJA" },
+          { id: 2, name: "MAIZ" },
+        ],
+      }),
+    });
+  });
+
+  await page.route("**/api/v1/lots**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ success: true, data: { data: [], page_info: {} } }),
+    });
+  });
+}
+
+async function openNewCustomerDrawer(page: Page) {
+  await page.goto("/admin/database/customers/list");
+  await page.getByRole("button", { name: "Nuevo", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Nuevo Cliente" })).toBeVisible();
+}
+
+test.beforeEach(async ({ page }) => {
+  await installAuthenticatedSession(page);
+});
+
+test("cliente/sociedad muestra lista completa, filtra, selecciona y bloquea duplicado exacto", async ({
+  page,
+}) => {
+  await mockCustomerEditorApis(page);
+  await openNewCustomerDrawer(page);
+
+  const customerInput = page.getByLabel("Cliente / Sociedad");
+  const dropdown = page.getByTestId("project_customer-smart-entity-dropdown");
+
+  await customerInput.click();
+  await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "EL SUEÑO 25-26" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "Nuevo" })).toBeVisible();
+
+  await dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" }).click();
+  await expect(customerInput).toHaveValue("AGRO LAJITAS 25-26");
+
+  await page.getByLabel("Nombre del proyecto").click();
+  await expect(page.getByTestId("project_name-smart-entity-dropdown")).toBeVisible();
+  await expect(
+    page.getByTestId("project_name-smart-entity-dropdown").getByRole("button", { name: "Nuevo" })
+  ).toBeVisible();
+
+  await customerInput.click();
+  await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "EL SUEÑO 25-26" })).toBeVisible();
+
+  await customerInput.fill("sueno");
+  await expect(dropdown.getByRole("button", { name: "EL SUEÑO 25-26" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).not.toBeVisible();
+
+  await customerInput.fill("AGRO TUC");
+  await expect(dropdown.getByRole("button", { name: "AGRO TUC" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "Nuevo" })).toBeDisabled();
+});
+
+test("fallo de actores no rompe la lista de clientes", async ({ page }) => {
+  await mockCustomerEditorApis(page, { failActors: true });
+  await openNewCustomerDrawer(page);
+
+  const dropdown = page.getByTestId("project_customer-smart-entity-dropdown");
+  await page.getByLabel("Cliente / Sociedad").click();
+
+  await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "Nuevo" })).toBeVisible();
+});

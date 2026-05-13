@@ -1,6 +1,6 @@
 const primaryTitles = new Map<string, string>([
   ["/admin/dashboard", "Dashboard"],
-  ["/admin/database/customers/list", "Clientes y Sociedades"],
+  ["/admin/database/customers/list", "Clientes y Proyectos"],
   ["/admin/lots", "Lotes"],
   ["/admin/work-orders", "Órdenes de Trabajo"],
   ["/admin/tasks", "Labores"],

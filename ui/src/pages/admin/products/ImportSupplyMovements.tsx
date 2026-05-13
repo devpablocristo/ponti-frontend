@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import Button from "../../../components/Button/Button";
-import Drawer from "../../../components/Drawer/Drawer";
+import { DrawerFormActions } from "../../../components/Drawer/DrawerFormActions";
+import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useProviders from "../../../hooks/useProviders";
 import useSupplies from "../../../hooks/useSupplies";
@@ -66,20 +66,10 @@ const HEADER_ALIASES = {
   ],
 
   // Opcional: solo para validar contra el proyecto activo
-  originProject: [
-    "proyecto_origen",
-    "proyecto origen",
-    "project_origin",
-    "origen_proyecto",
-  ],
+  originProject: ["proyecto_origen", "proyecto origen", "project_origin", "origen_proyecto"],
 } as const;
 
-
-const ALLOWED_MOVEMENT_TYPES = new Set([
-  "Stock",
-  "Movimiento interno",
-  "Remito oficial",
-]);
+const ALLOWED_MOVEMENT_TYPES = new Set(["Stock", "Movimiento interno", "Remito oficial"]);
 
 type PreviewRow = {
   rowIndex: number;
@@ -140,7 +130,6 @@ function extractCollection<T>(payload: ApiCollectionResponse<T> | undefined): T[
   return [];
 }
 
-
 export default function ImportSupplyMovements({
   open,
   file,
@@ -179,9 +168,7 @@ export default function ImportSupplyMovements({
     [selectedProject]
   );
 
-  const fileKey = file
-    ? `${file.name}:${file.lastModified}:${file.size}:${projectId}`
-    : "";
+  const fileKey = file ? `${file.name}:${file.lastModified}:${file.size}:${projectId}` : "";
 
   useEffect(() => {
     if (!open || !projectId) return;
@@ -191,11 +178,7 @@ export default function ImportSupplyMovements({
     const loadLookups = async () => {
       setLookupReady(false);
       try {
-        await Promise.all([
-          getProject(projectId),
-          getProviders(""),
-          getSupplies(projectId),
-        ]);
+        await Promise.all([getProject(projectId), getProviders(""), getSupplies(projectId)]);
       } finally {
         if (!cancelled) {
           setLookupReady(true);
@@ -221,12 +204,7 @@ export default function ImportSupplyMovements({
   }, [open]);
 
   useEffect(() => {
-    if (
-      !open ||
-      !file ||
-      !lookupReady ||
-      parsedFileKey === fileKey
-    ) {
+    if (!open || !file || !lookupReady || parsedFileKey === fileKey) {
       return;
     }
 
@@ -273,9 +251,7 @@ export default function ImportSupplyMovements({
         if (parsedRows.length === 0) {
           if (!cancelled) {
             setPreviewRows([]);
-            setParseError(
-              "El archivo no tiene datos válidos. Verifique encabezados y filas."
-            );
+            setParseError("El archivo no tiene datos válidos. Verifique encabezados y filas.");
             setParsedFileKey(fileKey);
           }
           return;
@@ -287,9 +263,7 @@ export default function ImportSupplyMovements({
         const investorByName = new Map(
           investors.map((entry) => [normalizeText(entry.name), entry])
         );
-        const supplyByName = new Map(
-          supplies.map((entry) => [normalizeText(entry.name), entry])
-        );
+        const supplyByName = new Map(supplies.map((entry) => [normalizeText(entry.name), entry]));
 
         const customerByName = new Map<string, CustomerOption>();
         const projectsByCustomerId = new Map<number, ProjectOption[]>();
@@ -310,19 +284,13 @@ export default function ImportSupplyMovements({
 
         const rawInternalDestinationCustomers = new Set<string>();
         parsedRows.forEach((rawRow) => {
-          const rawMovementType = getValueByAliases(
-            rawRow,
-            HEADER_ALIASES.movementType
-          ).trim();
+          const rawMovementType = getValueByAliases(rawRow, HEADER_ALIASES.movementType).trim();
           const canonicalMovementType = rawMovementType
             ? toCanonicalMovementType(rawMovementType)
             : "Remito oficial";
           if (canonicalMovementType !== "Movimiento interno") return;
 
-          const customerName = getValueByAliases(
-            rawRow,
-            HEADER_ALIASES.destinationCustomer
-          ).trim();
+          const customerName = getValueByAliases(rawRow, HEADER_ALIASES.destinationCustomer).trim();
           if (customerName) {
             rawInternalDestinationCustomers.add(normalizeText(customerName));
           }
@@ -358,33 +326,18 @@ export default function ImportSupplyMovements({
 
         parsedRows.forEach((rawRow, index) => {
           const rowIndex = index + 2;
-          const rawMovementType = getValueByAliases(
-            rawRow,
-            HEADER_ALIASES.movementType
-          ).trim();
+          const rawMovementType = getValueByAliases(rawRow, HEADER_ALIASES.movementType).trim();
           const rawDate = getValueByAliases(rawRow, HEADER_ALIASES.date).trim();
           const rawReferenceNumber = getValueByAliases(
             rawRow,
             HEADER_ALIASES.referenceNumber
           ).trim();
-          const rawProvider = getValueByAliases(
-            rawRow,
-            HEADER_ALIASES.provider
-          ).trim();
-          const rawInvestor = getValueByAliases(
-            rawRow,
-            HEADER_ALIASES.investor
-          ).trim();
+          const rawProvider = getValueByAliases(rawRow, HEADER_ALIASES.provider).trim();
+          const rawInvestor = getValueByAliases(rawRow, HEADER_ALIASES.investor).trim();
           const rawSupply = getValueByAliases(rawRow, HEADER_ALIASES.supply).trim();
-          const rawQuantity = getValueByAliases(
-            rawRow,
-            HEADER_ALIASES.quantity
-          ).trim();
+          const rawQuantity = getValueByAliases(rawRow, HEADER_ALIASES.quantity).trim();
 
-          const rawOriginProject = getValueByAliases(
-            rawRow,
-            HEADER_ALIASES.originProject
-          ).trim();
+          const rawOriginProject = getValueByAliases(rawRow, HEADER_ALIASES.originProject).trim();
 
           const rawDestinationCustomer = getValueByAliases(
             rawRow,
@@ -400,7 +353,6 @@ export default function ImportSupplyMovements({
             rawRow,
             HEADER_ALIASES.destinationCampaign
           ).trim();
-
 
           if (
             !rawMovementType &&
@@ -450,17 +402,13 @@ export default function ImportSupplyMovements({
           if (!rawInvestor) {
             errors.push(`Fila ${rowIndex}: falta el inversor.`);
           } else if (!investor) {
-            errors.push(
-              `Fila ${rowIndex}: el inversor "${rawInvestor}" no existe en el proyecto.`
-            );
+            errors.push(`Fila ${rowIndex}: el inversor "${rawInvestor}" no existe en el proyecto.`);
           }
 
           if (!rawSupply) {
             errors.push(`Fila ${rowIndex}: falta el insumo.`);
           } else if (!supply) {
-            errors.push(
-              `Fila ${rowIndex}: el insumo "${rawSupply}" no existe en el proyecto.`
-            );
+            errors.push(`Fila ${rowIndex}: el insumo "${rawSupply}" no existe en el proyecto.`);
           }
 
           if (
@@ -469,9 +417,7 @@ export default function ImportSupplyMovements({
             quantity <= 0 ||
             !/^\d*\.?\d+$/.test(normalizedQuantity)
           ) {
-            errors.push(
-              `Fila ${rowIndex}: la cantidad debe ser numérica y mayor a 0.`
-            );
+            errors.push(`Fila ${rowIndex}: la cantidad debe ser numérica y mayor a 0.`);
           }
 
           if (movementType === "Movimiento interno") {
@@ -490,9 +436,7 @@ export default function ImportSupplyMovements({
             if (!rawDestinationCustomer) {
               errors.push(`Fila ${rowIndex}: falta cliente destino.`);
             } else {
-              const customer = customerByName.get(
-                normalizeText(rawDestinationCustomer)
-              );
+              const customer = customerByName.get(normalizeText(rawDestinationCustomer));
               if (!customer) {
                 errors.push(
                   `Fila ${rowIndex}: el cliente destino "${rawDestinationCustomer}" no existe.`
@@ -510,16 +454,10 @@ export default function ImportSupplyMovements({
               errors.push(`Fila ${rowIndex}: falta campaña destino.`);
             }
 
-            if (
-              destinationCustomerId &&
-              rawDestinationProject &&
-              rawDestinationCampaign
-            ) {
-              const destinationProjects =
-                projectsByCustomerId.get(destinationCustomerId) ?? [];
+            if (destinationCustomerId && rawDestinationProject && rawDestinationCampaign) {
+              const destinationProjects = projectsByCustomerId.get(destinationCustomerId) ?? [];
               const matchedProject = destinationProjects.find(
-                (entry) =>
-                  normalizeText(entry.name) === normalizeText(rawDestinationProject)
+                (entry) => normalizeText(entry.name) === normalizeText(rawDestinationProject)
               );
 
               if (!matchedProject) {
@@ -531,12 +469,9 @@ export default function ImportSupplyMovements({
                 const campaignKey = `${destinationCustomerId}::${normalizeText(
                   matchedProject.name
                 )}`;
-                const campaigns =
-                  campaignsByCustomerAndProject.get(campaignKey) ?? [];
+                const campaigns = campaignsByCustomerAndProject.get(campaignKey) ?? [];
                 const matchedCampaign = campaigns.find(
-                  (entry) =>
-                    normalizeText(entry.name) ===
-                    normalizeText(rawDestinationCampaign)
+                  (entry) => normalizeText(entry.name) === normalizeText(rawDestinationCampaign)
                 );
 
                 if (!matchedCampaign) {
@@ -615,12 +550,20 @@ export default function ImportSupplyMovements({
     return () => {
       cancelled = true;
     };
-  }, [open, file, fileKey, parsedFileKey, lookupReady, providers, investors, supplies, selectedProject, projectId]);
+  }, [
+    open,
+    file,
+    fileKey,
+    parsedFileKey,
+    lookupReady,
+    providers,
+    investors,
+    supplies,
+    selectedProject,
+    projectId,
+  ]);
 
-  const rowErrors = useMemo(
-    () => previewRows.flatMap((row) => row.errors),
-    [previewRows]
-  );
+  const rowErrors = useMemo(() => previewRows.flatMap((row) => row.errors), [previewRows]);
 
   const displayError = useMemo(() => {
     if (parseError) return parseError;
@@ -636,9 +579,7 @@ export default function ImportSupplyMovements({
   const displayErrorLines = useMemo(() => {
     if (!displayError) return [];
 
-    const rowBasedMatches = displayError.match(
-      /Fila\s+\d+:[\s\S]*?(?=Fila\s+\d+:|$)/g
-    );
+    const rowBasedMatches = displayError.match(/Fila\s+\d+:[\s\S]*?(?=Fila\s+\d+:|$)/g);
 
     if (rowBasedMatches && rowBasedMatches.length > 0) {
       return rowBasedMatches.map((line) => line.trim()).filter(Boolean);
@@ -656,15 +597,14 @@ export default function ImportSupplyMovements({
     const importedMovements = resultCreation.supply_movements;
     if (!importedMovements.length) return;
 
-    const hasErrors = importedMovements.some(
-      (movement) => movement.error_detail !== ""
-    );
+    const hasErrors = importedMovements.some((movement) => movement.error_detail !== "");
     setImportAttempted(false);
 
     if (hasErrors) return;
 
     onImported(
-      `Se importaron ${importedMovements.length} movimiento${importedMovements.length !== 1 ? "s" : ""
+      `Se importaron ${importedMovements.length} movimiento${
+        importedMovements.length !== 1 ? "s" : ""
       } con éxito.`
     );
   }, [open, importAttempted, resultCreation, onImported]);
@@ -680,9 +620,7 @@ export default function ImportSupplyMovements({
         movement_date: new Date(row.movementDate),
         reference_number: row.referenceNumber,
         project_destination_id:
-          row.movementType === "Movimiento interno"
-            ? row.destinationProjectId || 0
-            : 0,
+          row.movementType === "Movimiento interno" ? row.destinationProjectId || 0 : 0,
         supply_id: row.supplyId || 0,
         investor_id: row.investorId || 0,
         quantity: Number(row.quantity),
@@ -695,179 +633,128 @@ export default function ImportSupplyMovements({
   };
 
   return (
-    <Drawer open={open} onClose={onClose} maxWidth="max-w-6xl">
-      <div className="flex flex-col h-full">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Importar insumos
-          </h2>
-          <p className="mt-1 text-sm text-gray-600">
-            El archivo puede contener multiples remitos, fechas, proveedores e
-            inversores. La importacion se guarda de forma atomica.
-          </p>
-          {file && (
-            <p className="mt-2 text-sm font-medium text-gray-700">
-              Archivo: {file.name}
+    <DrawerShell
+      open={open}
+      onClose={onClose}
+      title="Importar Insumos"
+      subtitle={
+        <>
+          El archivo puede contener multiples remitos, fechas, proveedores e inversores. La
+          importacion se guarda de forma atomica.
+          {file ? (
+            <span className="mt-2 block font-medium text-slate-700">Archivo: {file.name}</span>
+          ) : null}
+        </>
+      }
+      footer={
+        <DrawerFormActions
+          cancelLabel="Cancelar"
+          submitLabel={processingCreation ? "Importando..." : "Confirmar Importacion"}
+          onCancel={onClose}
+          onSubmit={handleImport}
+          disabled={processingCreation || previewRows.length === 0 || rowErrors.length > 0}
+        />
+      }
+    >
+      {displayError && (
+        <ErrorBanner>
+          <span className="font-semibold">Error:</span>
+          <div className="mt-1 space-y-1">
+            {displayErrorLines.map((line, index) => (
+              <p key={`${line}-${index}`}>{line}</p>
+            ))}
+          </div>
+        </ErrorBanner>
+      )}
+
+      {rowErrors.length > 0 && (
+        <ErrorBanner>
+          <span className="font-semibold">
+            Se detectaron {rowErrors.length} error
+            {rowErrors.length !== 1 ? "es" : ""} antes de guardar:
+          </span>
+          <ul className="mt-2 list-disc pl-5">
+            {rowErrors.slice(0, 10).map((rowError, index) => (
+              <li key={`${rowError}-${index}`}>{rowError}</li>
+            ))}
+          </ul>
+          {rowErrors.length > 10 && (
+            <p className="mt-2">
+              Y {rowErrors.length - 10} error
+              {rowErrors.length - 10 !== 1 ? "es" : ""} mas.
             </p>
           )}
-        </div>
+        </ErrorBanner>
+      )}
 
-        {displayError && (
-          <ErrorBanner>
-            <span className="font-semibold">Error:</span>
-            <div className="mt-1 space-y-1">
-              {displayErrorLines.map((line, index) => (
-                <p key={`${line}-${index}`}>{line}</p>
-              ))}
-            </div>
-          </ErrorBanner>
-        )}
-
-        {rowErrors.length > 0 && (
-          <ErrorBanner>
-            <span className="font-semibold">
-              Se detectaron {rowErrors.length} error
-              {rowErrors.length !== 1 ? "es" : ""} antes de guardar:
-            </span>
-            <ul className="mt-2 list-disc pl-5">
-              {rowErrors.slice(0, 10).map((rowError, index) => (
-                <li key={`${rowError}-${index}`}>{rowError}</li>
-              ))}
-            </ul>
-            {rowErrors.length > 10 && (
-              <p className="mt-2">
-                Y {rowErrors.length - 10} error
-                {rowErrors.length - 10 !== 1 ? "es" : ""} mas.
-              </p>
-            )}
-          </ErrorBanner>
-        )}
-
-        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="sticky top-0 bg-gray-50">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200">
+        <table className="min-w-full divide-y divide-gray-200 text-sm">
+          <thead className="sticky top-0 bg-gray-50">
+            <tr>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Fila</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Ingreso</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Fecha</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Remito</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Proveedor</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Inversor</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Insumo</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Cantidad</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Cliente destino</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Proyecto destino</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Campaña destino</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Estado</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 bg-white">
+            {previewRows.length === 0 ? (
               <tr>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Fila
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Ingreso
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Fecha
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Remito
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Proveedor
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Inversor
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Insumo
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Cantidad
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Cliente destino
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Proyecto destino
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Campaña destino
-                </th>
-                <th className="px-3 py-3 text-left font-semibold text-gray-700">
-                  Estado
-                </th>
+                <td colSpan={12} className="px-4 py-8 text-center text-gray-500">
+                  No hay filas importadas para previsualizar.
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {previewRows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={12}
-                    className="px-4 py-8 text-center text-gray-500"
-                  >
-                    No hay filas importadas para previsualizar.
+            ) : (
+              previewRows.map((row) => (
+                <tr key={`${row.rowIndex}-${row.referenceNumber}-${row.supplyName}`}>
+                  <td className="px-3 py-3 align-top text-gray-700">{row.rowIndex}</td>
+                  <td className="px-3 py-3 align-top text-gray-700">{row.movementType}</td>
+                  <td className="px-3 py-3 align-top text-gray-700">{row.movementDate || "—"}</td>
+                  <td className="px-3 py-3 align-top font-medium text-gray-900">
+                    {row.referenceNumber || "—"}
+                  </td>
+                  <td className="px-3 py-3 align-top text-gray-700">{row.providerName || "—"}</td>
+                  <td className="px-3 py-3 align-top text-gray-700">{row.investorName || "—"}</td>
+                  <td className="px-3 py-3 align-top text-gray-700">{row.supplyName || "—"}</td>
+                  <td className="px-3 py-3 align-top text-gray-700">{row.quantity || "—"}</td>
+                  <td className="px-3 py-3 align-top text-gray-700">
+                    {row.destinationCustomerName || "—"}
+                  </td>
+                  <td className="px-3 py-3 align-top text-gray-700">
+                    {row.destinationProjectName || "—"}
+                  </td>
+                  <td className="px-3 py-3 align-top text-gray-700">
+                    {row.destinationCampaignName || "—"}
+                  </td>
+                  <td className="px-3 py-3 align-top">
+                    {row.errors.length > 0 ? (
+                      <div className="space-y-1">
+                        {row.errors.map((error) => (
+                          <p key={error} className="text-xs text-red-700">
+                            {replaceSupplyIdsWithNames(error, supplies)}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                        Lista para importar
+                      </span>
+                    )}
                   </td>
                 </tr>
-              ) : (
-                previewRows.map((row) => (
-                  <tr key={`${row.rowIndex}-${row.referenceNumber}-${row.supplyName}`}>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.rowIndex}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.movementType}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.movementDate || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top font-medium text-gray-900">
-                      {row.referenceNumber || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.providerName || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.investorName || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.supplyName || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.quantity || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.destinationCustomerName || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.destinationProjectName || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
-                      {row.destinationCampaignName || "—"}
-                    </td>
-                    <td className="px-3 py-3 align-top">
-                      {row.errors.length > 0 ? (
-                        <div className="space-y-1">
-                          {row.errors.map((error) => (
-                            <p key={error} className="text-xs text-red-700">
-                              {replaceSupplyIdsWithNames(error, supplies)}
-                            </p>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                          Lista para importar
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <Button variant="primary" onClick={onClose} disabled={processingCreation}>
-            Cancelar
-          </Button>
-          <Button
-            variant="primary"
-            onClick={handleImport}
-            disabled={
-              processingCreation || previewRows.length === 0 || rowErrors.length > 0
-            }
-          >
-            {processingCreation ? "Importando..." : "Confirmar importacion"}
-          </Button>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-    </Drawer>
+    </DrawerShell>
   );
 }

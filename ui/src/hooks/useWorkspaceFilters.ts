@@ -84,12 +84,7 @@ export const useWorkspaceFilters = (
     new Set<FilterKey>(["customer", "project", "campaign", ...enabledFilters])
   ).join("|");
   const enabledFilterSet = useMemo(
-    () =>
-      new Set(
-        enabledFiltersKey
-          ? (enabledFiltersKey.split("|") as FilterKey[])
-          : []
-      ),
+    () => new Set(enabledFiltersKey ? (enabledFiltersKey.split("|") as FilterKey[]) : []),
     [enabledFiltersKey]
   );
 
@@ -114,22 +109,19 @@ export const useWorkspaceFilters = (
   const selectedCampaignId = selectedCampaign?.id;
   const selectedField = contextField as Field | undefined;
 
-  const setSelectedCustomer: React.Dispatch<
-    React.SetStateAction<Customer | undefined>
-  > = useCallback(
-    (value) => {
-      if (typeof value === "function") {
-        // Not supported for contextSetCustomer
-        return;
-      }
-      contextSetCustomer(value);
-    },
-    [contextSetCustomer]
-  );
+  const setSelectedCustomer: React.Dispatch<React.SetStateAction<Customer | undefined>> =
+    useCallback(
+      (value) => {
+        if (typeof value === "function") {
+          // Not supported for contextSetCustomer
+          return;
+        }
+        contextSetCustomer(value);
+      },
+      [contextSetCustomer]
+    );
 
-  const setSelectedProject: React.Dispatch<
-    React.SetStateAction<Project | undefined>
-  > = useCallback(
+  const setSelectedProject: React.Dispatch<React.SetStateAction<Project | undefined>> = useCallback(
     (value) => {
       if (typeof value === "function") {
         return;
@@ -152,9 +144,7 @@ export const useWorkspaceFilters = (
     [contextSetCampaign]
   );
 
-  const setSelectedField: React.Dispatch<
-    React.SetStateAction<Field | undefined>
-  > = useCallback(
+  const setSelectedField: React.Dispatch<React.SetStateAction<Field | undefined>> = useCallback(
     (value) => {
       if (typeof value === "function") {
         return;
@@ -180,17 +170,17 @@ export const useWorkspaceFilters = (
       : undefined;
   const workspaceReady = Boolean(
     selectedCustomer &&
-      selectedCustomer.id > 0 &&
-      normalizedSelectedProject &&
-      normalizedSelectedProject.id > 0 &&
-      selectedCampaignId &&
-      selectedCampaignId > 0
+    selectedCustomer.id > 0 &&
+    normalizedSelectedProject &&
+    normalizedSelectedProject.id > 0 &&
+    selectedCampaignId &&
+    selectedCampaignId > 0
   );
 
-  const [queryCustomer, setQueryCustomer] = useState<string>("Todos los clientes");
-  const [queryProject, setQueryProject] = useState<string>("Todos los proyectos");
-  const [queryCampaign, setQueryCampaign] = useState<string>("Todas las campañas");
-  const [queryField, setQueryField] = useState<string>("Todos los campos");
+  const [queryCustomer, setQueryCustomer] = useState<string>("");
+  const [queryProject, setQueryProject] = useState<string>("");
+  const [queryCampaign, setQueryCampaign] = useState<string>("");
+  const [queryField, setQueryField] = useState<string>("");
 
   const {
     customers,
@@ -230,7 +220,7 @@ export const useWorkspaceFilters = (
     if (selectedCustomer) {
       setQueryCustomer(selectedCustomer.name);
     } else {
-      setQueryCustomer("Todos los clientes");
+      setQueryCustomer("");
     }
   }, [selectedCustomer]);
 
@@ -238,7 +228,7 @@ export const useWorkspaceFilters = (
     if (selectedProject) {
       setQueryProject(selectedProject.name);
     } else {
-      setQueryProject("Todos los proyectos");
+      setQueryProject("");
     }
   }, [selectedProject]);
 
@@ -246,7 +236,7 @@ export const useWorkspaceFilters = (
     if (selectedCampaign) {
       setQueryCampaign(selectedCampaign.name);
     } else {
-      setQueryCampaign("Todas las campañas");
+      setQueryCampaign("");
     }
   }, [selectedCampaign]);
 
@@ -254,7 +244,7 @@ export const useWorkspaceFilters = (
     if (normalizedSelectedField) {
       setQueryField(normalizedSelectedField.name);
     } else {
-      setQueryField("Todos los campos");
+      setQueryField("");
     }
   }, [normalizedSelectedField]);
 
@@ -269,9 +259,29 @@ export const useWorkspaceFilters = (
 
   const handleSetCustomer = useCallback(
     (customer: Customer | undefined) => {
+      const nextCustomerId = customer && customer.id > 0 ? customer.id : undefined;
+      const currentCustomerId =
+        selectedCustomer && selectedCustomer.id > 0 ? selectedCustomer.id : undefined;
+      const customerChanged = nextCustomerId !== currentCustomerId;
+
       setSelectedCustomer(customer);
+
+      if (customerChanged) {
+        setSelectedProject(undefined);
+        setSelectedCampaign(undefined);
+        setSelectedField(undefined);
+        setQueryProject("");
+        setQueryCampaign("");
+        setQueryField("");
+      }
     },
-    [setSelectedCustomer]
+    [
+      selectedCustomer,
+      setSelectedCampaign,
+      setSelectedCustomer,
+      setSelectedField,
+      setSelectedProject,
+    ]
   );
 
   const handleSetCustomerUnknown = useCallback(
@@ -313,10 +323,30 @@ export const useWorkspaceFilters = (
 
   const handleSetProject = useCallback(
     (project: Project | undefined) => {
+      const nextProjectId = project && project.id > 0 ? project.id : undefined;
+      const currentProjectId =
+        normalizedSelectedProject && normalizedSelectedProject.id > 0
+          ? normalizedSelectedProject.id
+          : undefined;
+      const projectChanged = nextProjectId !== currentProjectId;
+
       setSelectedProject(project);
-      contextSetProjectId(project?.id);
+      contextSetProjectId(nextProjectId);
+
+      if (projectChanged) {
+        setSelectedCampaign(undefined);
+        setSelectedField(undefined);
+        setQueryCampaign("");
+        setQueryField("");
+      }
     },
-    [contextSetProjectId, setSelectedProject]
+    [
+      contextSetProjectId,
+      normalizedSelectedProject,
+      setSelectedCampaign,
+      setSelectedField,
+      setSelectedProject,
+    ]
   );
 
   const handleSetProjectUnknown = useCallback(
@@ -378,7 +408,18 @@ export const useWorkspaceFilters = (
       value: queryCampaign,
       onChange: setQueryCampaign,
       setData: (data: unknown) => {
-        setSelectedCampaign(data as Campaign | undefined);
+        const campaign = data as Campaign | undefined;
+        const nextCampaignId = campaign && campaign.id > 0 ? campaign.id : undefined;
+        const currentCampaignId =
+          selectedCampaign && selectedCampaign.id > 0 ? selectedCampaign.id : undefined;
+        const campaignChanged = nextCampaignId !== currentCampaignId;
+
+        setSelectedCampaign(campaign);
+
+        if (campaignChanged) {
+          setSelectedField(undefined);
+          setQueryField("");
+        }
       },
       disabled: loadingCampaigns,
       loading: loadingCampaigns,

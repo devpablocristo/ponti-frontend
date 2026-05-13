@@ -4,7 +4,7 @@ export type FuzzySearchable = {
   code?: string | number | null;
 };
 
-const normalizeSearchText = (value: unknown): string =>
+export const normalizeSearchText = (value: unknown): string =>
   String(value ?? "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -34,7 +34,7 @@ const trigramScore = (query: string, target: string): number => {
   return matches / Math.max(queryGrams.size, targetGrams.size);
 };
 
-const scoreOption = (query: string, option: FuzzySearchable): number => {
+export const scoreFuzzyOption = (query: string, option: FuzzySearchable): number => {
   const searchable = normalizeSearchText(
     [option.name, option.code, option.id].filter(Boolean).join(" "),
   );
@@ -66,7 +66,7 @@ export function fuzzySearchOptions<T extends FuzzySearchable>(
     .map((option, index) => ({
       option,
       index,
-      score: scoreOption(normalizedQuery, option),
+      score: scoreFuzzyOption(normalizedQuery, option),
     }))
     .filter((item) => item.score >= 0.18)
     .sort((a, b) => b.score - a.score || a.index - b.index)

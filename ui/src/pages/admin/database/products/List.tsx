@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Plus, Upload } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
-import { Supply, SuppliesMode } from "../../../../hooks/useSupplies/types";
+import {
+  Supply,
+  SupplyCreatePayload,
+  SuppliesMode,
+} from "../../../../hooks/useSupplies/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
-import { BaseModal } from "../../../../components/Modal/BaseModal";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import { units } from "../../../../constants/units";
@@ -18,6 +21,7 @@ import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
+import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { SUPPLY_ENTITY as ENTITY } from "../../entities";
 import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
@@ -33,6 +37,19 @@ const renderPriceCell = (value: unknown, row: Supply) => (
   </div>
 );
 
+const newSupply = (): Supply => ({
+  id: 0,
+  name: "",
+  price: "",
+  is_partial_price: false,
+  unit_id: 0,
+  unit_name: "",
+  type_id: 0,
+  type_name: "",
+  category_id: 0,
+  category_name: "",
+});
+
 type ListItemsProps = {
   editorOnly?: boolean;
 };
@@ -42,6 +59,7 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
     getSupplies,
     error,
     supplies,
+    saveSupplies,
     updateSupply,
     completePendingSupply,
     archiveSupply,
@@ -269,9 +287,28 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
     pagination.resetPage();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (processing) return;
     if (!item || !projectId) return;
+
+    if (!item.id) {
+      const payload: SupplyCreatePayload = {
+        name: item.name.trim(),
+        unit: Number(item.unit_id || 0),
+        price: Number(String(item.price).replace(",", ".")) || 0,
+        type: Number(item.type_id || 0),
+        category: Number(item.category_id || 0),
+        is_partial_price: Boolean(item.is_partial_price),
+      };
+
+      const saved = await saveSupplies([payload], projectId);
+      if (saved) {
+        setModalOpen(false);
+        setItem(null);
+        getSupplies(projectId, suppliesMode);
+      }
+      return;
+    }
 
     closeModalOnNextUpdateRef.current = true;
 
@@ -302,15 +339,8 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
     <div className="w-full mx-auto">
       <AppFilterBar filters={filters} actions={[
         {
-          label: "Importar",
-          icon: <Upload className="h-4 w-4" />,
-          variant: "primary",
-          isPrimary: true,
-          disabled: true,
-        },
-        {
           label: "Exportar",
-          icon: <Download className="h-4 w-4" />,
+          icon: <Upload className="h-4 w-4" />,
           variant: "primary",
           isPrimary: true,
           disabled: !projectId,
@@ -323,7 +353,7 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
           isPrimary: true,
           disabled: !projectId,
           onClick: () => {
-            setItem(null);
+            setItem(newSupply());
             setModalOpen(true);
           },
         },
@@ -369,8 +399,8 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
           ) : null}
         </div>
         <div className="mt-4">
-          <BaseModal
-            isOpen={modalOpen}
+          <EntityFormDrawer
+            open={modalOpen}
             onClose={() => {
               setModalOpen(false);
               setItem(null);
@@ -378,18 +408,22 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
             title={
               suppliesMode === "pending"
                 ? `Completar insumo pendiente ${item?.name || ""}`
-                : `Edicion de insumo ${item?.name || ""}`
+                : item?.id
+                  ? `Edicion de insumo ${item.name || ""}`
+                  : "Nuevo insumo"
             }
-            primaryButtonText={
+            submitLabel={
               suppliesMode === "pending" ? "Completar" : "Guardar"
             }
-            onPrimaryAction={handleSave}
-          >              {suppliesMode === "pending" && (
-            <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Este insumo fue creado desde la app con información incompleta.
-              Para que pueda usarse al publicar órdenes, completá los datos faltantes.
-            </div>
-          )}
+            processing={processing}
+            onSubmit={handleSave}
+          >
+            {suppliesMode === "pending" && (
+              <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                Este insumo fue creado desde la app con información incompleta.
+                Para que pueda usarse al publicar órdenes, completá los datos faltantes.
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <InputField
                 label="Nombre del insumo"
@@ -477,7 +511,7 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
               />
 
             </div>
-          </BaseModal>
+          </EntityFormDrawer>
           <div className="flex items-center gap-2 mb-4">
             <Button
               variant={suppliesMode === "all" ? "primary" : "secondary"}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Download } from "lucide-react";
 import { useBlocker } from "react-router-dom";
 import { parsePartialPrice } from "@/lib/importHelpers";
 import InputField from "../../../../components/Input/InputField";
@@ -771,10 +772,11 @@ export default function Items() {
             <Button
               variant="primary"
               size="sm"
-              className="text-sm font-medium"
+              className="text-sm font-medium flex items-center gap-1"
               onClick={() => fileInputRef.current?.click()}
             >
-              Importar Excel
+              <Download className="h-4 w-4" />
+              Importar Insumos
             </Button>
             <Button
               variant="primary"
@@ -796,7 +798,7 @@ export default function Items() {
                   d="M4 6h16M4 10h16M4 14h16M4 18h16"
                 />
               </svg>
-              Ver listado
+              Ver Listado
             </Button>
           </div>
         </div>
@@ -986,10 +988,10 @@ export default function Items() {
             ? `El archivo contiene ${pendingImport.duplicates.length} insumo${pendingImport.duplicates.length > 1 ? "s" : ""} que ya existe${pendingImport.duplicates.length > 1 ? "n" : ""} en la lista.${pendingImport.newRows.length > 0 ? `\n\nAdemás hay ${pendingImport.newRows.length} insumo${pendingImport.newRows.length > 1 ? "s" : ""} nuevo${pendingImport.newRows.length > 1 ? "s" : ""}.` : ""}`
             : ""
         }
-        primaryButtonText={overwriting ? "Actualizando..." : "Sobreescribir existentes"}
+        primaryButtonText={overwriting ? "Actualizando..." : "Sobreescribir Existentes"}
         primaryButtonColor="bg-blue-600 hover:bg-blue-700 focus:ring-blue-300"
         onPrimaryAction={handleOverwrite}
-        secondaryButtonText="Solo nuevos"
+        secondaryButtonText="Solo Nuevos"
         onSecondaryAction={handleSkipDuplicates}
         isSaving={overwriting}
       />

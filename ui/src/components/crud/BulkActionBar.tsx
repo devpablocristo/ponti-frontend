@@ -1,6 +1,9 @@
 import { X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import AppButton from "../Button/Button";
+import { IconActionButton } from "../Button/IconActionButton";
+
 export type BulkAction = {
   label: string;
   icon?: LucideIcon;
@@ -44,15 +47,11 @@ export function BulkActionBar({
           <span className="font-medium">
             {selectedCount} {itemLabel} seleccionado{selectedCount === 1 ? "" : "s"}
           </span>
-          <button
-            type="button"
+          <IconActionButton
+            label="Limpiar selección"
+            icon={<X className="h-3.5 w-3.5" />}
             onClick={onClear}
-            className="inline-flex items-center gap-1 text-xs text-blue-700 hover:text-blue-900"
-            aria-label="Limpiar selección"
-          >
-            <X className="h-3 w-3" />
-            Limpiar
-          </button>
+          />
         </div>
       ) : (
         <span />
@@ -62,24 +61,19 @@ export function BulkActionBar({
           const Icon = action.icon;
           const isDanger = action.variant === "danger";
           return (
-            <button
+            <AppButton
               key={action.label}
-              type="button"
               disabled={action.disabled}
               onClick={action.onClick}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                isDanger
-                  ? "bg-white text-red-700 hover:bg-red-50 border border-red-200"
-                  : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"
-              }`}
+              variant={isDanger ? "danger" : "primary"}
+              size="sm"
+              iconLeft={Icon ? <Icon className="h-4 w-4" /> : undefined}
             >
-              {Icon && <Icon className="h-4 w-4" />}
               {action.label}
-            </button>
+            </AppButton>
           );
         })}
       </div>
     </div>
   );
 }
-

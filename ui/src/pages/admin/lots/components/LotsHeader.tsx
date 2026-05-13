@@ -73,7 +73,7 @@ export function LotsHeader({
         iconLeft={<SlidersHorizontal className="mr-2 h-4 w-4" />}
         onClick={() => setShowColumnsModal(true)}
       >
-        Configurar columnas
+        Configurar Columnas
       </Button>
 
       <BaseModal

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import Button from "../../../components/Button/Button";
+import AppButton from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import useSupplies from "../../../hooks/useSupplies";
-import { LoaderCircle, Trash } from "lucide-react";
+import { LoaderCircle, Plus, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useStockMovement from "../../../hooks/useStockMovement";
-import Drawer from "../../../components/Drawer/Drawer";
+import { IconActionButton } from "../../../components/Button/IconActionButton";
+import { DrawerFormActions } from "../../../components/Drawer/DrawerFormActions";
+import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 
 const emptyItems = [
   { item: "", quantity: "" },
@@ -28,12 +30,8 @@ export default function CreateStockItem({
   projectId: number;
   onStockCreated: () => void;
 }) {
-  const {
-    resultCreation,
-    errorCreation,
-    processingCreation,
-    saveStockMovement,
-  } = useStockMovement();
+  const { resultCreation, errorCreation, processingCreation, saveStockMovement } =
+    useStockMovement();
   const { getProject, selectedProject, processing } = useProjects();
 
   const [error, setError] = useState<string | null>(null);
@@ -44,17 +42,11 @@ export default function CreateStockItem({
 
   const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState("");
-  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
-    null
-  );
-  const [investors, setInvestors] = useState<{ id: number; name: string }[]>(
-    []
-  );
+  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(null);
+  const [investors, setInvestors] = useState<{ id: number; name: string }[]>([]);
   const latestOnStockCreatedRef = useRef(onStockCreated);
 
-  const [items, setItems] = useState<
-    { item: string; quantity: string }[]
-  >(emptyItems);
+  const [items, setItems] = useState<{ item: string; quantity: string }[]>(emptyItems);
 
   const clearForm = () => {
     setError(null);
@@ -102,8 +94,8 @@ export default function CreateStockItem({
       }
 
       setSuccessMessage("Movimiento guardado correctamente");
-latestOnStockCreatedRef.current();
-clearForm();
+      latestOnStockCreatedRef.current();
+      clearForm();
     };
 
     void handleCreatedMovement();
@@ -132,9 +124,7 @@ clearForm();
   }, [investor, investors]);
 
   const handleItemChange = (i: number, field: string, value: string) => {
-    setItems((prev) =>
-      prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
-    );
+    setItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
   };
 
   const handlePreSave = () => {
@@ -149,18 +139,14 @@ clearForm();
       errors.push("Debe seleccionar una fecha.");
     }
 
-    const itemsWithAnyValue = items.filter(
-      (item) => item.item || item.quantity
-    );
+    const itemsWithAnyValue = items.filter((item) => item.item || item.quantity);
 
     if (itemsWithAnyValue.length === 0) {
       errors.push("Debe cargar al menos un insumo");
       return;
     }
 
-    const hasPartial = itemsWithAnyValue.some(
-      (item) => !item.item || !item.quantity
-    );
+    const hasPartial = itemsWithAnyValue.some((item) => !item.item || !item.quantity);
 
     if (hasPartial) {
       errors.push("No se completaron todos los campos de los items cargados");
@@ -201,275 +187,266 @@ clearForm();
   };
 
   return (
-    <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-      <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">Ingreso de Stock</h2>
-        {processing || processingCreation ? (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        ) : (
-          <>
-            <form className="space-y-4 flex-1">
-              <div className="grid grid-cols-3 gap-4">
-                <InputField
-                  label="Tipo de ingreso"
-                  name="movementType"
-                  type="text"
-                  value="Stock actual"
-                  onChange={() => {}}
-                  disabled
-                  size="sm"
-                />
-                <InputField
-                  label="Fecha"
-                  name="date"
-                  type="date"
-                  value={date || ""}
-                  onChange={(e) => {
-                    const inputValue = e.target.value;
-                    if (inputValue) {
-                      const dateParts = inputValue.split("-");
-                      if (dateParts[0] && dateParts[0].length > 4) {
-                        dateParts[0] = dateParts[0].slice(0, 4);
-                        setDate(dateParts.join("-"));
-                      } else {
-                        setDate(inputValue);
-                      }
+    <DrawerShell
+      open={drawerOpen}
+      onClose={() => setDrawerOpen(false)}
+      title="Ingreso de Stock"
+      bodyClassName="drawer-body-relative"
+      footer={
+        processing || processingCreation ? undefined : (
+          <DrawerFormActions
+            cancelLabel="Cancelar"
+            submitLabel="Guardar"
+            onCancel={() => setDrawerOpen(false)}
+            onSubmit={handlePreSave}
+            disabled={processing || processingCreation}
+          />
+        )
+      }
+    >
+      {processing || processingCreation ? (
+        <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
+          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
+        </div>
+      ) : (
+        <>
+          <form className="space-y-4 flex-1">
+            <div className="grid grid-cols-3 gap-4">
+              <InputField
+                label="Tipo de ingreso"
+                name="movementType"
+                type="text"
+                value="Stock actual"
+                onChange={() => {}}
+                disabled
+                size="sm"
+              />
+              <InputField
+                label="Fecha"
+                name="date"
+                type="date"
+                value={date || ""}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  if (inputValue) {
+                    const dateParts = inputValue.split("-");
+                    if (dateParts[0] && dateParts[0].length > 4) {
+                      dateParts[0] = dateParts[0].slice(0, 4);
+                      setDate(dateParts.join("-"));
                     } else {
-                      setDate("");
+                      setDate(inputValue);
                     }
-                  }}
-                  size="sm"
-                />
-                <InputField
-                  label="Numero / Nombre"
-                  placeholder="Numero / Nombre"
-                  name="nroName"
-                  type="text"
-                  value={orderNumber || ""}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  size="sm"
-                />
+                  } else {
+                    setDate("");
+                  }
+                }}
+                size="sm"
+              />
+              <InputField
+                label="Numero / Nombre"
+                placeholder="Numero / Nombre"
+                name="nroName"
+                type="text"
+                value={orderNumber || ""}
+                onChange={(e) => setOrderNumber(e.target.value)}
+                size="sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <InputField
+                label="Proyecto"
+                name="project"
+                type="text"
+                value={selectedProject?.name || ""}
+                onChange={() => {}}
+                disabled
+                size="sm"
+              />
+            </div>
+            <div>
+              <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
+                <span className="font-sm text-gray-900">Insumo</span>
+                <span className="font-sm text-gray-900">Cantidad</span>
+                <div></div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <InputField
-                  label="Proyecto"
-                  name="project"
-                  type="text"
-                  value={selectedProject?.name || ""}
-                  onChange={() => {}}
-                  disabled
-                  size="sm"
-                />
-              </div>
-              <div>
-                <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
-                  <span className="font-sm text-gray-900">Insumo</span>
-                  <span className="font-sm text-gray-900">Cantidad</span>
-                  <div></div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
-                  {items.map((item, i) => (
-                    <div
-                      key={i}
-                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                    >
-                      <div className="sm:col-span-1">
-                        <SelectField
-                          label=""
-                          name={`item-${i}`}
-                          options={supplies}
-                          value={item.item}
-                          onChange={(e) =>
-                            handleItemChange(i, "item", e.target.value)
-                          }
-                          size="sm"
-                        />
-                      </div>
-                      <div className="sm:col-span-1">
-                        <InputField
-                          label=""
-                          placeholder="Lt/Kg/Bolsas"
-                          name={`quantity${i}`}
-                          type="text"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, ".");
-                            if (/^\d*\.?\d{0,3}$/.test(value)) {
-                              handleItemChange(i, "quantity", value);
-                            }
-                          }}
-                          size="sm"
-                        />
-                      </div>
-                      <div>
-                        <Button
-                          variant="primary"
-                          size="xs"
-                          onClick={() => {
-                            const newItems = [...items];
-                            newItems.splice(i, 1);
-                            setItems(newItems);
-                          }}
-                          className="text-blue-500 hover:underline max-w-fit"
-                        >
-                          <Trash size={12} />
-                        </Button>
-                      </div>
+              <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
+                {items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                  >
+                    <div className="sm:col-span-1">
+                      <SelectField
+                        label=""
+                        name={`item-${i}`}
+                        options={supplies}
+                        value={item.item}
+                        onChange={(e) => handleItemChange(i, "item", e.target.value)}
+                        size="sm"
+                      />
                     </div>
-                  ))}
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => {
-                      setItems([...items, { item: "", quantity: "" }]);
-                    }}
-                    className="max-w-fit"
-                  >
-                    Agregar insumo +
-                  </Button>
-                </div>
-              </div>
-              {errorMessages.length > 0 && (
-                <div
-                  id="alert-2"
-                  className="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50"
-                  role="alert"
-                >
-                  <div>
-                    <ul className="mt-1.5 list-disc list-inside">
-                      {errorMessages.map((msg, index) => (
-                        <li key={index}>{msg}</li>
-                      ))}
-                    </ul>
+                    <div className="sm:col-span-1">
+                      <InputField
+                        label=""
+                        placeholder="Lt/Kg/Bolsas"
+                        name={`quantity${i}`}
+                        type="text"
+                        value={item.quantity}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/,/g, ".");
+                          if (/^\d*\.?\d{0,3}$/.test(value)) {
+                            handleItemChange(i, "quantity", value);
+                          }
+                        }}
+                        size="sm"
+                      />
+                    </div>
+                    <div>
+                      <IconActionButton
+                        label="Eliminar insumo"
+                        icon={<Trash size={14} />}
+                        tone="danger"
+                        onClick={() => {
+                          const newItems = [...items];
+                          newItems.splice(i, 1);
+                          setItems(newItems);
+                        }}
+                      />
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                    data-dismiss-target="#alert-2"
-                    aria-label="Close"
-                    onClick={() => setErrorMessages([])}
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg
-                      className="w-3 h-3"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-              {error && error !== "" && (
-                <div
-                  className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
-                  role="alert"
+                ))}
+                <AppButton
+                  variant="secondary"
+                  size="sm"
+                  iconLeft={<Plus className="h-4 w-4" />}
+                  onClick={() => {
+                    setItems([...items, { item: "", quantity: "" }]);
+                  }}
+                  className="max-w-fit"
                 >
-                  <span className="font-medium">Error!</span> {error}
-                  <button
-                    type="button"
-                    className="ms-auto -mx-1 -my-1 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
-                    aria-label="Close"
-                    onClick={() => setError("")}
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg
-                      className="w-2 h-2"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-              {successMessage && successMessage !== "" && (
-                <div
-                  className="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
-                  role="alert"
-                >
-                  <svg
-                    className="shrink-0 inline w-4 h-4 me-3"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z" />
-                  </svg>
-                  <span className="sr-only">Info</span>
-                  <div>
-                    <span className="font-medium">{successMessage}</span>
-                  </div>
-                  <button
-                    type="button"
-                    className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
-                    data-dismiss-target="#alert-3"
-                    aria-label="Close"
-                    onClick={() => setSuccessMessage("")}
-                  >
-                    <span className="sr-only">Close</span>
-                    <svg
-                      className="w-3 h-3"
-                      aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 14 14"
-                    >
-                      <path
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </form>
-            <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={() => setDrawerOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  variant="primary"
-                  className="text-base font-medium"
-                  onClick={handlePreSave}
-                  disabled={processing || processingCreation}
-                >
-                  Guardar
-                </Button>
+                  Agregar Insumo
+                </AppButton>
               </div>
             </div>
-          </>
-        )}
-      </div>
-    </Drawer>
+            {errorMessages.length > 0 && (
+              <div
+                id="alert-2"
+                className="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50"
+                role="alert"
+              >
+                <div>
+                  <ul className="mt-1.5 list-disc list-inside">
+                    {errorMessages.map((msg, index) => (
+                      <li key={index}>{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+                <button
+                  type="button"
+                  className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
+                  data-dismiss-target="#alert-2"
+                  aria-label="Close"
+                  onClick={() => setErrorMessages([])}
+                >
+                  <span className="sr-only">Close</span>
+                  <svg
+                    className="w-3 h-3"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 14 14"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
+            {error && error !== "" && (
+              <div
+                className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+                role="alert"
+              >
+                <span className="font-medium">Error!</span> {error}
+                <button
+                  type="button"
+                  className="ms-auto -mx-1 -my-1 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
+                  aria-label="Close"
+                  onClick={() => setError("")}
+                >
+                  <span className="sr-only">Close</span>
+                  <svg
+                    className="w-2 h-2"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 14 14"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
+            {successMessage && successMessage !== "" && (
+              <div
+                className="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
+                role="alert"
+              >
+                <svg
+                  className="shrink-0 inline w-4 h-4 me-3"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z" />
+                </svg>
+                <span className="sr-only">Info</span>
+                <div>
+                  <span className="font-medium">{successMessage}</span>
+                </div>
+                <button
+                  type="button"
+                  className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
+                  data-dismiss-target="#alert-3"
+                  aria-label="Close"
+                  onClick={() => setSuccessMessage("")}
+                >
+                  <span className="sr-only">Close</span>
+                  <svg
+                    className="w-3 h-3"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 14 14"
+                  >
+                    <path
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </form>
+        </>
+      )}
+    </DrawerShell>
   );
 }

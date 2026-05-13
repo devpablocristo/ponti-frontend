@@ -80,7 +80,7 @@ export function EditableTonsCell({
       <span className="w-full truncate pr-2 text-right">{editValue}</span>
       <button
         type="button"
-        className="flex min-h-6 min-w-6 items-center p-1 text-blue-600 hover:text-blue-800"
+        className="app-action-button-icon"
         onClick={() => setEditing(true)}
         aria-label="Editar toneladas"
       >

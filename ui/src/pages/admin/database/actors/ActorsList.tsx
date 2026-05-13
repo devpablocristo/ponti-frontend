@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Download, Plus, Upload, Users } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
@@ -182,7 +181,6 @@ const columns: Column<Actor>[] = [
 ];
 
 export default function ActorsList({ rolePreset }: ActorsListProps) {
-  const navigate = useNavigate();
   const [selectedActorId, setSelectedActorId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<ActorRole | "">(rolePreset ?? "");
   const [selectedKind, setSelectedKind] = useState<ActorKind | "">("");
@@ -345,7 +343,8 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
               const status = (option?.id as "active" | "archived" | undefined) ?? "active";
               setSelectedStatus(status);
               if (status === "archived") {
-                navigate("/admin/database/actors/archived");
+                setArchivedDrawerOpen(true);
+                setSelectedStatus("active");
               }
             },
             allLabel: "Activos",
@@ -355,7 +354,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         actions={[
           {
             label: "Importar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: ".csv,text/csv",
@@ -363,7 +362,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
           },
           {
             label: "Exportar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: handleExport,

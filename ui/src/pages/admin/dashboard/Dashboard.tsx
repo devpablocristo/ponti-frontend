@@ -1,7 +1,8 @@
 import { useCallback, useEffect } from "react";
-import { ArrowUp, Hourglass, Wallet } from "lucide-react";
+import { ArrowUp, Hourglass, Upload, Wallet } from "lucide-react";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { EmptyState } from "../../../components/feedback/EmptyState";
 import { usePDF } from "react-to-pdf";
 
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
@@ -167,6 +168,9 @@ export function Dashboard() {
   });
   const selectedCampaign =
     campaigns.find((campaign) => campaign.id === selectedCampaignId);
+  const hasActiveFilters = Boolean(
+    selectedCustomer?.id || projectId || selectedCampaignId || selectedField?.id
+  );
   const selectedFilters = [
     {
       label: "Cliente",
@@ -224,8 +228,11 @@ export function Dashboard() {
   }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
   useEffect(() => {
+    if (!hasActiveFilters) return;
+
     getDashboardInfo(buildQueryParams());
   }, [
+    hasActiveFilters,
     selectedCustomer,
     projectId,
     selectedCampaignId,
@@ -241,19 +248,28 @@ export function Dashboard() {
         actions={[
           {
             label: "Exportar PDF",
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: processing || !dashboard,
+            disabled: processing || !dashboard || !hasActiveFilters,
             onClick: toPDF,
           },
         ]}
       />
 
-      {processing && (
+      {!hasActiveFilters && (
+        <EmptyState
+          className="mt-10 rounded-xl border border-dashed border-slate-300 bg-white"
+          title="Seleccioná filtros para ver el dashboard"
+          description="El dashboard no carga datos globales automáticamente. Elegí cliente, proyecto, campaña o campo para consultar métricas."
+        />
+      )}
+
+      {hasActiveFilters && processing && (
         <InlineSpinner size="lg" containerClassName="flex items-center justify-center h-20" />
       )}
 
-      {error && (
+      {hasActiveFilters && error && (
         <ErrorBanner className="mt-4">
           <div className="flex items-center justify-between gap-3">
             <div>Error al cargar datos del dashboard: {error}</div>
@@ -269,9 +285,12 @@ export function Dashboard() {
         </ErrorBanner>
       )}
 
-      <DashboardContent dashboard={dashboard} selectedFilters={selectedFilters} />
+      {hasActiveFilters && (
+        <DashboardContent dashboard={dashboard} selectedFilters={selectedFilters} />
+      )}
 
-      <div className="fixed left-[-10000px] top-0">
+      {hasActiveFilters && (
+        <div className="fixed left-[-10000px] top-0">
         <div ref={targetRef} className="w-[1280px] p-6 bg-white">
           <DashboardContent
             dashboard={dashboard}
@@ -279,7 +298,8 @@ export function Dashboard() {
             includeFilters
           />
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

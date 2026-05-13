@@ -547,7 +547,7 @@ export function Products() {
         actions={[
           {
             label: "Importar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             accept: SPREADSHEET_ACCEPT,
@@ -555,7 +555,7 @@ export function Products() {
           },
           {
             label: "Exportar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => handleExport(),

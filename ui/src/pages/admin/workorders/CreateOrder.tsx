@@ -7,7 +7,7 @@ import { Field } from "../../../hooks/useWorkspaceFilters";
 import useLabors from "../../../hooks/useLabors";
 import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
@@ -17,7 +17,7 @@ import useStock from "../../../hooks/useStock";
 import { getUnitName, units } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
-import Drawer from "../../../components/Drawer/Drawer";
+import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
@@ -39,8 +39,7 @@ const emptyItems: WorkOrderItem[] = Array.from({ length: 7 }, () => ({
   dose: "",
 }));
 
-const formatAvailableQty = (value: number) =>
-  value.toFixed(2).replace(/\.?0+$/, "");
+const formatAvailableQty = (value: number) => value.toFixed(2).replace(/\.?0+$/, "");
 
 export default function CreateOrder({
   drawerOpen,
@@ -57,8 +56,7 @@ export default function CreateOrder({
   selectedField: Field | undefined;
   onOrderCreated: () => void;
 }) {
-  const { saveOrder, resultCreation, errorCreation, processingCreation } =
-    useWorkOrders();
+  const { saveOrder, resultCreation, errorCreation, processingCreation } = useWorkOrders();
   const { getProject, selectedProject, processing } = useProjects();
 
   const [error, setError] = useState<string | null>(null);
@@ -77,35 +75,25 @@ export default function CreateOrder({
   const [date, setDate] = useState("");
   const [openCreateSupply, setOpenCreateSupply] = useState(false);
   const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
-  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(
-    null
-  );
+  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(null);
   const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
   const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
-  const [highlightedSupplyIndex, setHighlightedSupplyIndex] = useState<
-    Record<number, number>
-  >({});
+  const [highlightedSupplyIndex, setHighlightedSupplyIndex] = useState<Record<number, number>>({});
   const supplyListRefs = useRef<Record<number, HTMLUListElement | null>>({});
   const typeaheadBufferByRowRef = useRef<Record<number, string>>({});
   const lastTypeaheadAtByRowRef = useRef<Record<number, number>>({});
-  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
-    null
-  );
+  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(null);
   const [splitByInvestor, setSplitByInvestor] = useState(false);
   const [investorSplits, setInvestorSplits] = useState<InvestorSplit[]>([
     { investorId: null, percentage: "100" },
   ]);
   const [processingSplit, setProcessingSplit] = useState(false);
-  const [investors, setInvestors] = useState<{ id: number; name: string }[]>(
-    []
-  );
+  const [investors, setInvestors] = useState<{ id: number; name: string }[]>([]);
 
   const [items, setItems] = useState<WorkOrderItem[]>(() =>
     emptyItems.map((item) => ({ ...item }))
   );
-  const [preciseDoseByRow, setPreciseDoseByRow] = useState<Record<number, number>>(
-    {}
-  );
+  const [preciseDoseByRow, setPreciseDoseByRow] = useState<Record<number, number>>({});
 
   function CreateSupplyInline({
     projectId,
@@ -154,112 +142,120 @@ export default function CreateOrder({
           <SuccessBanner size="sm">
             <div className="flex items-center justify-between">
               <span>{success}</span>
-              <Button size="xs" variant="primary" onClick={() => {
-                setSuccess(null);
-                onCreated(normalizedName);
-              }}>OK</Button>
+              <Button
+                size="xs"
+                variant="primary"
+                onClick={() => {
+                  setSuccess(null);
+                  onCreated(normalizedName);
+                }}
+              >
+                OK
+              </Button>
             </div>
           </SuccessBanner>
         )}
 
-        {!success && <>
-          {error && <ErrorBanner message={error} size="sm" />}
-          <InputField
-            label="Nombre del insumo"
-            name="suplyName"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            size="sm"
-          />
-
-          <SelectField
-            label="Unidad"
-            name="unit"
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-            options={units}
-            size="sm"
-          />
-
-          <InputField
-            label="Precio"
-            name="supplyPrice"
-            value={price}
-            onChange={(e) => {
-              const value = e.target.value.replace(/,/g, ".");
-              if (/^\d*\.?\d{0,2}$/.test(value)) {
-                setPrice(value);
-              }
-            }}
-            size="sm"
-          />
-
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-            <Checkbox
-              tone="form"
-              checked={isPartialPrice}
-              onChange={(e) => setIsPartialPrice(e.target.checked)}
+        {!success && (
+          <>
+            {error && <ErrorBanner message={error} size="sm" />}
+            <InputField
+              label="Nombre del insumo"
+              name="suplyName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              size="sm"
             />
-            Precio parcial
-          </label>
 
-          <SelectField
-            label="Rubro"
-            name="category"
-            value={category}
-            onChange={(e) => {
-              const selectedCategory = categories.find(
-                (c: { id: number; type_id?: number }) => c.id === Number(e.target.value)
-              );
-              setCategory(e.target.value);
-              setType(selectedCategory?.type_id?.toString() || "");
-            }}
-            options={categories}
-            size="sm"
-          />
+            <SelectField
+              label="Unidad"
+              name="unit"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              options={units}
+              size="sm"
+            />
 
-          <SelectField
-            label="Tipo / Clase"
-            name="type"
-            value={type}
-            options={types}
-            disabled
-            onChange={() => { }}
-            size="sm"
-          />
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="primary" onClick={onCancel} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              disabled={saving}
-              onClick={() => {
-                if (!projectId || !name || !unit || !price || !category || !type) {
-                  return;
+            <InputField
+              label="Precio"
+              name="supplyPrice"
+              value={price}
+              onChange={(e) => {
+                const value = e.target.value.replace(/,/g, ".");
+                if (/^\d*\.?\d{0,2}$/.test(value)) {
+                  setPrice(value);
                 }
-                setSaving(true);
-                setSuccess(null);
-                saveSupplies(
-                  [
-                    {
-                      name: normalizedName,
-                      unit: Number(unit),
-                      price: Number(price),
-                      category: Number(category),
-                      type: Number(type),
-                      is_partial_price: isPartialPrice,
-                    },
-                  ],
-                  projectId
-                );
               }}
-            >
-              {saving ? "Guardando..." : "Guardar insumo"}
-            </Button>
-          </div>
-        </>}
+              size="sm"
+            />
+
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <Checkbox
+                tone="form"
+                checked={isPartialPrice}
+                onChange={(e) => setIsPartialPrice(e.target.checked)}
+              />
+              Precio parcial
+            </label>
+
+            <SelectField
+              label="Rubro"
+              name="category"
+              value={category}
+              onChange={(e) => {
+                const selectedCategory = categories.find(
+                  (c: { id: number; type_id?: number }) => c.id === Number(e.target.value)
+                );
+                setCategory(e.target.value);
+                setType(selectedCategory?.type_id?.toString() || "");
+              }}
+              options={categories}
+              size="sm"
+            />
+
+            <SelectField
+              label="Tipo / Clase"
+              name="type"
+              value={type}
+              options={types}
+              disabled
+              onChange={() => {}}
+              size="sm"
+            />
+
+            <div className="drawer-footer-actions justify-end pt-4">
+              <Button variant="secondary" onClick={onCancel} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                disabled={saving}
+                onClick={() => {
+                  if (!projectId || !name || !unit || !price || !category || !type) {
+                    return;
+                  }
+                  setSaving(true);
+                  setSuccess(null);
+                  saveSupplies(
+                    [
+                      {
+                        name: normalizedName,
+                        unit: Number(unit),
+                        price: Number(price),
+                        category: Number(category),
+                        type: Number(type),
+                        is_partial_price: isPartialPrice,
+                      },
+                    ],
+                    projectId
+                  );
+                }}
+              >
+                {saving ? "Guardando..." : "Guardar Insumo"}
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -357,9 +353,7 @@ export default function CreateOrder({
     if (openSupplyDropdown === null) return;
 
     const handlePointerDown = (event: MouseEvent) => {
-      const row = document.querySelector(
-        `[data-supply-row="${openSupplyDropdown}"]`
-      );
+      const row = document.querySelector(`[data-supply-row="${openSupplyDropdown}"]`);
       const target = event.target as Node;
       if (row && !row.contains(target)) {
         setOpenSupplyDropdown(null);
@@ -375,23 +369,17 @@ export default function CreateOrder({
     const projectInvestors = Array.isArray(selectedProject.investors)
       ? selectedProject.investors
       : [];
-    const projectFields = Array.isArray(selectedProject.fields)
-      ? selectedProject.fields
-      : [];
+    const projectFields = Array.isArray(selectedProject.fields) ? selectedProject.fields : [];
 
     setInvestors(
-      projectInvestors
-        .filter((i) => i.id !== null)
-        .map((i) => ({ id: i.id!, name: i.name }))
+      projectInvestors.filter((i) => i.id !== null).map((i) => ({ id: i.id!, name: i.name }))
     );
 
     if (!selectedField) {
       setLots([]);
       return;
     }
-    const foundField = projectFields.find(
-      (f) => String(f.id) === String(selectedField.id)
-    );
+    const foundField = projectFields.find((f) => String(f.id) === String(selectedField.id));
 
     if (foundField) {
       setField({
@@ -406,12 +394,7 @@ export default function CreateOrder({
   }, [selectedProject, selectedField, projectId]);
 
   useEffect(() => {
-    if (
-      orderToDuplicate &&
-      investors.length > 0 &&
-      labors.length > 0 &&
-      selectedProject
-    ) {
+    if (orderToDuplicate && investors.length > 0 && labors.length > 0 && selectedProject) {
       setSurface(orderToDuplicate.effective_area.toString());
 
       const isoDate = orderToDuplicate.date;
@@ -440,9 +423,7 @@ export default function CreateOrder({
       setLabor(laborObj || null);
 
       if (orderToDuplicate.field_id) {
-        const projectFields = Array.isArray(selectedProject.fields)
-          ? selectedProject.fields
-          : [];
+        const projectFields = Array.isArray(selectedProject.fields) ? selectedProject.fields : [];
         const foundField = projectFields.find(
           (f) => String(f.id) === String(orderToDuplicate.field_id)
         );
@@ -459,7 +440,9 @@ export default function CreateOrder({
       setContractor(orderToDuplicate.contractor);
       setObservations(orderToDuplicate.observations);
 
-      const loadedItems: WorkOrderItem[] = (Array.isArray(orderToDuplicate.items) ? orderToDuplicate.items : []).map((item) => ({
+      const loadedItems: WorkOrderItem[] = (
+        Array.isArray(orderToDuplicate.items) ? orderToDuplicate.items : []
+      ).map((item) => ({
         itemId: item.supply_id,
         totalUsed: item.total_used.toString(),
         dose: item.final_dose.toString(),
@@ -483,17 +466,26 @@ export default function CreateOrder({
       .filter((s) => Number.isFinite(s.percentage) && s.percentage > 0);
 
     if (validSplits.length === 0) {
-      return { error: "Debe ingresar al menos un inversor con porcentaje.", splits: [] as { investorId: number; percentage: number }[] };
+      return {
+        error: "Debe ingresar al menos un inversor con porcentaje.",
+        splits: [] as { investorId: number; percentage: number }[],
+      };
     }
 
     const unique = new Set(validSplits.map((s) => s.investorId));
     if (unique.size !== validSplits.length) {
-      return { error: "No se puede repetir el mismo inversor en la división.", splits: [] as { investorId: number; percentage: number }[] };
+      return {
+        error: "No se puede repetir el mismo inversor en la división.",
+        splits: [] as { investorId: number; percentage: number }[],
+      };
     }
 
     const totalPct = validSplits.reduce((acc, s) => acc + s.percentage, 0);
     if (Math.abs(totalPct - 100) > 0.001) {
-      return { error: "La suma de porcentajes debe ser 100%.", splits: [] as { investorId: number; percentage: number }[] };
+      return {
+        error: "La suma de porcentajes debe ser 100%.",
+        splits: [] as { investorId: number; percentage: number }[],
+      };
     }
 
     return { error: null, splits: validSplits };
@@ -512,11 +504,7 @@ export default function CreateOrder({
         if (item.totalUsed && item.totalUsed !== "") {
           const preciseDose = Number(item.totalUsed) / Number(surface);
           setPreciseDoseByRow((prev) => ({ ...prev, [i]: preciseDose }));
-          handleItemChange(
-            i,
-            "dose",
-            latestFormatDoseRef.current(preciseDose)
-          );
+          handleItemChange(i, "dose", latestFormatDoseRef.current(preciseDose));
         }
       });
     }
@@ -527,9 +515,7 @@ export default function CreateOrder({
     field: K,
     value: WorkOrderItem[K]
   ) => {
-    setItems((prev) =>
-      prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
-    );
+    setItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
   };
 
   const roundTo = useCallback((value: number, decimals: number) => {
@@ -538,7 +524,10 @@ export default function CreateOrder({
   }, []);
 
   const formatDose = useCallback(
-    (value: number) => roundTo(value, 3).toFixed(3).replace(/\.?0+$/, ""),
+    (value: number) =>
+      roundTo(value, 3)
+        .toFixed(3)
+        .replace(/\.?0+$/, ""),
     [roundTo]
   );
 
@@ -546,7 +535,6 @@ export default function CreateOrder({
     latestFormatDoseRef.current = formatDose;
   }, [formatDose]);
 
-  
   const formatTotalUsedFromDose = (value: number) => roundTo(value, 0).toFixed(2);
 
   const scrollHighlightedSupplyIntoView = (rowIndex: number, optionIndex: number) => {
@@ -577,14 +565,8 @@ export default function CreateOrder({
     const findByPrefix = (prefix: string, startIndex = 0) => {
       if (!prefix) return null;
       const normalizedPrefix = prefix.toLowerCase();
-      const ordered = [
-        ...safeSupplies.slice(startIndex),
-        ...safeSupplies.slice(0, startIndex),
-      ];
-      return (
-        ordered.find((s) => s.name.toLowerCase().startsWith(normalizedPrefix)) ||
-        null
-      );
+      const ordered = [...safeSupplies.slice(startIndex), ...safeSupplies.slice(0, startIndex)];
+      return ordered.find((s) => s.name.toLowerCase().startsWith(normalizedPrefix)) || null;
     };
 
     const shouldCycleSameLetter =
@@ -599,9 +581,7 @@ export default function CreateOrder({
       matchedSupply = findByPrefix(lowerKey, currentIndex + 1);
       typeaheadBufferByRowRef.current[rowIndex] = lowerKey;
     } else {
-      const nextBuffer = withinWindow
-        ? `${previousBuffer}${lowerKey}`
-        : lowerKey;
+      const nextBuffer = withinWindow ? `${previousBuffer}${lowerKey}` : lowerKey;
 
       matchedSupply = findByPrefix(nextBuffer);
 
@@ -728,647 +708,603 @@ export default function CreateOrder({
 
   return (
     <>
-    <EntityFormDrawer
-      open={drawerOpen}
-      onClose={() => setDrawerOpen(false)}
-      title="Nueva Orden de Trabajo"
-      subtitle={selectedProject?.name}
-      processing={processing || processingCreation || processingSplit}
-      onSubmit={handleSaveOrder}
-    >
-      <>
-              <div className="grid grid-cols-4 gap-4">
-                <InputField
-                  label="Nro. Orden"
-                  placeholder="000-001"
-                  name="order"
-                  type="text"
-                  value={orderNumber || ""}
-                  onChange={(e) => setOrderNumber(e.target.value)}
-                  size="sm"
-                />
-                <InputField
-                  label="Fecha"
-                  name="date"
-                  type="date"
-                  value={date || ""}
-                  max={new Date().toISOString().split("T")[0]}
-                  onChange={(e) => {
-                    const inputValue = e.target.value;
-                    if (inputValue) {
-                      const dateParts = inputValue.split("-");
-                      if (dateParts[0] && dateParts[0].length > 4) {
-                        dateParts[0] = dateParts[0].slice(0, 4);
-                        const formattedDate = dateParts.join("-");
-                        setDate(formattedDate);
-                      } else {
-                        setDate(inputValue);
-                      }
+      <EntityFormDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="Nueva Orden de Trabajo"
+        subtitle={selectedProject?.name}
+        processing={processing || processingCreation || processingSplit}
+        onSubmit={handleSaveOrder}
+      >
+        <>
+          <section className="drawer-section">
+            <div className="grid grid-cols-4 gap-4">
+              <InputField
+                label="Nro. Orden"
+                placeholder="000-001"
+                name="order"
+                type="text"
+                value={orderNumber || ""}
+                onChange={(e) => setOrderNumber(e.target.value)}
+                size="sm"
+              />
+              <InputField
+                label="Fecha"
+                name="date"
+                type="date"
+                value={date || ""}
+                max={new Date().toISOString().split("T")[0]}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  if (inputValue) {
+                    const dateParts = inputValue.split("-");
+                    if (dateParts[0] && dateParts[0].length > 4) {
+                      dateParts[0] = dateParts[0].slice(0, 4);
+                      const formattedDate = dateParts.join("-");
+                      setDate(formattedDate);
                     } else {
-                      setDate("");
+                      setDate(inputValue);
                     }
-                  }}
-                  size="sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <SelectField
-                  label="Campo"
-                  name="field"
-                  options={
-                    selectedProject
-                      ? (Array.isArray(selectedProject.fields) ? selectedProject.fields : []).map((field) => ({
-                        id: field.id,
-                        name: field.name,
-                      }))
-                      : []
+                  } else {
+                    setDate("");
                   }
-                  value={field?.id?.toString() || ""}
-                  onChange={(e) => {
-                    const selectedField = (Array.isArray(selectedProject?.fields) ? selectedProject.fields : []).find(
-                      (f) => f.id === Number(e.target.value)
-                    );
-                    if (selectedField) {
-                      setField({
-                        id: selectedField.id,
-                        name: selectedField.name,
-                        project_id: projectId || 0,
-                      });
-                      setLots(Array.isArray(selectedField.lots) ? selectedField.lots : []);
-                    }
-                  }}
-                  disabled={!projectId || processing}
-                  size="sm"
-                />
-                <SelectField
-                  label="Lote"
-                  name="lot"
-                  options={lots.map((lot) => ({
-                    id: lot.id,
-                    name: lot.name,
-                  }))}
-                  value={lot?.id?.toString() || ""}
-                  onChange={(e) => {
-                    const selectedLot = lots.find(
-                      (l) => l.id === Number(e.target.value)
-                    );
-                    if (selectedLot) {
-                      setLot(selectedLot);
-                    }
-                  }}
-                  disabled={!projectId || !field || processing}
-                  size="sm"
-                />
+                }}
+                size="sm"
+              />
+            </div>
 
-                <div>
-                  <InputField
-                    label="Cultivo Actual"
-                    placeholder="Selecciona el lote"
-                    name="crop"
-                    type="text"
-                    value={lot?.current_crop_name || ""}
-                    onChange={() => { }}
-                    disabled
-                    size="sm"
-                  />
-                </div>
-              </div>
+            <div className="grid grid-cols-3 gap-4">
+              <SelectField
+                label="Campo"
+                name="field"
+                options={
+                  selectedProject
+                    ? (Array.isArray(selectedProject.fields) ? selectedProject.fields : []).map(
+                        (field) => ({
+                          id: field.id,
+                          name: field.name,
+                        })
+                      )
+                    : []
+                }
+                value={field?.id?.toString() || ""}
+                onChange={(e) => {
+                  const selectedField = (
+                    Array.isArray(selectedProject?.fields) ? selectedProject.fields : []
+                  ).find((f) => f.id === Number(e.target.value));
+                  if (selectedField) {
+                    setField({
+                      id: selectedField.id,
+                      name: selectedField.name,
+                      project_id: projectId || 0,
+                    });
+                    setLots(Array.isArray(selectedField.lots) ? selectedField.lots : []);
+                  }
+                }}
+                disabled={!projectId || processing}
+                size="sm"
+              />
+              <SelectField
+                label="Lote"
+                name="lot"
+                options={lots.map((lot) => ({
+                  id: lot.id,
+                  name: lot.name,
+                }))}
+                value={lot?.id?.toString() || ""}
+                onChange={(e) => {
+                  const selectedLot = lots.find((l) => l.id === Number(e.target.value));
+                  if (selectedLot) {
+                    setLot(selectedLot);
+                  }
+                }}
+                disabled={!projectId || !field || processing}
+                size="sm"
+              />
 
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <SelectField
-                    label="Labor"
-                    placeholder="Selecciona el labor"
-                    name="labor"
-                    options={labors}
-                    value={labor?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedLabor = labors.find(
-                        (l) => l.id === Number(e.target.value)
-                      );
-                      if (selectedLabor) {
-                        setLabor(selectedLabor);
-                        setContractor(selectedLabor.contractor_name);
-                      }
-                    }}
-                    size="sm"
-                  />
-                </div>
-                <div>
-                  <InputField
-                    label="Superficie realizada"
-                    placeholder="Ingresar superficie"
-                    name="surface"
-                    type="text"
-                    value={surface}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/,/g, ".");
-                      if (/^\d*\.?\d{0,2}$/.test(value)) {
-                        setSurface(value);
-                      }
-                    }}
-                    size="sm"
-                  />
-                </div>
+              <div>
                 <InputField
-                  label="Contratista"
-                  placeholder="Selecciona el labor"
-                  name="contractor"
+                  label="Cultivo Actual"
+                  placeholder="Selecciona el lote"
+                  name="crop"
                   type="text"
-                  value={contractor}
+                  value={lot?.current_crop_name || ""}
+                  onChange={() => {}}
                   disabled
-                  onChange={() => { }}
                   size="sm"
                 />
               </div>
+            </div>
 
-              <div className="rounded-lg border border-gray-200 p-4 bg-gray-50/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-700">Inversor del labor</span>
-                  <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-                    <Checkbox
-                      tone="form"
-                      checked={splitByInvestor}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setSplitByInvestor(checked);
-                        if (!checked && investorSplits[0]?.investorId) {
-                          const selectedInvestor = investors.find(
-                            (i) => i.id === investorSplits[0].investorId
-                          );
-                          setInvestor(selectedInvestor || null);
-                        }
-                      }}
-                    />
-                    Dividir aporte
-                  </label>
-                </div>
-                {!splitByInvestor ? (
-                  <div className="max-w-sm">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <SelectField
+                  label="Labor"
+                  placeholder="Selecciona el labor"
+                  name="labor"
+                  options={labors}
+                  value={labor?.id?.toString() || ""}
+                  onChange={(e) => {
+                    const selectedLabor = labors.find((l) => l.id === Number(e.target.value));
+                    if (selectedLabor) {
+                      setLabor(selectedLabor);
+                      setContractor(selectedLabor.contractor_name);
+                    }
+                  }}
+                  size="sm"
+                />
+              </div>
+              <div>
+                <InputField
+                  label="Superficie realizada"
+                  placeholder="Ingresar superficie"
+                  name="surface"
+                  type="text"
+                  value={surface}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/,/g, ".");
+                    if (/^\d*\.?\d{0,2}$/.test(value)) {
+                      setSurface(value);
+                    }
+                  }}
+                  size="sm"
+                />
+              </div>
+              <InputField
+                label="Contratista"
+                placeholder="Selecciona el labor"
+                name="contractor"
+                type="text"
+                value={contractor}
+                disabled
+                onChange={() => {}}
+                size="sm"
+              />
+            </div>
+          </section>
+
+          <section className="drawer-section">
+            <div className="flex items-center justify-between">
+              <span className="drawer-section-title">Inversor del labor</span>
+              <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <Checkbox
+                  tone="form"
+                  checked={splitByInvestor}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setSplitByInvestor(checked);
+                    if (!checked && investorSplits[0]?.investorId) {
+                      const selectedInvestor = investors.find(
+                        (i) => i.id === investorSplits[0].investorId
+                      );
+                      setInvestor(selectedInvestor || null);
+                    }
+                  }}
+                />
+                Dividir aporte
+              </label>
+            </div>
+            {!splitByInvestor ? (
+              <div className="max-w-sm">
+                <SelectField
+                  label=""
+                  placeholder="Selecciona el inversor"
+                  name="investor"
+                  options={investors}
+                  value={investor?.id?.toString() || ""}
+                  onChange={(e) => {
+                    const selectedInvestor = investors.find((i) => i.id === Number(e.target.value));
+                    if (selectedInvestor) {
+                      setInvestor(selectedInvestor);
+                    }
+                  }}
+                  size="sm"
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {investorSplits.map((split, idx) => (
+                  <div key={idx} className="grid grid-cols-[1fr_120px_auto] gap-3 items-center">
                     <SelectField
                       label=""
-                      placeholder="Selecciona el inversor"
-                      name="investor"
+                      name={`split-investor-${idx}`}
                       options={investors}
-                      value={investor?.id?.toString() || ""}
+                      value={split.investorId?.toString() || ""}
                       onChange={(e) => {
-                        const selectedInvestor = investors.find(
-                          (i) => i.id === Number(e.target.value)
+                        const value = e.target.value ? Number(e.target.value) : null;
+                        setInvestorSplits((prev) =>
+                          prev.map((row, i) => (i === idx ? { ...row, investorId: value } : row))
                         );
-                        if (selectedInvestor) {
-                          setInvestor(selectedInvestor);
-                        }
                       }}
                       size="sm"
                     />
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {investorSplits.map((split, idx) => (
-                      <div key={idx} className="grid grid-cols-[1fr_120px_auto] gap-3 items-center">
-                        <SelectField
-                          label=""
-                          name={`split-investor-${idx}`}
-                          options={investors}
-                          value={split.investorId?.toString() || ""}
-                          onChange={(e) => {
-                            const value = e.target.value ? Number(e.target.value) : null;
-                            setInvestorSplits((prev) =>
-                              prev.map((row, i) =>
-                                i === idx ? { ...row, investorId: value } : row
-                              )
-                            );
-                          }}
-                          size="sm"
-                        />
-                        <InputField
-                          label=""
-                          name={`split-pct-${idx}`}
-                          type="text"
-                          value={split.percentage}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(",", ".");
-                            if (/^\d*\.?\d{0,2}$/.test(value)) {
-                              setInvestorSplits((prev) =>
-                                prev.map((row, i) =>
-                                  i === idx ? { ...row, percentage: value } : row
-                                )
-                              );
-                            }
-                          }}
-                          placeholder="%"
-                          size="sm"
-                        />
-                        <Button
-                          variant="primary"
-                          size="xs"
-                          onClick={() => {
-                            setInvestorSplits((prev) =>
-                              prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)
-                            );
-                          }}
-                        >
-                          Quitar
-                        </Button>
-                      </div>
-                    ))}
-                    <div className="flex justify-between items-center pt-1">
-                      <Button
-                        variant="primary"
-                        size="xs"
-                        onClick={() =>
-                          setInvestorSplits((prev) => [
-                            ...prev,
-                            { investorId: null, percentage: "" },
-                          ])
+                    <InputField
+                      label=""
+                      name={`split-pct-${idx}`}
+                      type="text"
+                      value={split.percentage}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(",", ".");
+                        if (/^\d*\.?\d{0,2}$/.test(value)) {
+                          setInvestorSplits((prev) =>
+                            prev.map((row, i) => (i === idx ? { ...row, percentage: value } : row))
+                          );
                         }
-                      >
-                        + Inversor
-                      </Button>
-                      {(() => {
-                        const total = investorSplits.reduce(
-                          (acc, s) => acc + (Number(s.percentage) || 0),
-                          0
+                      }}
+                      placeholder="%"
+                      size="sm"
+                    />
+                    <Button
+                      variant="danger"
+                      size="xs"
+                      iconLeft={<Trash2 className="h-3.5 w-3.5" />}
+                      onClick={() => {
+                        setInvestorSplits((prev) =>
+                          prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)
                         );
-                        return (
-                          <span className={`text-sm font-medium ${total === 100 ? "text-green-600" : "text-red-600"}`}>
-                            Total: {total}%
-                            {total !== 100 && <span className="ml-1 text-xs">(debe ser 100%)</span>}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Tabla de insumos */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-gray-900">
-                    Carga de insumos
-                  </span>
-                  <Button
-                    variant="primary"
-                    size="xs"
-                    onClick={() => {
-                      setItemIndexToUpdate(null);
-                      setOpenCreateSupply(true);
-                    }}
-                    className="max-w-fit"
-                  >
-                    + Crear Nuevo Insumo
-                  </Button>
-                </div>
-                <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4 mb-2">
-                  <span className="font-sm text-gray-900">Insumo</span>
-                  <span className="font-sm text-gray-900">Total utilizado</span>
-                  <span className="font-sm text-gray-900">Dosis final</span>
-                  <div></div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4">
-                  {items.map((item, i) => {
-                    const filteredSupplies = availableSupplies.filter(
-                      (s) =>
-                        !supplySearch[i] ||
-                        s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
-                    );
-                    const highlightedIndex = highlightedSupplyIndex[i] ?? 0;
-                    const selectedSupply = availableSupplies.find(
-                      (s) => s.id === Number(item.itemId)
-                    );
-
-                    return (
-                    <div
-                      key={i}
-                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                      }}
                     >
-                      <div className="sm:col-span-1 relative" data-supply-row={i}>
-                        <div
-                          role="button"
-                          tabIndex={0}
-                          aria-haspopup="listbox"
-                          aria-expanded={openSupplyDropdown === i}
-                          className="input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between"
-                          onClick={() => {
+                      Quitar
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center pt-1">
+                  <Button
+                    variant="secondary"
+                    size="xs"
+                    iconLeft={<Plus className="h-3.5 w-3.5" />}
+                    onClick={() =>
+                      setInvestorSplits((prev) => [...prev, { investorId: null, percentage: "" }])
+                    }
+                  >
+                    Agregar Inversor
+                  </Button>
+                  {(() => {
+                    const total = investorSplits.reduce(
+                      (acc, s) => acc + (Number(s.percentage) || 0),
+                      0
+                    );
+                    return (
+                      <span
+                        className={`text-sm font-medium ${total === 100 ? "text-green-600" : "text-red-600"}`}
+                      >
+                        Total: {total}%
+                        {total !== 100 && <span className="ml-1 text-xs">(debe ser 100%)</span>}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Tabla de insumos */}
+          <section className="drawer-section">
+            <div className="drawer-section-header">
+              <span className="drawer-section-title">Carga de insumos</span>
+              <Button
+                variant="light"
+                size="xs"
+                iconLeft={<Plus className="h-3.5 w-3.5" />}
+                onClick={() => {
+                  setItemIndexToUpdate(null);
+                  setOpenCreateSupply(true);
+                }}
+              >
+                Crear Nuevo Insumo
+              </Button>
+            </div>
+            <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4 mb-2">
+              <span className="font-sm text-gray-900">Insumo</span>
+              <span className="font-sm text-gray-900">Total utilizado</span>
+              <span className="font-sm text-gray-900">Dosis final</span>
+              <div></div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4">
+              {items.map((item, i) => {
+                const filteredSupplies = availableSupplies.filter(
+                  (s) =>
+                    !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
+                );
+                const highlightedIndex = highlightedSupplyIndex[i] ?? 0;
+                const selectedSupply = availableSupplies.find((s) => s.id === Number(item.itemId));
+
+                return (
+                  <div
+                    key={i}
+                    className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                  >
+                    <div className="sm:col-span-1 relative" data-supply-row={i}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        aria-haspopup="listbox"
+                        aria-expanded={openSupplyDropdown === i}
+                        className="input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between"
+                        onClick={() => {
+                          const nextOpen = openSupplyDropdown === i ? null : i;
+                          setOpenSupplyDropdown(nextOpen);
+                          if (nextOpen !== null) {
+                            setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
                             const nextOpen = openSupplyDropdown === i ? null : i;
                             setOpenSupplyDropdown(nextOpen);
                             if (nextOpen !== null) {
                               setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
                             }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              const nextOpen = openSupplyDropdown === i ? null : i;
-                              setOpenSupplyDropdown(nextOpen);
-                              if (nextOpen !== null) {
-                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                          }
+                          if (e.key === "Escape" && openSupplyDropdown === i) {
+                            e.preventDefault();
+                            setOpenSupplyDropdown(null);
+                          }
+                          if (
+                            openSupplyDropdown !== i &&
+                            e.key.length === 1 &&
+                            !e.altKey &&
+                            !e.ctrlKey &&
+                            !e.metaKey
+                          ) {
+                            e.preventDefault();
+                            handleSupplyTypeahead(i, e.key, item.itemId);
+                          }
+                        }}
+                      >
+                        {item.itemId ? (
+                          <span className="truncate font-semibold text-gray-900">
+                            {selectedSupply?.name || "Seleccionar..."}
+                            {selectedSupply && (
+                              <span className="ml-1 text-xs text-gray-400 font-normal">
+                                <span
+                                  className={
+                                    selectedSupply.availableQty < 0 ? "text-red-600" : undefined
+                                  }
+                                >
+                                  {formatAvailableQty(selectedSupply.availableQty)}
+                                </span>{" "}
+                                {selectedSupply.availableUnit}
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">Seleccionar...</span>
+                        )}
+                        <ChevronDown size={16} className="text-slate-400 shrink-0" />
+                      </div>
+                      {openSupplyDropdown === i && (
+                        <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
+                          <input
+                            type="text"
+                            placeholder="Buscar insumo..."
+                            className="w-full px-3 py-2 text-sm border-b outline-none"
+                            value={supplySearch[i] || ""}
+                            onChange={(e) => {
+                              setSupplySearch((prev) => ({
+                                ...prev,
+                                [i]: e.target.value,
+                              }));
+                              setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "ArrowDown") {
+                                e.preventDefault();
+                                if (filteredSupplies.length === 0) return;
+                                const nextIndex =
+                                  highlightedIndex < filteredSupplies.length - 1
+                                    ? highlightedIndex + 1
+                                    : 0;
+                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
+                                scrollHighlightedSupplyIntoView(i, nextIndex);
+                                return;
                               }
-                            }
-                            if (e.key === "Escape" && openSupplyDropdown === i) {
-                              e.preventDefault();
-                              setOpenSupplyDropdown(null);
-                            }
-                            if (
-                              openSupplyDropdown !== i &&
-                              e.key.length === 1 &&
-                              !e.altKey &&
-                              !e.ctrlKey &&
-                              !e.metaKey
-                            ) {
-                              e.preventDefault();
-                              handleSupplyTypeahead(i, e.key, item.itemId);
-                            }
-                          }}
-                        >
-                          {item.itemId ? (
-                            <span className="truncate font-semibold text-gray-900">
-                              {selectedSupply?.name || "Seleccionar..."}
-                              {selectedSupply && (
-                                <span className="ml-1 text-xs text-gray-400 font-normal">
-                                  <span
-                                    className={
-                                      selectedSupply.availableQty < 0
-                                        ? "text-red-600"
-                                        : undefined
-                                    }
-                                  >
-                                    {formatAvailableQty(selectedSupply.availableQty)}
-                                  </span>{" "}
-                                  {selectedSupply.availableUnit}
-                                </span>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">Seleccionar...</span>
-                          )}
-                          <ChevronDown size={16} className="text-slate-400 shrink-0" />
-                        </div>
-                        {openSupplyDropdown === i && (
-                          <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
-                            <input
-                              type="text"
-                              placeholder="Buscar insumo..."
-                              className="w-full px-3 py-2 text-sm border-b outline-none"
-                              value={supplySearch[i] || ""}
-                              onChange={(e) => {
-                                setSupplySearch((prev) => ({
-                                  ...prev,
-                                  [i]: e.target.value,
-                                }));
-                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
+                              if (e.key === "ArrowUp") {
+                                e.preventDefault();
+                                if (filteredSupplies.length === 0) return;
+                                const nextIndex =
+                                  highlightedIndex > 0
+                                    ? highlightedIndex - 1
+                                    : filteredSupplies.length - 1;
+                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
+                                scrollHighlightedSupplyIntoView(i, nextIndex);
+                                return;
+                              }
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                const selected = filteredSupplies[highlightedIndex];
+                                if (!selected) return;
+                                handleItemChange(i, "itemId", selected.id);
+                                handleItemChange(i, "dose", "");
+                                handleItemChange(i, "totalUsed", "");
+                                setOpenSupplyDropdown(null);
+                                setSupplySearch((prev) => ({ ...prev, [i]: "" }));
+                                return;
+                              }
+                              if (e.key === "Escape") {
+                                e.preventDefault();
+                                setOpenSupplyDropdown(null);
+                                return;
+                              }
+                              if (e.key === "Tab") {
+                                setOpenSupplyDropdown(null);
+                              }
+                            }}
+                            autoFocus
+                          />
+                          <ul
+                            className="max-h-[200px] overflow-y-auto"
+                            ref={(el) => {
+                              supplyListRefs.current[i] = el;
+                            }}
+                          >
+                            <li
+                              className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleItemChange(i, "itemId", null);
+                                setItemIndexToUpdate(i);
+                                setOpenCreateSupply(true);
+                                setOpenSupplyDropdown(null);
+                                setSupplySearch((prev) => ({ ...prev, [i]: "" }));
                               }}
-                              onKeyDown={(e) => {
-                                if (e.key === "ArrowDown") {
-                                  e.preventDefault();
-                                  if (filteredSupplies.length === 0) return;
-                                  const nextIndex =
-                                    highlightedIndex < filteredSupplies.length - 1
-                                      ? highlightedIndex + 1
-                                      : 0;
-                                  setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
-                                  scrollHighlightedSupplyIntoView(i, nextIndex);
-                                  return;
+                            >
+                              + Crear Nuevo Insumo
+                            </li>
+                            {filteredSupplies.map((s, supplyIdx) => (
+                              <li
+                                key={s.id}
+                                data-supply-option-index={supplyIdx}
+                                className={`px-3 py-2 cursor-pointer font-semibold text-gray-900 ${
+                                  highlightedIndex === supplyIdx
+                                    ? "bg-gray-100"
+                                    : "hover:bg-gray-100"
+                                }`}
+                                onMouseEnter={() =>
+                                  setHighlightedSupplyIndex((prev) => ({
+                                    ...prev,
+                                    [i]: supplyIdx,
+                                  }))
                                 }
-                                if (e.key === "ArrowUp") {
+                                onMouseDown={(e) => {
                                   e.preventDefault();
-                                  if (filteredSupplies.length === 0) return;
-                                  const nextIndex =
-                                    highlightedIndex > 0
-                                      ? highlightedIndex - 1
-                                      : filteredSupplies.length - 1;
-                                  setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
-                                  scrollHighlightedSupplyIntoView(i, nextIndex);
-                                  return;
-                                }
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  const selected = filteredSupplies[highlightedIndex];
-                                  if (!selected) return;
-                                  handleItemChange(i, "itemId", selected.id);
+                                  handleItemChange(i, "itemId", s.id);
                                   handleItemChange(i, "dose", "");
                                   handleItemChange(i, "totalUsed", "");
                                   setOpenSupplyDropdown(null);
                                   setSupplySearch((prev) => ({ ...prev, [i]: "" }));
-                                  return;
-                                }
-                                if (e.key === "Escape") {
-                                  e.preventDefault();
-                                  setOpenSupplyDropdown(null);
-                                  return;
-                                }
-                                if (e.key === "Tab") {
-                                  setOpenSupplyDropdown(null);
-                                }
-                              }}
-                              autoFocus
-                            />
-                            <ul
-                              className="max-h-[200px] overflow-y-auto"
-                              ref={(el) => {
-                                supplyListRefs.current[i] = el;
-                              }}
-                            >
-                              <li
-                                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  handleItemChange(i, "itemId", null);
-                                  setItemIndexToUpdate(i);
-                                  setOpenCreateSupply(true);
-                                  setOpenSupplyDropdown(null);
-                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
                                 }}
                               >
-                                + Crear nuevo insumo
+                                <span>{s.name}</span>
+                                <span className="ml-1 text-xs text-gray-400 font-normal">
+                                  <span className={s.availableQty < 0 ? "text-red-600" : undefined}>
+                                    {formatAvailableQty(s.availableQty)}
+                                  </span>{" "}
+                                  {s.availableUnit}
+                                </span>
                               </li>
-                              {filteredSupplies.map((s, supplyIdx) => (
-                                  <li
-                                    key={s.id}
-                                    data-supply-option-index={supplyIdx}
-                                    className={`px-3 py-2 cursor-pointer font-semibold text-gray-900 ${
-                                      highlightedIndex === supplyIdx
-                                        ? "bg-gray-100"
-                                        : "hover:bg-gray-100"
-                                    }`}
-                                    onMouseEnter={() =>
-                                      setHighlightedSupplyIndex((prev) => ({
-                                        ...prev,
-                                        [i]: supplyIdx,
-                                      }))
-                                    }
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      handleItemChange(i, "itemId", s.id);
-                                      handleItemChange(i, "dose", "");
-                                      handleItemChange(i, "totalUsed", "");
-                                      setOpenSupplyDropdown(null);
-                                      setSupplySearch((prev) => ({ ...prev, [i]: "" }));
-                                    }}
-                                  >
-                                    <span>{s.name}</span>
-                                    <span className="ml-1 text-xs text-gray-400 font-normal">
-                                      <span
-                                        className={s.availableQty < 0 ? "text-red-600" : undefined}
-                                      >
-                                        {formatAvailableQty(s.availableQty)}
-                                      </span>{" "}
-                                      {s.availableUnit}
-                                    </span>
-                                  </li>
-                                ))}
-                              {filteredSupplies.length === 0 && (
-                                <li className="px-3 py-2 text-sm text-gray-400">
-                                  Sin resultados
-                                </li>
-                              )}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                      <div className="sm:col-span-1">
-                        <InputField
-                          label=""
-                          placeholder="Lt/Kg/Bolsas"
-                          name={`totalUsed${i}`}
-                          type="text"
-                          value={item.totalUsed}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, ".");
-                            if (/^\d*\.?\d{0,3}$/.test(value)) {
-                              handleItemChange(i, "totalUsed", value);
-                              if (
-                                surface &&
-                                surface !== "" &&
-                                surface !== "0"
-                              ) {
-                                const preciseDose = Number(value) / Number(surface);
-                                setPreciseDoseByRow((prev) => ({
-                                  ...prev,
-                                  [i]: preciseDose,
-                                }));
-                                handleItemChange(
-                                  i,
-                                  "dose",
-                                  formatDose(preciseDose)
-                                );
-                              }
-                            }
-                          }}
-                          size="sm"
-                        />
-                      </div>
-                      <div className="sm:col-span-1">
-                        <InputField
-                          label=""
-                          placeholder="Total/superficie"
-                          name={`dose${i}`}
-                          type="text"
-                          value={item.dose}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/,/g, ".");
-                            if (/^\d*\.?\d{0,3}$/.test(value)) {
-                              handleItemChange(i, "dose", value);
-                              if (
-                                surface &&
-                                surface !== "" &&
-                                surface !== "0"
-                              ) {
-                                const preciseDose = preciseDoseByRow[i];
-                                const doseForCalc =
-                                  typeof preciseDose === "number" &&
-                                  formatDose(preciseDose) === value
-                                    ? preciseDose
-                                    : Number(value);
-                                handleItemChange(
-                                  i,
-                                  "totalUsed",
-                                  formatTotalUsedFromDose(
-                                    doseForCalc * Number(surface)
-                                  )
-                                );
-                              }
-                            }
-                          }}
-                          size="sm"
-                        />
-                      </div>
-                      <div>
-                        <Button
-                          variant="primary"
-                          size="xs"
-                          onClick={() => {
-                            const newItems = [...items];
-                            newItems.splice(i, 1);
-                            setItems(newItems);
-                          }}
-                          className="text-blue-500 hover:underline max-w-fit"
-                        >
-                          Eliminar
-                        </Button>
-                      </div>
+                            ))}
+                            {filteredSupplies.length === 0 && (
+                              <li className="px-3 py-2 text-sm text-gray-400">Sin resultados</li>
+                            )}
+                          </ul>
+                        </div>
+                      )}
                     </div>
-                    );
-                  })}
-                  <Button
-                    variant="primary"
-                    size="xs"
-                    onClick={() => {
-                      setItems([
-                        ...items,
-                        { itemId: null, totalUsed: "", dose: "" },
-                      ]);
-                    }}
-                    className="text-blue-500 hover:underline max-w-fit"
-                  >
-                    + Agregar fila de insumo
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Observaciones
-                </label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-[80px]"
-                  placeholder="Escriba observaciones"
-                  name="observaciones"
-                  value={observations}
-                  onChange={(e) => setObservations(e.target.value)}
-                />
-              </div>
-              <ErrorBanner
-                message={error || null}
-                prefix="Error!"
-                onDismiss={() => setError("")}
-              />
-              <SuccessBanner
-                message={successMessage || null}
-                variant="alert"
-                onDismiss={() => setSuccessMessage("")}
-              />
-      </>
-    </EntityFormDrawer>
+                    <div className="sm:col-span-1">
+                      <InputField
+                        label=""
+                        placeholder="Lt/Kg/Bolsas"
+                        name={`totalUsed${i}`}
+                        type="text"
+                        value={item.totalUsed}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/,/g, ".");
+                          if (/^\d*\.?\d{0,3}$/.test(value)) {
+                            handleItemChange(i, "totalUsed", value);
+                            if (surface && surface !== "" && surface !== "0") {
+                              const preciseDose = Number(value) / Number(surface);
+                              setPreciseDoseByRow((prev) => ({
+                                ...prev,
+                                [i]: preciseDose,
+                              }));
+                              handleItemChange(i, "dose", formatDose(preciseDose));
+                            }
+                          }
+                        }}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="sm:col-span-1">
+                      <InputField
+                        label=""
+                        placeholder="Total/superficie"
+                        name={`dose${i}`}
+                        type="text"
+                        value={item.dose}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/,/g, ".");
+                          if (/^\d*\.?\d{0,3}$/.test(value)) {
+                            handleItemChange(i, "dose", value);
+                            if (surface && surface !== "" && surface !== "0") {
+                              const preciseDose = preciseDoseByRow[i];
+                              const doseForCalc =
+                                typeof preciseDose === "number" && formatDose(preciseDose) === value
+                                  ? preciseDose
+                                  : Number(value);
+                              handleItemChange(
+                                i,
+                                "totalUsed",
+                                formatTotalUsedFromDose(doseForCalc * Number(surface))
+                              );
+                            }
+                          }
+                        }}
+                        size="sm"
+                      />
+                    </div>
+                    <div>
+                      <Button
+                        variant="danger"
+                        size="xs"
+                        iconLeft={<Trash2 className="h-3.5 w-3.5" />}
+                        onClick={() => {
+                          const newItems = [...items];
+                          newItems.splice(i, 1);
+                          setItems(newItems);
+                        }}
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              <Button
+                variant="secondary"
+                size="xs"
+                iconLeft={<Plus className="h-3.5 w-3.5" />}
+                onClick={() => {
+                  setItems([...items, { itemId: null, totalUsed: "", dose: "" }]);
+                }}
+              >
+                Agregar Fila de Insumo
+              </Button>
+            </div>
+          </section>
+          <section className="drawer-section">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-[80px]"
+              placeholder="Escriba observaciones"
+              name="observaciones"
+              value={observations}
+              onChange={(e) => setObservations(e.target.value)}
+            />
+          </section>
+          <ErrorBanner message={error || null} prefix="Error!" onDismiss={() => setError("")} />
+          <SuccessBanner
+            message={successMessage || null}
+            variant="alert"
+            onDismiss={() => setSuccessMessage("")}
+          />
+        </>
+      </EntityFormDrawer>
 
-    {/* ============================
+      {/* ============================
     DRAWER CREAR INSUMO
 ============================ */}
-    <Drawer
-      open={openCreateSupply}
-      onClose={() => {
-        setOpenCreateSupply(false);
-        setItemIndexToUpdate(null);
-        setPendingCreatedSupplyName(null);
-      }}
-    >
-      <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-4">
-          Crear Nuevo Insumo
-        </h2>
-        {/* FORMULARIO SIMPLE DE INSUMO */}
+      <DrawerShell
+        open={openCreateSupply}
+        onClose={() => {
+          setOpenCreateSupply(false);
+          setItemIndexToUpdate(null);
+          setPendingCreatedSupplyName(null);
+        }}
+        title="Crear Nuevo Insumo"
+      >
         <CreateSupplyInline
           projectId={projectId}
           onCreated={async (createdName) => {
@@ -1385,9 +1321,7 @@ export default function CreateOrder({
             setPendingCreatedSupplyName(null);
           }}
         />
-      </div>
-    </Drawer>
+      </DrawerShell>
     </>
-
   );
 }

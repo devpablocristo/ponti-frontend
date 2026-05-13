@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 
 import { apiClient } from "@/api/client";
-import { AppFilterBar } from "../filters/AppFilterBar";
 import { DataTable } from "@/lib/dataDisplay";
 import { BaseModal } from "../Modal/BaseModal";
 import { BulkSelectionPanel } from "../crud/BulkSelectionPanel";
@@ -26,7 +25,7 @@ import { toastError, toastSuccess } from "../../lib/toast";
 // checkboxes por fila + barra de acciones masivas (Restaurar N / Eliminar definitivamente N).
 
 type ArchivedListPageProps<T extends { id: number }> = {
-  /** Texto descriptivo arriba de la tabla (1 línea). */
+  /** Texto legacy: los drawers de archivados no muestran subtítulos. */
   description?: string;
   /** Columnas de datos. Las acciones aparecen solo en la barra de selección. */
   columns: Column<T>[];
@@ -258,7 +257,7 @@ function inferRelations<T extends { id: number }>(
 }
 
 export function ArchivedListPage<T extends { id: number }>({
-  description,
+  description: _description,
   columns,
   data,
   entity,
@@ -281,7 +280,6 @@ export function ArchivedListPage<T extends { id: number }>({
   const [projectCatalog, setProjectCatalog] = useState<ProjectCatalogItem[]>([]);
 
   const {
-    filters,
     selectedCustomer,
     selectedProject,
     selectedCampaignId,
@@ -504,7 +502,7 @@ export function ArchivedListPage<T extends { id: number }>({
           onClick: openBulkRestore,
         },
         onHardDelete && {
-          label: `Eliminar definitivamente ${selectedCount}`,
+          label: `Eliminar Definitivamente ${selectedCount}`,
           icon: Trash2,
           variant: "danger" as const,
           onClick: openBulkHardDelete,
@@ -521,10 +519,6 @@ export function ArchivedListPage<T extends { id: number }>({
 
   return (
     <div>
-      <AppFilterBar filters={filters} />
-      {description && (
-        <p className="my-3 text-sm text-gray-500">{description}</p>
-      )}
       {bulkEnabled && (
         <BulkSelectionPanel
           selectedCount={selectedCount}

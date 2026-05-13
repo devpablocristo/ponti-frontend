@@ -1,5 +1,5 @@
 import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { Archive, Download, LoaderCircle, ClockIcon, CheckIcon, FileTextIcon, FileXIcon, Plus, Upload } from "lucide-react";
+import { Archive, Download, ClockIcon, CheckIcon, FileTextIcon, FileXIcon, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
@@ -7,6 +7,7 @@ import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
+import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 
@@ -31,7 +32,7 @@ import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../f
 import { readSpreadsheetRows } from "../spreadsheetReader";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import Drawer from "../../../components/Drawer/Drawer";
+import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import ArchivedTasks from "../database/tasks/ArchivedTasks";
 import TasksForm from "../database/tasks/TasksForm";
 
@@ -160,25 +161,10 @@ function LaborsHeader({
       <Button
         variant="primary"
         size="sm"
-        iconLeft={
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 4a1 1 0 011-1h2a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM17 4a1 1 0 011-1h2a1 1 0 011 1v16a1 1 0 01-1 1h-2a1 1 0 01-1-1V4zM10 10h4M10 14h4"
-            />
-          </svg>
-        }
+        iconLeft={<SlidersHorizontal className="mr-2 h-4 w-4" />}
         onClick={() => setShowColumnsModal(true)}
       >
-        Configurar columnas
+        Configurar Columnas
       </Button>
       <BaseModal
         isOpen={showColumnsModal}
@@ -952,14 +938,14 @@ export function Tasks() {
         actions={[
           {
             label: "Importar",
-            icon: <Upload className="h-4 w-4" />,
+            icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => fileInputRef.current?.click(),
           },
           {
             label: "Exportar",
-            icon: <Download className="h-4 w-4" />,
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => handleExport(),
@@ -997,20 +983,16 @@ export function Tasks() {
         message={warningMessage}
         onDismiss={() => setWarningMessage(null)}
       />
-      <Drawer
+      <DrawerShell
         open={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
-        maxWidth="max-w-6xl"
+        title="Nueva Labor"
       >
-        <div className="flex h-full flex-col gap-4">
-          <header>
-            <h2 className="text-lg font-semibold text-slate-900">Nueva labor</h2>
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-            <TasksForm />
-          </div>
-        </div>
-      </Drawer>
+        <TasksForm
+          hideWorkspaceFilters
+          onCancel={() => setCreateDrawerOpen(false)}
+        />
+      </DrawerShell>
       <ArchivedDrawer
         open={archivedDrawerOpen}
         title="Labores archivadas"
@@ -1065,13 +1047,17 @@ export function Tasks() {
               : undefined
           }
         />
-        <BaseModal
-          isOpen={showInvoiceModal}
-          onClose={() => {
-            setShowInvoiceModal(false);
-          }}
+        <EntityFormDrawer
+          open={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
           title="Cargar Factura"
-          onPrimaryAction={() => {
+          submitLabel="Cargar"
+          processing={processingInvoice}
+          errorMessage={errorInvoiceMessage}
+          onDismissError={() => setErrorInvoiceMessage(null)}
+          successMessage={resultInvoiceMessage}
+          onDismissSuccess={() => setResultInvoiceMessage(null)}
+          onSubmit={() => {
             if (processingInvoice) return;
 
             const statusText = invoiceStatusOptions.find(
@@ -1098,15 +1084,8 @@ export function Tasks() {
               createInvoice(invoiceData);
             }
           }}
-          onSecondaryAction={() => {
-            if (processingInvoice) return;
-            setShowInvoiceModal(false);
-          }}
-          primaryButtonText="Cargar"
-          secondaryButtonText="Cancelar"
         >
-          <div className="flex gap-2 mt-2">
-            {processingInvoice && <LoaderCircle className="w-5 h-5 text-blue-600 animate-spin" />}
+          <div className="grid gap-4 md:grid-cols-2">
             <InputField
               label="Ingrese N° Factura"
               placeholder="N°"
@@ -1124,8 +1103,6 @@ export function Tasks() {
               value={invoice.invoice_date}
               onChange={(e) => setInvoice({ ...invoice, invoice_date: e.target.value })}
             />
-          </div>
-          <div className="flex gap-2 mt-2">
             <InputField
               label="Ingrese Nombre Empresa"
               placeholder="Empresa"
@@ -1149,18 +1126,7 @@ export function Tasks() {
               }}
             />
           </div>
-          <ErrorBanner
-            message={errorInvoiceMessage}
-            variant="outlined"
-            prefix="Error:"
-            className="mt-4"
-          />
-          <SuccessBanner
-            message={resultInvoiceMessage}
-            variant="outlined"
-            className="mt-4"
-          />
-        </BaseModal>
+        </EntityFormDrawer>
         <SuccessBanner message={importMessage} variant="outlined" />
         {!showInvoiceModal && (
           <SuccessBanner message={resultInvoiceMessage} variant="outlined" />

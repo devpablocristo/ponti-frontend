@@ -76,14 +76,15 @@ const useSupplies = () => {
             type: actions.SET_RESULT,
             payload: "Se han creado los insumos con éxito!",
           });
-          return;
+          return true;
         }
 
         setError("Ocurrio un error en la creación de los insumos");
+        return false;
       } catch (error) {
         if (extractErrorStatus(error) === 409) {
           setError("Ya existe un insumo con el mismo nombre.");
-          return;
+          return false;
         }
 
         setError(
@@ -92,6 +93,7 @@ const useSupplies = () => {
             "Error desconocido en la creación de los insumos."
           )
         );
+        return false;
       } finally {
         setProcessing(false);
       }
