@@ -17,16 +17,33 @@ import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
 
+const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
+const MISSING_ENTRY_LABEL = "REV ING.";
+
+function getStockFilterValue(item: GetStockItems, key: keyof GetStockItems) {
+  const value = item[key];
+
+  if (key === "investor_name" && String(value ?? "").trim() === "") {
+    return item.has_multiple_investors
+      ? MULTIPLE_INVESTORS_LABEL
+      : MISSING_ENTRY_LABEL;
+  }
+
+  return String(value ?? "");
+}
+
 const EditableCell = ({
   item,
   value,
   projectId,
   onSaved,
+  onValidationError,
 }: {
   item: GetStockItems;
   value: string | number;
   projectId: number | null;
   onSaved?: () => void;
+  onValidationError: (message: string) => void;
 }) => {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value ?? "");
@@ -41,13 +58,30 @@ const EditableCell = ({
     if (savingRef.current || processingStock) {
       return;
     }
+
     if (editValue === "") {
       return;
     }
+
     if (projectId === null) {
       alert("Error al guardar");
       return;
     }
+
+    if (item.has_multiple_investors) {
+      onValidationError(
+        "Existe más de un inversor asociado a este insumo. Corrobore los ingresos y asignaciones antes de cerrar stock."
+      );
+      return;
+    }
+
+    if (!item.id || item.id <= 0) {
+      onValidationError(
+        "Para cargar stock de campo, primero cargá un ingreso del insumo."
+      );
+      return;
+    }
+
     savingRef.current = true;
     try {
       await updateStock(projectId, item.id, Number(editValue), item.updated_at);
@@ -250,6 +284,10 @@ export function Stock() {
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
+  const [stockValidationModal, setStockValidationModal] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const [disabledCloseStock, setDisabledCloseStock] = useState(false);
   const [enabledCloseStock, setEnabledCloseStock] = useState(false);
   const [stockPeriods, setStockPeriods] = useState<
@@ -315,8 +353,10 @@ export function Stock() {
           return true;
         }
 
-        const itemValue = String(item[key as keyof GetStockItems] ?? "")
-          .toLowerCase();
+        const itemValue = getStockFilterValue(
+  item,
+  key as keyof GetStockItems
+).toLowerCase();
 
         // 🟢 MULTI SELECT
         if (Array.isArray(value)) {
@@ -368,7 +408,10 @@ export function Stock() {
       Object.entries(otherFilters).every(([k, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        const itemValue = String(item[k as keyof GetStockItems] ?? "").toLowerCase();
+        const itemValue = getStockFilterValue(
+  item,
+  k as keyof GetStockItems
+).toLowerCase();
 
         if (Array.isArray(value)) {
           return value.some((v) =>
@@ -380,7 +423,9 @@ export function Stock() {
       })
     );
 
-    return [...new Set(filtered.map((i) => String(i[key] ?? "")))].filter(Boolean);
+    return [...new Set(filtered.map((i) => getStockFilterValue(i, key)))].filter(
+  Boolean
+);
   }
 
   const columns: Column<GetStockItems>[] = useMemo(
@@ -435,6 +480,21 @@ export function Stock() {
           stock,
           columnsFilters
         ),
+        render: (value, item) => {
+          const investorName = String(value ?? "").trim();
+
+          if (!investorName) {
+            return (
+              <span className="font-semibold text-red-600">
+                {item.has_multiple_investors
+                  ? MULTIPLE_INVESTORS_LABEL
+                  : MISSING_ENTRY_LABEL}
+              </span>
+            );
+          }
+
+          return <span>{investorName}</span>;
+        },
       },
       {
         key: "entry_stock",
@@ -498,6 +558,12 @@ export function Stock() {
             value={typeof value === "string" || typeof value === "number" ? value : ""}
             projectId={projectId}
             onSaved={refreshStock}
+            onValidationError={(message) =>
+              setStockValidationModal({
+                title: "No se pudo cargar stock de campo",
+                message,
+              })
+            }
           />
         ),
       },
@@ -802,6 +868,16 @@ export function Stock() {
             pagination={pagination.buildPagination(filteredStock.length)}
           />
         )}
+        <BaseModal
+  isOpen={stockValidationModal !== null}
+  onClose={() => setStockValidationModal(null)}
+  title={stockValidationModal?.title ?? ""}
+  message={stockValidationModal?.message ?? ""}
+  primaryButtonText="Cerrar"
+  secondaryButtonText={null}
+  primaryButtonColor="bg-blue-600 hover:bg-blue-800 focus:ring-blue-300"
+  onPrimaryAction={() => setStockValidationModal(null)}
+/>
         <BaseModal
           isOpen={isModalOpen}
           onClose={() => {

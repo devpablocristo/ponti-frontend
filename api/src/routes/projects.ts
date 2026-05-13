@@ -429,8 +429,13 @@ router.delete(
       };
 
       const data = await apiClient.delete<any>(`/labors/${id}`, headers);
+
+
       setImmediate(() => cache.flushAll());
       res.status(200).json(data);
+
+
+
     } catch (error: any) {
       const err = error as ApiResponse<null>;
 
@@ -724,18 +729,18 @@ router.post("/:id/labors", async (req: Request, res: Response) => {
     };
 
 
-const { data: backendResponse } = await apiClient.post<any>(
-  `/projects/${projectId}/labors`,
-  requestData,
-  headers
-);
+    const { data: backendResponse } = await apiClient.post<any>(
+      `/projects/${projectId}/labors`,
+      requestData,
+      headers
+    );
 
-setImmediate(() => cache.flushAll());
+    setImmediate(() => cache.flushAll());
 
-res.status(207).json({
-  success: true,
-  data: backendResponse,
-});
+    res.status(207).json({
+      success: true,
+      data: backendResponse,
+    });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -895,7 +900,7 @@ router.post("/:id/commercializations", async (req: Request, res: Response) => {
       data: commerce,
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.del(`commerce:${projectId}`);
 
     res.status(200).json(data);
   } catch (error: any) {
