@@ -22,7 +22,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   REGION: us-central1
   REGISTRY: us-central1-docker.pkg.dev
   REPOSITORY: ponti-frontend-registry
@@ -95,7 +94,7 @@ jobs:
           echo "UI_ARTIFACT_PATH=/tmp/${artifact_name}.tgz" >> "$GITHUB_ENV"
 
       - name: Upload UI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ env.UI_ARTIFACT_NAME }}
           path: ${{ env.UI_ARTIFACT_PATH }}
