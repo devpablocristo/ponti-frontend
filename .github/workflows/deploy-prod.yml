@@ -68,6 +68,25 @@ jobs:
         with:
           ref: ${{ github.event.inputs.staging_sha }}
 
+      - name: Resolve deploy SHA
+        env:
+          STAGING_SHA: ${{ github.event.inputs.staging_sha }}
+        run: |
+          set -euo pipefail
+          deploy_sha="$(git rev-parse HEAD)"
+          if [[ ! "$deploy_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "ERROR: invalid deploy SHA: $deploy_sha"
+            exit 1
+          fi
+          if [[ "$deploy_sha" != "$STAGING_SHA" ]]; then
+            echo "ERROR: checkout SHA no coincide con staging_sha."
+            echo "       staging_sha=$STAGING_SHA"
+            echo "       checkout_sha=$deploy_sha"
+            exit 1
+          fi
+          echo "DEPLOY_SHA=$deploy_sha" >> "$GITHUB_ENV"
+          echo "DEPLOY_SHORT_SHA=${deploy_sha::12}" >> "$GITHUB_ENV"
+
       - name: Validate STAGING approval
         id: approved
         run: python3 scripts/release/deployments.py resolve
@@ -143,10 +162,10 @@ jobs:
           STAGING_SHA: ${{ github.event.inputs.staging_sha }}
           INPUT_RELEASE_VERSION: ${{ github.event.inputs.release_version }}
         run: |
-          short_sha="${STAGING_SHA::12}"
-          release_version="${INPUT_RELEASE_VERSION:-prod-${short_sha}}"
-          echo "SERVICE_GIT_SHA=${STAGING_SHA}" >> "$GITHUB_ENV"
-          echo "SERVICE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
+          build_time="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          release_version="${INPUT_RELEASE_VERSION:-prod-${DEPLOY_SHORT_SHA}}"
+          echo "SERVICE_GIT_SHA=${DEPLOY_SHA}" >> "$GITHUB_ENV"
+          echo "SERVICE_BUILD_TIME=$build_time" >> "$GITHUB_ENV"
           echo "RELEASE_SERVICE_VERSION=${release_version}" >> "$GITHUB_ENV"
 
       - name: Configure Docker for Artifact Registry (PROD)
@@ -204,7 +223,7 @@ jobs:
             --min-instances=2 \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=prod,SERVICE_NAME=ponti-bff,SERVICE_VERSION=${RELEASE_SERVICE_VERSION},SERVICE_GIT_SHA=${SERVICE_GIT_SHA},SERVICE_BUILD_TIME=${SERVICE_BUILD_TIME},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
+            --set-env-vars="NODE_ENV=prod,SERVICE_NAME=${SERVICE_NAME_PROD},SERVICE_VERSION=${RELEASE_SERVICE_VERSION},SERVICE_GIT_SHA=${SERVICE_GIT_SHA},SERVICE_BUILD_TIME=${SERVICE_BUILD_TIME},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_PROD }},IDENTITY_PLATFORM_PROJECT_ID=${GCP_PROJECT_ID_PROD}"
 
       - name: "Guardrail: verify BASE_MANAGER_API detagged (PROD)"
         run: |
@@ -326,16 +345,16 @@ jobs:
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
 
       - name: Record PROD deployment
-        run: python3 scripts/release/deployments.py record
+        run: |
+          DEPLOY_DESCRIPTION="Frontend PROD promoted ${DEPLOY_SHA}" \
+          SERVICE_VERSION="$RELEASE_SERVICE_VERSION" \
+          IMAGE_URI="$IMAGE" \
+          python3 scripts/release/deployments.py record
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_ENV: prod
-          DEPLOY_SHA: ${{ github.event.inputs.staging_sha }}
           DEPLOY_STATUS_LABEL: PROD_PROMOTED
           DEPLOY_STATE: success
-          DEPLOY_DESCRIPTION: "Frontend PROD promoted ${{ github.event.inputs.staging_sha }}"
-          SERVICE_VERSION: ${{ env.RELEASE_SERVICE_VERSION }}
-          IMAGE_URI: ${{ env.IMAGE }}
           UI_ARTIFACT_NAME: ${{ steps.approved.outputs.ui_artifact_name }}
           UI_ARTIFACT_RUN_ID: ${{ steps.approved.outputs.ui_artifact_run_id }}
 

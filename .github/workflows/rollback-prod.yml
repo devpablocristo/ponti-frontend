@@ -175,4 +175,3 @@ jobs:
           IMAGE_URI: ${{ env.IMAGE_URI }}
           UI_ARTIFACT_NAME: ${{ steps.target.outputs.ui_artifact_name }}
           UI_ARTIFACT_RUN_ID: ${{ steps.target.outputs.ui_artifact_run_id }}
-

@@ -76,4 +76,3 @@ jobs:
             echo "- BFF image: \`${{ steps.approved.outputs.image_uri }}\`"
             echo "- UI artifact: \`${{ steps.approved.outputs.ui_artifact_name }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
-

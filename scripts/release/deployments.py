@@ -117,10 +117,11 @@ def clean_payload(payload: Any) -> dict[str, Any]:
 def base_payload(status_label: str) -> dict[str, Any]:
     migrations_dir = env("MIGRATIONS_DIR_FOR_RELEASE") or env("MIGRATIONS_DIR")
     migration_version = env("MIGRATION_VERSION") or latest_migration_version(migrations_dir)
+    deploy_sha = env("DEPLOY_SHA", required=True)
     return {
         "status_label": status_label,
-        "sha": env("DEPLOY_SHA") or env("GITHUB_SHA"),
-        "short_sha": (env("DEPLOY_SHA") or env("GITHUB_SHA"))[:12],
+        "sha": deploy_sha,
+        "short_sha": deploy_sha[:12],
         "image_uri": env("IMAGE_URI"),
         "service_url": env("SERVICE_URL") or env("DEPLOY_URL"),
         "cloud_run_revision": env("CLOUD_RUN_REVISION"),
@@ -224,7 +225,9 @@ def find_latest(
 
 def command_record() -> None:
     environment = env("DEPLOY_ENV", required=True)
-    sha = env("DEPLOY_SHA") or env("GITHUB_SHA", required=True)
+    sha = env("DEPLOY_SHA", required=True)
+    if not re.fullmatch(r"[0-9a-f]{40}", sha):
+        die("DEPLOY_SHA must be a full 40-character lowercase hexadecimal SHA")
     label = env("DEPLOY_STATUS_LABEL", "DEPLOYED")
     state = env("DEPLOY_STATE") or ("failure" if label.endswith("FAILED") else "success")
     payload = base_payload(label)

@@ -43,6 +43,21 @@ jobs:
         with:
           ref: ${{ github.event.inputs.ref || github.ref_name }}
 
+      - name: Resolve deploy SHA
+        run: |
+          set -euo pipefail
+          deploy_sha="$(git rev-parse HEAD)"
+          if [[ ! "$deploy_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "ERROR: invalid deploy SHA: $deploy_sha"
+            exit 1
+          fi
+          build_time="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "DEPLOY_SHA=$deploy_sha" >> "$GITHUB_ENV"
+          echo "DEPLOY_SHORT_SHA=${deploy_sha::12}" >> "$GITHUB_ENV"
+          echo "SERVICE_GIT_SHA=$deploy_sha" >> "$GITHUB_ENV"
+          echo "SERVICE_BUILD_TIME=$build_time" >> "$GITHUB_ENV"
+          echo "RELEASE_SERVICE_VERSION=stg-${deploy_sha::12}" >> "$GITHUB_ENV"
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
@@ -53,13 +68,6 @@ jobs:
         uses: google-github-actions/setup-gcloud@v3
         with:
           project_id: ${{ vars.GCP_PROJECT_ID_STG }}
-
-      - name: Build metadata
-        run: |
-          short_sha="${GITHUB_SHA::12}"
-          echo "SERVICE_GIT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
-          echo "SERVICE_BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
-          echo "RELEASE_SERVICE_VERSION=stg-${short_sha}" >> "$GITHUB_ENV"
 
       - name: Setup Node
         uses: actions/setup-node@v6
@@ -80,7 +88,7 @@ jobs:
 
       - name: Package UI artifact
         run: |
-          artifact_name="ponti-ui-dist-${GITHUB_SHA}"
+          artifact_name="ponti-ui-dist-${DEPLOY_SHA}"
           tar -czf "/tmp/${artifact_name}.tgz" -C ui/dist .
           echo "UI_ARTIFACT_NAME=${artifact_name}" >> "$GITHUB_ENV"
           echo "UI_ARTIFACT_PATH=/tmp/${artifact_name}.tgz" >> "$GITHUB_ENV"
@@ -94,7 +102,7 @@ jobs:
 
       - name: Build Docker image (API only)
         run: |
-          IMAGE_SHA="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${{ github.sha }}"
+          IMAGE_SHA="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:${DEPLOY_SHA}"
           IMAGE_STG="${{ env.REGISTRY }}/${{ vars.GCP_PROJECT_ID_STG }}/${{ env.REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }}:stg"
           docker build -f Dockerfile.api -t "$IMAGE_SHA" .
           docker tag "$IMAGE_SHA" "$IMAGE_STG"
@@ -134,7 +142,7 @@ jobs:
             --service-account="${{ vars.CLOUD_RUN_SERVICE_ACCOUNT_STG }}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=staging,SERVICE_NAME=ponti-bff,SERVICE_VERSION=${RELEASE_SERVICE_VERSION},SERVICE_GIT_SHA=${SERVICE_GIT_SHA},SERVICE_BUILD_TIME=${SERVICE_BUILD_TIME},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}"
+            --set-env-vars="NODE_ENV=staging,SERVICE_NAME=${{ vars.CLOUD_RUN_SERVICE_FRONTEND_STG }},SERVICE_VERSION=${RELEASE_SERVICE_VERSION},SERVICE_GIT_SHA=${SERVICE_GIT_SHA},SERVICE_BUILD_TIME=${SERVICE_BUILD_TIME},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_STG }},IDENTITY_PLATFORM_PROJECT_ID=${{ vars.GCP_PROJECT_ID_STG }}"
 
       - name: "Guardrail: verify BASE_MANAGER_API detagged (STAGING)"
         run: |
@@ -235,17 +243,16 @@ jobs:
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
 
       - name: Record STAGING deployment
-        run: python3 scripts/release/deployments.py record
+        run: |
+          DEPLOY_DESCRIPTION="Frontend STAGING smoke OK ${DEPLOY_SHA}" \
+          SERVICE_VERSION="$RELEASE_SERVICE_VERSION" \
+          IMAGE_URI="$IMAGE_SHA" \
+          python3 scripts/release/deployments.py record
         env:
           GH_TOKEN: ${{ github.token }}
           DEPLOY_ENV: staging
-          DEPLOY_SHA: ${{ github.sha }}
           DEPLOY_STATUS_LABEL: SMOKE_OK
           DEPLOY_STATE: success
-          DEPLOY_DESCRIPTION: "Frontend STAGING smoke OK ${{ github.sha }}"
-          SERVICE_VERSION: ${{ env.RELEASE_SERVICE_VERSION }}
-          IMAGE_URI: ${{ env.IMAGE_SHA }}
-          UI_ARTIFACT_NAME: ${{ env.UI_ARTIFACT_NAME }}
           UI_ARTIFACT_RUN_ID: ${{ github.run_id }}
 
       - name: Show deployment URLs (STAGING)
