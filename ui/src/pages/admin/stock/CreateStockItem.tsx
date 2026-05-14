@@ -76,12 +76,16 @@ export default function CreateStockItem({
 
   useEffect(() => {
     const handleCreatedMovement = async () => {
-      if (resultCreation.supply_movements.length === 0) {
+      const createdMovements = Array.isArray(resultCreation.supply_movements)
+        ? resultCreation.supply_movements
+        : [];
+
+      if (createdMovements.length === 0) {
         return;
       }
 
       const errors: string[] = [];
-      resultCreation.supply_movements.forEach((movement) => {
+      createdMovements.forEach((movement) => {
         if (movement.error_detail !== "") {
           errors.push(movement.error_detail.replace("VALIDATION_ERROR: ", ""));
         }
@@ -110,8 +114,11 @@ export default function CreateStockItem({
 
   useEffect(() => {
     if (!selectedProject) return;
+    const projectInvestors = Array.isArray(selectedProject.investors)
+      ? selectedProject.investors
+      : [];
     setInvestors(
-      selectedProject.investors
+      projectInvestors
         .filter((i) => i.id !== null)
         .map((i) => ({ id: i.id!, name: i.name }))
     );
@@ -281,7 +288,7 @@ export default function CreateStockItem({
                       <SelectField
                         label=""
                         name={`item-${i}`}
-                        options={supplies}
+                        options={Array.isArray(supplies) ? supplies : []}
                         value={item.item}
                         onChange={(e) => handleItemChange(i, "item", e.target.value)}
                         size="sm"

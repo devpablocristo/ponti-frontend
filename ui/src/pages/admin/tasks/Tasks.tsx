@@ -1,6 +1,7 @@
 import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { Archive, Download, ClockIcon, CheckIcon, FileTextIcon, FileXIcon, Plus, SlidersHorizontal, Upload } from "lucide-react";
+import { Archive, Briefcase, Download, ClockIcon, CheckIcon, FileTextIcon, FileXIcon, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { EmptyState } from "../../../components/feedback/EmptyState";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
@@ -300,6 +301,7 @@ export function Tasks() {
     selectedCustomer,
     selectedCampaignId,
     selectedField,
+    hasWorkspaceSelection,
   } = useWorkspaceFilters([
     "customer",
     "project",
@@ -321,10 +323,11 @@ export function Tasks() {
   useEffect(() => {
     if (resultInvoice) {
       setResultInvoiceMessage(resultInvoice);
+      if (!hasWorkspaceSelection) return;
       getLaborGroups(laborQuery);
       getMetrics(laborQuery);
     }
-  }, [resultInvoice, laborQuery, getLaborGroups, getMetrics]);
+  }, [resultInvoice, hasWorkspaceSelection, laborQuery, getLaborGroups, getMetrics]);
 
   useEffect(() => {
     if (errorInvoice) {
@@ -651,12 +654,17 @@ export function Tasks() {
   useEffect(() => {
     setVisibleColumns(latestAllColumnKeysRef.current);
     resetPage();
+    getCategories("");
+
+    if (!hasWorkspaceSelection) return;
+
     getLaborGroups(laborQuery);
     getMetrics(laborQuery);
-    getCategories("");
-  }, [laborQuery, getLaborGroups, getMetrics, getCategories, resetPage]);
+  }, [hasWorkspaceSelection, laborQuery, getLaborGroups, getMetrics, getCategories, resetPage]);
 
   const filteredTasks = useMemo(() => {
+    if (!hasWorkspaceSelection) return [];
+
     return laborGroups.filter((task) => {
       return Object.entries(taskFilters).every(([key, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
@@ -684,7 +692,7 @@ export function Tasks() {
         return taskVal === String(value).toLowerCase();
       });
     });
-  }, [laborGroups, taskFilters]);
+  }, [hasWorkspaceSelection, laborGroups, taskFilters]);
 
   type SelectableLaborGroup = LaborGroupData & { id: number };
 
@@ -732,9 +740,11 @@ export function Tasks() {
   }, []);
 
   const refreshLabors = useCallback(() => {
+    if (!hasWorkspaceSelection) return;
+
     getLaborGroups(laborQuery);
     getMetrics(laborQuery);
-  }, [getLaborGroups, getMetrics, laborQuery]);
+  }, [getLaborGroups, getMetrics, hasWorkspaceSelection, laborQuery]);
 
   const bulk = useBulkActions<SelectableLaborGroup>({
     items: selectableTasks,
@@ -884,8 +894,10 @@ export function Tasks() {
 
       await saveLabors(laborsToSave, projectId);
 
-      getLaborGroups(laborQuery);
-      getMetrics(laborQuery);
+      if (hasWorkspaceSelection) {
+        getLaborGroups(laborQuery);
+        getMetrics(laborQuery);
+      }
 
       if (importErrors.length > 0) {
         setImportMessage(
@@ -1000,6 +1012,7 @@ export function Tasks() {
       >
         <ArchivedTasks />
       </ArchivedDrawer>
+      {hasWorkspaceSelection && (
       <div className="my-3">
         {errorMetrics ? (
           <ErrorBanner message={errorMetrics} variant="outlined" prefix="Error:" />
@@ -1011,42 +1024,53 @@ export function Tasks() {
           />
         )}
       </div>
+      )}
 
       <div className="mt-3 relative">
-        <LoadingOverlay show={processing} />
-        <BulkSelectionPanel
-          selectedCount={bulk.selectedCount}
-          totalCount={selectableTasks.length}
-          allSelected={bulk.allSelected}
-          onToggleAll={bulk.toggleAll}
-          onClear={bulk.clear}
-          actions={bulk.actions}
-          entity={WORKORDER_ENTITY}
-        />
-        <DataTable
-          key={laborGroups.length}
-          data={selectableTasks}
-          rowStyle="softZebra"
-          columns={columnsWithSelection}
-          filters={taskFilters}
-          onFilterChange={handleFilterChange}
-          className={`${processing ? "pointer-events-none opacity-60" : ""}`}
-          enableFilters={true}
-          message="No hay labores disponibles"
-          headerComponent={
-            <LaborsHeader
-              selectedColumns={selectedColumns}
-              setSelectedColumns={setSelectedColumns}
-              setVisibleColumns={setVisibleColumns}
-              allColumns={allColumns}
+        <LoadingOverlay show={hasWorkspaceSelection && processing} />
+        {!hasWorkspaceSelection ? (
+          <EmptyState
+            icon={Briefcase}
+            title="Seleccioná filtros para ver labores"
+            description="El listado no carga datos globales automáticamente."
+          />
+        ) : (
+          <>
+            <BulkSelectionPanel
+              selectedCount={bulk.selectedCount}
+              totalCount={selectableTasks.length}
+              allSelected={bulk.allSelected}
+              onToggleAll={bulk.toggleAll}
+              onClear={bulk.clear}
+              actions={bulk.actions}
+              entity={WORKORDER_ENTITY}
             />
-          }
-          pagination={
-            pageInfo
-              ? pagination.buildPagination(filteredTasks.length)
-              : undefined
-          }
-        />
+            <DataTable
+              key={laborGroups.length}
+              data={selectableTasks}
+              rowStyle="softZebra"
+              columns={columnsWithSelection}
+              filters={taskFilters}
+              onFilterChange={handleFilterChange}
+              className={`${processing ? "pointer-events-none opacity-60" : ""}`}
+              enableFilters={true}
+              message="No hay labores disponibles"
+              headerComponent={
+                <LaborsHeader
+                  selectedColumns={selectedColumns}
+                  setSelectedColumns={setSelectedColumns}
+                  setVisibleColumns={setVisibleColumns}
+                  allColumns={allColumns}
+                />
+              }
+              pagination={
+                pageInfo
+                  ? pagination.buildPagination(filteredTasks.length)
+                  : undefined
+              }
+            />
+          </>
+        )}
         <EntityFormDrawer
           open={showInvoiceModal}
           onClose={() => setShowInvoiceModal(false)}

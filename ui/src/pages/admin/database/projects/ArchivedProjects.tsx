@@ -45,6 +45,7 @@ export default function ArchivedProjects() {
       entity={ENTITY}
       bulk
       getItemLabel={(item) => item.name}
+      ignoreWorkspaceFilters
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}

@@ -42,6 +42,8 @@ type ArchivedListPageProps<T extends { id: number }> = {
   getItemLabel: (item: T) => string;
   /** Relación opcional para que los 4 filtros de workspace filtren archivados. */
   getFilterRelations?: (item: T) => ArchivedFilterRelation[];
+  /** Cuando está activo, la lista archivada ignora filtros de workspace. */
+  ignoreWorkspaceFilters?: boolean;
   /** Disparar restore para el item seleccionado. Si no se pasa, no hay botón. */
   onRestore?: (item: T) => Promise<void> | void;
   /** Disparar hard-delete para el item seleccionado. Si no se pasa, no hay botón. */
@@ -264,6 +266,7 @@ export function ArchivedListPage<T extends { id: number }>({
   bulk: bulkEnabled = false,
   getItemLabel,
   getFilterRelations,
+  ignoreWorkspaceFilters = false,
   onRestore,
   onHardDelete,
   onMount,
@@ -382,10 +385,11 @@ export function ArchivedListPage<T extends { id: number }>({
       : undefined;
 
   const activeWorkspaceFilter = Boolean(
-    selectedCustomer?.id ||
+    !ignoreWorkspaceFilters &&
+      (selectedCustomer?.id ||
       selectedProject?.id ||
       selectedCampaign?.id ||
-      selectedField?.id,
+      selectedField?.id),
   );
 
   const filteredData = useMemo(() => {
@@ -502,7 +506,7 @@ export function ArchivedListPage<T extends { id: number }>({
           onClick: openBulkRestore,
         },
         onHardDelete && {
-          label: `Eliminar Definitivamente ${selectedCount}`,
+          label: "Eliminar",
           icon: Trash2,
           variant: "danger" as const,
           onClick: openBulkHardDelete,

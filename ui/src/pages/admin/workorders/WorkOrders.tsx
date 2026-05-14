@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, Download, Plus, SlidersHorizontal, Upload } from "lucide-react";
+import { Archive, Briefcase, Download, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { EmptyState } from "../../../components/feedback/EmptyState";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
@@ -625,8 +626,10 @@ export function WorkOrders() {
     selectedCustomer,
     selectedCampaignId,
     filters,
+    hasWorkspaceSelection,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const effectiveProjectId = projectId ?? selectedProject?.id ?? routeProjectId;
+  const effectiveHasWorkspaceSelection = hasWorkspaceSelection || Boolean(routeProjectId);
 
   const [warningMessage, setWarningMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -656,11 +659,13 @@ export function WorkOrders() {
 
 
   const handleOrderCreated = useCallback(() => {
+    if (!effectiveHasWorkspaceSelection) return;
+
     resetPage();
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
     setFilterDatasetVersion((version) => version + 1);
-  }, [getOrders, getMetrics, resetPage, workOrdersQuery]);
+  }, [effectiveHasWorkspaceSelection, getOrders, getMetrics, resetPage, workOrdersQuery]);
 
 
   async function handlePublishOrder(order: OrdersData) {
@@ -832,9 +837,12 @@ export function WorkOrders() {
   useEffect(() => {
     setWarningMessage("");
     setErrorMessage("");
+    if (!effectiveHasWorkspaceSelection) return;
+
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
   }, [
+    effectiveHasWorkspaceSelection,
     workOrdersQuery,
     getOrders,
     getMetrics,
@@ -844,6 +852,12 @@ export function WorkOrders() {
     let active = true;
     setFilterDatasetOrders([]);
     setFilterDatasetReady(false);
+
+    if (!effectiveHasWorkspaceSelection) {
+      return () => {
+        active = false;
+      };
+    }
 
     const querySuffix = workOrdersFilterDatasetQuery
       ? `?${workOrdersFilterDatasetQuery}`
@@ -871,6 +885,7 @@ export function WorkOrders() {
       active = false;
     };
   }, [
+    effectiveHasWorkspaceSelection,
     workOrdersFilterDatasetQuery,
     filterDatasetVersion,
   ]);
@@ -883,6 +898,8 @@ export function WorkOrders() {
   };
 
   const filteredOrders = useMemo(() => {
+    if (!effectiveHasWorkspaceSelection) return [];
+
     return globalFilterSourceOrders.filter((order) => {
       return Object.entries(columnsFilters).every(([key, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
@@ -913,7 +930,7 @@ export function WorkOrders() {
         return orderVal === String(value).toLowerCase();
       });
     });
-  }, [globalFilterSourceOrders, columnsFilters]);
+  }, [effectiveHasWorkspaceSelection, globalFilterSourceOrders, columnsFilters]);
 
   const derivedMetrics: Metrics = useMemo(() => {
     const toNum = (v: unknown) => Number(v) || 0;
@@ -946,12 +963,31 @@ export function WorkOrders() {
     [columnsFilters]
   );
 
-  const displayedMetrics = hasColumnFilters ? derivedMetrics : metrics;
-  const displayedOrders = hasColumnFilters ? filteredOrders : safeOrders;
-  const displayedRowsTotal = hasColumnFilters
+  const emptyMetrics: Metrics = {
+    surface_ha: 0,
+    liters: 0,
+    kilograms: 0,
+    direct_cost: 0,
+    orders_count: 0,
+  };
+  const displayedMetrics = !effectiveHasWorkspaceSelection
+    ? emptyMetrics
+    : hasColumnFilters
+      ? derivedMetrics
+      : metrics;
+  const displayedOrders = !effectiveHasWorkspaceSelection
+    ? []
+    : hasColumnFilters
+      ? filteredOrders
+      : safeOrders;
+  const displayedRowsTotal = !effectiveHasWorkspaceSelection
+    ? 0
+    : hasColumnFilters
     ? filteredOrders.length
     : pageInfo?.total ?? safeOrders.length;
-  const displayedOrdersCount = hasColumnFilters
+  const displayedOrdersCount = !effectiveHasWorkspaceSelection
+    ? 0
+    : hasColumnFilters
     ? derivedMetrics.orders_count
     : Number(metrics.orders_count) ||
       countUniqueOrderBaseNumbers(
@@ -1158,7 +1194,7 @@ export function WorkOrders() {
       <WarningBanner message={warningMessage || null} />
       <SuccessBanner message={successMessage || null} variant="outlined" />
       <ErrorBanner message={errorMessage} variant="outlined" prefix="Error:" />
-      {!processing && !errorMetrics && safeOrders.length > 0 && (
+      {effectiveHasWorkspaceSelection && !processing && !errorMetrics && displayedOrders.length > 0 && (
         <div className="my-3">
           <OrdersIndicators
             metrics={displayedMetrics}
@@ -1210,61 +1246,71 @@ export function WorkOrders() {
             </button>
           </div>
         )}
-        <BulkSelectionPanel
-          selectedCount={bulk.selectedCount}
-          totalCount={displayedOrders.length}
-          allSelected={bulk.allSelected}
-          onToggleAll={bulk.toggleAll}
-          onClear={bulk.clear}
-          actions={bulk.actions}
-          entity={WORKORDER_ENTITY}
-        />
-        <DataTable
-          key={`${projectId}-${selectedField?.id || 0}-${selectedSupplyFilter.id || 0}`}
-          data={displayedOrders}
-          rowStyle="softZebra"
-          filters={columnsFilters}
-          onFilterChange={handleFilterChange}
-          columns={visibleColumnsWithSelection}
-          actionsHeader="Acciones"
-          renderActions={(item) => {
-            const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
-
-            if (isDigitalOrder(item) && !isDraftDigital) {
-              return null;
-            }
-
-            if (!isDraftDigital) {
-              return null;
-            }
-
-            return (
-              <Button
-                variant="primary"
-                size="xs"
-                onClick={() => {
-                  handlePrePublish(item);
-                }}
-              >
-                Publicar
-              </Button>
-            );
-          }}
-          enableFilters={true}
-          headerComponent={
-            <OrdersHeader
-              selectedColumns={selectedColumns}
-              setSelectedColumns={setSelectedColumns}
-              setVisibleColumns={setVisibleColumns}
-              allColumns={allColumns}
+        {!effectiveHasWorkspaceSelection ? (
+          <EmptyState
+            icon={Briefcase}
+            title="Seleccioná filtros para ver órdenes de trabajo"
+            description="El listado no carga datos globales automáticamente."
+          />
+        ) : (
+          <>
+            <BulkSelectionPanel
+              selectedCount={bulk.selectedCount}
+              totalCount={displayedOrders.length}
+              allSelected={bulk.allSelected}
+              onToggleAll={bulk.toggleAll}
+              onClear={bulk.clear}
+              actions={bulk.actions}
+              entity={WORKORDER_ENTITY}
             />
-          }
-          message="No hay ordenes disponibles"
-          pagination={pagination.buildPagination(
-            displayedRowsTotal,
-            { serverSide: !hasColumnFilters }
-          )}
-        />
+            <DataTable
+              key={`${projectId}-${selectedField?.id || 0}-${selectedSupplyFilter.id || 0}`}
+              data={displayedOrders}
+              rowStyle="softZebra"
+              filters={columnsFilters}
+              onFilterChange={handleFilterChange}
+              columns={visibleColumnsWithSelection}
+              actionsHeader="Acciones"
+              renderActions={(item) => {
+                const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
+
+                if (isDigitalOrder(item) && !isDraftDigital) {
+                  return null;
+                }
+
+                if (!isDraftDigital) {
+                  return null;
+                }
+
+                return (
+                  <Button
+                    variant="primary"
+                    size="xs"
+                    onClick={() => {
+                      handlePrePublish(item);
+                    }}
+                  >
+                    Publicar
+                  </Button>
+                );
+              }}
+              enableFilters={true}
+              headerComponent={
+                <OrdersHeader
+                  selectedColumns={selectedColumns}
+                  setSelectedColumns={setSelectedColumns}
+                  setVisibleColumns={setVisibleColumns}
+                  allColumns={allColumns}
+                />
+              }
+              message="No hay ordenes disponibles"
+              pagination={pagination.buildPagination(
+                displayedRowsTotal,
+                { serverSide: !hasColumnFilters }
+              )}
+            />
+          </>
+        )}
         <BaseModal
           isOpen={isModalOpen}
           isSaving={isProcessing}

@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
-import { Archive, Download, Plus, Upload } from "lucide-react";
+import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { EmptyState } from "../../../components/feedback/EmptyState";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
@@ -336,7 +337,7 @@ export function Products() {
     [supplyMovements, columnsFilters]
   );
 
-  const { projectId, filters, customers, selectedCustomer, selectedCampaignId, selectedField } = useWorkspaceFilters([
+  const { projectId, filters, customers, selectedCustomer, selectedCampaignId, selectedField, hasWorkspaceSelection } = useWorkspaceFilters([
     "customer",
     "project",
     "campaign",
@@ -355,8 +356,10 @@ export function Products() {
   );
 
   useEffect(() => {
+    if (!hasWorkspaceSelection) return;
+
     getSupplyMovements(supplyMovementQuery);
-  }, [getSupplyMovements, supplyMovementQuery]);
+  }, [getSupplyMovements, hasWorkspaceSelection, supplyMovementQuery]);
 
   useEffect(() => {
     if (deleteError) {
@@ -369,9 +372,10 @@ export function Products() {
     if (deleteResult) {
       setSuccessMessage("Movimiento archivado con éxito.");
       setActionErrorMessage(null);
+      if (!hasWorkspaceSelection) return;
       getSupplyMovements(supplyMovementQuery);
     }
-  }, [deleteResult, getSupplyMovements, supplyMovementQuery]);
+  }, [deleteResult, getSupplyMovements, hasWorkspaceSelection, supplyMovementQuery]);
 
   useEffect(() => {
     if (errorCreation) {
@@ -390,6 +394,7 @@ export function Products() {
 
   const handleProductCreated = () => {
     pagination.resetPage();
+    if (!hasWorkspaceSelection) return;
     getSupplyMovements(supplyMovementQuery);
   };
 
@@ -397,12 +402,16 @@ export function Products() {
     setSuccessMessage(message);
     setActionErrorMessage(null);
     pagination.resetPage();
-    getSupplyMovements(supplyMovementQuery);
+    if (hasWorkspaceSelection) {
+      getSupplyMovements(supplyMovementQuery);
+    }
     setPendingImportFile(null);
     setImportDrawerOpen(false);
   };
 
   const filteredMovements = useMemo(() => {
+    if (!hasWorkspaceSelection) return [];
+
     return supplyMovements.filter((item) => {
       return Object.entries(columnsFilters).every(([key, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) {
@@ -445,7 +454,7 @@ export function Products() {
         return itemValue.includes(String(value).toLowerCase());
       });
     });
-  }, [supplyMovements, columnsFilters]);
+  }, [supplyMovements, columnsFilters, hasWorkspaceSelection]);
 
   const movementEntity = useMemo(
     () => ({
@@ -464,6 +473,7 @@ export function Products() {
       : undefined,
     onEdit: handleEdit,
     onAfter: () => {
+      if (!hasWorkspaceSelection) return;
       getSupplyMovements(supplyMovementQuery);
     },
   });
@@ -596,13 +606,13 @@ export function Products() {
         onDismiss={() => setWarningMessage(null)}
       />
       <SuccessBanner message={successMessage} variant="outlined" />
-      {!error && (
+      {hasWorkspaceSelection && !error && (
         <div className="my-3">
           <ItemsIndicators summary={derivedSummary} />
         </div>
       )}
       <div className="mt-3 relative">
-        <LoadingOverlay show={processing} />
+        <LoadingOverlay show={hasWorkspaceSelection && processing} />
 
         <ErrorBanner
           message={actionErrorMessage || exportErrorMessage || error}
@@ -622,6 +632,7 @@ export function Products() {
                 setEditingMovement(null);
                 setSuccessMessage("Movimiento actualizado con éxito.");
                 setActionErrorMessage(null);
+                if (!hasWorkspaceSelection) return;
                 getSupplyMovements(supplyMovementQuery);
               }}
             />
@@ -647,25 +658,35 @@ export function Products() {
         >
           <ArchivedSupplyMovements />
         </ArchivedDrawer>
-        <BulkSelectionPanel
-          selectedCount={bulk.selectedCount}
-          totalCount={filteredMovements.length}
-          allSelected={bulk.allSelected}
-          onToggleAll={bulk.toggleAll}
-          onClear={bulk.clear}
-          actions={bulk.actions}
-          entity={movementEntity}
-        />
-        <DataTable
-          data={filteredMovements}
-          rowStyle="softZebra"
-          columns={columnsWithSelection}
-          filters={columnsFilters}
-          onFilterChange={handleFilterChange}
-          enableFilters={true}
-          message="No hay movimientos disponibles"
-          pagination={pagination.buildPagination(filteredMovements.length)}
-        />
+        {!hasWorkspaceSelection ? (
+          <EmptyState
+            icon={Briefcase}
+            title="Seleccioná filtros para ver insumos"
+            description="El listado no carga datos globales automáticamente."
+          />
+        ) : (
+          <>
+            <BulkSelectionPanel
+              selectedCount={bulk.selectedCount}
+              totalCount={filteredMovements.length}
+              allSelected={bulk.allSelected}
+              onToggleAll={bulk.toggleAll}
+              onClear={bulk.clear}
+              actions={bulk.actions}
+              entity={movementEntity}
+            />
+            <DataTable
+              data={filteredMovements}
+              rowStyle="softZebra"
+              columns={columnsWithSelection}
+              filters={columnsFilters}
+              onFilterChange={handleFilterChange}
+              enableFilters={true}
+              message="No hay movimientos disponibles"
+              pagination={pagination.buildPagination(filteredMovements.length)}
+            />
+          </>
+        )}
       </div>
     </div>
   );

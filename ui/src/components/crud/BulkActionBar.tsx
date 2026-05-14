@@ -36,43 +36,48 @@ export function BulkActionBar({
 }: BulkActionBarProps) {
   if (selectedCount === 0) return null;
 
+  const dangerActions = actions.filter((action) => action.variant === "danger");
+  const defaultActions = actions.filter((action) => action.variant !== "danger");
+  const renderAction = (action: BulkAction) => {
+    const Icon = action.icon;
+    const isDanger = action.variant === "danger";
+    return (
+      <AppButton
+        key={action.label}
+        disabled={action.disabled}
+        onClick={action.onClick}
+        variant={isDanger ? "danger" : "primary"}
+        size="sm"
+        iconLeft={Icon ? <Icon className="h-4 w-4" /> : undefined}
+      >
+        {action.label}
+      </AppButton>
+    );
+  };
+
   return (
     <div
       className={`sticky top-0 z-20 mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 shadow-sm ${className}`}
       role="toolbar"
       aria-label="Acciones masivas"
     >
-      {showSelectionSummary ? (
-        <div className="flex items-center gap-3 text-sm text-blue-900">
+      <div className="flex items-center gap-2">
+        {dangerActions.map(renderAction)}
+        {showSelectionSummary && (
+          <div className="flex items-center gap-3 text-sm text-blue-900">
           <span className="font-medium">
             {selectedCount} {itemLabel} seleccionado{selectedCount === 1 ? "" : "s"}
           </span>
-          <IconActionButton
-            label="Limpiar selección"
-            icon={<X className="h-3.5 w-3.5" />}
-            onClick={onClear}
-          />
-        </div>
-      ) : (
-        <span />
-      )}
+            <IconActionButton
+              label="Limpiar selección"
+              icon={<X className="h-3.5 w-3.5" />}
+              onClick={onClear}
+            />
+          </div>
+        )}
+      </div>
       <div className="flex items-center gap-2">
-        {actions.map((action) => {
-          const Icon = action.icon;
-          const isDanger = action.variant === "danger";
-          return (
-            <AppButton
-              key={action.label}
-              disabled={action.disabled}
-              onClick={action.onClick}
-              variant={isDanger ? "danger" : "primary"}
-              size="sm"
-              iconLeft={Icon ? <Icon className="h-4 w-4" /> : undefined}
-            >
-              {action.label}
-            </AppButton>
-          );
-        })}
+        {defaultActions.map(renderAction)}
       </div>
     </div>
   );

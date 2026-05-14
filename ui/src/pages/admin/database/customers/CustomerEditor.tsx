@@ -151,19 +151,25 @@ function normalizeProject(project: Project): Project {
 
 type CustomerEditorProps = {
   embedded?: boolean;
+  mode?: "customerOnly" | "project";
   customerId?: number | null;
+  initialProjectId?: number | null;
   onClose?: () => void;
 };
 
 export default function CustomerEditor({
   embedded = false,
+  mode = "project",
   customerId,
+  initialProjectId,
   onClose,
 }: CustomerEditorProps = {}) {
   const navigate = useNavigate();
   const { id } = useParams();
   const initialCustomerId = customerId ?? (Number(id) || NEW_VALUE);
   const { projectId: contextProjectId } = useSelection();
+  const preferredInitialProjectId = initialProjectId ?? contextProjectId ?? null;
+  const customerOnly = mode === "customerOnly";
 
   const [customerOptions, setCustomerOptions] = useState<CustomerData[]>([]);
   const [actorOptions, setActorOptions] = useState<ActorOption[]>([]);
@@ -263,7 +269,11 @@ export default function CustomerEditor({
       };
 
       try {
-        await Promise.allSettled([loadCustomers(), loadActors(), loadReferenceLists()]);
+        await Promise.allSettled([
+          loadCustomers(),
+          loadActors(),
+          ...(customerOnly ? [] : [loadReferenceLists()]),
+        ]);
         if (!cancelled) {
           setLoading(false);
         }
@@ -279,7 +289,7 @@ export default function CustomerEditor({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [customerOnly]);
 
   useEffect(() => {
     setSelectedCustomerId(initialCustomerId);
@@ -293,6 +303,19 @@ export default function CustomerEditor({
     let cancelled = false;
 
     const loadProjects = async () => {
+      if (customerOnly) {
+        setSelectedProjectId("");
+        setProjectOptions([]);
+        setProjectDraft(
+          createEmptyProject(
+            isExistingId(selectedCustomerId)
+              ? customerOptions.find((customer) => customer.id === selectedCustomerId) ?? null
+              : null
+          )
+        );
+        return;
+      }
+
       if (selectedCustomerId === NEW_VALUE) {
         setSelectedProjectId(NEW_VALUE);
         setProjectDraft(createEmptyProject(null));
@@ -322,8 +345,8 @@ export default function CustomerEditor({
 
         const details = Object.fromEntries(detailsEntries);
         const preferredProject =
-          (contextProjectId
-            ? projects.find((project) => project.id === contextProjectId)
+          (preferredInitialProjectId
+            ? projects.find((project) => project.id === preferredInitialProjectId)
             : undefined) ?? projects[0];
         const preferredDetail = preferredProject
           ? details[preferredProject.id]
@@ -349,7 +372,7 @@ export default function CustomerEditor({
     return () => {
       cancelled = true;
     };
-  }, [contextProjectId, customerOptions, selectedCustomerId]);
+  }, [customerOnly, customerOptions, preferredInitialProjectId, selectedCustomerId]);
 
   const customerByActorId = useMemo(() => {
     const map = new Map<number, CustomerData>();
@@ -1094,26 +1117,29 @@ export default function CustomerEditor({
     return null;
   };
 
-	  const handleSave = async () => {
-	    if (!selectedProjectId || !projectDraft) return;
-	    const customerId = projectDraft.customer.id ?? null;
-	    const customerActorId = projectDraft.customer.actor_id ?? null;
-	    const match = findEntityMatches(projectDraft.customer.name, customerMatchOptions);
+  const handleSave = async () => {
+    if (!projectDraft) return;
+    const customerId =
+      customerOnly && isExistingId(selectedCustomerId)
+        ? selectedCustomerId
+        : projectDraft.customer.id ?? null;
+    const customerActorId = projectDraft.customer.actor_id ?? null;
+    const match = findEntityMatches(projectDraft.customer.name, customerMatchOptions);
 
-	    if (!customerId && !customerActorId && match.exactMatch) {
-	      setSuccess(null);
-	      setError(
-	        `Ya existe el actor "${match.exactMatch.name}". Seleccionalo desde la lista para evitar duplicados.`
-	      );
-	      return;
-	    }
+    if (!customerId && !customerActorId && match.exactMatch) {
+      setSuccess(null);
+      setError(
+        `Ya existe el actor "${match.exactMatch.name}". Seleccionalo desde la lista para evitar duplicados.`
+      );
+      return;
+    }
 
-	    if (
-	      !customerId &&
-	      !customerActorId &&
-	      match.requiresConfirmation &&
-	      confirmedCustomerCreateName !== match.normalizedInput
-	    ) {
+    if (
+      !customerId &&
+      !customerActorId &&
+      match.requiresConfirmation &&
+      confirmedCustomerCreateName !== match.normalizedInput
+    ) {
       setSuccess(null);
       setError(
         "Hay clientes parecidos. Confirmá que querés crear uno nuevo antes de guardar."
@@ -1121,7 +1147,9 @@ export default function CustomerEditor({
       return;
     }
 
-    const actorEntityError = validateActorEntities();
+    if (!customerOnly && !selectedProjectId) return;
+
+    const actorEntityError = customerOnly ? null : validateActorEntities();
     if (actorEntityError) {
       setSuccess(null);
       setError(actorEntityError);
@@ -1132,7 +1160,19 @@ export default function CustomerEditor({
     setError(null);
     setSuccess(null);
     try {
-      if (selectedProjectId === NEW_VALUE) {
+      if (customerOnly) {
+        const payload = {
+          name: projectDraft.customer.name,
+          actor_id: customerActorId,
+        };
+        if (customerId) {
+          await apiClient.put(`/customers/${customerId}`, payload);
+          setSuccess("Cliente guardado.");
+        } else {
+          await apiClient.post("/customers", payload);
+          setSuccess("Cliente creado.");
+        }
+      } else if (selectedProjectId === NEW_VALUE) {
         await apiClient.post("/projects", projectDraft);
         setSuccess("Proyecto creado.");
       } else {
@@ -1140,7 +1180,7 @@ export default function CustomerEditor({
         setSuccess("Cambios guardados.");
       }
     } catch {
-      setError("No se pudieron guardar los cambios.");
+      setError(customerOnly ? "No se pudo guardar el cliente." : "No se pudieron guardar los cambios.");
     } finally {
       setSaving(false);
     }
@@ -1164,67 +1204,73 @@ export default function CustomerEditor({
         <div className="space-y-2">
           <section className="drawer-section">
             <div className="drawer-section-header">
-              <h2 className="drawer-section-title">Proyecto</h2>
+              <h2 className="drawer-section-title">{customerOnly ? "Cliente" : "Proyecto"}</h2>
             </div>
-            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-5">
-	              <SmartEntityInput<ActorOption>
-	                label="Cliente / Sociedad"
-	                name="project_customer"
-	                value={projectDraft.customer.name}
-	                options={customerActorOptions}
-	                entityLabel="Cliente / Sociedad"
-	                onChange={updateCustomerName}
-	                onSelectExisting={selectExistingCustomer}
-	                selectedOptionId={projectDraft.customer.actor_id ?? null}
-	                createConfirmed={customerCreateConfirmed}
-	                onConfirmCreate={confirmCustomerCreate}
-	                size="sm"
-              />
-              <SmartEntityInput<EntityOption>
-                label="Nombre del proyecto"
-                name="project_name"
-                value={projectDraft.name}
-                options={projectOptions}
-                entityLabel="Proyecto"
-                onChange={(value) => updateProjectValue("name", value)}
-                onSelectExisting={selectProjectOption}
-                selectedOptionId={selectedProjectId === NEW_VALUE ? null : selectedProjectId}
-                createConfirmed={isEntityCreateConfirmed("project", projectDraft.name)}
-                onConfirmCreate={confirmProjectCreate}
+            <div className={`grid grid-cols-1 gap-2.5 ${customerOnly ? "max-w-xl" : "md:grid-cols-5"}`}>
+              <SmartEntityInput<ActorOption>
+                label="Cliente / Sociedad"
+                name="project_customer"
+                value={projectDraft.customer.name}
+                options={customerActorOptions}
+                entityLabel="Cliente / Sociedad"
+                onChange={updateCustomerName}
+                onSelectExisting={selectExistingCustomer}
+                selectedOptionId={projectDraft.customer.actor_id ?? null}
+                createConfirmed={customerCreateConfirmed}
+                onConfirmCreate={confirmCustomerCreate}
                 size="sm"
               />
-              <SmartEntityInput<EntityOption>
-                label="Campaña"
-                name="campaign_name"
-                value={projectDraft.campaign.name}
-                options={campaignOptions}
-                entityLabel="Campaña"
-                onChange={updateCampaignName}
-                onSelectExisting={selectCampaignOption}
-                selectedOptionId={projectDraft.campaign.id}
-                createConfirmed={isEntityCreateConfirmed("campaign", projectDraft.campaign.name)}
-                onConfirmCreate={(value) => confirmEntityCreate("campaign", value)}
-                size="sm"
-              />
-              <InputField
-                label="Costo planificado"
-                name="planned_cost"
-                type="number"
-                value={String(projectDraft.planned_cost ?? 0)}
-                onChange={(event) => updateProjectValue("planned_cost", event.target.value)}
-                size="sm"
-              />
-              <InputField
-                label="Costo administrativo"
-                name="admin_cost"
-                type="number"
-                value={String(projectDraft.admin_cost ?? 0)}
-                onChange={(event) => updateProjectValue("admin_cost", event.target.value)}
-                size="sm"
-              />
+              {!customerOnly && (
+                <>
+                  <SmartEntityInput<EntityOption>
+                    label="Nombre del proyecto"
+                    name="project_name"
+                    value={projectDraft.name}
+                    options={projectOptions}
+                    entityLabel="Proyecto"
+                    onChange={(value) => updateProjectValue("name", value)}
+                    onSelectExisting={selectProjectOption}
+                    selectedOptionId={selectedProjectId === NEW_VALUE ? null : selectedProjectId}
+                    createConfirmed={isEntityCreateConfirmed("project", projectDraft.name)}
+                    onConfirmCreate={confirmProjectCreate}
+                    size="sm"
+                  />
+                  <SmartEntityInput<EntityOption>
+                    label="Campaña"
+                    name="campaign_name"
+                    value={projectDraft.campaign.name}
+                    options={campaignOptions}
+                    entityLabel="Campaña"
+                    onChange={updateCampaignName}
+                    onSelectExisting={selectCampaignOption}
+                    selectedOptionId={projectDraft.campaign.id}
+                    createConfirmed={isEntityCreateConfirmed("campaign", projectDraft.campaign.name)}
+                    onConfirmCreate={(value) => confirmEntityCreate("campaign", value)}
+                    size="sm"
+                  />
+                  <InputField
+                    label="Costo planificado"
+                    name="planned_cost"
+                    type="number"
+                    value={String(projectDraft.planned_cost ?? 0)}
+                    onChange={(event) => updateProjectValue("planned_cost", event.target.value)}
+                    size="sm"
+                  />
+                  <InputField
+                    label="Costo administrativo"
+                    name="admin_cost"
+                    type="number"
+                    value={String(projectDraft.admin_cost ?? 0)}
+                    onChange={(event) => updateProjectValue("admin_cost", event.target.value)}
+                    size="sm"
+                  />
+                </>
+              )}
             </div>
           </section>
 
+          {!customerOnly && (
+            <>
           <section className="grid grid-cols-1 gap-2 xl:grid-cols-3">
             <EditableList
               title="Responsables"
@@ -1579,6 +1625,8 @@ export default function CustomerEditor({
               )}
             </div>
           </section>
+            </>
+          )}
           <section className="flex justify-end gap-2 pb-2">
             <Button variant="light" disabled={saving} onClick={handleCancel}>
               Cancelar

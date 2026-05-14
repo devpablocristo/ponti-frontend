@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, Pencil, Check, AlertCircle, Plus, Upload } from "lucide-react";
+import { LoaderCircle, Pencil, Check, AlertCircle, Briefcase, Plus, Upload } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +7,7 @@ import useStock from "../../../hooks/useStock";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { EmptyState } from "../../../components/feedback/EmptyState";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
@@ -286,7 +287,7 @@ export function Stock() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { projectId, filters, selectedCustomer, selectedCampaignId, selectedField, customers } =
+  const { projectId, filters, selectedCustomer, selectedCampaignId, selectedField, customers, hasWorkspaceSelection } =
     useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const {
@@ -315,11 +316,13 @@ export function Stock() {
   );
 
   const refreshStock = useCallback(() => {
+    if (!hasWorkspaceSelection) return;
+
     getStock(
       stockQuery,
       period === "0" ? "" : stockPeriods[Number(period)]?.name || ""
     );
-  }, [getStock, period, stockPeriods, stockQuery]);
+  }, [getStock, hasWorkspaceSelection, period, stockPeriods, stockQuery]);
 
   const handleStockCreated = () => {
     if (!projectId) return;
@@ -339,8 +342,13 @@ export function Stock() {
     [navigate, stockQuery]
   );
 
+  const stockRows = useMemo(
+    () => (hasWorkspaceSelection && Array.isArray(stock) ? stock : []),
+    [hasWorkspaceSelection, stock]
+  );
+
   const filteredStock = useMemo(() => {
-    return (Array.isArray(stock) ? stock : []).filter((item) => {
+    return stockRows.filter((item) => {
       return Object.entries(columnsFilters).every(([key, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) {
           return true;
@@ -362,7 +370,7 @@ export function Stock() {
         return itemValue.includes(String(value).toLowerCase());
       });
     });
-  }, [stock, columnsFilters]);
+  }, [stockRows, columnsFilters]);
 
   const derivedSummary: Summary = useMemo(() => {
     let totalKg = 0;
@@ -394,10 +402,11 @@ export function Stock() {
     stock: GetStockItems[],
     filters: Record<string, unknown>
   ) {
+    const source = Array.isArray(stock) ? stock : [];
     const otherFilters = { ...filters };
     delete otherFilters[key];
 
-    const filtered = stock.filter((item) =>
+    const filtered = source.filter((item) =>
       Object.entries(otherFilters).every(([k, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
@@ -434,7 +443,7 @@ export function Stock() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "supply_name",
-          stock,
+          stockRows,
           columnsFilters
         ),
         render: (value, item) => (
@@ -457,7 +466,7 @@ export function Stock() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "class_type",
-          stock,
+          stockRows,
           columnsFilters
         ),
       },
@@ -470,7 +479,7 @@ export function Stock() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "investor_name",
-          stock,
+          stockRows,
           columnsFilters
         ),
         render: (value, item) => {
@@ -497,7 +506,7 @@ export function Stock() {
         headerPadding: "xs",
         filterOptions: getFilterOptionsForColumn(
           "entry_stock",
-          stock,
+          stockRows,
           columnsFilters
         ),
         header: "Ingresados",
@@ -519,7 +528,7 @@ export function Stock() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "consumed",
-          stock,
+          stockRows,
           columnsFilters
         ),
       },
@@ -536,7 +545,7 @@ export function Stock() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "stock_units",
-          stock,
+          stockRows,
           columnsFilters
         ),
       },
@@ -572,7 +581,7 @@ export function Stock() {
         headerPadding: "xs",
         filterOptions: getFilterOptionsForColumn(
           "stock_difference",
-          stock,
+          stockRows,
           columnsFilters
         ),
         header: "Diferencia",
@@ -630,7 +639,7 @@ export function Stock() {
         headerPadding: "xs",
         filterOptions: getFilterOptionsForColumn(
           "close_date",
-          stock,
+          stockRows,
           columnsFilters
         ),
         header: "Fecha de cierre",
@@ -667,21 +676,23 @@ export function Stock() {
         },
       },
     ],
-    [projectId, stock, columnsFilters, refreshStock, handleViewConsumingOrders]
+    [projectId, stockRows, columnsFilters, refreshStock, handleViewConsumingOrders]
   );
 
   useEffect(() => {
     resetPage();
     setPeriod("0");
     setStockPeriods([{ id: 0, name: "Activo" }]);
+    setDisabledCloseStock(!projectId);
+    setSelectedDate("");
+
+    if (!hasWorkspaceSelection) return;
 
     getStock(stockQuery, "");
     if (projectId) {
       getPeriods(projectId);
     }
-    setDisabledCloseStock(!projectId);
-    setSelectedDate("");
-  }, [getStock, getPeriods, projectId, resetPage, stockQuery]);
+  }, [getStock, getPeriods, hasWorkspaceSelection, projectId, resetPage, stockQuery]);
 
   useEffect(() => {
     if (periods && periods.length > 0) {
@@ -699,6 +710,7 @@ export function Stock() {
 
   useEffect(() => {
     resetPage();
+    if (!hasWorkspaceSelection) return;
 
     const periodNumber = Number(period);
     if (periodNumber === 0) {
@@ -711,7 +723,7 @@ export function Stock() {
     getStock(stockQuery, stockPeriods[periodNumber]?.name || "");
     setSelectedDate(stockPeriods[periodNumber]?.name || "");
     setDisabledCloseStock(true);
-  }, [period, stockPeriods, getStock, projectId, resetPage, stockQuery]);
+  }, [period, stockPeriods, getStock, hasWorkspaceSelection, projectId, resetPage, stockQuery]);
 
   useEffect(() => {
     if (errorCloseStock) {
@@ -809,7 +821,7 @@ export function Stock() {
         message={warningMessage}
         onDismiss={() => setWarningMessage(null)}
       />
-      {!error && (
+      {hasWorkspaceSelection && !error && (
         <div className="my-3">
           <ItemsIndicators
             summary={derivedSummary}
@@ -822,7 +834,7 @@ export function Stock() {
         </div>
       )}
       <div className="mt-3 relative">
-        {processing && (
+        {hasWorkspaceSelection && processing && (
           <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
           </div>
@@ -861,15 +873,23 @@ export function Stock() {
             onStockCreated={handleStockCreated}
           />
         )}
-        <DataTable
-          data={filteredStock}
-          columns={columns}
-          message="No hay stock disponible"
-          filters={columnsFilters}
-          onFilterChange={handleFilterChange}
-          enableFilters={true}
-          pagination={pagination.buildPagination(filteredStock.length)}
-        />
+        {!hasWorkspaceSelection ? (
+          <EmptyState
+            icon={Briefcase}
+            title="Seleccioná filtros para ver stock"
+            description="El listado no carga datos globales automáticamente."
+          />
+        ) : (
+          <DataTable
+            data={filteredStock}
+            columns={columns}
+            message="No hay stock disponible"
+            filters={columnsFilters}
+            onFilterChange={handleFilterChange}
+            enableFilters={true}
+            pagination={pagination.buildPagination(filteredStock.length)}
+          />
+        )}
         <BaseModal
   isOpen={stockValidationModal !== null}
   onClose={() => setStockValidationModal(null)}

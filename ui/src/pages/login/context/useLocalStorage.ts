@@ -32,7 +32,10 @@ export const clearWorkspaceSelectionStorage = () => {
   ["customer", "project", "project_id", "campaign", "field"].forEach((key) => {
     localStorage.removeItem(`ponti:${key}`);
     localStorage.removeItem(key);
+    sessionStorage.removeItem(`ponti:${key}`);
+    sessionStorage.removeItem(key);
   });
+  window.dispatchEvent(new CustomEvent("ponti:workspace-selection-reset"));
 };
 
 export const setLocalStorage = (token: TokenPair) => {

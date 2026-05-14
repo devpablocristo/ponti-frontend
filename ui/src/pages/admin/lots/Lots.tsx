@@ -1,7 +1,8 @@
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
-import { Archive, Download, Plus, Upload } from "lucide-react";
+import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { EmptyState } from "../../../components/feedback/EmptyState";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { WarningBanner } from "../../../components/feedback/WarningBanner";
@@ -80,10 +81,13 @@ function Lots() {
     fields,
     filters,
     seasons,
+    hasWorkspaceSelection,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const selectedFieldId = selectedField?.id;
 
   const loadCurrentLots = useCallback(() => {
+    if (!hasWorkspaceSelection) return;
+
     const query = buildWorkspaceQuery({
       customerId: selectedCustomer?.id,
       projectId,
@@ -92,7 +96,15 @@ function Lots() {
     });
     getLots(query);
     getLotsKpis(query);
-  }, [getLots, getLotsKpis, projectId, selectedCampaignId, selectedCustomer?.id, selectedFieldId]);
+  }, [
+    getLots,
+    getLotsKpis,
+    hasWorkspaceSelection,
+    projectId,
+    selectedCampaignId,
+    selectedCustomer?.id,
+    selectedFieldId,
+  ]);
 
   const reloadFromFirstPage = useCallback(() => {
     resetPage();
@@ -195,8 +207,8 @@ function Lots() {
   }, [updateLotError]);
 
   const filteredLots = useMemo(
-    () => filterLots(lots, columnsFilters),
-    [columnsFilters, lots]
+    () => (hasWorkspaceSelection ? filterLots(lots, columnsFilters) : []),
+    [columnsFilters, hasWorkspaceSelection, lots]
   );
 
   const calculatedKpis = useMemo(
@@ -208,10 +220,15 @@ function Lots() {
     [columnsFilters]
   );
   const indicators = useMemo(
-    () => (hasColumnFilters ? calculatedKpis : mapApiLotIndicators(kpis)),
-    [calculatedKpis, hasColumnFilters, kpis]
+    () =>
+      hasWorkspaceSelection
+        ? hasColumnFilters
+          ? calculatedKpis
+          : mapApiLotIndicators(kpis)
+        : calculatedKpis,
+    [calculatedKpis, hasColumnFilters, hasWorkspaceSelection, kpis]
   );
-  const fieldsAmount = fields.length;
+  const fieldsAmount = hasWorkspaceSelection ? fields.length : 0;
   const lotsAmount = filteredLots.length;
 
   const openEditDrawer = useCallback((item: LotsData) => {
@@ -516,7 +533,7 @@ function Lots() {
 
       <ErrorBanner message={errorMessage || error} variant="outlined" prefix="Error:" />
 
-      {!message && !error ? (
+      {hasWorkspaceSelection && !message && !error ? (
         <div className="my-3">
           <LotsIndicators
             kpis={indicators}
@@ -555,7 +572,13 @@ function Lots() {
           <ArchivedLots />
         </ArchivedDrawer>
 
-        {!message && !error && (
+        {!hasWorkspaceSelection ? (
+          <EmptyState
+            icon={Briefcase}
+            title="Seleccioná filtros para ver lotes"
+            description="El listado no carga datos globales automáticamente."
+          />
+        ) : !message && !error ? (
           <BulkSelectionPanel
             selectedCount={bulk.selectedCount}
             totalCount={filteredLots.length}
@@ -565,8 +588,8 @@ function Lots() {
             actions={bulk.actions}
             entity={ENTITY}
           />
-        )}
-        {!message && !error ? (
+        ) : null}
+        {hasWorkspaceSelection && !message && !error ? (
           <DataTable
             data={filteredLots}
             columns={columnsToShow}

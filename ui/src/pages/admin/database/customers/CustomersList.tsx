@@ -4,6 +4,7 @@ import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { apiClient } from "@/api/client";
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
+import { Checkbox } from "../../../../components/Input/Checkbox";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
@@ -13,19 +14,25 @@ import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPan
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
+import useProjects from "../../../../hooks/useDatabase/projects";
 import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
-import { CustomerData } from "../../../../hooks/useCustomers/types";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { toastError, toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
-import { CUSTOMER_ENTITY as ENTITY } from "../../entities";
+import { CUSTOMER_ENTITY, PROJECT_ENTITY } from "../../entities";
 import { formatNumberAr } from "../../utils";
 import ArchivedCustomers from "./ArchivedCustomers";
+import ArchivedProjects from "../projects/ArchivedProjects";
 import CustomerEditor from "./CustomerEditor";
 
+type CustomerProjectMode = "customer" | "project";
+
 type CustomerProjectRow = {
-  id: string;
+  id: number;
+  mode: CustomerProjectMode;
+  projectId?: number;
+  projectIds: number[];
   customerId: number;
   customerName: string;
   projectName: string;
@@ -85,6 +92,27 @@ function normalizeFilter(value: string) {
 function campaignName(project: RawProject) {
   const key = campaignKey(project);
   return String(key || "");
+}
+
+function countUniqueCampaigns(projects: RawProject[]) {
+  return new Set(projects.map(campaignName).filter(Boolean)).size;
+}
+
+function countUniqueFields(projects: RawProject[]) {
+  const fields = new Set<string>();
+
+  projects.forEach((project) => {
+    (Array.isArray(project.fields) ? project.fields : []).forEach((field) => {
+      if (typeof field === "string") {
+        fields.add(normalizeFilter(field));
+        return;
+      }
+
+      fields.add(String(field.id ?? normalizeFilter(field.name ?? "")));
+    });
+  });
+
+  return fields.size;
 }
 
 function projectMatchesFilters(
@@ -160,6 +188,7 @@ async function loadProjectDetails(projects: RawProject[]) {
 export default function CustomersList() {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
+  const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const {
     customers,
@@ -171,6 +200,7 @@ export default function CustomersList() {
   } = useCustomers();
   const [projectsByCustomer, setProjectsByCustomer] = useState<Record<number, RawProject[]>>({});
   const [projectsLoading, setProjectsLoading] = useState(false);
+  const { deleteProject } = useProjects();
   const {
     filters,
     selectedCustomer,
@@ -178,11 +208,14 @@ export default function CustomersList() {
     selectedCampaignId,
     selectedField,
     campaigns,
+    hasWorkspaceSelection,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const selectedCampaign = useMemo(
     () => campaigns.find((campaign) => campaign.id === selectedCampaignId),
     [campaigns, selectedCampaignId],
   );
+  const mode: CustomerProjectMode = selectedProject?.id ? "project" : "customer";
+  const isProjectMode = mode === "project";
 
   const refresh = useCallback(
     () => getCustomers("limit=1000"),
@@ -190,6 +223,8 @@ export default function CustomersList() {
   );
 
   const visibleCustomers = useMemo(() => {
+    if (!hasWorkspaceSelection) return [];
+
     const customerNeedle = normalizeFilter(selectedCustomer?.name ?? "");
 
     return customers.filter((customer) => {
@@ -211,6 +246,7 @@ export default function CustomersList() {
     });
   }, [
     customers,
+    hasWorkspaceSelection,
     projectsByCustomer,
     selectedCampaign,
     selectedCustomer,
@@ -219,6 +255,8 @@ export default function CustomersList() {
   ]);
 
   const totalVisibleHectares = useMemo(() => {
+    if (!hasWorkspaceSelection) return 0;
+
     return visibleCustomers.reduce((total, customer) => {
       const projects = projectsByCustomer[customer.id] ?? [];
       const filteredProjects = projects.filter((project) =>
@@ -235,6 +273,7 @@ export default function CustomersList() {
     }, 0);
   }, [
     projectsByCustomer,
+    hasWorkspaceSelection,
     selectedCampaign,
     selectedField,
     selectedProject,
@@ -242,17 +281,25 @@ export default function CustomersList() {
   ]);
 
   const visibleProjectRows = useMemo<CustomerProjectRow[]>(() => {
-    return visibleCustomers.flatMap((customer) => {
-      const projects = (projectsByCustomer[customer.id] ?? []).filter((project) =>
+    if (!hasWorkspaceSelection) return [];
+
+    return visibleCustomers.flatMap((customer): CustomerProjectRow[] => {
+      const allProjects = projectsByCustomer[customer.id] ?? [];
+      const projectIds = allProjects
+        .map((project) => project.id)
+        .filter((projectId): projectId is number => typeof projectId === "number" && projectId > 0);
+      const projects = allProjects.filter((project) =>
         projectMatchesFilters(project, selectedProject, selectedCampaign, selectedField)
       );
 
       if (projects.length === 0) {
         return [
           {
-            id: `customer-${customer.id}-empty`,
+            id: -customer.id,
+            mode: "customer",
             customerId: customer.id,
             customerName: customer.name,
+            projectIds,
             projectName: "Sin proyecto",
             campaignCount: 0,
             fieldCount: 0,
@@ -260,8 +307,26 @@ export default function CustomersList() {
         ];
       }
 
+      if (!isProjectMode) {
+        return [
+          {
+            id: -customer.id,
+            mode: "customer",
+            customerId: customer.id,
+            customerName: customer.name,
+            projectIds,
+            projectName: "Todos",
+            campaignCount: countUniqueCampaigns(projects),
+            fieldCount: countUniqueFields(projects),
+          },
+        ];
+      }
+
       return projects.map((project, index) => ({
-        id: `customer-${customer.id}-project-${project.id ?? index}`,
+        id: project.id ?? Number(`${customer.id}${index}`),
+        mode: "project" as const,
+        projectId: project.id,
+        projectIds: project.id ? [project.id] : [],
         customerId: customer.id,
         customerName: customer.name,
         projectName: project.name ?? "Sin proyecto",
@@ -271,6 +336,8 @@ export default function CustomersList() {
     });
   }, [
     projectsByCustomer,
+    hasWorkspaceSelection,
+    isProjectMode,
     selectedCampaign,
     selectedField,
     selectedProject,
@@ -329,14 +396,16 @@ export default function CustomersList() {
   );
 
   useEffect(() => {
+    if (!hasWorkspaceSelection) return;
+
     refresh();
-  }, [refresh]);
+  }, [hasWorkspaceSelection, refresh]);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadSummaries = async () => {
-      if (customers.length === 0) {
+      if (!hasWorkspaceSelection || customers.length === 0) {
         setProjectsByCustomer({});
         return;
       }
@@ -376,18 +445,68 @@ export default function CustomersList() {
     return () => {
       cancelled = true;
     };
-  }, [customers]);
+  }, [customers, hasWorkspaceSelection]);
 
-  const bulk = useBulkActions<CustomerData>({
-    items: visibleCustomers,
-    entity: ENTITY,
-    archive: archiveCustomer,
-    onEdit: (customer) => setEditingCustomerId(customer.id),
+  const bulkEntity = isProjectMode ? PROJECT_ENTITY : CUSTOMER_ENTITY;
+  const bulkRows = useMemo(
+    () => (isProjectMode ? visibleProjectRows.filter((row) => row.projectId) : visibleProjectRows),
+    [isProjectMode, visibleProjectRows],
+  );
+  const rowArchive = useCallback(
+    async (rowId: number) => {
+      const row = visibleProjectRows.find((item) => item.id === rowId);
+      if (!row) return;
+
+      if (row.mode === "project") {
+        if (!row.projectId) return;
+        await deleteProject(row.projectId);
+        return;
+      }
+
+      await archiveCustomer(row.customerId);
+    },
+    [archiveCustomer, deleteProject, visibleProjectRows],
+  );
+
+  const bulk = useBulkActions<CustomerProjectRow>({
+    items: bulkRows,
+    entity: bulkEntity,
+    archive: rowArchive,
+    onEdit: (row) => {
+      setEditingCustomerId(row.customerId);
+      setEditingProjectId(row.mode === "project" ? row.projectId ?? null : null);
+    },
     onAfter: refresh,
   });
 
+  const selectColumn = useMemo<Column<CustomerProjectRow>>(
+    () => ({
+      key: "id",
+      header: "",
+      align: "center",
+      width: "40px",
+      render: (_value, row) => (
+          <Checkbox
+            checked={bulk.isSelected(row.id)}
+            onChange={(event) => {
+              event.stopPropagation();
+              bulk.toggle(row.id);
+            }}
+            onClick={(event) => event.stopPropagation()}
+            aria-label={
+              isProjectMode
+                ? `Seleccionar proyecto ${row.projectName}`
+                : `Seleccionar cliente ${row.customerName}`
+            }
+          />
+      ),
+    }),
+    [bulk, isProjectMode],
+  );
+
   const tableColumns = useMemo<Column<CustomerProjectRow>[]>(
     () => [
+      selectColumn,
       { key: "customerName", header: "Cliente" },
       { key: "projectName", header: "Proyecto" },
       {
@@ -401,7 +520,7 @@ export default function CustomersList() {
         align: "center",
       },
     ],
-    [],
+    [selectColumn],
   );
 
   return (
@@ -451,28 +570,42 @@ export default function CustomersList() {
 
       <DrawerShell
         open={editingCustomerId !== null}
-        onClose={() => setEditingCustomerId(null)}
-        title="Editar Cliente"
+        onClose={() => {
+          setEditingCustomerId(null);
+          setEditingProjectId(null);
+        }}
+        title={editingProjectId ? "Editar Proyecto" : "Editar Cliente"}
       >
         <CustomerEditor
           embedded
+          mode={editingProjectId ? "project" : "customerOnly"}
           customerId={editingCustomerId}
-          onClose={() => setEditingCustomerId(null)}
+          initialProjectId={editingProjectId}
+          onClose={() => {
+            setEditingCustomerId(null);
+            setEditingProjectId(null);
+          }}
         />
       </DrawerShell>
 
       <ArchivedDrawer
         open={archivedDrawerOpen}
-        title="Clientes archivados"
+        title={isProjectMode ? "Proyectos archivados" : "Clientes archivados"}
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        <ArchivedCustomers />
+        {isProjectMode ? <ArchivedProjects /> : <ArchivedCustomers />}
       </ArchivedDrawer>
 
       <div className="relative">
-        <LoadingOverlay show={processing || projectsLoading} />
+        <LoadingOverlay show={hasWorkspaceSelection && (processing || projectsLoading)} />
         {error && <ErrorBanner message={error} />}
-        {!processing && visibleCustomers.length === 0 ? (
+        {!hasWorkspaceSelection ? (
+          <EmptyState
+            icon={Briefcase}
+            title="Seleccioná filtros para ver clientes y proyectos"
+            description="El listado no carga datos globales automáticamente."
+          />
+        ) : !processing && visibleCustomers.length === 0 ? (
           <EmptyState
             icon={Briefcase}
             title="Aún no hay clientes"
@@ -498,12 +631,12 @@ export default function CustomersList() {
             </div>
             <BulkSelectionPanel
               selectedCount={bulk.selectedCount}
-              totalCount={visibleCustomers.length}
+              totalCount={bulkRows.length}
               allSelected={bulk.allSelected}
               onToggleAll={bulk.toggleAll}
               onClear={bulk.clear}
               actions={bulk.actions}
-              entity={ENTITY}
+              entity={bulkEntity}
             />
             <DataTable data={visibleProjectRows} columns={tableColumns} />
           </>

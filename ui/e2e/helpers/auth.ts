@@ -1,11 +1,11 @@
 import { Page } from "@playwright/test";
 import { Buffer } from "node:buffer";
 
-const workspace = {
-  customer: { id: 17, name: "AGRO LAJITAS 25-26" },
-  project: { id: 30, name: "JUJUY (MEALLA/ACHERAL)" },
-  projectId: 30,
-  campaign: { id: 2, name: "2025-2026", project_id: 30 },
+export const e2eWorkspace = {
+  customer: { id: 14, name: "SOALEN SRL 25-26" },
+  project: { id: 29, name: "CAMPO COTY" },
+  projectId: 29,
+  campaign: { id: 2, name: "2025-2026", project_id: 29 },
 };
 
 function base64Url(value: unknown): string {
@@ -28,7 +28,10 @@ function createE2EToken(): string {
   ].join(".");
 }
 
-export async function installAuthenticatedSession(page: Page) {
+export async function installAuthenticatedSession(
+  page: Page,
+  selectedWorkspace = e2eWorkspace
+) {
   const token = createE2EToken();
   let tenantId = process.env.E2E_TENANT_ID ?? "";
 
@@ -77,6 +80,6 @@ export async function installAuthenticatedSession(page: Page) {
       setSelectionJson("campaign", selectedWorkspace.campaign);
       removeSelection("field");
     },
-    { e2eToken: token, selectedWorkspace: workspace, selectedTenantId: tenantId }
+    { e2eToken: token, selectedWorkspace, selectedTenantId: tenantId }
   );
 }

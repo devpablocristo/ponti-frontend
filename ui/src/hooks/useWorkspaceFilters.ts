@@ -58,6 +58,7 @@ export interface UseWorkspaceFiltersReturn {
   projectId: number | null;
   selectedCampaignId: number | undefined; // Or Campaign object if you prefer
   selectedField: Field | undefined;
+  hasWorkspaceSelection: boolean;
   workspaceReady: boolean;
   seasons: { name: string; id: number }[];
   filters: FilterBarFilter[];
@@ -175,6 +176,12 @@ export const useWorkspaceFilters = (
     normalizedSelectedProject.id > 0 &&
     selectedCampaignId &&
     selectedCampaignId > 0
+  );
+  const hasWorkspaceSelection = Boolean(
+    (selectedCustomer && selectedCustomer.id > 0) ||
+    normalizedProjectId ||
+    (selectedCampaignId && selectedCampaignId > 0) ||
+    normalizedSelectedField
   );
 
   const [queryCustomer, setQueryCustomer] = useState<string>("");
@@ -472,6 +479,7 @@ export const useWorkspaceFilters = (
     projectId: normalizedProjectId ?? null,
     selectedCampaignId,
     selectedField: normalizedSelectedField,
+    hasWorkspaceSelection,
     workspaceReady,
     filters,
     seasons,

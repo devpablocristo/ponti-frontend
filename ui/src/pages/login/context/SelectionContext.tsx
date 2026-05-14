@@ -1,5 +1,5 @@
 // contexts/SelectionContext.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Entity } from "../../../hooks/useDatabase/options/types";
 import type { Data } from "../../../hooks/useFields/types";
 import { SelectionContext } from "./SelectionContext.shared";
@@ -68,20 +68,37 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
   ];
 
   const [customer, setCustomerState] = useState<Entity | undefined>(() =>
-    readStoredJson<Entity>("customer"),
+    readStoredJson<Entity>("customer")
   );
   const [project, setProjectState] = useState<Entity | undefined>(() =>
-    readStoredJson<Entity>("project"),
+    readStoredJson<Entity>("project")
   );
   const [projectId, setProjectIdState] = useState<number | null | undefined>(() =>
-    readStoredNumber("project_id"),
+    readStoredNumber("project_id")
   );
   const [campaign, setCampaignState] = useState<Entity | undefined>(() =>
-    readStoredJson<Entity>("campaign"),
+    readStoredJson<Entity>("campaign")
   );
   const [field, setFieldState] = useState<Data | undefined>(() =>
-    readStoredJson<Data>("field"),
+    readStoredJson<Data>("field")
   );
+
+  useEffect(() => {
+    const resetSelection = () => {
+      setCustomerState(undefined);
+      setProjectState(undefined);
+      setProjectIdState(undefined);
+      setCampaignState(undefined);
+      setFieldState(undefined);
+    };
+
+    window.addEventListener("ponti:tenant-changed", resetSelection);
+    window.addEventListener("ponti:workspace-selection-reset", resetSelection);
+    return () => {
+      window.removeEventListener("ponti:tenant-changed", resetSelection);
+      window.removeEventListener("ponti:workspace-selection-reset", resetSelection);
+    };
+  }, []);
 
   const setCustomer = (value: Entity | undefined) => {
     setCustomerState(value);

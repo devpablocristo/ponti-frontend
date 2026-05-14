@@ -45,6 +45,7 @@ export default function ArchivedCustomers() {
       entity={ENTITY}
       bulk
       getItemLabel={(item) => item.name}
+      ignoreWorkspaceFilters
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}

@@ -41,7 +41,7 @@ const stockReducer = (state: typeof initialState, action: Action) => {
     case actions.SET_STOCK:
       return {
         ...state,
-        stock: action.payload,
+        stock: Array.isArray(action.payload) ? action.payload : [],
       };
     case actions.SET_SUMMARY:
       return {
