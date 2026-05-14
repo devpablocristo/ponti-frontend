@@ -180,7 +180,7 @@ jobs:
           service_json="$(gcloud run services describe "${SERVICE_NAME_PROD}" \
             --project="${GCP_PROJECT_ID_PROD}" \
             --region="${{ env.REGION }}" \
-            --format='json(spec.template.spec.containers[0].env)')"
+            --format='json')"
           deployed_base_manager_api="$(SERVICE_JSON="$service_json" python3 - <<'PY'
           import json, os
           data = json.loads(os.environ["SERVICE_JSON"])
