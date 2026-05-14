@@ -42,3 +42,7 @@ node ./scripts/generate-ai-types.mjs
 cd api
 $env:NODE_ENV = "local"; nodemon --ext ts --exec ts-node src/index.ts
 ```
+
+## Deploys
+
+- Versionado, trazabilidad y rollback: `doc/VERSIONADO_DEPLOYS.md`.
