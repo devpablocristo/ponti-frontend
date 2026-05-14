@@ -30,10 +30,26 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      deployments: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+
+      - name: Resolve deploy SHA
+        run: |
+          set -euo pipefail
+          deploy_sha="$(git rev-parse HEAD)"
+          if [[ ! "$deploy_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "ERROR: invalid deploy SHA: $deploy_sha"
+            exit 1
+          fi
+          build_time="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          echo "DEPLOY_SHA=$deploy_sha" >> "$GITHUB_ENV"
+          echo "DEPLOY_SHORT_SHA=${deploy_sha::12}" >> "$GITHUB_ENV"
+          echo "SERVICE_GIT_SHA=$deploy_sha" >> "$GITHUB_ENV"
+          echo "SERVICE_BUILD_TIME=$build_time" >> "$GITHUB_ENV"
+          echo "RELEASE_SERVICE_VERSION=dev-${deploy_sha::12}" >> "$GITHUB_ENV"
 
       - name: Set DEV environment
         id: env
@@ -77,9 +93,12 @@ jobs:
 
       - name: Build Docker image (API only)
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
-          docker build -f Dockerfile.api -t "$IMAGE" .
-          docker tag "$IMAGE" "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE_SHA="${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${DEPLOY_SHA}"
+          IMAGE_DEV="${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
+          docker build -f Dockerfile.api -t "$IMAGE_SHA" .
+          docker tag "$IMAGE_SHA" "$IMAGE_DEV"
+          echo "IMAGE_SHA=$IMAGE_SHA" >> "$GITHUB_ENV"
+          echo "IMAGE_DEV=$IMAGE_DEV" >> "$GITHUB_ENV"
 
       - name: Resolve canonical backend API URL
         id: backend
@@ -101,20 +120,19 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
-          docker push "${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ github.sha }}"
+          docker push "$IMAGE_SHA"
+          docker push "$IMAGE_DEV"
 
       - name: Deploy API to Cloud Run
         run: |
-          IMAGE="${{ env.REGISTRY }}/${{ steps.env.outputs.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ steps.env.outputs.SERVICE_NAME }}:${{ steps.env.outputs.TAG }}"
           gcloud run deploy "${{ steps.env.outputs.SERVICE_NAME }}" \
             --project="${{ steps.env.outputs.PROJECT_ID }}" \
             --region="${{ env.REGION }}" \
-            --image="$IMAGE" \
+            --image="$IMAGE_SHA" \
             --service-account="${{ steps.env.outputs.CLOUD_RUN_SERVICE_ACCOUNT }}" \
             --allow-unauthenticated \
             --port=3000 \
-            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
+            --set-env-vars="NODE_ENV=${{ steps.env.outputs.ENV }},SERVICE_NAME=${{ steps.env.outputs.SERVICE_NAME }},SERVICE_VERSION=${RELEASE_SERVICE_VERSION},SERVICE_GIT_SHA=${SERVICE_GIT_SHA},SERVICE_BUILD_TIME=${SERVICE_BUILD_TIME},BASE_MANAGER_API=${{ steps.backend.outputs.BASE_MANAGER_API }},X_API_KEY=${{ secrets.X_API_KEY }},IDENTITY_PLATFORM_API_KEY=${{ secrets.IDENTITY_PLATFORM_API_KEY_DEV }},IDENTITY_PLATFORM_PROJECT_ID=${{ steps.env.outputs.PROJECT_ID }}"
 
       - name: "Guardrail: verify BASE_MANAGER_API detagged in deployed revision"
         run: |
@@ -155,6 +173,14 @@ jobs:
             exit 1
           fi
           echo "SERVICE_URL=$service_url" >> "$GITHUB_ENV"
+
+      - name: Resolve Cloud Run revision
+        run: |
+          revision="$(gcloud run services describe "${{ steps.env.outputs.SERVICE_NAME }}" \
+            --project="${{ steps.env.outputs.PROJECT_ID }}" \
+            --region="${{ env.REGION }}" \
+            --format='value(status.latestReadyRevisionName)')"
+          echo "CLOUD_RUN_REVISION=$revision" >> "$GITHUB_ENV"
 
       - name: Write Firebase target config (DEV)
         run: |
@@ -205,6 +231,18 @@ jobs:
         env:
           AUTH_BEARER_TOKEN: ${{ env.AUTH_BEARER_TOKEN }}
           REQUIRE_AUTH_SMOKE: ${{ env.REQUIRE_AUTH_SMOKE }}
+
+      - name: Record DEV deployment
+        run: |
+          DEPLOY_DESCRIPTION="Frontend DEV smoke OK ${DEPLOY_SHA}" \
+          SERVICE_VERSION="$RELEASE_SERVICE_VERSION" \
+          IMAGE_URI="$IMAGE_SHA" \
+          python3 scripts/release/deployments.py record
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_ENV: dev
+          DEPLOY_STATUS_LABEL: SMOKE_OK
+          DEPLOY_STATE: success
 
       - name: Show deployment URLs
         run: |
