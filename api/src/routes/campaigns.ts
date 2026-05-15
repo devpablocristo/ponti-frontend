@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
+import { buildForwardQuery } from "../utils/forwardQuery";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -79,7 +80,10 @@ router.get("/archived", async (req: Request, res: Response) => {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
     };
-    const { data: campaigns } = await apiClient.get<any>("/campaigns/archived", headers);
+    const { data: campaigns } = await apiClient.get<any>(
+      `/campaigns/archived${buildForwardQuery(req)}`,
+      headers
+    );
     const items = Array.isArray(campaigns?.data) ? campaigns.data : [];
     const total =
       typeof campaigns?.page_info?.total === "number"
@@ -115,7 +119,7 @@ router.post("", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     const { data } = await apiClient.post<any>("/campaigns", req.body, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(201).json({ success: true, data });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -144,7 +148,7 @@ router.put("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.put<any>(`/campaigns/${id}`, req.body, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -173,7 +177,7 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.post<any>(`/campaigns/${id}/archive`, {}, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -202,7 +206,7 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.post<any>(`/campaigns/${id}/restore`, {}, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -231,7 +235,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.delete<any>(`/campaigns/${id}/hard`, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;

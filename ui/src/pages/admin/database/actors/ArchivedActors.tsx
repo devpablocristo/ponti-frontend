@@ -1,8 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import { ArchivedListPage } from "../../../../components/ArchivedListPage/ArchivedListPage";
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
-import useActors, { Actor } from "../../../../hooks/useActors";
+import useActors, { Actor, ActorKind, ActorRole } from "../../../../hooks/useActors";
 import { Column } from "../../types";
 import { ACTOR_ENTITY as ENTITY } from "../../entities";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
@@ -40,7 +40,26 @@ const columns: Column<Actor>[] = [
   },
 ];
 
-export default function ArchivedActors() {
+export type ActorListFilters = {
+  actorId?: number | null;
+  actorName?: string;
+  role?: ActorRole | "";
+  kind?: ActorKind | "";
+};
+
+const actorMatchesFilters = (actor: Actor, filters?: ActorListFilters) => {
+  if (!filters) return true;
+  if (filters.actorId && actor.id !== filters.actorId) return false;
+  if (filters.role && !(actor.roles ?? []).includes(filters.role)) return false;
+  if (filters.kind && actor.actor_kind !== filters.kind) return false;
+  return true;
+};
+
+type ArchivedActorsProps = {
+  filters?: ActorListFilters;
+};
+
+export default function ArchivedActors({ filters }: ArchivedActorsProps) {
   const {
     archivedActors,
     getArchivedActors,
@@ -51,8 +70,16 @@ export default function ArchivedActors() {
   } = useActors();
 
   const refetch = useCallback(async () => {
-    await getArchivedActors("page=1&per_page=1000");
-  }, [getArchivedActors]);
+    const params = new URLSearchParams({ page: "1", per_page: "1000" });
+    if (filters?.role) params.set("role", filters.role);
+    if (filters?.actorName) params.set("q", filters.actorName);
+    await getArchivedActors(params.toString());
+  }, [filters?.actorName, filters?.role, getArchivedActors]);
+
+  const filteredActors = useMemo(
+    () => archivedActors.filter((actor) => actorMatchesFilters(actor, filters)),
+    [archivedActors, filters],
+  );
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Actor>({
@@ -65,7 +92,7 @@ export default function ArchivedActors() {
     <ArchivedListPage<Actor>
       description="Restaurar o eliminar actores de forma definitiva"
       columns={columns}
-      data={archivedActors}
+      data={filteredActors}
       entity={ENTITY}
       bulk
       getItemLabel={(item) => item.display_name}
@@ -74,6 +101,7 @@ export default function ArchivedActors() {
       onMount={refetch}
       processing={processing || actionProcessing}
       error={lastError ?? error}
+      ignoreWorkspaceFilters
     />
   );
 }

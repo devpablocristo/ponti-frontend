@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from "./index";
+import { buildForwardQuery } from "../utils/forwardQuery";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -87,7 +88,10 @@ router.get("/archived", async (req: Request, res: Response) => {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
     };
-    const { data: fields } = await apiClient.get<any>("/fields/archived", headers);
+    const { data: fields } = await apiClient.get<any>(
+      `/fields/archived${buildForwardQuery(req)}`,
+      headers
+    );
     const items = Array.isArray(fields?.data) ? fields.data : [];
     const total =
       typeof fields?.page_info?.total === "number" ? fields.page_info.total : items.length;
@@ -122,7 +126,7 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.post<any>(`/fields/${id}/archive`, {}, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -151,7 +155,7 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.post<any>(`/fields/${id}/restore`, {}, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -180,7 +184,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.delete<any>(`/fields/${id}/hard`, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -211,7 +215,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
     };
 
     await apiClient.delete<any>(`/fields/${id}`, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;

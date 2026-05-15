@@ -109,7 +109,7 @@ router.get("/periods/:id", async (req: Request, res: Response) => {
     };
 
     if (Array.isArray(periods) && periods.length > 0) {
-      setImmediate(() => cache.set(`stock:periods:${projectId}`, data));
+      cache.set(`stock:periods:${projectId}`, data);
     }
 
     res.status(200).json(data);
@@ -161,7 +161,7 @@ router.get("", async (req: Request, res: Response) => {
     };
 
     if (Array.isArray(stock?.items) && stock.items.length > 0) {
-      setImmediate(() => cache.set(`stock:workspace:${queryString}`, data));
+      cache.set(`stock:workspace:${queryString}`, data);
     }
 
     res.status(200).json(data);
@@ -223,7 +223,7 @@ router.get("/:id", async (req: Request, res: Response) => {
     };
 
     if (Array.isArray(stock?.items) && stock.items.length > 0) {
-      setImmediate(() => cache.set(`stock:${projectId}:${queryString}`, data));
+      cache.set(`stock:${projectId}:${queryString}`, data);
     }
 
     res.status(200).json(data);

@@ -19,7 +19,7 @@ const Navbar: React.FC<NavbarProps> = ({
   setIsLogoutModalOpen,
 }) => {
   return (
-    <nav className="w-full bg-white border-b border-slate-200/80">
+    <nav className="relative z-[900] w-full bg-white border-b border-slate-200/80">
       <div className="mx-auto px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {!isSidebarOpen && (

@@ -3,6 +3,7 @@ import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { parsePartialPriceFlag } from "../utils/partialPrice";
 import { configService } from "../configService";
 import { cache } from ".";
+import { buildForwardQuery } from "../utils/forwardQuery";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -101,11 +102,9 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    setImmediate(() => {
-      if (adaptedProjects.length > 0) {
-        cache.set(cacheKey, data, 60 * 5);
-      }
-    });
+    if (adaptedProjects.length > 0) {
+      cache.set(cacheKey, data, 60 * 5);
+    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -137,12 +136,13 @@ router.get("/archived", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
+    const query = buildForwardQuery(req);
     const { data: projects } = await apiClient.get<any>(
-      "/projects/archived",
+      `/projects/archived${query}`,
       headers
     );
     const { data: archivedCustomers } = await apiClient.get<any>(
-      "/customers/archived",
+      `/customers/archived${query}`,
       headers
     );
 
@@ -310,7 +310,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     const data = await apiClient.get<any>(`/projects/${id}`, headers);
 
-    setImmediate(() => cache.set(`project:${id}`, data));
+    cache.set(`project:${id}`, data);
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -348,7 +348,7 @@ router.post("", async (req: Request, res: Response) => {
 
     await apiClient.post<any>(`/projects`, requestData, headers);
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json({
       success: true,
@@ -390,7 +390,7 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     await apiClient.put<any>(`/projects/${id}`, requestData, headers);
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json({
       success: true,
@@ -431,7 +431,7 @@ router.delete(
       const data = await apiClient.delete<any>(`/labors/${id}`, headers);
 
 
-      setImmediate(() => cache.flushAll());
+      cache.flushAll();
       res.status(200).json(data);
 
 
@@ -468,7 +468,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
     };
 
     await apiClient.delete<any>(`/projects/${id}`, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -501,7 +501,7 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
     };
 
     await apiClient.post<any>(`/projects/${id}/archive`, {}, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -534,7 +534,7 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
     };
 
     await apiClient.post<any>(`/projects/${id}/restore`, {}, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -567,7 +567,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
     };
 
     await apiClient.delete<any>(`/projects/${id}/hard`, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -621,7 +621,7 @@ router.get("/:id/dollar-values", async (req: Request, res: Response) => {
     };
 
     if (Array.isArray(dollar) && dollar.length > 0) {
-      setImmediate(() => cache.set(`dollar:${projectId}`, data));
+      cache.set(`dollar:${projectId}`, data);
     }
 
     res.status(200).json(data);
@@ -671,7 +671,7 @@ router.put("/:id/dollar-values", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     const data = {
       success: true,
@@ -735,7 +735,7 @@ router.post("/:id/labors", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(207).json({
       success: true,
@@ -794,7 +794,7 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
     };
 
     if (Array.isArray(items) && items.length > 0) {
-      setImmediate(() => cache.set(`labors:${projectId}`, data));
+      cache.set(`labors:${projectId}`, data);
     }
 
     res.status(200).json(data);
@@ -850,7 +850,7 @@ router.get("/:id/commercializations", async (req: Request, res: Response) => {
     };
 
     if (Array.isArray(commerce) && commerce.length > 0) {
-      setImmediate(() => cache.set(`commerce:${projectId}`, data));
+      cache.set(`commerce:${projectId}`, data);
     }
 
     res.status(200).json(data);

@@ -72,9 +72,7 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    setImmediate(() => {
-      cache.set("options", data, CACHE_TTL_SHORT);
-    });
+    cache.set("options", data, CACHE_TTL_SHORT);
 
     res.status(200).json(data);
   } catch (error: any) {

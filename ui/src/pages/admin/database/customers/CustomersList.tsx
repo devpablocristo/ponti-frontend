@@ -18,6 +18,7 @@ import useProjects from "../../../../hooks/useDatabase/projects";
 import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
+import { useSelection } from "../../../login/context/useSelection";
 import { toastError, toastSuccess } from "../../../../lib/toast";
 import { Column } from "../../types";
 import { CUSTOMER_ENTITY, PROJECT_ENTITY } from "../../entities";
@@ -190,6 +191,7 @@ export default function CustomersList() {
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const [dataVersion, setDataVersion] = useState(0);
   const {
     customers,
     processing,
@@ -201,6 +203,7 @@ export default function CustomersList() {
   const [projectsByCustomer, setProjectsByCustomer] = useState<Record<number, RawProject[]>>({});
   const [projectsLoading, setProjectsLoading] = useState(false);
   const { deleteProject } = useProjects();
+  const { allSelection } = useSelection();
   const {
     filters,
     selectedCustomer,
@@ -214,13 +217,26 @@ export default function CustomersList() {
     () => campaigns.find((campaign) => campaign.id === selectedCampaignId),
     [campaigns, selectedCampaignId],
   );
-  const mode: CustomerProjectMode = selectedProject?.id ? "project" : "customer";
+  const hasProjectScope = Boolean(
+    selectedProject?.id ||
+      selectedCampaign?.id ||
+      selectedField?.id ||
+      allSelection.project ||
+      allSelection.campaign ||
+      allSelection.field,
+  );
+  const mode: CustomerProjectMode = hasProjectScope ? "project" : "customer";
   const isProjectMode = mode === "project";
+  const archivedShowsProjects = hasProjectScope;
 
   const refresh = useCallback(
     () => getCustomers("limit=1000"),
     [getCustomers],
   );
+  const refreshAfterArchivedRestore = useCallback(async () => {
+    await refresh();
+    setDataVersion((current) => current + 1);
+  }, [refresh]);
 
   const visibleCustomers = useMemo(() => {
     if (!hasWorkspaceSelection) return [];
@@ -236,7 +252,10 @@ export default function CustomersList() {
       const hasRelationFilter =
         Boolean(selectedProject) ||
         Boolean(selectedCampaign) ||
-        Boolean(selectedField);
+        Boolean(selectedField) ||
+        allSelection.project ||
+        allSelection.campaign ||
+        allSelection.field;
 
       if (!hasRelationFilter) return true;
 
@@ -252,6 +271,9 @@ export default function CustomersList() {
     selectedCustomer,
     selectedField,
     selectedProject,
+    allSelection.project,
+    allSelection.campaign,
+    allSelection.field,
   ]);
 
   const totalVisibleHectares = useMemo(() => {
@@ -445,7 +467,7 @@ export default function CustomersList() {
     return () => {
       cancelled = true;
     };
-  }, [customers, hasWorkspaceSelection]);
+  }, [customers, dataVersion, hasWorkspaceSelection]);
 
   const bulkEntity = isProjectMode ? PROJECT_ENTITY : CUSTOMER_ENTITY;
   const bulkRows = useMemo(
@@ -590,10 +612,14 @@ export default function CustomersList() {
 
       <ArchivedDrawer
         open={archivedDrawerOpen}
-        title={isProjectMode ? "Proyectos archivados" : "Clientes archivados"}
+        title={archivedShowsProjects ? "Proyectos archivados" : "Clientes archivados"}
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        {isProjectMode ? <ArchivedProjects /> : <ArchivedCustomers />}
+        {archivedShowsProjects ? (
+          <ArchivedProjects onAfterRestore={refreshAfterArchivedRestore} />
+        ) : (
+          <ArchivedCustomers onAfterRestore={refreshAfterArchivedRestore} />
+        )}
       </ArchivedDrawer>
 
       <div className="relative">

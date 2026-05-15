@@ -61,7 +61,7 @@ export function BaseModal({
     <div
       id="popup-modal"
       tabIndex={-1}
-      className={`animate-modal-backdrop fixed top-0 right-0 left-0 z-50 flex justify-center items-center w-full h-screen backdrop-blur-sm bg-slate-900/50 ${
+      className={`animate-modal-backdrop fixed top-0 right-0 left-0 z-[1000] flex justify-center items-center w-full h-screen backdrop-blur-sm bg-slate-900/50 ${
         isOpen ? "flex" : "hidden"
       }`}
     >

@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
@@ -8,20 +8,21 @@ import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
+import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import CreateItem from "./CreateItem";
-import ImportSupplyMovements from "./ImportSupplyMovements";
+import Items from "../database/products/Items";
 import useSupplyMovements from "../../../hooks/useSupplyMovement";
 import { SupplyMovement } from "../../../hooks/useSupplyMovement/types";
 import { Summary } from "@/api/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
-import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../fileTransfer";
+import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedSupplyMovements from "./ArchivedSupplyMovements";
@@ -56,7 +57,6 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
 }
 
 export function Products() {
-  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
   const {
     getSupplyMovements,
@@ -95,19 +95,15 @@ export function Products() {
     );
   };
 
-  const handleImportFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (!file) return;
-
+  const openImportDrawer = () => {
     if (!projectId) {
-      setWarningMessage("Para importar movimientos de insumos, seleccioná un proyecto.");
+      setWarningMessage("Para importar insumos, seleccioná un proyecto.");
       return;
     }
 
     setWarningMessage(null);
     setActionErrorMessage(null);
     setSuccessMessage(null);
-    setPendingImportFile(file);
     setImportDrawerOpen(true);
   };
 
@@ -398,16 +394,11 @@ export function Products() {
     getSupplyMovements(supplyMovementQuery);
   };
 
-  const handleImported = (message: string) => {
+  const handleImported = useCallback((message: string) => {
     setSuccessMessage(message);
     setActionErrorMessage(null);
-    pagination.resetPage();
-    if (hasWorkspaceSelection) {
-      getSupplyMovements(supplyMovementQuery);
-    }
-    setPendingImportFile(null);
     setImportDrawerOpen(false);
-  };
+  }, []);
 
   const filteredMovements = useMemo(() => {
     if (!hasWorkspaceSelection) return [];
@@ -560,8 +551,7 @@ export function Products() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            accept: SPREADSHEET_ACCEPT,
-            onFileChange: handleImportFileChange,
+            onClick: openImportDrawer,
           },
           {
             label: "Exportar",
@@ -637,18 +627,18 @@ export function Products() {
               }}
             />
 
-            {importDrawerOpen && (
-              <ImportSupplyMovements
-                open={importDrawerOpen}
-                file={pendingImportFile}
-                projectId={projectId}
-                onClose={() => {
-                  setImportDrawerOpen(false);
-                  setPendingImportFile(null);
-                }}
-                onImported={handleImported}
+            <DrawerShell
+              open={importDrawerOpen}
+              onClose={() => setImportDrawerOpen(false)}
+              title="Importar insumos"
+              subtitle="Cargá insumos manualmente o importalos desde Excel/CSV para el proyecto seleccionado."
+            >
+              <Items
+                embedded
+                onCancel={() => setImportDrawerOpen(false)}
+                onSaved={handleImported}
               />
-            )}
+            </DrawerShell>
           </>
         )}
         <ArchivedDrawer

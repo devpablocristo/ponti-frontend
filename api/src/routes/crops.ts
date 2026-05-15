@@ -32,9 +32,7 @@ router.get("", async (req: Request, res: Response) => {
       data: crops.data,
     };
 
-    setImmediate(() => {
-      cache.set("crops", data, CACHE_TTL_SHORT);
-    });
+    cache.set("crops", data, CACHE_TTL_SHORT);
 
     res.status(200).json(data);
   } catch (error: any) {

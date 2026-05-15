@@ -116,7 +116,7 @@ router.post("/invoice", async (req: Request, res: Response) => {
       headers,
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     const data = {
       success: true,
@@ -203,7 +203,7 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
       headers,
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     const data = {
       success: true,
@@ -462,7 +462,7 @@ router.get("/group", async (req: Request, res: Response) => {
       },
     };
 
-    setImmediate(() => cache.set(cacheKey, data));
+    cache.set(cacheKey, data);
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -530,9 +530,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       },
     };
 
-    setImmediate(() =>
-      cache.set(`labors:project:${project_id}:query:${query}`, data),
-    );
+    cache.set(`labors:project:${project_id}:query:${query}`, data);
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -570,7 +568,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
       message: "Labor eliminada exitosamente",
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -616,7 +614,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       headers,
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     const data = {
       success: true,
@@ -701,7 +699,7 @@ router.post("/:labor_id/archive", async (req: Request, res: Response) => {
       {},
       headers,
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -733,7 +731,7 @@ router.post("/:labor_id/restore", async (req: Request, res: Response) => {
       {},
       headers,
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -764,7 +762,7 @@ router.delete("/:labor_id/hard", async (req: Request, res: Response) => {
       `/labors/${req.params.labor_id}/hard`,
       headers,
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;

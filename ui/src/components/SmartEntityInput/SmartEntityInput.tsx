@@ -91,7 +91,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
         top: dropdownPosition.top,
         left: dropdownPosition.left,
         width: dropdownPosition.width,
-        zIndex: 300,
+        zIndex: 980,
       }
     : undefined;
 

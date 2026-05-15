@@ -7,6 +7,7 @@ import {
   buildWorkOrderScopeParams,
   parseWorkOrderScope,
 } from "../utils/workOrdersRoute";
+import { buildForwardQuery } from "../utils/forwardQuery";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -100,7 +101,7 @@ router.post("", async (req: Request, res: Response) => {
       data: workorder,
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -161,7 +162,7 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    setImmediate(() => cache.set(`workorders:query:${query}`, data));
+    cache.set(`workorders:query:${query}`, data);
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -216,7 +217,7 @@ router.get("/filter-rows", async (req: Request, res: Response) => {
       },
     };
 
-    setImmediate(() => cache.set(cacheKey, data));
+    cache.set(cacheKey, data);
 
     res.status(200).json(data);
   } catch (error: unknown) {
@@ -375,7 +376,7 @@ router.put("/drafts/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(204).send();
   } catch (error: any) {
@@ -410,7 +411,7 @@ router.post("/drafts/:id/publish", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json({
       success: true,
@@ -447,7 +448,7 @@ router.delete("/drafts/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json({
       success: true,
@@ -530,7 +531,7 @@ router.put("/:id", async (req: Request, res: Response) => {
       message: "Orden actualizada exitosamente",
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -568,7 +569,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
       message: "Orden eliminada exitosamente",
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -594,7 +595,10 @@ router.get("/archived", async (req: Request, res: Response) => {
       return;
     }
     const headers = getAuthHeaders(userId);
-    const { data: workOrders } = await apiClient.get<any>("/work-orders/archived", headers);
+    const { data: workOrders } = await apiClient.get<any>(
+      `/work-orders/archived${buildForwardQuery(req)}`,
+      headers
+    );
     const items = Array.isArray(workOrders?.data) ? workOrders.data : [];
     const total =
       typeof workOrders?.page_info?.total === "number"
@@ -627,7 +631,7 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
     }
     const headers = getAuthHeaders(userId);
     await apiClient.post<any>(`/work-orders/${req.params.id}/archive`, {}, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Orden archivada exitosamente" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -652,7 +656,7 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
     }
     const headers = getAuthHeaders(userId);
     await apiClient.post<any>(`/work-orders/${req.params.id}/restore`, {}, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Orden restaurada exitosamente" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -677,7 +681,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
     }
     const headers = getAuthHeaders(userId);
     await apiClient.delete<any>(`/work-orders/${req.params.id}/hard`, headers);
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Orden eliminada definitivamente" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;

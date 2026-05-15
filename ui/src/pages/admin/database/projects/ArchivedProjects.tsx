@@ -15,7 +15,11 @@ const columns: Column<ProjectData>[] = [
   { key: "investors", header: "Inversores y aportes" },
 ];
 
-export default function ArchivedProjects() {
+type ArchivedProjectsProps = {
+  onAfterRestore?: () => Promise<void> | void;
+};
+
+export default function ArchivedProjects({ onAfterRestore }: ArchivedProjectsProps) {
   const {
     projects,
     getArchivedProjects,
@@ -29,11 +33,18 @@ export default function ArchivedProjects() {
     () => getArchivedProjects("page=1&per_page=1000"),
     [getArchivedProjects],
   );
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreProject(id);
+      await onAfterRestore?.();
+    },
+    [onAfterRestore, restoreProject],
+  );
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<ProjectData>({
       refetch,
-      restore: restoreProject,
+      restore: restoreAndNotify,
       hardDelete: hardDeleteProject,
     });
 

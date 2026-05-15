@@ -25,6 +25,11 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
     setIsDropdownOpen(!isDropdownOpen);
   };
 
+  const handleLogoutClick = () => {
+    setIsDropdownOpen(false);
+    setIsLogoutModalOpen();
+  };
+
   const handleClickOutside = (event: MouseEvent) => {
     if (
       dropdownRef.current &&
@@ -124,7 +129,7 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
 
       <div
         ref={dropdownRef}
-        className={`absolute right-0 top-full mt-2 z-[9999] ${
+        className={`absolute right-0 top-full mt-2 z-[910] ${
           isDropdownOpen ? "animate-fade-in-down" : "hidden"
         } w-52 bg-white rounded-xl border border-slate-200 overflow-hidden`}
         style={{ boxShadow: "var(--shadow-lg)" }}
@@ -147,7 +152,7 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
         </div>
         <div className="p-2 border-t border-slate-100">
           <button
-            onClick={setIsLogoutModalOpen}
+            onClick={handleLogoutClick}
             className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg hover:bg-red-50 transition-colors duration-150"
             style={{ color: "#DC2626" }}
           >

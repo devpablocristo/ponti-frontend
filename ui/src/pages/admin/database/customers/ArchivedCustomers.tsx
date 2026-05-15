@@ -11,11 +11,15 @@ type ArchivedCustomer = {
   name: string;
 };
 
+type ArchivedCustomersProps = {
+  onAfterRestore?: () => Promise<void> | void;
+};
+
 const columns: Column<ArchivedCustomer>[] = [
   { key: "name", header: "Cliente/Sociedad" },
 ];
 
-export default function ArchivedCustomers() {
+export default function ArchivedCustomers({ onAfterRestore }: ArchivedCustomersProps) {
   const {
     customers,
     getArchivedCustomers,
@@ -29,11 +33,18 @@ export default function ArchivedCustomers() {
     () => getArchivedCustomers("page=1&per_page=1000"),
     [getArchivedCustomers],
   );
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreCustomer(id);
+      await onAfterRestore?.();
+    },
+    [onAfterRestore, restoreCustomer],
+  );
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<ArchivedCustomer>({
       refetch,
-      restore: restoreCustomer,
+      restore: restoreAndNotify,
       hardDelete: hardDeleteCustomer,
     });
 

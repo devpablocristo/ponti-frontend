@@ -185,11 +185,11 @@
   /* Drawers */
   .drawer-root {
     @apply fixed inset-0 flex;
-    z-index: 120;
+    z-index: 950;
   }
 
   .drawer-backdrop {
-    @apply fixed inset-0 transition-opacity;
+    @apply fixed inset-0 transition-opacity backdrop-blur-sm;
     background: rgba(15, 23, 42, 0.45);
   }
 

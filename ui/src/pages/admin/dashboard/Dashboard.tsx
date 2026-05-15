@@ -159,6 +159,7 @@ export function Dashboard() {
     projectId,
     selectedCampaignId,
     selectedField,
+    hasWorkspaceSelection,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const { dashboard, processing, error, getDashboardInfo } = useDashboard();
@@ -168,9 +169,7 @@ export function Dashboard() {
   });
   const selectedCampaign =
     campaigns.find((campaign) => campaign.id === selectedCampaignId);
-  const hasActiveFilters = Boolean(
-    selectedCustomer?.id || projectId || selectedCampaignId || selectedField?.id
-  );
+  const hasActiveFilters = hasWorkspaceSelection;
   const selectedFilters = [
     {
       label: "Cliente",

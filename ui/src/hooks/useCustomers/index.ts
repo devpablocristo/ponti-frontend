@@ -11,7 +11,7 @@ import { extractErrorMessage } from "@/api/hooks/useApiCall";
 const useCustomers = () => {
   const [{ total, customers, processing, error }, dispatch] =
     useCustomersReducer();
-  const lastQueryRef = useRef<string>("limit=1000");
+  const lastQueryRef = useRef<string>("per_page=1000");
 
   const getCustomers = React.useCallback(
     async (queryString: string): Promise<void> => {
@@ -114,7 +114,7 @@ const useCustomers = () => {
         );
 
         if (response.success) {
-          await getCustomers(lastQueryRef.current || "limit=1000");
+          await getCustomers(lastQueryRef.current || "per_page=1000");
           return response.data ?? null;
         }
 
@@ -144,7 +144,7 @@ const useCustomers = () => {
         );
 
         if (response.success) {
-          await getCustomers(lastQueryRef.current || "limit=1000");
+          await getCustomers(lastQueryRef.current || "per_page=1000");
           return;
         }
 
@@ -174,7 +174,7 @@ const useCustomers = () => {
         );
 
         if (response.success) {
-          await getCustomers(lastQueryRef.current || "limit=1000");
+          await getCustomers(lastQueryRef.current || "per_page=1000");
           return;
         }
 
@@ -210,7 +210,7 @@ const useCustomers = () => {
         );
 
         if (response.success) {
-          await getCustomers(lastQueryRef.current || "limit=1000");
+          await getCustomers(lastQueryRef.current || "per_page=1000");
           return;
         }
 
@@ -245,7 +245,7 @@ const useCustomers = () => {
         );
 
         if (response.success) {
-          await getArchivedCustomers("limit=1000");
+          await getArchivedCustomers("per_page=1000");
           return;
         }
 

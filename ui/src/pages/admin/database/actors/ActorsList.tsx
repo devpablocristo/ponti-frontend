@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, Download, Plus, Upload, Users } from "lucide-react";
+import { Archive, Download, GitCompare, Plus, Upload, Users } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
@@ -26,7 +26,8 @@ import { ACTOR_ENTITY as ENTITY } from "../../entities";
 import ActorFormDrawer from "./ActorFormDrawer";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
 import { downloadCsvRows } from "../../fileTransfer";
-import ArchivedActors from "./ArchivedActors";
+import ArchivedActors, { ActorListFilters } from "./ArchivedActors";
+import DuplicateActors from "./DuplicateActors";
 
 const kindLabel = (kind?: string) =>
   ACTOR_KIND_OPTIONS.find((option) => option.value === kind)?.label ?? "Sin definir";
@@ -41,19 +42,6 @@ const normalize = (value: unknown) =>
     .toLowerCase()
     .trim();
 
-const actorOptions = (actors: Actor[]): FilterOption[] =>
-  actors.map((actor) => ({
-    id: actor.id,
-    name: actor.display_name,
-    code: [
-      actor.organization_profile?.legal_name,
-      actor.identifiers?.map((identifier) => identifier.identifier_value).join(" "),
-      actor.aliases?.map((alias) => alias.alias).join(" "),
-    ]
-      .filter(Boolean)
-      .join(" "),
-  }));
-
 const roleOptions: FilterOption[] = ACTOR_ROLE_OPTIONS.map((role) => ({
   id: role.value,
   name: role.label,
@@ -63,11 +51,6 @@ const kindOptions: FilterOption[] = ACTOR_KIND_OPTIONS.map((kind) => ({
   id: kind.value,
   name: kind.label,
 }));
-
-const statusOptions: FilterOption[] = [
-  { id: "active", name: "Activos" },
-  { id: "archived", name: "Archivados" },
-];
 
 type ActorsListProps = {
   rolePreset?: ActorRole;
@@ -181,11 +164,10 @@ const columns: Column<Actor>[] = [
 ];
 
 export default function ActorsList({ rolePreset }: ActorsListProps) {
-  const [selectedActorId, setSelectedActorId] = useState<number | null>(null);
   const [selectedRole, setSelectedRole] = useState<ActorRole | "">(rolePreset ?? "");
   const [selectedKind, setSelectedKind] = useState<ActorKind | "">("");
-  const [selectedStatus, setSelectedStatus] = useState<"active" | "archived">("active");
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const [duplicatesDrawerOpen, setDuplicatesDrawerOpen] = useState(false);
   const { actors, processing, error, getActors, createActor, updateActor, archiveActor } =
     useActors();
 
@@ -212,12 +194,19 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
 
   const rows = useMemo(() => {
     return actors.filter((actor) => {
-      if (selectedActorId && actor.id !== selectedActorId) return false;
       if (selectedRole && !(actor.roles ?? []).includes(selectedRole)) return false;
       if (selectedKind && actor.actor_kind !== selectedKind) return false;
       return true;
     });
-  }, [actors, selectedActorId, selectedKind, selectedRole]);
+  }, [actors, selectedKind, selectedRole]);
+
+  const actorListFilters = useMemo<ActorListFilters>(
+    () => ({
+      role: selectedRole,
+      kind: selectedKind,
+    }),
+    [selectedKind, selectedRole],
+  );
 
   const handleImport = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -286,22 +275,6 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         filters={[
           {
             type: "search",
-            name: "actor",
-            label: "Actor",
-            placeholder: "Buscar",
-            value:
-              actors.find((actor) => actor.id === selectedActorId)?.display_name ??
-              "Todos los actores",
-            options: actorOptions(actors),
-            onChange: () => {},
-            setData: (data) => {
-              const option = data as FilterOption | undefined;
-              setSelectedActorId(option ? Number(option.id) : null);
-            },
-            allLabel: "Todos los actores",
-          },
-          {
-            type: "search",
             name: "rol",
             label: "Rol",
             placeholder: "Buscar",
@@ -330,26 +303,6 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
             },
             allLabel: "Todos los tipos",
           },
-          {
-            type: "search",
-            name: "estado",
-            label: "Estado",
-            placeholder: "Buscar",
-            value: selectedStatus === "archived" ? "Archivados" : "Activos",
-            options: statusOptions,
-            onChange: () => {},
-            setData: (data) => {
-              const option = data as FilterOption | undefined;
-              const status = (option?.id as "active" | "archived" | undefined) ?? "active";
-              setSelectedStatus(status);
-              if (status === "archived") {
-                setArchivedDrawerOpen(true);
-                setSelectedStatus("active");
-              }
-            },
-            allLabel: "Activos",
-            allowAll: false,
-          },
         ]}
         actions={[
           {
@@ -367,6 +320,17 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
             isPrimary: true,
             onClick: handleExport,
           },
+          ...(!rolePreset
+            ? [
+                {
+                  label: "Duplicados",
+                  icon: <GitCompare className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: () => setDuplicatesDrawerOpen(true),
+                },
+              ]
+            : []),
           {
             label: "Archivados",
             icon: <Archive className="h-4 w-4" />,
@@ -427,7 +391,14 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         title="Actores archivados"
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        <ArchivedActors />
+        <ArchivedActors filters={actorListFilters} />
+      </ArchivedDrawer>
+      <ArchivedDrawer
+        open={duplicatesDrawerOpen}
+        title="Duplicados"
+        onClose={() => setDuplicatesDrawerOpen(false)}
+      >
+        <DuplicateActors filters={actorListFilters} />
       </ArchivedDrawer>
     </div>
   );

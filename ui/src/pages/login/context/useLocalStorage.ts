@@ -13,6 +13,7 @@ export const authTokenStorage = createBrowserTokenStorage({
     "project_id",
     "campaign",
     "field",
+    "workspace_all_selection",
   ],
 });
 
@@ -29,7 +30,14 @@ export const clearLocalStorage = () => {
 };
 
 export const clearWorkspaceSelectionStorage = () => {
-  ["customer", "project", "project_id", "campaign", "field"].forEach((key) => {
+  [
+    "customer",
+    "project",
+    "project_id",
+    "campaign",
+    "field",
+    "workspace_all_selection",
+  ].forEach((key) => {
     localStorage.removeItem(`ponti:${key}`);
     localStorage.removeItem(key);
     sessionStorage.removeItem(`ponti:${key}`);

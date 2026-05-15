@@ -191,7 +191,13 @@ function getValueByAliases(
   return "";
 }
 
-export default function Items() {
+type ItemsProps = {
+  embedded?: boolean;
+  onCancel?: () => void;
+  onSaved?: (message: string) => void;
+};
+
+export default function Items({ embedded = false, onCancel, onSaved }: ItemsProps) {
   const { saveSupplies, result, error, supplies, getSupplies } = useSupplies();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const confirm = useConfirmDialog();
@@ -203,7 +209,7 @@ export default function Items() {
   // beforeunload (efecto más abajo) cubre el cierre de tab / refresh.
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname,
+      !embedded && hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname,
   );
 
   useEffect(() => {
@@ -317,6 +323,7 @@ export default function Items() {
   useEffect(() => {
     if (result !== "") {
       cleanForm();
+      onSaved?.(result);
       setTimeout(() => {
         document
           .getElementById("main-scroll")
@@ -326,7 +333,7 @@ export default function Items() {
     }
     setErrorMessage("");
     setSuccessMessage(result);
-  }, [result]);
+  }, [onSaved, result]);
 
   useEffect(() => {
     if (error) {
@@ -743,10 +750,32 @@ export default function Items() {
     }
   };
 
+  const handleCancel = async () => {
+    if (hasUnsavedChanges) {
+      const ok = await confirm({
+        title: "Cambios sin guardar",
+        message:
+          "Hay cambios sin guardar. ¿Desea cancelar de todas formas?",
+        severity: "warning",
+        primaryLabel: "Descartar cambios",
+        secondaryLabel: "Volver",
+      });
+      if (!ok) return;
+    }
+    cleanForm();
+    onCancel?.();
+  };
+
   return (
     <div className="w-full mx-auto">
-      <AppFilterBar filters={filters} />
-      <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
+      {!embedded && <AppFilterBar filters={filters} />}
+      <div
+        className={
+          embedded
+            ? "w-full"
+            : "p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md"
+        }
+      >
         <ErrorBanner
           message={errorMessage || null}
           variant="alert"
@@ -778,28 +807,30 @@ export default function Items() {
               <Download className="h-4 w-4" />
               Importar Insumos
             </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              className="text-sm font-medium flex items-center gap-1"
-              href="/admin/database/items/list"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+            {!embedded && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="text-sm font-medium flex items-center gap-1"
+                href="/admin/database/items/list"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                />
-              </svg>
-              Ver Listado
-            </Button>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                  />
+                </svg>
+                Ver Listado
+              </Button>
+            )}
           </div>
         </div>
         <div className="mt-4">
@@ -944,23 +975,7 @@ export default function Items() {
         <Button
           variant="primary"
           className="text-base font-medium"
-          onClick={async () => {
-            if (hasUnsavedChanges) {
-              const ok = await confirm({
-                title: "Cambios sin guardar",
-                message:
-                  "Hay cambios sin guardar. ¿Desea cancelar de todas formas?",
-                severity: "warning",
-                primaryLabel: "Descartar cambios",
-                secondaryLabel: "Volver",
-              });
-              if (ok) {
-                cleanForm();
-              }
-            } else {
-              cleanForm();
-            }
-          }}
+          onClick={handleCancel}
         >
           Cancelar
         </Button>

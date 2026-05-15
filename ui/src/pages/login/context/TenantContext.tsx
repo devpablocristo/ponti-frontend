@@ -5,7 +5,14 @@ import { TenantContext, type Tenant, type TenantContextValue } from "./TenantCon
 
 const TENANT_STORAGE_KEY = "ponti:tenant_id";
 const LEGACY_TENANT_STORAGE_KEY = "tenant_id";
-const WORKSPACE_KEYS = ["customer", "project", "project_id", "campaign", "field"];
+const WORKSPACE_KEYS = [
+  "customer",
+  "project",
+  "project_id",
+  "campaign",
+  "field",
+  "workspace_all_selection",
+];
 
 function readStoredTenantId(): string {
   if (typeof window === "undefined") return "";

@@ -13,6 +13,7 @@ import {
   buildLotsQueryParams,
   isLotsCacheKey,
 } from "../utils/lotsRoute";
+import { buildForwardQuery } from "../utils/forwardQuery";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -137,7 +138,7 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    setImmediate(() => cache.set(key, data));
+    cache.set(key, data);
 
     res.status(200).json(data);
   } catch (error: unknown) {
@@ -193,7 +194,7 @@ router.get("/metrics", async (req: Request, res: Response) => {
       data: metrics,
     };
 
-    setImmediate(() => cache.set(key, data));
+    cache.set(key, data);
 
     res.status(200).json(data);
   } catch (error: unknown) {
@@ -238,7 +239,7 @@ router.post("", async (req: Request, res: Response) => {
 
     const { data } = await apiClient.post<unknown>("/lots", requestData, headers);
 
-    setImmediate(invalidateLotsCache);
+    invalidateLotsCache();
 
     res.status(201).json({
       success: true,
@@ -334,7 +335,7 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     await apiClient.put<unknown>(`/lots/${req.params.id}`, requestData, headers);
 
-    setImmediate(invalidateLotsCache);
+    invalidateLotsCache();
 
     const data = {
       success: true,
@@ -371,7 +372,10 @@ router.get("/archived", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const { data: lots } = await apiClient.get<any>("/lots/archived", headers);
+    const { data: lots } = await apiClient.get<any>(
+      `/lots/archived${buildForwardQuery(req)}`,
+      headers
+    );
     const items = Array.isArray(lots?.data) ? lots.data : [];
     const total =
       typeof lots?.page_info?.total === "number" ? lots.page_info.total : items.length;
@@ -406,7 +410,7 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.post<any>(`/lots/${req.params.id}/archive`, {}, headers);
-    setImmediate(invalidateLotsCache);
+    invalidateLotsCache();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: unknown) {
     const err = error as ApiResponse<null>;
@@ -434,7 +438,7 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.post<any>(`/lots/${req.params.id}/restore`, {}, headers);
-    setImmediate(invalidateLotsCache);
+    invalidateLotsCache();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: unknown) {
     const err = error as ApiResponse<null>;
@@ -462,7 +466,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
     await apiClient.delete<any>(`/lots/${req.params.id}/hard`, headers);
-    setImmediate(invalidateLotsCache);
+    invalidateLotsCache();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: unknown) {
     const err = error as ApiResponse<null>;
@@ -499,7 +503,7 @@ router.put("/:id/tons", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(invalidateLotsCache);
+    invalidateLotsCache();
 
     const data = {
       success: true,

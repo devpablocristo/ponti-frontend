@@ -26,6 +26,7 @@ export interface FilterItem {
   emptyMessage?: string;
   allowAll?: boolean;
   allLabel?: string;
+  preserveAllSelection?: boolean;
   onChange: (value: string) => void;
   setData: (value: unknown) => void;
 }
@@ -279,9 +280,8 @@ export function AppFilterBar({
 
   const handleSuggestionClick = useCallback(
     (filter: FilterItem, option: FilterOption) => {
-      const isAllOption = option.id === 0;
-      filter.setData(isAllOption ? undefined : option);
-      filter.onChange(isAllOption ? "" : option.name);
+      filter.setData(option);
+      filter.onChange(option.name);
       setSearchByFilter((prev) => ({ ...prev, [filter.name]: "" }));
       hideSuggestions(filter.name);
     },
@@ -342,9 +342,12 @@ export function AppFilterBar({
                     size={inputSize}
                     onClick={() => showSuggestions(filter.name)}
                     onChange={(event) => {
+                      const nextValue = event.target.value;
+                      filter.setData(undefined);
+                      filter.onChange(nextValue);
                       setSearchByFilter((prev) => ({
                         ...prev,
-                        [filter.name]: event.target.value,
+                        [filter.name]: nextValue,
                       }));
                       setSuggestionsVisible((prev) => ({
                         ...prev,

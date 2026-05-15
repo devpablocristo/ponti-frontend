@@ -5,12 +5,25 @@ import Button from "../../../../components/Button/Button";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
-import useActors, { ActorMergeImpact, DuplicateCandidate } from "../../../../hooks/useActors";
+import useActors, {
+  ActorKind,
+  ActorMergeImpact,
+  ActorRole,
+  DuplicateCandidate,
+} from "../../../../hooks/useActors";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
 
 type MergeSelection = {
   targetId: number | null;
   sourceIds: number[];
+};
+
+type DuplicateActor = DuplicateCandidate["actors"][number];
+
+type DuplicateActorsFilters = {
+  actorId?: number | null;
+  role?: ActorRole | "";
+  kind?: ActorKind | "";
 };
 
 const candidateKey = (candidate: DuplicateCandidate) =>
@@ -37,7 +50,32 @@ const groupLabel = (groupType: string) => {
   }
 };
 
-export default function DuplicateActors() {
+const actorMatchesFilters = (actor: DuplicateActor, filters?: DuplicateActorsFilters) => {
+  if (!filters) return true;
+  if (filters.role && !(actor.roles ?? []).includes(filters.role)) return false;
+  if (filters.kind && actor.actor_kind !== filters.kind) return false;
+  return true;
+};
+
+const filterCandidate = (
+  candidate: DuplicateCandidate,
+  filters?: DuplicateActorsFilters,
+): DuplicateCandidate | null => {
+  if (!filters?.actorId) {
+    const actors = candidate.actors.filter((actor) => actorMatchesFilters(actor, filters));
+    return actors.length >= 2 ? { ...candidate, actors } : null;
+  }
+
+  const selectedActor = candidate.actors.find((actor) => actor.id === filters.actorId);
+  if (!selectedActor || !actorMatchesFilters(selectedActor, filters)) return null;
+  return candidate;
+};
+
+type DuplicateActorsProps = {
+  filters?: DuplicateActorsFilters;
+};
+
+export default function DuplicateActors({ filters }: DuplicateActorsProps) {
   const { getDuplicateCandidates, mergeActors } = useActors();
   const [candidates, setCandidates] = useState<DuplicateCandidate[]>([]);
   const [selection, setSelection] = useState<Record<string, MergeSelection>>({});
@@ -83,7 +121,15 @@ export default function DuplicateActors() {
     refresh();
   }, [refresh]);
 
-  const totalGroups = useMemo(() => candidates.length, [candidates]);
+  const visibleCandidates = useMemo(
+    () =>
+      candidates
+        .map((candidate) => filterCandidate(candidate, filters))
+        .filter((candidate): candidate is DuplicateCandidate => candidate !== null),
+    [candidates, filters],
+  );
+
+  const totalGroups = visibleCandidates.length;
 
   const setTarget = (key: string, targetId: number) => {
     setSelection((current) => {
@@ -185,7 +231,7 @@ export default function DuplicateActors() {
         </Button>
       </div>
 
-      {candidates.length === 0 && !loading ? (
+      {visibleCandidates.length === 0 && !loading ? (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
           <GitMerge className="mx-auto mb-3 h-8 w-8 text-slate-400" />
           <h2 className="text-base font-semibold text-slate-800">No hay posibles duplicados</h2>
@@ -196,11 +242,22 @@ export default function DuplicateActors() {
       ) : null}
 
       <div className="space-y-4">
-        {candidates.map((candidate) => {
+        {visibleCandidates.map((candidate) => {
           const key = candidateKey(candidate);
-          const current = selection[key] ?? {
-            targetId: candidate.actors[0]?.id ?? null,
-            sourceIds: [],
+          const visibleActorIds = new Set(candidate.actors.map((actor) => actor.id));
+          const saved = selection[key];
+          const targetId =
+            saved?.targetId && visibleActorIds.has(saved.targetId)
+              ? saved.targetId
+              : candidate.actors[0]?.id ?? null;
+          const current = {
+            targetId,
+            sourceIds: (
+              saved?.sourceIds ??
+              candidate.actors
+                .slice(1)
+                .map((actor) => actor.id)
+            ).filter((id) => visibleActorIds.has(id) && id !== targetId),
           };
           const impact = impactByGroup[key];
           const busy = actionLoading?.endsWith(key);

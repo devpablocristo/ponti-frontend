@@ -150,7 +150,7 @@ router.post("", async (req: Request, res: Response) => {
         ? (await apiClient.get<any>(`/actors/${actorId}`, buildHeaders(userId)))
             .data
         : data;
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(201).json({ success: true, data: hydrated });
   } catch (error: any) {
     respondError(res, error);
@@ -171,7 +171,7 @@ router.put("/:id", async (req: Request, res: Response) => {
       `/actors/${id}`,
       buildHeaders(userId),
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, data });
   } catch (error: any) {
     respondError(res, error);
@@ -192,7 +192,7 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
       {},
       buildHeaders(userId),
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     respondError(res, error);
@@ -213,7 +213,7 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
       {},
       buildHeaders(userId),
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     respondError(res, error);
@@ -230,7 +230,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
 
     const { id } = req.params;
     await apiClient.delete<any>(`/actors/${id}/hard`, buildHeaders(userId));
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     respondError(res, error);
@@ -251,7 +251,7 @@ router.post("/:id/roles", async (req: Request, res: Response) => {
       req.body,
       buildHeaders(userId),
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     respondError(res, error);
@@ -272,7 +272,7 @@ router.post("/:id/aliases", async (req: Request, res: Response) => {
       req.body,
       buildHeaders(userId),
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(201).json({ success: true, data });
   } catch (error: any) {
     respondError(res, error);
@@ -292,7 +292,7 @@ router.post("/merge", async (req: Request, res: Response) => {
       req.body,
       buildHeaders(userId),
     );
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
     res.status(200).json({ success: true, data });
   } catch (error: any) {
     respondError(res, error);

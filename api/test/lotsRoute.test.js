@@ -11,6 +11,7 @@ const {
   parseFieldProjectQueryParams,
   parsePaginationQueryParams,
 } = require("../dist/utils/queryParams");
+const { buildForwardQuery } = require("../dist/utils/forwardQuery");
 
 test("parseFieldProjectQueryParams normaliza ids inválidos a cero", () => {
   assert.deepEqual(
@@ -46,6 +47,18 @@ test("parsePaginationQueryParams aplica defaults y límite máximo de per_page",
   assert.deepEqual(
     parsePaginationQueryParams({ page: "3", per_page: "999999" }),
     { page: 3, perPage: 1000 }
+  );
+});
+
+test("buildForwardQuery preserva filtros y completa paginación archived", () => {
+  assert.equal(
+    buildForwardQuery({ query: { customer_id: "17", project_id: "30" } }),
+    "?customer_id=17&project_id=30&page=1&per_page=1000"
+  );
+
+  assert.equal(
+    buildForwardQuery({ query: { page: "2", per_page: "25", q: "agro" } }),
+    "?page=2&per_page=25&q=agro"
   );
 });
 

@@ -2,9 +2,26 @@
 import { useEffect, useState } from "react";
 import type { Entity } from "../../../hooks/useDatabase/options/types";
 import type { Data } from "../../../hooks/useFields/types";
-import { SelectionContext } from "./SelectionContext.shared";
+import {
+  SelectionContext,
+  type WorkspaceAllSelection,
+} from "./SelectionContext.shared";
 
 const storageKey = (key: string) => `ponti:${key}`;
+const emptyAllSelection: WorkspaceAllSelection = {
+  customer: false,
+  project: false,
+  campaign: false,
+  field: false,
+};
+const workspaceStorageKeys = [
+  "customer",
+  "project",
+  "project_id",
+  "campaign",
+  "field",
+  "workspace_all_selection",
+];
 
 function readStoredJson<T>(key: string): T | undefined {
   if (typeof window === "undefined") return undefined;
@@ -57,6 +74,15 @@ function writeStoredNumber(key: string, value: number | null | undefined) {
   window.localStorage.setItem(storageKey(key), String(value));
 }
 
+function clearStoredWorkspaceSelection() {
+  if (typeof window === "undefined") return;
+
+  workspaceStorageKeys.forEach((key) => {
+    window.localStorage.removeItem(storageKey(key));
+    window.localStorage.removeItem(key);
+  });
+}
+
 export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -82,6 +108,10 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
   const [field, setFieldState] = useState<Data | undefined>(() =>
     readStoredJson<Data>("field")
   );
+  const [allSelection, setAllSelectionState] = useState<WorkspaceAllSelection>(() => ({
+    ...emptyAllSelection,
+    ...(readStoredJson<Partial<WorkspaceAllSelection>>("workspace_all_selection") ?? {}),
+  }));
 
   useEffect(() => {
     const resetSelection = () => {
@@ -90,6 +120,8 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
       setProjectIdState(undefined);
       setCampaignState(undefined);
       setFieldState(undefined);
+      setAllSelectionState(emptyAllSelection);
+      clearStoredWorkspaceSelection();
     };
 
     window.addEventListener("ponti:tenant-changed", resetSelection);
@@ -125,6 +157,18 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
     writeStoredJson("field", value);
   };
 
+  const setAllSelection = (
+    value:
+      | WorkspaceAllSelection
+      | ((current: WorkspaceAllSelection) => WorkspaceAllSelection)
+  ) => {
+    setAllSelectionState((current) => {
+      const next = typeof value === "function" ? value(current) : value;
+      writeStoredJson("workspace_all_selection", next);
+      return next;
+    });
+  };
+
   return (
     <SelectionContext.Provider
       value={{
@@ -138,6 +182,8 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
         setCampaign,
         field,
         setField,
+        allSelection,
+        setAllSelection,
         seasons,
       }}
     >
