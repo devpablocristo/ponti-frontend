@@ -7,6 +7,7 @@ import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Button from "../../../../components/Button/Button";
 import { IconActionButton } from "../../../../components/Button/IconActionButton";
 import InputField from "../../../../components/Input/InputField";
+import SelectField from "../../../../components/Input/SelectField";
 import SmartEntityInput from "../../../../components/SmartEntityInput/SmartEntityInput";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
@@ -499,21 +500,7 @@ export default function CustomerEditor({
     [actorOptions]
   );
 
-  const seasonOptions = useMemo(() => {
-    const campaignSeasonOptions = campaignOptions
-      .filter((campaign) => campaign.name.trim())
-      .map((campaign) => ({
-        id: campaign.id,
-        name: campaign.name,
-      }));
-    const seen = new Set<string>();
-    return [...campaignSeasonOptions, ...SEASON_OPTIONS].filter((option) => {
-      const key = normalizeEntityName(option.name);
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }, [campaignOptions]);
+  const seasonOptions = SEASON_OPTIONS;
 
   const entityCreateKey = (scope: string, value: string) =>
     `${scope}:${normalizeEntityName(value)}`;
@@ -1759,24 +1746,27 @@ export default function CustomerEditor({
                               }
                               size="sm"
                             />
-                            <SmartEntityInput<EntityOption>
+                            <SelectField
                               label="Periodo"
                               name={`lot_season_${fieldIndex}_${lotIndex}`}
-                              value={lot.season}
+                              value={
+                                seasonOptions
+                                  .find((season) => season.name === lot.season)
+                                  ?.id.toString() ?? ""
+                              }
+                              onChange={(event) => {
+                                const id = Number(event.target.value);
+                                const season = seasonOptions.find((s) => s.id === id);
+                                updateLotAt(
+                                  fieldIndex,
+                                  lotIndex,
+                                  "season",
+                                  season?.name ?? ""
+                                );
+                              }}
                               options={seasonOptions}
-                              entityLabel="Periodo"
-                              onChange={(value) =>
-                                updateLotAt(fieldIndex, lotIndex, "season", value)
-                              }
-                              onSelectExisting={(season) =>
-                                updateLotAt(fieldIndex, lotIndex, "season", season.name)
-                              }
-                              selectedOptionId={
-                                seasonOptions.find((season) => season.name === lot.season)?.id ??
-                                null
-                              }
-                              allowCreate={false}
                               size="sm"
+                              fullWidth
                             />
                             <RemoveButton
                               label="Quitar lote"
