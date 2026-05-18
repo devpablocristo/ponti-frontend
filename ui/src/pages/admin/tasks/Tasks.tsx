@@ -34,7 +34,7 @@ import { readSpreadsheetRows } from "../spreadsheetReader";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
-import ArchivedTasks from "../database/tasks/ArchivedTasks";
+import ArchivedWorkOrders from "../database/work-orders/ArchivedWorkOrders";
 import TasksForm from "../database/tasks/TasksForm";
 
 const LABOR_HEADER_ALIASES = {
@@ -1007,10 +1007,12 @@ export function Tasks() {
       </DrawerShell>
       <ArchivedDrawer
         open={archivedDrawerOpen}
-        title="Labores archivadas"
+        title="Órdenes de trabajo archivadas (por labor)"
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        <ArchivedTasks />
+        {/* En esta página "Labores" se archivan work-orders (no entradas del catálogo
+            de labors), por lo que el drawer muestra órdenes de trabajo archivadas. */}
+        <ArchivedWorkOrders onAfterRestore={refreshLabors} />
       </ArchivedDrawer>
       {hasWorkspaceSelection && (
       <div className="my-3">

@@ -190,6 +190,45 @@ router.get("", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+    const { data: movements } = await apiClient.get<any>(`/supply-movements/archived`, headers);
+    const entries = Array.isArray(movements?.entries)
+      ? movements.entries
+      : Array.isArray(movements?.data)
+        ? movements.data
+        : [];
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: movements?.summary,
+        entries,
+        page_info: { total: entries.length, page: 1, per_page: 100, max_page: 1 },
+      },
+    });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 router.get("/:project_id/archived", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;

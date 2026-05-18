@@ -2,7 +2,6 @@ import { useCallback } from "react";
 
 import { ArchivedListPage } from "../../../../components/ArchivedListPage/ArchivedListPage";
 import { useArchiveActions } from "../../../../hooks/useArchiveActions";
-import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useLabors from "../../../../hooks/useLabors";
 import { LaborInfo } from "../../../../hooks/useLabors/types";
 import { Column } from "../../types";
@@ -18,7 +17,11 @@ const columns: Column<LaborInfo>[] = [
   },
 ];
 
-export default function ArchivedTasks() {
+type ArchivedTasksProps = {
+  onAfterRestore?: () => void;
+};
+
+export default function ArchivedTasks({ onAfterRestore }: ArchivedTasksProps = {}) {
   const {
     labors,
     getArchivedLabors,
@@ -28,34 +31,46 @@ export default function ArchivedTasks() {
     error,
   } = useLabors();
 
-  const { selectedProject } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-    "field",
-  ]);
-  const selectedProjectId = selectedProject?.id ?? null;
-
+  // El drawer de archivadas no filtra por proyecto seleccionado: muestra siempre
+  // todas las labors archivadas del tenant para evitar que se vean vacías cuando
+  // el usuario tiene un proyecto activo sin archivos.
   const refetch = useCallback(async () => {
-    if (selectedProjectId) await getArchivedLabors(selectedProjectId);
-  }, [getArchivedLabors, selectedProjectId]);
+    await getArchivedLabors(null);
+  }, [getArchivedLabors]);
+
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreLabor(id);
+      onAfterRestore?.();
+    },
+    [restoreLabor, onAfterRestore],
+  );
+
+  const hardDeleteAndNotify = useCallback(
+    async (id: number) => {
+      await hardDeleteLabor(id);
+      onAfterRestore?.();
+    },
+    [hardDeleteLabor, onAfterRestore],
+  );
 
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<LaborInfo>({
       refetch,
-      restore: restoreLabor,
-      hardDelete: hardDeleteLabor,
+      restore: restoreAndNotify,
+      hardDelete: hardDeleteAndNotify,
     });
 
   const safeLabors = Array.isArray(labors) ? labors : [];
 
   return (
     <ArchivedListPage<LaborInfo>
-      description="Restaurar o eliminar labores archivadas del proyecto seleccionado."
+      description="Restaurar o eliminar labores archivadas."
       columns={columns}
-      data={selectedProjectId ? safeLabors : []}
+      data={safeLabors}
       entity={ENTITY}
       bulk
+      ignoreWorkspaceFilters
       getItemLabel={(item) => item.name}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}

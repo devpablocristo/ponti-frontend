@@ -569,7 +569,7 @@ function Lots() {
           title="Lotes archivados"
           onClose={() => setArchivedDrawerOpen(false)}
         >
-          <ArchivedLots />
+          <ArchivedLots onAfterRestore={loadCurrentLots} />
         </ArchivedDrawer>
 
         {!hasWorkspaceSelection ? (

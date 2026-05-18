@@ -1230,7 +1230,7 @@ export function WorkOrders() {
           title="Órdenes archivadas"
           onClose={() => setArchivedDrawerOpen(false)}
         >
-          <ArchivedWorkOrders />
+          <ArchivedWorkOrders onAfterRestore={handleOrderCreated} />
         </ArchivedDrawer>
         {selectedSupplyFilter.id && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">

@@ -391,7 +391,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         title="Actores archivados"
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        <ArchivedActors filters={actorListFilters} />
+        <ArchivedActors filters={actorListFilters} onAfterRestore={refresh} />
       </ArchivedDrawer>
       <ArchivedDrawer
         open={duplicatesDrawerOpen}

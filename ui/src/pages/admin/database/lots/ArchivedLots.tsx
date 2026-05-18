@@ -7,15 +7,33 @@ import type { LotsData } from "../../../../hooks/useLots/types";
 import { Column } from "../../types";
 import { LOT_ENTITY as ENTITY } from "../../entities";
 
+const SEASON_NAMES: Record<string, string> = {
+  "1": "Otoño",
+  "2": "Invierno",
+  "3": "Primavera",
+  "4": "Verano",
+};
+
 const columns: Column<LotsData>[] = [
   { key: "project_name", header: "Proyecto" },
   { key: "field_name", header: "Campo" },
   { key: "lot_name", header: "Lote" },
-  { key: "season", header: "Campaña" },
+  {
+    key: "season",
+    header: "Periodo",
+    render: (value) => {
+      const raw = String(value ?? "");
+      return SEASON_NAMES[raw] ?? raw;
+    },
+  },
   { key: "current_crop", header: "Cultivo actual" },
 ];
 
-export default function ArchivedLots() {
+type ArchivedLotsProps = {
+  onAfterRestore?: () => void;
+};
+
+export default function ArchivedLots({ onAfterRestore }: ArchivedLotsProps = {}) {
   const {
     lots,
     getArchivedLots,
@@ -31,11 +49,27 @@ export default function ArchivedLots() {
     [getArchivedLots],
   );
 
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreLot(id);
+      onAfterRestore?.();
+    },
+    [restoreLot, onAfterRestore],
+  );
+
+  const hardDeleteAndNotify = useCallback(
+    async (id: number) => {
+      await hardDeleteLot(id);
+      onAfterRestore?.();
+    },
+    [hardDeleteLot, onAfterRestore],
+  );
+
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<LotsData>({
       refetch,
-      restore: restoreLot,
-      hardDelete: hardDeleteLot,
+      restore: restoreAndNotify,
+      hardDelete: hardDeleteAndNotify,
     });
 
   return (

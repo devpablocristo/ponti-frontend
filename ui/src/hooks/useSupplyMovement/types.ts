@@ -59,6 +59,7 @@ export interface SupplyResponse {
 
 export interface SupplyMovement {
   id: number;
+  project_id?: number;
   entry_type: string;
   reference_number: string;
   entry_date: string;

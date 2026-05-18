@@ -31,6 +31,15 @@ export type ListInsightsOptions = {
 
 const getBaseUrl = (): string => "/api/v1";
 
+const getTenantId = (): string => {
+  if (typeof window === "undefined") return "";
+  return (
+    window.localStorage.getItem("ponti:tenant_id") ||
+    window.localStorage.getItem("tenant_id") ||
+    ""
+  ).trim();
+};
+
 const buildHeaders = (projectId?: string): Record<string, string> => {
   const token = getAccessToken();
   const headers: Record<string, string> = {
@@ -38,6 +47,8 @@ const buildHeaders = (projectId?: string): Record<string, string> => {
   };
   if (projectId) headers["X-Project-Id"] = projectId;
   if (token) headers.Authorization = `Bearer ${token}`;
+  const tenantId = getTenantId();
+  if (tenantId) headers["X-Tenant-Id"] = tenantId;
   return headers;
 };
 

@@ -11,7 +11,11 @@ const columns: Column<Campaign>[] = [
   { key: "name", header: "Campaña" },
 ];
 
-export default function ArchivedCampaigns() {
+type ArchivedCampaignsProps = {
+  onAfterRestore?: () => void;
+};
+
+export default function ArchivedCampaigns({ onAfterRestore }: ArchivedCampaignsProps = {}) {
   const {
     archivedCampaigns,
     getArchivedCampaigns,
@@ -25,11 +29,27 @@ export default function ArchivedCampaigns() {
     await getArchivedCampaigns("page=1&per_page=1000");
   }, [getArchivedCampaigns]);
 
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreCampaign(id);
+      onAfterRestore?.();
+    },
+    [restoreCampaign, onAfterRestore],
+  );
+
+  const hardDeleteAndNotify = useCallback(
+    async (id: number) => {
+      await hardDeleteCampaign(id);
+      onAfterRestore?.();
+    },
+    [hardDeleteCampaign, onAfterRestore],
+  );
+
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Campaign>({
       refetch,
-      restore: restoreCampaign,
-      hardDelete: hardDeleteCampaign,
+      restore: restoreAndNotify,
+      hardDelete: hardDeleteAndNotify,
     });
 
   return (

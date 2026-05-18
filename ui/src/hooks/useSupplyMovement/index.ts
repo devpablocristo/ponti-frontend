@@ -151,14 +151,16 @@ const useSupplyMovements = () => {
   );
 
   const getArchivedSupplyMovements = React.useCallback(
-    async (projectId: number): Promise<void> => {
+    async (projectId?: number | null): Promise<void> => {
       setProcessing(true);
       setError(null);
 
       try {
-        const response = await apiClient.get<SuccessResponse<SupplyResponse>>(
-          `/supply_movements/${projectId}/archived`
-        );
+        const path =
+          projectId && projectId > 0
+            ? `/supply_movements/${projectId}/archived`
+            : `/supply_movements/archived`;
+        const response = await apiClient.get<SuccessResponse<SupplyResponse>>(path);
 
         if (response.success) {
           dispatch({

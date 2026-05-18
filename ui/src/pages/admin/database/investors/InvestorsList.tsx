@@ -604,7 +604,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
         title="Inversores archivados"
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        <ArchivedInvestors />
+        <ArchivedInvestors onAfterRestore={refresh} />
       </ArchivedDrawer>
     </div>
   );

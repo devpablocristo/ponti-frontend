@@ -16,7 +16,11 @@ const columns: Column<OrdersData>[] = [
   { key: "labor_name", header: "Labor" },
 ];
 
-export default function ArchivedWorkOrders() {
+type ArchivedWorkOrdersProps = {
+  onAfterRestore?: () => void;
+};
+
+export default function ArchivedWorkOrders({ onAfterRestore }: ArchivedWorkOrdersProps = {}) {
   const {
     orders,
     getArchivedOrders,
@@ -31,11 +35,27 @@ export default function ArchivedWorkOrders() {
     [getArchivedOrders],
   );
 
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreOrder(id);
+      onAfterRestore?.();
+    },
+    [restoreOrder, onAfterRestore],
+  );
+
+  const hardDeleteAndNotify = useCallback(
+    async (id: number) => {
+      await hardDeleteOrder(id);
+      onAfterRestore?.();
+    },
+    [hardDeleteOrder, onAfterRestore],
+  );
+
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<OrdersData>({
       refetch,
-      restore: restoreOrder,
-      hardDelete: hardDeleteOrder,
+      restore: restoreAndNotify,
+      hardDelete: hardDeleteAndNotify,
     });
 
   return (

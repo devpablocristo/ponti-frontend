@@ -646,7 +646,9 @@ export function Products() {
           title="Movimientos archivados"
           onClose={() => setArchivedDrawerOpen(false)}
         >
-          <ArchivedSupplyMovements />
+          <ArchivedSupplyMovements
+            onAfterRestore={() => getSupplyMovements(supplyMovementQuery)}
+          />
         </ArchivedDrawer>
         {!hasWorkspaceSelection ? (
           <EmptyState

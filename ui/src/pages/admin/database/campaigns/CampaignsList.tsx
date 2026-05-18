@@ -201,7 +201,7 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
         title="Campañas archivadas"
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        <ArchivedCampaigns />
+        <ArchivedCampaigns onAfterRestore={refresh} />
       </ArchivedDrawer>
     </div>
   );

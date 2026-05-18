@@ -30,7 +30,11 @@ const hardDeleteAdapter = (
       }
     : undefined;
 
-export default function ArchivedSupplies() {
+type ArchivedSuppliesProps = {
+  onAfterRestore?: () => void;
+};
+
+export default function ArchivedSupplies({ onAfterRestore }: ArchivedSuppliesProps = {}) {
   const {
     supplies,
     getArchivedSupplies,
@@ -45,11 +49,24 @@ export default function ArchivedSupplies() {
     [getArchivedSupplies],
   );
 
+  const adaptedRestore = restoreAdapter(restoreSupply);
+  const adaptedHardDelete = hardDeleteAdapter(hardDeleteSupply);
+
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Supply>({
       refetch,
-      restore: restoreAdapter(restoreSupply),
-      hardDelete: hardDeleteAdapter(hardDeleteSupply),
+      restore: adaptedRestore
+        ? async (id) => {
+            await adaptedRestore(id);
+            onAfterRestore?.();
+          }
+        : undefined,
+      hardDelete: adaptedHardDelete
+        ? async (id) => {
+            await adaptedHardDelete(id);
+            onAfterRestore?.();
+          }
+        : undefined,
     });
 
   return (

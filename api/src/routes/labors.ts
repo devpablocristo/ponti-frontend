@@ -480,6 +480,38 @@ router.get("/group", async (req: Request, res: Response) => {
   }
 });
 
+// IMPORTANTE: `/archived` debe declararse antes de `/:id` para que Express
+// no matchee con la ruta paramétrica (id="archived" dispararía validación de proyecto).
+router.get("/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
+    const { data: labors } = await apiClient.get<any>(`/labors/archived`, headers);
+    const items = Array.isArray(labors?.data) ? labors.data : [];
+    const total =
+      typeof labors?.page_info?.total === "number" ? labors.page_info.total : items.length;
+    res.status(200).json({ success: true, data: { data: items, total } });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;

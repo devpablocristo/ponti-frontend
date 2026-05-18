@@ -492,6 +492,9 @@ export function ArchivedListPage<T extends { id: number }>({
     } finally {
       setIsModalOpen(false);
       setPending(null);
+      // Refetch final para garantizar que la lista refleje el estado del servidor,
+      // sin importar race conditions entre múltiples runRestore en bulk.
+      onMount?.();
     }
   };
 

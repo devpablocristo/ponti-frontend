@@ -10,7 +10,11 @@ const columns: Column<Manager>[] = [
   { key: "name", header: "Responsable" },
 ];
 
-export default function ArchivedManagers() {
+type ArchivedManagersProps = {
+  onAfterRestore?: () => void;
+};
+
+export default function ArchivedManagers({ onAfterRestore }: ArchivedManagersProps = {}) {
   const {
     archivedManagers,
     getArchivedManagers,
@@ -24,11 +28,27 @@ export default function ArchivedManagers() {
     await getArchivedManagers("page=1&per_page=1000");
   }, [getArchivedManagers]);
 
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreManager(id);
+      onAfterRestore?.();
+    },
+    [restoreManager, onAfterRestore],
+  );
+
+  const hardDeleteAndNotify = useCallback(
+    async (id: number) => {
+      await hardDeleteManager(id);
+      onAfterRestore?.();
+    },
+    [hardDeleteManager, onAfterRestore],
+  );
+
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Manager>({
       refetch,
-      restore: restoreManager,
-      hardDelete: hardDeleteManager,
+      restore: restoreAndNotify,
+      hardDelete: hardDeleteAndNotify,
     });
 
   return (

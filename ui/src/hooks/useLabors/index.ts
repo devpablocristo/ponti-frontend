@@ -404,13 +404,15 @@ const useLabors = () => {
   }, []);
 
   const getArchivedLabors = React.useCallback(
-    async (projectId: number) => {
+    async (projectId?: number | null) => {
       setProcessing(true);
       setError(null);
       try {
-        const response = await apiClient.get<LaborsResponse>(
-          `/labors/projects/${projectId}/archived`,
-        );
+        const path =
+          projectId && projectId > 0
+            ? `/labors/projects/${projectId}/archived`
+            : `/labors/archived`;
+        const response = await apiClient.get<LaborsResponse>(path);
         if (response.success) {
           const normalized = extractLaborsArray(response.data);
           dispatch({ type: actions.SET_LABORS, payload: normalized });

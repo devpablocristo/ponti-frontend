@@ -10,7 +10,11 @@ const columns: Column<Investor>[] = [
   { key: "name", header: "Inversor" },
 ];
 
-export default function ArchivedInvestors() {
+type ArchivedInvestorsProps = {
+  onAfterRestore?: () => void;
+};
+
+export default function ArchivedInvestors({ onAfterRestore }: ArchivedInvestorsProps = {}) {
   const {
     archivedInvestors,
     getArchivedInvestors,
@@ -24,11 +28,27 @@ export default function ArchivedInvestors() {
     await getArchivedInvestors("page=1&per_page=1000");
   }, [getArchivedInvestors]);
 
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreInvestor(id);
+      onAfterRestore?.();
+    },
+    [restoreInvestor, onAfterRestore],
+  );
+
+  const hardDeleteAndNotify = useCallback(
+    async (id: number) => {
+      await hardDeleteInvestor(id);
+      onAfterRestore?.();
+    },
+    [hardDeleteInvestor, onAfterRestore],
+  );
+
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Investor>({
       refetch,
-      restore: restoreInvestor,
-      hardDelete: hardDeleteInvestor,
+      restore: restoreAndNotify,
+      hardDelete: hardDeleteAndNotify,
     });
 
   return (

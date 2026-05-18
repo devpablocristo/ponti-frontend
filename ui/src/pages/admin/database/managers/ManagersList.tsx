@@ -535,7 +535,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
         title="Responsables archivados"
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        <ArchivedManagers />
+        <ArchivedManagers onAfterRestore={refresh} />
       </ArchivedDrawer>
     </div>
   );

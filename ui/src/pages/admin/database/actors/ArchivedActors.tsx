@@ -57,9 +57,10 @@ const actorMatchesFilters = (actor: Actor, filters?: ActorListFilters) => {
 
 type ArchivedActorsProps = {
   filters?: ActorListFilters;
+  onAfterRestore?: () => void;
 };
 
-export default function ArchivedActors({ filters }: ArchivedActorsProps) {
+export default function ArchivedActors({ filters, onAfterRestore }: ArchivedActorsProps) {
   const {
     archivedActors,
     getArchivedActors,
@@ -81,11 +82,27 @@ export default function ArchivedActors({ filters }: ArchivedActorsProps) {
     [archivedActors, filters],
   );
 
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreActor(id);
+      onAfterRestore?.();
+    },
+    [restoreActor, onAfterRestore],
+  );
+
+  const hardDeleteAndNotify = useCallback(
+    async (id: number) => {
+      await hardDeleteActor(id);
+      onAfterRestore?.();
+    },
+    [hardDeleteActor, onAfterRestore],
+  );
+
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Actor>({
       refetch,
-      restore: restoreActor,
-      hardDelete: hardDeleteActor,
+      restore: restoreAndNotify,
+      hardDelete: hardDeleteAndNotify,
     });
 
   return (
