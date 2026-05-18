@@ -18,9 +18,14 @@ const columns: Column<OrdersData>[] = [
 
 type ArchivedWorkOrdersProps = {
   onAfterRestore?: () => void;
+  /** Si se pasa, filtra el listado por ese lote (usado por el flujo de Lotes archivados). */
+  lotIdFilter?: number | null;
 };
 
-export default function ArchivedWorkOrders({ onAfterRestore }: ArchivedWorkOrdersProps = {}) {
+export default function ArchivedWorkOrders({
+  onAfterRestore,
+  lotIdFilter,
+}: ArchivedWorkOrdersProps = {}) {
   const {
     orders,
     getArchivedOrders,
@@ -30,10 +35,11 @@ export default function ArchivedWorkOrders({ onAfterRestore }: ArchivedWorkOrder
     error,
   } = useOrders();
 
-  const refetch = useCallback(
-    () => getArchivedOrders("page=1&per_page=1000"),
-    [getArchivedOrders],
-  );
+  const refetch = useCallback(() => {
+    const params = new URLSearchParams({ page: "1", per_page: "1000" });
+    if (lotIdFilter && lotIdFilter > 0) params.set("lot_id", String(lotIdFilter));
+    return getArchivedOrders(params.toString());
+  }, [getArchivedOrders, lotIdFilter]);
 
   const restoreAndNotify = useCallback(
     async (id: number) => {
@@ -60,11 +66,16 @@ export default function ArchivedWorkOrders({ onAfterRestore }: ArchivedWorkOrder
 
   return (
     <ArchivedListPage<OrdersData>
-      description="Restaurar o eliminar órdenes de trabajo de forma definitiva"
+      description={
+        lotIdFilter
+          ? "Órdenes de trabajo asociadas al lote seleccionado"
+          : "Restaurar o eliminar órdenes de trabajo de forma definitiva"
+      }
       columns={columns}
       data={orders}
       entity={ENTITY}
       bulk
+      ignoreWorkspaceFilters={!!lotIdFilter}
       getItemLabel={(item) => item.number}
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}
