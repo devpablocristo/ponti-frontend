@@ -93,10 +93,10 @@ const NEW_VALUE = "new";
 const COST_INPUT_REGEX = /^\d*(?:[.,]\d{0,2})?$/;
 const HECTARES_INPUT_REGEX = /^\d*(?:[.,]\d{0,3})?$/;
 const SEASON_OPTIONS: EntityOption[] = [
-  { id: -1, name: "Otoño" },
-  { id: -2, name: "Invierno" },
-  { id: -3, name: "Primavera" },
-  { id: -4, name: "Verano" },
+  { id: 1, name: "Otoño" },
+  { id: 2, name: "Invierno" },
+  { id: 3, name: "Primavera" },
+  { id: 4, name: "Verano" },
 ];
 
 const extractEntityOptions = (payload: EntityOptionsPayload | undefined): EntityOption[] => {
@@ -1749,21 +1749,15 @@ export default function CustomerEditor({
                             <SelectField
                               label="Periodo"
                               name={`lot_season_${fieldIndex}_${lotIndex}`}
-                              value={
-                                seasonOptions
-                                  .find((season) => season.name === lot.season)
-                                  ?.id.toString() ?? ""
-                              }
-                              onChange={(event) => {
-                                const id = Number(event.target.value);
-                                const season = seasonOptions.find((s) => s.id === id);
+                              value={lot.season}
+                              onChange={(event) =>
                                 updateLotAt(
                                   fieldIndex,
                                   lotIndex,
                                   "season",
-                                  season?.name ?? ""
-                                );
-                              }}
+                                  event.target.value
+                                )
+                              }
                               options={seasonOptions}
                               size="sm"
                               fullWidth
