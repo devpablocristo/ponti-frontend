@@ -19,6 +19,16 @@ const columns: Column<ArchivedCustomer>[] = [
   { key: "name", header: "Cliente/Sociedad" },
 ];
 
+const getCustomerHardDeleteCopy = (count: number) => ({
+  title: "Confirmar eliminación definitiva",
+  message:
+    count === 1
+      ? "¿Eliminar definitivamente este cliente? Esta acción elimina en cascada el cliente, sus proyectos y los datos relacionados. No se puede deshacer."
+      : `¿Eliminar definitivamente ${count} clientes? Esta acción elimina en cascada los clientes, sus proyectos y los datos relacionados. No se puede deshacer.`,
+  primaryButtonText: "Eliminar definitivamente",
+  secondaryButtonText: "Cancelar",
+});
+
 export default function ArchivedCustomers({ onAfterRestore }: ArchivedCustomersProps) {
   const {
     customers,
@@ -59,6 +69,7 @@ export default function ArchivedCustomers({ onAfterRestore }: ArchivedCustomersP
       ignoreWorkspaceFilters
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}
+      getHardDeleteCopy={getCustomerHardDeleteCopy}
       onMount={refetch}
       processing={processing || actionProcessing}
       error={lastError ?? error}

@@ -48,6 +48,8 @@ type ArchivedListPageProps<T extends { id: number }> = {
   onRestore?: (item: T) => Promise<void> | void;
   /** Disparar hard-delete para el item seleccionado. Si no se pasa, no hay botón. */
   onHardDelete?: (item: T) => Promise<void> | void;
+  /** Copy específico para hard-delete cuando la entidad tiene cascadas relevantes. */
+  getHardDeleteCopy?: (count: number, entityLabelPlural: string) => ConfirmCopy;
   /** Callback opcional al montar (típicamente fetch inicial). */
   onMount?: () => void;
   /** Estado de processing externo (del hook useArchiveActions). */
@@ -269,6 +271,7 @@ export function ArchivedListPage<T extends { id: number }>({
   ignoreWorkspaceFilters = false,
   onRestore,
   onHardDelete,
+  getHardDeleteCopy,
   onMount,
   processing = false,
   error,
@@ -447,7 +450,11 @@ export function ArchivedListPage<T extends { id: number }>({
   const openBulkHardDelete = () => {
     if (selectedItems.length === 0) return;
     setPending({ items: selectedItems, op: "hard" });
-    setCopy(getBulkHardDeleteCopy(selectedItems.length, entityLabelPlural));
+    setCopy(
+      getHardDeleteCopy
+        ? getHardDeleteCopy(selectedItems.length, entityLabelPlural)
+        : getBulkHardDeleteCopy(selectedItems.length, entityLabelPlural),
+    );
     setIsModalOpen(true);
   };
 

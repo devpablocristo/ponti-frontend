@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 import { apiClient } from "@/api/client";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import Button from "../../../../components/Button/Button";
 import { IconActionButton } from "../../../../components/Button/IconActionButton";
 import InputField from "../../../../components/Input/InputField";
@@ -14,6 +15,13 @@ import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustome
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import { findEntityMatches, normalizeEntityName } from "../../../../lib/entityNameMatcher";
 import { useSelection } from "../../../login/context/useSelection";
+import {
+  buildProjectPayloadForSave,
+  formatValidationErrors,
+  parseProjectFieldErrorMessage,
+  validatePercentageGroup,
+  validateProjectForSave,
+} from "./customerEditorValidation";
 
 type ApiResponse<T> = {
   success: boolean;
@@ -39,6 +47,10 @@ type FieldPayload = {
   total: number;
 };
 type CropPayload = EntityOption[];
+type EntityOptionsPayload = EntityOption[] | { data?: EntityOption[]; items?: EntityOption[] };
+type FormOptionsPayload = {
+  rentTypes?: EntityOptionsPayload;
+};
 type LotListPayload = {
   data?: Array<{
     id: number;
@@ -77,6 +89,35 @@ type ActorPayload = {
 };
 
 const NEW_VALUE = "new";
+const COST_INPUT_REGEX = /^\d*(?:[.,]\d{0,2})?$/;
+const HECTARES_INPUT_REGEX = /^\d*(?:[.,]\d{0,3})?$/;
+const SEASON_OPTIONS: EntityOption[] = [
+  { id: -1, name: "Otoño" },
+  { id: -2, name: "Invierno" },
+  { id: -3, name: "Primavera" },
+  { id: -4, name: "Verano" },
+];
+
+const extractEntityOptions = (payload: EntityOptionsPayload | undefined): EntityOption[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.items)) return payload.items;
+  return [];
+};
+
+const emptyFieldInvestor = () => ({ id: 0, actor_id: null, name: "", percentage: 0 });
+
+function normalizeDecimalInputValue(value: string): number | null {
+  const normalized = value.replace(",", ".");
+  const parsed = normalized === "" ? 0 : Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseBoundedPercentage(value: string): number | null {
+  const parsed = normalizeDecimalInputValue(value);
+  if (parsed === null || parsed < 0 || parsed > 100) return null;
+  return parsed;
+}
 
 function isExistingId(value: SelectionValue): value is number {
   return typeof value === "number" && value > 0;
@@ -110,7 +151,7 @@ function createEmptyProject(customer?: CustomerData | null): Project {
         lease_type_id: 0,
         lease_type_percent: "",
         lease_type_value: "",
-        investors: [],
+        investors: [emptyFieldInvestor()],
         lots: [
           {
             id: 0,
@@ -142,7 +183,10 @@ function normalizeProject(project: Project): Project {
     fields: Array.isArray(project.fields)
       ? project.fields.map((field) => ({
           ...field,
-          investors: Array.isArray(field.investors) ? field.investors : [],
+          investors:
+            Array.isArray(field.investors) && field.investors.length > 0
+              ? field.investors
+              : [emptyFieldInvestor()],
           lots: Array.isArray(field.lots) ? field.lots : [],
         }))
       : [],
@@ -178,6 +222,7 @@ export default function CustomerEditor({
   const [fieldOptions, setFieldOptions] = useState<EntityOption[]>([]);
   const [lotOptions, setLotOptions] = useState<EntityOption[]>([]);
   const [cropOptions, setCropOptions] = useState<EntityOption[]>([]);
+  const [leaseTypeOptions, setLeaseTypeOptions] = useState<EntityOption[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<SelectionValue>(initialCustomerId);
   const [selectedProjectId, setSelectedProjectId] = useState<SelectionValue>(
     initialCustomerId === NEW_VALUE ? NEW_VALUE : ""
@@ -237,11 +282,13 @@ export default function CustomerEditor({
       };
 
       const loadReferenceLists = async () => {
-        const [campaignsResult, fieldsResult, cropsResult, lotsResult] = await Promise.allSettled([
+        const [campaignsResult, fieldsResult, cropsResult, lotsResult, formOptionsResult] =
+          await Promise.allSettled([
           apiClient.get<ApiResponse<CampaignPayload>>("/campaigns?limit=1000"),
           apiClient.get<ApiResponse<FieldPayload>>("/fields?limit=1000"),
           apiClient.get<ApiResponse<CropPayload>>("/crops"),
           apiClient.get<ApiResponse<LotListPayload>>("/lots?limit=1000"),
+          apiClient.get<ApiResponse<FormOptionsPayload>>("/form-options"),
         ]);
 
         if (cancelled) return;
@@ -264,6 +311,11 @@ export default function CustomerEditor({
                 name: lot.lot_name ?? lot.name ?? "",
               }))
               .filter((lot) => lot.name.trim())
+          );
+        }
+        if (formOptionsResult.status === "fulfilled") {
+          setLeaseTypeOptions(
+            extractEntityOptions(formOptionsResult.value.data?.rentTypes)
           );
         }
       };
@@ -447,6 +499,22 @@ export default function CustomerEditor({
     [actorOptions]
   );
 
+  const seasonOptions = useMemo(() => {
+    const campaignSeasonOptions = campaignOptions
+      .filter((campaign) => campaign.name.trim())
+      .map((campaign) => ({
+        id: campaign.id,
+        name: campaign.name,
+      }));
+    const seen = new Set<string>();
+    return [...campaignSeasonOptions, ...SEASON_OPTIONS].filter((option) => {
+      const key = normalizeEntityName(option.name);
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [campaignOptions]);
+
   const entityCreateKey = (scope: string, value: string) =>
     `${scope}:${normalizeEntityName(value)}`;
 
@@ -472,10 +540,14 @@ export default function CustomerEditor({
   };
 
   const updateProjectValue = (key: "name" | "admin_cost" | "planned_cost", value: string) => {
+    if (key !== "name" && !COST_INPUT_REGEX.test(value)) return;
+    const numericValue = key === "name" ? null : normalizeDecimalInputValue(value);
+    if (key !== "name" && (numericValue === null || numericValue < 0)) return;
+
     setProjectDraft((prev) => {
       if (!prev) return prev;
       if (key === "name") return { ...prev, name: value };
-      return { ...prev, [key]: value === "" ? 0 : Number(value) };
+      return { ...prev, [key]: numericValue ?? 0 };
     });
   };
 
@@ -739,6 +811,9 @@ export default function CustomerEditor({
     key: "name" | "percentage",
     value: string
   ) => {
+    const percentage = key === "percentage" ? parseBoundedPercentage(value) : null;
+    if (key === "percentage" && percentage === null) return;
+
     const scope = `${group}:${index}`;
     setProjectDraft((prev) =>
       prev
@@ -750,7 +825,7 @@ export default function CustomerEditor({
                     ...investor,
                     id: key === "name" ? 0 : investor.id,
                     actor_id: key === "name" ? null : investor.actor_id,
-                    [key]: key === "percentage" ? Number(value || 0) : value,
+                    [key]: key === "percentage" ? percentage ?? 0 : value,
                   }
                 : investor
             ),
@@ -803,11 +878,12 @@ export default function CustomerEditor({
     );
   };
 
-  const updateFieldAt = (
-    fieldIndex: number,
-    key: "name" | "lease_type_id" | "lease_type_percent" | "lease_type_value",
-    value: string
-  ) => {
+  const leaseTypeName = (leaseTypeId: number, fallback?: string) =>
+    fallback ||
+    leaseTypeOptions.find((leaseType) => Number(leaseType.id) === Number(leaseTypeId))?.name ||
+    "";
+
+  const updateFieldLeaseTypeName = (fieldIndex: number, value: string) => {
     setProjectDraft((prev) =>
       prev
         ? {
@@ -816,7 +892,27 @@ export default function CustomerEditor({
               idx === fieldIndex
                 ? {
                     ...field,
-                    [key]: key === "name" ? value : value === "" ? "" : Number(value),
+                    lease_type_id: 0,
+                    lease_type_name: value,
+                  }
+                : field
+            ),
+          }
+        : prev
+    );
+  };
+
+  const selectLeaseTypeOption = (fieldIndex: number, leaseType: EntityOption) => {
+    setProjectDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            fields: prev.fields.map((field, idx) =>
+              idx === fieldIndex
+                ? {
+                    ...field,
+                    lease_type_id: Number(leaseType.id),
+                    lease_type_name: leaseType.name,
                   }
                 : field
             ),
@@ -839,7 +935,7 @@ export default function CustomerEditor({
                 lease_type_id: 0,
                 lease_type_percent: "",
                 lease_type_value: "",
-                investors: [],
+                investors: [emptyFieldInvestor()],
                 lots: [
                   {
                     id: 0,
@@ -865,6 +961,9 @@ export default function CustomerEditor({
     key: "name" | "percentage",
     value: string
   ) => {
+    const percentage = key === "percentage" ? parseBoundedPercentage(value) : null;
+    if (key === "percentage" && percentage === null) return;
+
     const scope = `field-investor:${fieldIndex}:${investorIndex}`;
     setProjectDraft((prev) =>
       prev
@@ -880,7 +979,7 @@ export default function CustomerEditor({
                             ...investor,
                             id: key === "name" ? 0 : investor.id,
                             actor_id: key === "name" ? null : investor.actor_id,
-                            [key]: key === "percentage" ? Number(value || 0) : value,
+                            [key]: key === "percentage" ? percentage ?? 0 : value,
                           }
                         : investor
                     ),
@@ -931,10 +1030,7 @@ export default function CustomerEditor({
               idx === fieldIndex
                 ? {
                     ...field,
-                    investors: [
-                      ...field.investors,
-                      { id: 0, actor_id: null, name: "", percentage: 0 },
-                    ],
+                    investors: [...field.investors, emptyFieldInvestor()],
                   }
                 : field
             ),
@@ -952,7 +1048,10 @@ export default function CustomerEditor({
               idx === fieldIndex
                 ? {
                     ...field,
-                    investors: field.investors.filter((_item, invIdx) => invIdx !== investorIndex),
+                    investors:
+                      field.investors.length <= 1
+                        ? [emptyFieldInvestor()]
+                        : field.investors.filter((_item, invIdx) => invIdx !== investorIndex),
                   }
                 : field
             ),
@@ -974,6 +1073,15 @@ export default function CustomerEditor({
       | "season",
     value: string
   ) => {
+    const hectaresValue =
+      key === "hectares" ? normalizeDecimalInputValue(value) : null;
+    if (
+      key === "hectares" &&
+      (!HECTARES_INPUT_REGEX.test(value) || hectaresValue === null || hectaresValue < 0)
+    ) {
+      return;
+    }
+
     setProjectDraft((prev) =>
       prev
         ? {
@@ -990,7 +1098,9 @@ export default function CustomerEditor({
                               key === "hectares" ||
                               key === "previous_crop_id" ||
                               key === "current_crop_id"
-                                ? Number(value || 0)
+                                ? key === "hectares"
+                                  ? hectaresValue ?? 0
+                                  : Number(value || 0)
                                 : value,
                           }
                         : lot
@@ -1048,14 +1158,14 @@ export default function CustomerEditor({
     );
   };
 
-	  const validateActorEntity = (
-	    scope: string,
-	    label: string,
-	    entity: { id: number | null; actor_id?: number | null; name: string },
-	    options: ActorOption[]
-	  ) => {
-	    const name = entity.name.trim();
-	    if (!name || entity.id || entity.actor_id) return null;
+  const validateActorEntity = (
+    scope: string,
+    label: string,
+    entity: { id: number | null; actor_id?: number | null; name: string },
+    options: ActorOption[]
+  ) => {
+    const name = entity.name.trim();
+    if (!name || entity.id || entity.actor_id) return null;
 
     const match = findEntityMatches(name, options);
     if (match.exactMatch) {
@@ -1069,10 +1179,8 @@ export default function CustomerEditor({
     return null;
   };
 
-  const validateActorEntities = () => {
-    if (!projectDraft) return null;
-
-    for (const [index, manager] of projectDraft.managers.entries()) {
+  const validateActorEntities = (draft: Project) => {
+    for (const [index, manager] of draft.managers.entries()) {
       const error = validateActorEntity(
         `manager:${index}`,
         "Responsables",
@@ -1082,7 +1190,7 @@ export default function CustomerEditor({
       if (error) return error;
     }
 
-    for (const [index, investor] of projectDraft.investors.entries()) {
+    for (const [index, investor] of draft.investors.entries()) {
       const error = validateActorEntity(
         `investors:${index}`,
         "Inversores",
@@ -1091,8 +1199,13 @@ export default function CustomerEditor({
       );
       if (error) return error;
     }
+    const investorsPercentageError = validatePercentageGroup(
+      "Inversores",
+      draft.investors
+    );
+    if (investorsPercentageError) return investorsPercentageError;
 
-    for (const [index, investor] of projectDraft.admin_cost_investors.entries()) {
+    for (const [index, investor] of draft.admin_cost_investors.entries()) {
       const error = validateActorEntity(
         `admin_cost_investors:${index}`,
         "Costo administrativo",
@@ -1101,8 +1214,13 @@ export default function CustomerEditor({
       );
       if (error) return error;
     }
+    const adminPercentageError = validatePercentageGroup(
+      "Costo administrativo",
+      draft.admin_cost_investors
+    );
+    if (adminPercentageError) return adminPercentageError;
 
-    for (const [fieldIndex, field] of projectDraft.fields.entries()) {
+    for (const [fieldIndex, field] of draft.fields.entries()) {
       for (const [investorIndex, investor] of field.investors.entries()) {
         const error = validateActorEntity(
           `field-investor:${fieldIndex}:${investorIndex}`,
@@ -1112,6 +1230,12 @@ export default function CustomerEditor({
         );
         if (error) return error;
       }
+      const fieldInvestorPercentageError = validatePercentageGroup(
+        `Arrendatarios del campo ${field.name || fieldIndex + 1}`,
+        field.investors,
+        { allowEmpty: true }
+      );
+      if (fieldInvestorPercentageError) return fieldInvestorPercentageError;
     }
 
     return null;
@@ -1119,12 +1243,24 @@ export default function CustomerEditor({
 
   const handleSave = async () => {
     if (!projectDraft) return;
+    const { project: projectPayload, errors: payloadErrors } = buildProjectPayloadForSave(
+      projectDraft,
+      { editing: selectedProjectId !== NEW_VALUE }
+    );
+    const validationErrors = validateProjectForSave(projectPayload, { customerOnly });
+    const preflightErrors = [...validationErrors, ...payloadErrors];
+    if (preflightErrors.length > 0) {
+      setSuccess(null);
+      setError(formatValidationErrors(preflightErrors));
+      return;
+    }
+
     const customerId =
       customerOnly && isExistingId(selectedCustomerId)
         ? selectedCustomerId
-        : projectDraft.customer.id ?? null;
-    const customerActorId = projectDraft.customer.actor_id ?? null;
-    const match = findEntityMatches(projectDraft.customer.name, customerMatchOptions);
+        : projectPayload.customer.id ?? null;
+    const customerActorId = projectPayload.customer.actor_id ?? null;
+    const match = findEntityMatches(projectPayload.customer.name, customerMatchOptions);
 
     if (!customerId && !customerActorId && match.exactMatch) {
       setSuccess(null);
@@ -1147,9 +1283,13 @@ export default function CustomerEditor({
       return;
     }
 
-    if (!customerOnly && !selectedProjectId) return;
+    if (!customerOnly && !selectedProjectId) {
+      setSuccess(null);
+      setError("Proyecto: seleccioná o creá un proyecto.");
+      return;
+    }
 
-    const actorEntityError = customerOnly ? null : validateActorEntities();
+    const actorEntityError = customerOnly ? null : validateActorEntities(projectPayload);
     if (actorEntityError) {
       setSuccess(null);
       setError(actorEntityError);
@@ -1162,7 +1302,7 @@ export default function CustomerEditor({
     try {
       if (customerOnly) {
         const payload = {
-          name: projectDraft.customer.name,
+          name: projectPayload.customer.name,
           actor_id: customerActorId,
         };
         if (customerId) {
@@ -1173,14 +1313,19 @@ export default function CustomerEditor({
           setSuccess("Cliente creado.");
         }
       } else if (selectedProjectId === NEW_VALUE) {
-        await apiClient.post("/projects", projectDraft);
+        await apiClient.post("/projects", projectPayload);
         setSuccess("Proyecto creado.");
       } else {
-        await apiClient.put(`/projects/${selectedProjectId}`, projectDraft);
+        await apiClient.put(`/projects/${selectedProjectId}`, projectPayload);
         setSuccess("Cambios guardados.");
       }
-    } catch {
-      setError(customerOnly ? "No se pudo guardar el cliente." : "No se pudieron guardar los cambios.");
+    } catch (saveError) {
+      const fallback = customerOnly
+        ? "No se pudo guardar el cliente."
+        : "No se pudieron guardar los cambios.";
+      const message = extractErrorMessage(saveError, fallback);
+      const fieldMessage = parseProjectFieldErrorMessage(message);
+      setError(fieldMessage ? `${message}\n${fieldMessage}` : message);
     } finally {
       setSaving(false);
     }
@@ -1252,6 +1397,8 @@ export default function CustomerEditor({
                     label="Costo planificado"
                     name="planned_cost"
                     type="number"
+                    min={0}
+                    step="0.01"
                     value={String(projectDraft.planned_cost ?? 0)}
                     onChange={(event) => updateProjectValue("planned_cost", event.target.value)}
                     size="sm"
@@ -1260,6 +1407,8 @@ export default function CustomerEditor({
                     label="Costo administrativo"
                     name="admin_cost"
                     type="number"
+                    min={0}
+                    step="0.01"
                     value={String(projectDraft.admin_cost ?? 0)}
                     onChange={(event) => updateProjectValue("admin_cost", event.target.value)}
                     size="sm"
@@ -1320,6 +1469,9 @@ export default function CustomerEditor({
                     label="%"
                     name={`investor_percentage_${index}`}
                     type="number"
+                    min={1}
+                    max={100}
+                    step="0.01"
                     value={String(investor.percentage ?? 0)}
                     onChange={(event) =>
                       updateInvestor("investors", index, "percentage", event.target.value)
@@ -1366,6 +1518,9 @@ export default function CustomerEditor({
                     label="%"
                     name={`admin_investor_percentage_${index}`}
                     type="number"
+                    min={1}
+                    max={100}
+                    step="0.01"
                     value={String(investor.percentage ?? 0)}
                     onChange={(event) =>
                       updateInvestor(
@@ -1424,91 +1579,90 @@ export default function CustomerEditor({
                         }
                         size="sm"
                       />
-                      <InputField
+                      <SmartEntityInput<EntityOption>
                         label="Tipo de Arriendo"
                         name={`field_lease_${fieldIndex}`}
-                        type="number"
-                        value={String(field.lease_type_id ?? 0)}
-                        onChange={(event) =>
-                          updateFieldAt(fieldIndex, "lease_type_id", event.target.value)
+                        value={leaseTypeName(
+                          field.lease_type_id ?? 0,
+                          field.lease_type_name
+                        )}
+                        options={leaseTypeOptions}
+                        entityLabel="Tipo de Arriendo"
+                        onChange={(value) => updateFieldLeaseTypeName(fieldIndex, value)}
+                        onSelectExisting={(leaseType) =>
+                          selectLeaseTypeOption(fieldIndex, leaseType)
                         }
+                        selectedOptionId={field.lease_type_id || null}
+                        allowCreate={false}
                         size="sm"
                       />
-                      <div>
-                        <div className="mb-1.5 flex items-center justify-between">
-                          <span className="text-xs font-medium text-slate-600">Arrendatario</span>
-                          <button
-                            type="button"
-                            className="text-xs font-semibold text-primary-700"
-                            onClick={() => addFieldInvestorAt(fieldIndex)}
-                          >
-                            + Agregar
-                          </button>
-                        </div>
-                        <div className="space-y-2">
-                          {field.investors.length === 0 ? (
-                            <div className="rounded-md border border-dashed border-slate-300 bg-white px-3 py-2 text-sm text-slate-500">
-                              Sin arrendatarios
+                      <div className="space-y-2">
+                        {field.investors.map((investor, investorIndex) => (
+                          <div key={investorIndex} className="space-y-1.5">
+                            <SmartEntityInput<ActorOption>
+                              label={investorIndex === 0 ? "Arrendatario" : ""}
+                              name={`field_investor_${fieldIndex}_${investorIndex}`}
+                              value={investor.name}
+                              options={tenantOptions}
+                              entityLabel="Arrendatario"
+                              onChange={(value) =>
+                                updateFieldInvestorAt(
+                                  fieldIndex,
+                                  investorIndex,
+                                  "name",
+                                  value
+                                )
+                              }
+                              onSelectExisting={(actor) =>
+                                selectFieldInvestorAt(fieldIndex, investorIndex, actor)
+                              }
+                              selectedOptionId={investor.actor_id ?? null}
+                              createConfirmed={isEntityCreateConfirmed(
+                                `field-investor:${fieldIndex}:${investorIndex}`,
+                                investor.name
+                              )}
+                              onConfirmCreate={(value) =>
+                                confirmEntityCreate(
+                                  `field-investor:${fieldIndex}:${investorIndex}`,
+                                  value
+                                )
+                              }
+                              size="sm"
+                            />
+                            <div className="flex items-center gap-2">
+                              <InputField
+                                label="%"
+                                name={`field_investor_percentage_${fieldIndex}_${investorIndex}`}
+                                type="number"
+                                min={1}
+                                max={100}
+                                step="0.01"
+                                value={String(investor.percentage ?? 0)}
+                                onChange={(event) =>
+                                  updateFieldInvestorAt(
+                                    fieldIndex,
+                                    investorIndex,
+                                    "percentage",
+                                    event.target.value
+                                  )
+                                }
+                                size="xs"
+                                className="max-w-24"
+                              />
+                              <RemoveButton
+                                label="Quitar arrendatario"
+                                onClick={() => removeFieldInvestorAt(fieldIndex, investorIndex)}
+                              />
                             </div>
-                          ) : (
-                            field.investors.map((investor, investorIndex) => (
-                              <div
-                                key={investorIndex}
-                                className="grid grid-cols-[1fr_80px_auto] gap-2"
-                              >
-                                <SmartEntityInput<ActorOption>
-                                  label=""
-                                  name={`field_investor_${fieldIndex}_${investorIndex}`}
-                                  value={investor.name}
-                                  options={tenantOptions}
-                                  entityLabel="Arrendatario"
-                                  onChange={(value) =>
-                                    updateFieldInvestorAt(
-                                      fieldIndex,
-                                      investorIndex,
-                                      "name",
-                                      value
-                                    )
-                                  }
-                                  onSelectExisting={(actor) =>
-                                    selectFieldInvestorAt(fieldIndex, investorIndex, actor)
-                                  }
-                                  selectedOptionId={investor.actor_id ?? null}
-                                  createConfirmed={isEntityCreateConfirmed(
-                                    `field-investor:${fieldIndex}:${investorIndex}`,
-                                    investor.name
-                                  )}
-                                  onConfirmCreate={(value) =>
-                                    confirmEntityCreate(
-                                      `field-investor:${fieldIndex}:${investorIndex}`,
-                                      value
-                                    )
-                                  }
-                                  size="sm"
-                                />
-                                <InputField
-                                  label=""
-                                  name={`field_investor_percentage_${fieldIndex}_${investorIndex}`}
-                                  type="number"
-                                  value={String(investor.percentage ?? 0)}
-                                  onChange={(event) =>
-                                    updateFieldInvestorAt(
-                                      fieldIndex,
-                                      investorIndex,
-                                      "percentage",
-                                      event.target.value
-                                    )
-                                  }
-                                  size="sm"
-                                />
-                                <RemoveButton
-                                  label="Quitar arrendatario"
-                                  onClick={() => removeFieldInvestorAt(fieldIndex, investorIndex)}
-                                />
-                              </div>
-                            ))
-                          )}
-                        </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="text-xs font-semibold text-primary-700"
+                          onClick={() => addFieldInvestorAt(fieldIndex)}
+                        >
+                          + Otro arrendatario
+                        </button>
                       </div>
                     </div>
 
@@ -1547,6 +1701,8 @@ export default function CustomerEditor({
                               label="Hectáreas"
                               name={`lot_hectares_${fieldIndex}_${lotIndex}`}
                               type="number"
+                              min={0}
+                              step="0.001"
                               value={String(lot.hectares ?? 0)}
                               onChange={(event) =>
                                 updateLotAt(fieldIndex, lotIndex, "hectares", event.target.value)
@@ -1603,13 +1759,23 @@ export default function CustomerEditor({
                               }
                               size="sm"
                             />
-                            <InputField
+                            <SmartEntityInput<EntityOption>
                               label="Periodo"
                               name={`lot_season_${fieldIndex}_${lotIndex}`}
                               value={lot.season}
-                              onChange={(event) =>
-                                updateLotAt(fieldIndex, lotIndex, "season", event.target.value)
+                              options={seasonOptions}
+                              entityLabel="Periodo"
+                              onChange={(value) =>
+                                updateLotAt(fieldIndex, lotIndex, "season", value)
                               }
+                              onSelectExisting={(season) =>
+                                updateLotAt(fieldIndex, lotIndex, "season", season.name)
+                              }
+                              selectedOptionId={
+                                seasonOptions.find((season) => season.name === lot.season)?.id ??
+                                null
+                              }
+                              allowCreate={false}
                               size="sm"
                             />
                             <RemoveButton

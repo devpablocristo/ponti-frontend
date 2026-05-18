@@ -15,6 +15,16 @@ const columns: Column<ProjectData>[] = [
   { key: "investors", header: "Inversores y aportes" },
 ];
 
+const getProjectHardDeleteCopy = (count: number) => ({
+  title: "Confirmar eliminación definitiva",
+  message:
+    count === 1
+      ? "¿Eliminar definitivamente este proyecto? Esta acción elimina en cascada el proyecto, sus campos, lotes y datos relacionados. No se puede deshacer."
+      : `¿Eliminar definitivamente ${count} proyectos? Esta acción elimina en cascada los proyectos, sus campos, lotes y datos relacionados. No se puede deshacer.`,
+  primaryButtonText: "Eliminar definitivamente",
+  secondaryButtonText: "Cancelar",
+});
+
 type ArchivedProjectsProps = {
   onAfterRestore?: () => Promise<void> | void;
 };
@@ -59,6 +69,7 @@ export default function ArchivedProjects({ onAfterRestore }: ArchivedProjectsPro
       ignoreWorkspaceFilters
       onRestore={runRestore ?? undefined}
       onHardDelete={runHardDelete ?? undefined}
+      getHardDeleteCopy={getProjectHardDeleteCopy}
       onMount={refetch}
       processing={processing || actionProcessing}
       error={lastError ?? error}

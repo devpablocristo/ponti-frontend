@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { ReactNode, useId } from "react";
+import { ReactNode, useEffect, useId } from "react";
 
 import { IconActionButton } from "../Button/IconActionButton";
 
@@ -39,6 +39,8 @@ type DrawerSectionProps = {
 type DrawerCloseButtonProps = {
   onClose: () => void;
 };
+
+const openDrawerStack: string[] = [];
 
 export function DrawerCloseButton({ onClose }: DrawerCloseButtonProps) {
   return (
@@ -96,6 +98,39 @@ export function DrawerShell({
 }: DrawerShellProps) {
   const generatedTitleId = useId();
   const titleId = labelledBy ?? generatedTitleId;
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    openDrawerStack.push(titleId);
+
+    return () => {
+      const index = openDrawerStack.lastIndexOf(titleId);
+      if (index >= 0) {
+        openDrawerStack.splice(index, 1);
+      }
+    };
+  }, [open, titleId]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      const topDrawerId = openDrawerStack[openDrawerStack.length - 1];
+      if (topDrawerId !== titleId) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [onClose, open, titleId]);
 
   if (!open) return null;
 
