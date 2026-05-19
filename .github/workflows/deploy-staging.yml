@@ -1,4 +1,4 @@
-name: Deploy Frontend STAGING (Cloud Run + Hosting)
+name: Deploy STAGING (Cloud Run + Hosting)
 
 on:
   push:
