@@ -27,7 +27,6 @@ import ListTasks from "./pages/admin/database/tasks/List";
 import ByFieldOrCropReport from "./pages/admin/reports/ByFieldOrCropReport.tsx";
 import ByFieldOrCropReportV2 from "./pages/admin/reports/ByFieldOrCropReportV2.tsx";
 import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
-import SummaryResultsReportV2 from "./pages/admin/reports/SummaryResultsReportV2.tsx";
 import InvestorContribution from "./pages/admin/reports/InvestorContributionReport.tsx";
 import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionReportV2.tsx";
 import AIAssistant from "./pages/admin/ai-assistant/AIAssistant";
@@ -175,10 +174,6 @@ export default [
       {
         path: "informes/resumen",
         element: <SummaryResultsReport />,
-      },
-      {
-        path: "informes/resumen-v2",
-        element: <SummaryResultsReportV2 />,
       },
       {
         path: "informes/campo",
