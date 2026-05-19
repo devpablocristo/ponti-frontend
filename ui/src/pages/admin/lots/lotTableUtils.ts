@@ -75,10 +75,7 @@ export function lotMatchesFilters(
   });
 }
 
-export function filterLots(
-  lots: LotsData[],
-  filters: Record<string, unknown>
-): LotsData[] {
+export function filterLots(lots: LotsData[], filters: Record<string, unknown>): LotsData[] {
   return lots.filter((lot) => lotMatchesFilters(lot, filters));
 }
 
@@ -87,9 +84,7 @@ export function getLotFilterOptions(
   filters: Record<string, unknown>,
   columnKey: keyof LotsData
 ): string[] {
-  const filteredData = lots.filter((lot) =>
-    lotMatchesFilters(lot, filters, columnKey)
-  );
+  const filteredData = lots.filter((lot) => lotMatchesFilters(lot, filters, columnKey));
 
   const options = filteredData.flatMap((lot) => valuesForFilter(lot, columnKey));
   return [...new Set(options)].filter(Boolean).sort().reverse();
@@ -98,35 +93,20 @@ export function getLotFilterOptions(
 export function calculateLotIndicators(lots: LotsData[]): LotIndicatorValues {
   if (lots.length === 0) return emptyIndicators;
 
-  const totalSeededArea = lots.reduce(
-    (sum, lot) => sum + toFiniteNumber(lot.sowed_area),
-    0
-  );
-  const totalSurfaceArea = lots.reduce(
-    (sum, lot) => sum + toFiniteNumber(lot.hectares),
-    0
-  );
-  const totalHarvestedArea = lots.reduce(
-    (sum, lot) => sum + toFiniteNumber(lot.harvested_area),
-    0
-  );
-  const totalTons = lots.reduce(
-    (sum, lot) => sum + toFiniteNumber(lot.tons),
-    0
-  );
+  const totalSeededArea = lots.reduce((sum, lot) => sum + toFiniteNumber(lot.sowed_area), 0);
+  const totalSurfaceArea = lots.reduce((sum, lot) => sum + toFiniteNumber(lot.hectares), 0);
+  const totalHarvestedArea = lots.reduce((sum, lot) => sum + toFiniteNumber(lot.harvested_area), 0);
+  const totalTons = lots.reduce((sum, lot) => sum + toFiniteNumber(lot.tons), 0);
   const weightedCost = lots.reduce(
-    (sum, lot) =>
-      sum + toFiniteNumber(lot.cost_usd_per_ha) * toFiniteNumber(lot.hectares),
+    (sum, lot) => sum + toFiniteNumber(lot.cost_usd_per_ha) * toFiniteNumber(lot.hectares),
     0
   );
 
   return {
     seeded_area: totalSeededArea,
     harvested_area: totalHarvestedArea,
-    yield_tn_per_ha:
-      totalHarvestedArea > 0 ? totalTons / totalHarvestedArea : 0,
-    cost_per_hectare:
-      totalSurfaceArea > 0 ? weightedCost / totalSurfaceArea : 0,
+    yield_tn_per_ha: totalSeededArea > 0 ? totalTons / totalSeededArea : 0,
+    cost_per_hectare: totalSurfaceArea > 0 ? weightedCost / totalSurfaceArea : 0,
     superficie_total: totalSurfaceArea,
   };
 }

@@ -62,10 +62,7 @@ describe("lotTableUtils", () => {
       }),
     ];
 
-    expect(getLotFilterOptions(data, {}, "harvest_date")).toEqual([
-      "2026-05-10",
-      "2026-04-20",
-    ]);
+    expect(getLotFilterOptions(data, {}, "harvest_date")).toEqual(["2026-05-10", "2026-04-20"]);
     expect(filterLots(data, { harvest_date: ["2026-05-10"] })).toHaveLength(1);
     expect(filterLots(data, { harvest_date: ["2026-05-10"] })[0].id).toBe(2);
   });
@@ -78,9 +75,7 @@ describe("lotTableUtils", () => {
       }),
     ];
 
-    expect(getLotFilterOptions(data, {}, "harvest_date")).toEqual([
-      "2026-05-20",
-    ]);
+    expect(getLotFilterOptions(data, {}, "harvest_date")).toEqual(["2026-05-20"]);
     expect(filterLots(data, { harvest_date: ["2026-05-20"] })).toHaveLength(1);
   });
 
@@ -103,13 +98,13 @@ describe("lotTableUtils", () => {
 
   it("calculates indicators from string decimals", () => {
     const indicators = calculateLotIndicators([
-      lot({ hectares: "10", sowed_area: "10", harvested_area: "8", tons: "12" }),
-      lot({ hectares: "5", sowed_area: "5", harvested_area: "2", tons: "3" }),
+      lot({ hectares: "50", sowed_area: "50", harvested_area: "48", tons: "152.5" }),
+      lot({ hectares: "50", sowed_area: "50", harvested_area: "45", tons: "152.5" }),
     ]);
 
-    expect(indicators.seeded_area).toBe(15);
-    expect(indicators.harvested_area).toBe(10);
-    expect(indicators.yield_tn_per_ha).toBe(1.5);
+    expect(indicators.seeded_area).toBe(100);
+    expect(indicators.harvested_area).toBe(93);
+    expect(indicators.yield_tn_per_ha).toBe(3.05);
   });
 
   it("maps API KPI strings to numeric display values", () => {
