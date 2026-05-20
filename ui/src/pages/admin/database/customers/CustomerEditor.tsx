@@ -939,38 +939,42 @@ export default function CustomerEditor({
     );
   };
 
+  const createEmptyField = () => ({
+    id: -Date.now(),
+    name: "",
+    lease_type_id: 0,
+    lease_type_percent: "",
+    lease_type_value: "",
+    investors: [emptyFieldInvestor()],
+    lots: [
+      {
+        id: 0,
+        name: "",
+        hectares: 0,
+        previous_crop_id: 0,
+        previous_crop_name: "",
+        current_crop_id: 0,
+        current_crop_name: "",
+        season: "",
+      },
+    ],
+  });
+
   const addField = () => {
-    const newFieldId = -Date.now();
     setProjectDraft((prev) =>
-      prev
-        ? {
-            ...prev,
-            fields: [
-              ...prev.fields,
-              {
-                id: newFieldId,
-                name: "",
-                lease_type_id: 0,
-                lease_type_percent: "",
-                lease_type_value: "",
-                investors: [emptyFieldInvestor()],
-                lots: [
-                  {
-                    id: 0,
-                    name: "",
-                    hectares: 0,
-                    previous_crop_id: 0,
-                    previous_crop_name: "",
-                    current_crop_id: 0,
-                    current_crop_name: "",
-                    season: "",
-                  },
-                ],
-              },
-            ],
-          }
-        : prev
+      prev ? { ...prev, fields: [...prev.fields, createEmptyField()] } : prev
     );
+  };
+
+  const removeField = (fieldIndex: number) => {
+    setProjectDraft((prev) => {
+      if (!prev) return prev;
+      const fields = prev.fields.filter((_, idx) => idx !== fieldIndex);
+      return {
+        ...prev,
+        fields: fields.length > 0 ? fields : [createEmptyField()],
+      };
+    });
   };
 
   const updateFieldInvestorAt = (
@@ -1827,6 +1831,12 @@ export default function CustomerEditor({
                           </div>
                         ))}
                       </div>
+                    </div>
+                    <div className="flex justify-end pt-1">
+                      <RemoveButton
+                        label="Quitar campo"
+                        onClick={() => removeField(fieldIndex)}
+                      />
                     </div>
                   </div>
                 ))
