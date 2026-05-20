@@ -9,9 +9,8 @@ import { IconActionButton } from "../../../../components/Button/IconActionButton
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import SmartEntityInput from "../../../../components/SmartEntityInput/SmartEntityInput";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
-import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { toastError, toastSuccess } from "../../../../lib/toast";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import { findEntityMatches, normalizeEntityName } from "../../../../lib/entityNameMatcher";
@@ -231,8 +230,6 @@ export default function CustomerEditor({
   const [projectDraft, setProjectDraft] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [confirmedCustomerCreateName, setConfirmedCustomerCreateName] = useState<string | null>(
     null
   );
@@ -245,7 +242,6 @@ export default function CustomerEditor({
 
     const load = async () => {
       setLoading(true);
-      setError(null);
 
       const loadCustomers = async () => {
         try {
@@ -256,7 +252,7 @@ export default function CustomerEditor({
           }
         } catch {
           if (!cancelled) {
-            setError("No se pudieron cargar los clientes.");
+            toastError("No se pudieron cargar los clientes.");
           }
         }
       };
@@ -277,7 +273,7 @@ export default function CustomerEditor({
         } catch {
           if (!cancelled) {
             setActorOptions([]);
-            setError("No se pudieron cargar los actores.");
+            toastError("No se pudieron cargar los actores.");
           }
         }
       };
@@ -377,8 +373,6 @@ export default function CustomerEditor({
       }
 
       setLoading(true);
-      setError(null);
-      setSuccess(null);
       try {
         const url = isExistingId(selectedCustomerId)
           ? `/projects/customers/${selectedCustomerId}?page=1&per_page=1000`
@@ -411,7 +405,7 @@ export default function CustomerEditor({
         setProjectDraft(preferredDetail ?? null);
       } catch {
         if (!cancelled) {
-          setError("No se pudieron cargar los proyectos.");
+          toastError("No se pudieron cargar los proyectos.");
         }
       } finally {
         if (!cancelled) {
@@ -603,13 +597,12 @@ export default function CustomerEditor({
   const selectProjectOption = async (project: EntityOption) => {
     setSelectedProjectId(project.id);
     setLoading(true);
-    setError(null);
     try {
       const detail = await apiClient.get<ProjectDetailResponse>(`/projects/${project.id}`);
       setProjectDraft(normalizeProject(detail.data));
     } catch {
       setProjectDraft((prev) => (prev ? { ...prev, name: project.name } : prev));
-      setError("No se pudo cargar el proyecto seleccionado.");
+      toastError("No se pudo cargar el proyecto seleccionado.");
     } finally {
       setLoading(false);
     }
@@ -1237,8 +1230,7 @@ export default function CustomerEditor({
     const validationErrors = validateProjectForSave(projectPayload, { customerOnly });
     const preflightErrors = [...validationErrors, ...payloadErrors];
     if (preflightErrors.length > 0) {
-      setSuccess(null);
-      setError(formatValidationErrors(preflightErrors));
+      toastError(formatValidationErrors(preflightErrors));
       return;
     }
 
@@ -1250,8 +1242,7 @@ export default function CustomerEditor({
     const match = findEntityMatches(projectPayload.customer.name, customerMatchOptions);
 
     if (!customerId && !customerActorId && match.exactMatch) {
-      setSuccess(null);
-      setError(
+      toastError(
         `Ya existe el actor "${match.exactMatch.name}". Seleccionalo desde la lista para evitar duplicados.`
       );
       return;
@@ -1263,29 +1254,24 @@ export default function CustomerEditor({
       match.requiresConfirmation &&
       confirmedCustomerCreateName !== match.normalizedInput
     ) {
-      setSuccess(null);
-      setError(
+      toastError(
         "Hay clientes parecidos. Confirmá que querés crear uno nuevo antes de guardar."
       );
       return;
     }
 
     if (!customerOnly && !selectedProjectId) {
-      setSuccess(null);
-      setError("Proyecto: seleccioná o creá un proyecto.");
+      toastError("Proyecto: seleccioná o creá un proyecto.");
       return;
     }
 
     const actorEntityError = customerOnly ? null : validateActorEntities(projectPayload);
     if (actorEntityError) {
-      setSuccess(null);
-      setError(actorEntityError);
+      toastError(actorEntityError);
       return;
     }
 
     setSaving(true);
-    setError(null);
-    setSuccess(null);
     try {
       if (customerOnly) {
         const payload = {
@@ -1294,17 +1280,17 @@ export default function CustomerEditor({
         };
         if (customerId) {
           await apiClient.put(`/customers/${customerId}`, payload);
-          setSuccess("Cliente guardado.");
+          toastSuccess("Cliente guardado.");
         } else {
           await apiClient.post("/customers", payload);
-          setSuccess("Cliente creado.");
+          toastSuccess("Cliente creado.");
         }
       } else if (selectedProjectId === NEW_VALUE) {
         await apiClient.post("/projects", projectPayload);
-        setSuccess("Proyecto creado.");
+        toastSuccess("Proyecto creado.");
       } else {
         await apiClient.put(`/projects/${selectedProjectId}`, projectPayload);
-        setSuccess("Cambios guardados.");
+        toastSuccess("Cambios guardados.");
       }
     } catch (saveError) {
       const fallback = customerOnly
@@ -1312,7 +1298,7 @@ export default function CustomerEditor({
         : "No se pudieron guardar los cambios.";
       const message = extractErrorMessage(saveError, fallback);
       const fieldMessage = parseProjectFieldErrorMessage(message);
-      setError(fieldMessage ? `${message}\n${fieldMessage}` : message);
+      toastError(fieldMessage ? `${message}\n${fieldMessage}` : message);
     } finally {
       setSaving(false);
     }
@@ -1329,8 +1315,6 @@ export default function CustomerEditor({
   return (
     <div className={embedded ? "space-y-2 pr-1" : "space-y-2"}>
       <LoadingOverlay show={loading || saving} />
-      {error && <ErrorBanner message={error} onDismiss={() => setError(null)} />}
-      {success && <SuccessBanner message={success} onDismiss={() => setSuccess(null)} />}
 
       {projectDraft && (
         <div className="space-y-2">
