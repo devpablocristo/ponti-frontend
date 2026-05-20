@@ -119,12 +119,8 @@ function getStatusBadgeClass(status: string) {
     : "bg-emerald-100 text-emerald-800 border border-emerald-200";
 }
 
-function isDigitalByNumber(order: OrdersData) {
-  return String(order.number).trim().toUpperCase().startsWith("D");
-}
-
 function isDigitalOrder(order: OrdersData) {
-  return order.is_digital || isDigitalByNumber(order);
+  return order.is_digital === true;
 }
 
 function getOrderBaseNumber(orderNumber: string | number) {
