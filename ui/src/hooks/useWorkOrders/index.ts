@@ -380,7 +380,7 @@ const useOrders = () => {
 
     try {
       const response = await apiClient.delete<SuccessResponse<string>>(
-        `/work-orders/drafts/${normalizeDraftId(id)}`
+        `/work-orders/drafts/${normalizeDraftId(id)}/hard`
       );
 
       if (response.success) {
@@ -416,7 +416,7 @@ const useOrders = () => {
 
     try {
       const response = await apiClient.delete<SuccessResponse<string>>(
-        "/work-orders/" + id
+        "/work-orders/" + id + "/hard"
       );
 
       if (response.success) {

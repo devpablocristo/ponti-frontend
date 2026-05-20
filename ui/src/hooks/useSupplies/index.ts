@@ -112,7 +112,7 @@ const useSupplies = () => {
 
       try {
         const response = await apiClient.delete<SupplyMutationResponse>(
-          `/supplies/${id}`
+          `/supplies/${id}/hard`
         );
 
         if (response.success) {

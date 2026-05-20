@@ -313,7 +313,7 @@ const useLabors = () => {
       });
 
       try {
-        const response = await apiClient.delete<LaborMutationResponse>(`/labors/${id}`);
+        const response = await apiClient.delete<LaborMutationResponse>(`/labors/${id}/hard`);
 
         if (response.success) {
           dispatch({

@@ -338,7 +338,7 @@ const useSupplyMovements = () => {
 
       try {
         const response = await apiClient.delete<SupplyMovementMutationResponse>(
-          `/supply_movements/${id}/project/${projectId}`
+          `/supply_movements/${id}/project/${projectId}/hard`
         );
 
         if (response.success) {
