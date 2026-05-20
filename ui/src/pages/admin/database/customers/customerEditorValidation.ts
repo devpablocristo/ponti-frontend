@@ -1,5 +1,5 @@
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
-import { normalizeEntityName } from "../../../../lib/entityNameMatcher";
+import { findEntityMatches, normalizeEntityName } from "../../../../lib/entityNameMatcher";
 
 type NormalizedDecimalResult = {
   value: number | null;
@@ -367,4 +367,75 @@ export const parseProjectFieldErrorMessage = (message: string): string | null =>
 
 export function formatValidationErrors(errors: string[]): string {
   return Array.from(new Set(errors)).join("\n");
+}
+
+export type IdentityOption = {
+  id: number | string;
+  name?: string;
+  customer_id?: number | null;
+};
+
+type IdentityEntity = {
+  id?: number | null;
+  actor_id?: number | null;
+  name: string;
+};
+
+// validateActorIdentity returns an error message when the typed name matches
+// an existing actor option that is NOT the one assigned to this slot. It is
+// the only duplicate guard kept in the editor after removing the explicit
+// "Nuevo" button: a slot may freely rename its assigned actor, but cannot
+// silently steal the identity of a different one.
+export function validateActorIdentity(
+  label: string,
+  entity: IdentityEntity,
+  options: IdentityOption[]
+): string | null {
+  const name = entity.name.trim();
+  if (!name) return null;
+
+  const match = findEntityMatches(name, options);
+  if (!match.exactMatch) return null;
+
+  const matchedActorId =
+    typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
+  const assignedActorId = entity.actor_id ?? null;
+  if (assignedActorId !== null && matchedActorId === assignedActorId) {
+    return null;
+  }
+
+  return `Ya existe "${match.exactMatch.name ?? name}" en ${label}. Seleccionalo desde la lista.`;
+}
+
+// validateCustomerIdentity is a thin wrapper around validateActorIdentity
+// for the project's customer slot. The semantics match the customer actor
+// options, which carry both `id` (actor id) and `customer_id` (legacy id).
+export function validateCustomerIdentity(
+  customer: IdentityEntity,
+  options: IdentityOption[]
+): string | null {
+  const name = customer.name.trim();
+  if (!name) return null;
+
+  const match = findEntityMatches(name, options);
+  if (!match.exactMatch) return null;
+
+  const matchedActorId =
+    typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
+  const matchedCustomerId =
+    typeof match.exactMatch.customer_id === "number"
+      ? match.exactMatch.customer_id
+      : null;
+  const assignedActorId = customer.actor_id ?? null;
+  const assignedCustomerId = customer.id ?? null;
+
+  const sameByActor =
+    assignedActorId !== null && matchedActorId === assignedActorId;
+  const sameByCustomer =
+    assignedCustomerId !== null && matchedCustomerId === assignedCustomerId;
+  if (sameByActor || sameByCustomer) return null;
+
+  return `Ya existe un cliente con el nombre "${
+    match.exactMatch.name ?? name
+  }". Seleccionalo del dropdown.`;
 }

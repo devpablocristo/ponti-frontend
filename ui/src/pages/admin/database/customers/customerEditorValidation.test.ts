@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import {
   buildProjectPayloadForSave,
+  type IdentityOption,
   normalizeNullableDecimal,
   parseProjectFieldErrorMessage,
+  validateActorIdentity,
+  validateCustomerIdentity,
   validateProjectForSave,
 } from "./customerEditorValidation";
 
@@ -137,5 +140,150 @@ describe("customerEditorValidation", () => {
     expect(parseProjectFieldErrorMessage("fields[2].lease_type_percent bad")).toBe(
       "Campo 3: porcentaje de arriendo."
     );
+  });
+});
+
+const customerOptions: IdentityOption[] = [
+  { id: 201, name: "AGRO LAJITAS 25-26", customer_id: 17 },
+  { id: 202, name: "EL SUEÑO 25-26", customer_id: 22 },
+  { id: 203, name: "AGRO TUC", customer_id: 31 },
+];
+
+const managerOptions: IdentityOption[] = [
+  { id: 101, name: "JUAN PEREZ" },
+  { id: 102, name: "MARIA LOPEZ" },
+];
+
+describe("validateCustomerIdentity", () => {
+  it("case 1: allows a brand-new customer with no assigned id", () => {
+    expect(
+      validateCustomerIdentity(
+        { id: null, actor_id: null, name: "CLIENTE NUEVO" },
+        customerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("case 2: blocks a new customer whose name matches an existing one", () => {
+    const err = validateCustomerIdentity(
+      { id: null, actor_id: null, name: "AGRO LAJITAS 25-26" },
+      customerOptions
+    );
+    expect(err).toContain("Ya existe");
+    expect(err).toContain("AGRO LAJITAS");
+  });
+
+  it("case 3: permits the assigned customer to keep its name", () => {
+    expect(
+      validateCustomerIdentity(
+        { id: 17, actor_id: 201, name: "AGRO LAJITAS 25-26" },
+        customerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("case 3: permits renaming the assigned customer to a name nobody owns", () => {
+    expect(
+      validateCustomerIdentity(
+        { id: 17, actor_id: 201, name: "AGRO LAJITAS LIMPIO" },
+        customerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("treats case/accent variations of the assigned name as the same identity", () => {
+    expect(
+      validateCustomerIdentity(
+        { id: 17, actor_id: 201, name: "agro lajitas 25-26" },
+        customerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("blocks renaming the assigned customer to another existing customer's name", () => {
+    const err = validateCustomerIdentity(
+      { id: 17, actor_id: 201, name: "AGRO TUC" },
+      customerOptions
+    );
+    expect(err).toContain("AGRO TUC");
+  });
+
+  it("case 4: permits swapping to a different existing customer", () => {
+    expect(
+      validateCustomerIdentity(
+        { id: 31, actor_id: 203, name: "AGRO TUC" },
+        customerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("ignores empty input", () => {
+    expect(
+      validateCustomerIdentity(
+        { id: null, actor_id: null, name: "   " },
+        customerOptions
+      )
+    ).toBeNull();
+  });
+});
+
+describe("validateActorIdentity", () => {
+  it("case 5: allows a brand-new manager with no assigned actor_id", () => {
+    expect(
+      validateActorIdentity(
+        "Responsables",
+        { id: 0, actor_id: null, name: "MANAGER NUEVO" },
+        managerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("case 6: permits the assigned actor to keep its name", () => {
+    expect(
+      validateActorIdentity(
+        "Responsables",
+        { id: 5, actor_id: 101, name: "JUAN PEREZ" },
+        managerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("case 6: permits renaming the assigned actor to a name nobody owns", () => {
+    expect(
+      validateActorIdentity(
+        "Responsables",
+        { id: 5, actor_id: 101, name: "JUAN PEREZ JR" },
+        managerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("blocks renaming the assigned actor to another existing one's name", () => {
+    const err = validateActorIdentity(
+      "Responsables",
+      { id: 5, actor_id: 101, name: "MARIA LOPEZ" },
+      managerOptions
+    );
+    expect(err).toContain("Responsables");
+    expect(err).toContain("MARIA LOPEZ");
+  });
+
+  it("blocks a new manager whose typed name matches another actor", () => {
+    const err = validateActorIdentity(
+      "Inversores",
+      { id: 0, actor_id: null, name: "JUAN PEREZ" },
+      managerOptions
+    );
+    expect(err).toContain("Inversores");
+  });
+
+  it("case 7: permits swapping to a different existing actor", () => {
+    expect(
+      validateActorIdentity(
+        "Responsables",
+        { id: 0, actor_id: 102, name: "MARIA LOPEZ" },
+        managerOptions
+      )
+    ).toBeNull();
   });
 });

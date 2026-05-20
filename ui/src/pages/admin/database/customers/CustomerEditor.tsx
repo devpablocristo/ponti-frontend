@@ -13,12 +13,13 @@ import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { toastError, toastSuccess } from "../../../../lib/toast";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
-import { findEntityMatches } from "../../../../lib/entityNameMatcher";
 import { useSelection } from "../../../login/context/useSelection";
 import {
   buildProjectPayloadForSave,
   formatValidationErrors,
   parseProjectFieldErrorMessage,
+  validateActorIdentity,
+  validateCustomerIdentity,
   validatePercentageGroup,
   validateProjectForSave,
 } from "./customerEditorValidation";
@@ -1063,35 +1064,14 @@ export default function CustomerEditor({
     );
   };
 
-  const validateActorEntity = (
-    label: string,
-    entity: { id: number | null; actor_id?: number | null; name: string },
-    options: ActorOption[]
-  ) => {
-    const name = entity.name.trim();
-    if (!name) return null;
-
-    const match = findEntityMatches(name, options);
-    if (!match.exactMatch) return null;
-
-    const matchedActorId =
-      typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
-    const assignedActorId = entity.actor_id ?? null;
-    if (assignedActorId !== null && matchedActorId === assignedActorId) {
-      return null;
-    }
-
-    return `Ya existe "${match.exactMatch.name}" en ${label}. Seleccionalo desde la lista.`;
-  };
-
   const validateActorEntities = (draft: Project) => {
     for (const manager of draft.managers) {
-      const error = validateActorEntity("Responsables", manager, managerOptions);
+      const error = validateActorIdentity("Responsables", manager, managerOptions);
       if (error) return error;
     }
 
     for (const investor of draft.investors) {
-      const error = validateActorEntity("Inversores", investor, investorOptions);
+      const error = validateActorIdentity("Inversores", investor, investorOptions);
       if (error) return error;
     }
     const investorsPercentageError = validatePercentageGroup(
@@ -1101,7 +1081,7 @@ export default function CustomerEditor({
     if (investorsPercentageError) return investorsPercentageError;
 
     for (const investor of draft.admin_cost_investors) {
-      const error = validateActorEntity("Costo administrativo", investor, investorOptions);
+      const error = validateActorIdentity("Costo administrativo", investor, investorOptions);
       if (error) return error;
     }
     const adminPercentageError = validatePercentageGroup(
@@ -1112,7 +1092,7 @@ export default function CustomerEditor({
 
     for (const [fieldIndex, field] of draft.fields.entries()) {
       for (const investor of field.investors) {
-        const error = validateActorEntity("Arrendatarios", investor, tenantOptions);
+        const error = validateActorIdentity("Arrendatarios", investor, tenantOptions);
         if (error) return error;
       }
       const fieldInvestorPercentageError = validatePercentageGroup(
@@ -1144,23 +1124,18 @@ export default function CustomerEditor({
         ? selectedCustomerId
         : projectPayload.customer.id ?? null;
     const customerActorId = projectPayload.customer.actor_id ?? null;
-    const match = findEntityMatches(projectPayload.customer.name, customerMatchOptions);
 
-    if (match.exactMatch) {
-      const matchedActorId =
-        typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
-      const matchedCustomerId =
-        typeof match.exactMatch.customer_id === "number"
-          ? match.exactMatch.customer_id
-          : null;
-      const sameCustomer = customerId !== null && matchedCustomerId === customerId;
-      const sameActor = customerActorId !== null && matchedActorId === customerActorId;
-      if (!sameCustomer && !sameActor) {
-        toastError(
-          `Ya existe un cliente con el nombre "${match.exactMatch.name}". Seleccionalo del dropdown.`
-        );
-        return;
-      }
+    const customerError = validateCustomerIdentity(
+      {
+        id: customerId,
+        actor_id: customerActorId,
+        name: projectPayload.customer.name,
+      },
+      customerMatchOptions
+    );
+    if (customerError) {
+      toastError(customerError);
+      return;
     }
 
     if (!customerOnly && !selectedProjectId) {
