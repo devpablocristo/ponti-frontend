@@ -10,3 +10,9 @@
 *.code-workspace
 .id
 .firebase/
+
+# Playwright drawer-audit ephemeral artifacts (captured on soft failures)
+docs/audit/drawers/after/*.failed.png
+docs/audit/drawers/after/*.failure.txt
+ui/playwright-report/
+ui/test-results/

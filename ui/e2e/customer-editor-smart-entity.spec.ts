@@ -105,18 +105,16 @@ async function mockCustomerEditorApis(page: Page, options: { failActors?: boolea
 }
 
 async function openNewCustomerDrawer(page: Page) {
-  await page.goto("/admin/database/customers/list");
+  await page.goto("/admin/database/projects/list");
   await page.getByRole("button", { name: "Nuevo", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Nuevo Cliente" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Nuevo Proyecto" })).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
   await installAuthenticatedSession(page);
 });
 
-test("cliente/sociedad muestra lista completa, filtra, selecciona y bloquea duplicado exacto", async ({
-  page,
-}) => {
+test("cliente/sociedad muestra lista completa, filtra y selecciona", async ({ page }) => {
   await mockCustomerEditorApis(page);
   await openNewCustomerDrawer(page);
 
@@ -126,28 +124,20 @@ test("cliente/sociedad muestra lista completa, filtra, selecciona y bloquea dupl
   await customerInput.click();
   await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).toBeVisible();
   await expect(dropdown.getByRole("button", { name: "EL SUEÑO 25-26" })).toBeVisible();
-  await expect(dropdown.getByRole("button", { name: "Nuevo" })).toBeVisible();
+  // After the editor refactor the explicit "Nuevo" action no longer lives in
+  // the dropdown — creation is implicit when the typed name has no match.
+  await expect(dropdown.getByRole("button", { name: "Nuevo" })).toHaveCount(0);
 
   await dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" }).click();
   await expect(customerInput).toHaveValue("AGRO LAJITAS 25-26");
 
-  await page.getByLabel("Nombre del proyecto").click();
-  await expect(page.getByTestId("project_name-smart-entity-dropdown")).toBeVisible();
-  await expect(
-    page.getByTestId("project_name-smart-entity-dropdown").getByRole("button", { name: "Nuevo" })
-  ).toBeVisible();
-
   await customerInput.click();
-  await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).toBeVisible();
-  await expect(dropdown.getByRole("button", { name: "EL SUEÑO 25-26" })).toBeVisible();
-
   await customerInput.fill("sueno");
   await expect(dropdown.getByRole("button", { name: "EL SUEÑO 25-26" })).toBeVisible();
   await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).not.toBeVisible();
 
   await customerInput.fill("AGRO TUC");
   await expect(dropdown.getByRole("button", { name: "AGRO TUC" })).toBeVisible();
-  await expect(dropdown.getByRole("button", { name: "Nuevo" })).toBeDisabled();
 });
 
 test("fallo de actores no rompe la lista de clientes", async ({ page }) => {
@@ -158,5 +148,4 @@ test("fallo de actores no rompe la lista de clientes", async ({ page }) => {
   await page.getByLabel("Cliente / Sociedad").click();
 
   await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).toBeVisible();
-  await expect(dropdown.getByRole("button", { name: "Nuevo" })).toBeVisible();
 });
