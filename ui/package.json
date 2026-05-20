@@ -23,6 +23,7 @@
     "@devpablocristo/core-browser": "^0.4.0",
     "@devpablocristo/core-http": "^0.2.0",
     "@devpablocristo/modules-ui-data-display": "^0.3.3",
+    "@devpablocristo/modules-ui-filters": "^0.1.0",
     "axios": "^1.16.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.477.0",

@@ -246,6 +246,11 @@
   resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.3.3.tgz#7ee4494421c83de89d21497af7aa0d973e3d1ac7"
   integrity sha512-HcbLk4lREq829nT2sexxyGAweI7m5kux0mNK26Mbv1HBhlz6W7OrEaM8e3z6KLWs8JCvTwa8xxKcYSvPQluhyA==
 
+"@devpablocristo/modules-ui-filters@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-filters/-/modules-ui-filters-0.1.0.tgz#757734d149206b97625dd0c4bae676eade4edb41"
+  integrity sha512-qia9gu/R6DmVN63+Y3miK9tE2nPwhUbjhtETTEud6IDwciY37KnYG/nDGeyCkfBX9UwNbJIOsuivcVNDyM7HqQ==
+
 "@esbuild/aix-ppc64@0.25.0":
   version "0.25.0"
   resolved "https://registry.yarnpkg.com/@esbuild/aix-ppc64/-/aix-ppc64-0.25.0.tgz#499600c5e1757a524990d5d92601f0ac3ce87f64"
