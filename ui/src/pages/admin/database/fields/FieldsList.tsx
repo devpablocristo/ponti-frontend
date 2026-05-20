@@ -9,14 +9,14 @@ import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
+import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
-import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useFields from "../../../../hooks/useFields";
-import { Data as Field, FieldPayloadInput } from "../../../../hooks/useFields/types";
+import { Data as Field } from "../../../../hooks/useFields/types";
 import { Column } from "../../types";
 import { FIELD_ENTITY as ENTITY } from "../../entities";
-import FieldFormDrawer from "./FieldFormDrawer";
+import CustomerEditor from "../customers/CustomerEditor";
 import ArchivedFields from "./ArchivedFields";
 
 const baseColumns: Column<Field>[] = [
@@ -34,36 +34,34 @@ type FieldsListProps = {
 
 export default function FieldsList({ editorOnly = false }: FieldsListProps) {
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const [editorContext, setEditorContext] = useState<{
+    initialProjectId: number | null;
+  } | null>(null);
   const {
     fields,
     processing,
     error,
     getFields,
-    updateField,
     archiveField,
   } = useFields();
-  const { filters } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+  const { selectedCustomer, filters } = useWorkspaceFilters([
+    "customer",
+    "project",
+    "campaign",
+    "field",
+  ]);
 
   const refresh = useCallback(() => getFields(""), [getFields]);
 
-  // Sólo Update — Create se gestiona desde el editor de Project (ver D.6 del plan).
-  // useEntityFormDrawer requiere `create`; pasamos un stub que el drawer no llamará
-  // (no hay botón "+ Nuevo" en esta lista).
-  const drawer = useEntityFormDrawer<Field, FieldPayloadInput>({
-    buildSuccessLabel: (input) => `el campo "${input.name}"`,
-    create: async () => {
-      throw new Error("Los campos se crean desde el proyecto.");
-    },
-    update: updateField,
-    fallbackErrorMessage: "No se pudo guardar el campo",
-    onAfter: refresh,
-  });
+  const openFieldEditor = useCallback((field: Field) => {
+    setEditorContext({ initialProjectId: field.project_id ?? null });
+  }, []);
 
   const bulk = useBulkActions<Field>({
     items: fields,
     entity: ENTITY,
     archive: archiveField,
-    onEdit: drawer.openEdit,
+    onEdit: openFieldEditor,
     onAfter: refresh,
   });
 
@@ -125,14 +123,24 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
         )}
       </div>
 
-      <FieldFormDrawer
-        open={drawer.open}
-        field={drawer.editing}
-        processing={processing}
-        errorMessage={drawer.submitError}
-        onClose={drawer.close}
-        onSubmit={drawer.handleSubmit}
-      />
+      <DrawerShell
+        open={editorContext !== null}
+        onClose={() => setEditorContext(null)}
+        title="Editar Proyecto"
+      >
+        {editorContext && (
+          <CustomerEditor
+            embedded
+            mode="project"
+            customerId={selectedCustomer?.id ?? null}
+            initialProjectId={editorContext.initialProjectId}
+            onClose={() => {
+              setEditorContext(null);
+              refresh();
+            }}
+          />
+        )}
+      </DrawerShell>
       <ArchivedDrawer
         open={archivedDrawerOpen}
         title="Campos archivados"
