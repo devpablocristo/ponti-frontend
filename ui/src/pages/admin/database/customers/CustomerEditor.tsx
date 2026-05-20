@@ -1328,10 +1328,17 @@ export default function CustomerEditor({
           toastSuccess("Cliente creado.");
         }
       } else if (selectedProjectId === NEW_VALUE) {
-        await apiClient.post("/projects", projectPayload);
+        const created = await apiClient.post<{ id: number }>("/projects", projectPayload);
+        const detail = await apiClient.get<ProjectDetailResponse>(`/projects/${created.id}`);
+        setSelectedProjectId(created.id);
+        setProjectDraft(normalizeProject(detail.data));
         toastSuccess("Proyecto creado.");
       } else {
         await apiClient.put(`/projects/${selectedProjectId}`, projectPayload);
+        const detail = await apiClient.get<ProjectDetailResponse>(
+          `/projects/${selectedProjectId}`
+        );
+        setProjectDraft(normalizeProject(detail.data));
         toastSuccess("Cambios guardados.");
       }
     } catch (saveError) {
