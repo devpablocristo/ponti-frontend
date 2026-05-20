@@ -486,9 +486,33 @@ export default function CustomerEditor({
     const numericValue = key === "name" ? null : normalizeDecimalInputValue(value);
     if (key !== "name" && (numericValue === null || numericValue < 0)) return;
 
+    if (key === "name") {
+      // "Starting over" detection: the user erased the project name while
+      // a loaded project was sitting in the draft. Treat it as a fresh
+      // project — clear managers/investors/fields/lots/etc. and keep only
+      // the customer. The next character the user types will land on a
+      // clean slate.
+      setProjectDraft((prev) => {
+        if (!prev) return prev;
+        const previousName = prev.name.trim();
+        const nextName = value.trim();
+        if (
+          previousName !== "" &&
+          nextName === "" &&
+          isExistingId(selectedProjectId)
+        ) {
+          return { ...createEmptyProject(null), customer: prev.customer, name: value };
+        }
+        return { ...prev, name: value };
+      });
+      if (isExistingId(selectedProjectId) && value.trim() === "") {
+        setSelectedProjectId(NEW_VALUE);
+      }
+      return;
+    }
+
     setProjectDraft((prev) => {
       if (!prev) return prev;
-      if (key === "name") return { ...prev, name: value };
       return { ...prev, [key]: numericValue ?? 0 };
     });
   };
