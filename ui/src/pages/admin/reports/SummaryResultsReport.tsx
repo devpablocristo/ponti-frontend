@@ -11,7 +11,6 @@ import {
 import {
   Home,
   Layers,
-  LoaderCircle,
   Percent,
   SquareArrowOutUpRight,
   TrendingUp,
@@ -21,6 +20,8 @@ import {
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { usePDF } from "react-to-pdf";
 
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useReporting from "../../../hooks/useReporting";
 import type {
@@ -317,11 +318,7 @@ export function SummaryResultsReport() {
 
   return (
     <div className="relative">
-      {isLoading && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
-          <LoaderCircle className="h-10 w-10 animate-spin text-emerald-700" />
-        </div>
-      )}
+      <LoadingOverlay show={isLoading} />
 
       <FilterBar
         filters={reportFilters}
@@ -342,11 +339,7 @@ export function SummaryResultsReport() {
         ]}
       />
 
-      {summaryError && (
-        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-800" role="alert">
-          <span className="font-medium">{summaryError}</span>
-        </div>
-      )}
+      {summaryError && <ErrorBanner message={summaryError} />}
 
       {!summaryError && data && (
         <div
@@ -953,7 +946,7 @@ function integralValueCellClass(row: IntegralRow, index: number) {
 
 function IntegralView({ data, error }: { data: FieldCropReportData | null; error: string | null }) {
   if (error) {
-    return <section className="rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}</section>;
+    return <section><ErrorBanner message={error} /></section>;
   }
 
   if (!data) {

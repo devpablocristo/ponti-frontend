@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, Pencil, Check, AlertCircle, Briefcase, Plus, Upload } from "lucide-react";
+import { Pencil, Check, AlertCircle, Briefcase, Plus, Upload } from "lucide-react";
+
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
@@ -834,11 +836,7 @@ export function Stock() {
         </div>
       )}
       <div className="mt-3 relative">
-        {hasWorkspaceSelection && processing && (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        )}
+        <LoadingOverlay show={hasWorkspaceSelection && processing} />
 
         <SuccessBanner message={successMessage} variant="outlined" />
         <ErrorBanner
