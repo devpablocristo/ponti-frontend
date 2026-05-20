@@ -47,10 +47,13 @@ function parseCsvLine(line: string, separator: string = ",") {
 }
 
 export function parseCsv(content: string) {
-  const lines = content
+  // Strip the UTF-8 BOM and the "sep=;" hint we emit on export so reimports
+  // round-trip cleanly.
+  const cleaned = content.replace(/^﻿/, "");
+  const lines = cleaned
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0 && !/^sep=.$/i.test(line));
 
   if (lines.length < 2) return [];
 

@@ -149,10 +149,12 @@ function parseCsvLine(line: string) {
 }
 
 function parseCsv(content: string) {
-  const lines = content
+  // Strip BOM + sep= hint so files exported by the BE re-import cleanly.
+  const cleaned = content.replace(/^﻿/, "");
+  const lines = cleaned
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+    .filter((line) => line.length > 0 && !/^sep=.$/i.test(line));
 
   if (lines.length < 2) {
     return [];

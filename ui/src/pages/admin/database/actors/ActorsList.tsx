@@ -58,10 +58,12 @@ type ActorsListProps = {
 };
 
 function parseCsv(text: string) {
-  const lines = text
+  // Strip BOM + sep= hint so files exported by the BE re-import cleanly.
+  const cleaned = text.replace(/^﻿/, "");
+  const lines = cleaned
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter(Boolean);
+    .filter((line) => line.length > 0 && !/^sep=.$/i.test(line));
   if (lines.length === 0) return [];
 
   const delimiter = lines[0].includes(";") ? ";" : ",";
