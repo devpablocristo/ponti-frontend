@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Download } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Download, Plus, Trash2 } from "lucide-react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
@@ -61,16 +61,62 @@ export default function TasksForm({
     "campaign",
   ]);
 
+  const nextIdRef = useRef(5);
+  const emptyRow = (id: number): Labor => ({
+    id,
+    name: "",
+    category: "",
+    price: "",
+    contractor: "",
+    is_partial_price: false,
+  });
   const [rows, setLabors] = useState<Labor[]>(
-    Array.from({ length: 5 }, (_, i) => ({
-      id: i,
-      name: "",
-      category: "",
-      price: "",
-      contractor: "",
-      is_partial_price: false,
-    }))
+    Array.from({ length: 5 }, (_, i) => emptyRow(i))
   );
+
+  const addRow = () => {
+    const id = nextIdRef.current++;
+    setLabors((prev) => [...prev, emptyRow(id)]);
+  };
+
+  const removeRow = (id: number) => {
+    setLabors((prev) => {
+      const next = prev.filter((row) => row.id !== id);
+      if (next.length === 0) {
+        const newId = nextIdRef.current++;
+        return [emptyRow(newId)];
+      }
+      return next;
+    });
+  };
+
+  // Per-cell validation. Returns an object keyed by row id whose value is a
+  // record { fieldName: errorMessage } for cells that fail. A row that is
+  // completely empty has no errors (it is treated as "not filled in" and
+  // filtered out at save time, not as invalid).
+  const rowErrors = useMemo<Record<number, Partial<Record<keyof Labor, string>>>>(() => {
+    const out: Record<number, Partial<Record<keyof Labor, string>>> = {};
+    rows.forEach((row) => {
+      const isEmpty =
+        !row.name.trim() &&
+        !row.category &&
+        !row.price.trim() &&
+        !row.contractor.trim();
+      if (isEmpty) return;
+      const errors: Partial<Record<keyof Labor, string>> = {};
+      if (!row.name.trim()) errors.name = "Falta el nombre.";
+      if (!row.category) errors.category = "Elegí un rubro.";
+      const priceNum = Number(row.price.replace(/,/g, "."));
+      if (!row.price.trim() || Number.isNaN(priceNum) || priceNum <= 0) {
+        errors.price = "Precio inválido.";
+      }
+      if (!row.contractor.trim()) errors.contractor = "Falta el contratista.";
+      if (Object.keys(errors).length > 0) out[row.id] = errors;
+    });
+    return out;
+  }, [rows]);
+
+  const hasErrors = Object.keys(rowErrors).length > 0;
 
   useEffect(() => {
     getCategories("type_id=4");
@@ -83,16 +129,8 @@ export default function TasksForm({
   }, [projectId, getLabors]);
 
   function cleanForm() {
-    setLabors(
-      Array.from({ length: 5 }, (_, i) => ({
-        id: i,
-        name: "",
-        category: "",
-        price: "",
-        contractor: "",
-        is_partial_price: false,
-      }))
-    );
+    nextIdRef.current = 5;
+    setLabors(Array.from({ length: 5 }, (_, i) => emptyRow(i)));
   }
 
   useEffect(() => {
@@ -128,15 +166,6 @@ export default function TasksForm({
     );
   };
 
-  function hasIncompleteRows(rows: Labor[]) {
-    return rows.some((row) => {
-      const anyFilled = row.name || row.category || row.price || row.contractor;
-      const anyMissing =
-        !row.name || !row.category || !row.price || !row.contractor;
-      return anyFilled && anyMissing;
-    });
-  }
-
   const handleCreateLabors = () => {
     if (!projectId) {
       setErrorMessage(
@@ -145,13 +174,12 @@ export default function TasksForm({
       return;
     }
 
-    setErrorMessage("");
-    if (hasIncompleteRows(rows)) {
-      setErrorMessage(
-        "Por favor, complete todos los campos del registro antes de guardar."
-      );
+    if (hasErrors) {
+      setErrorMessage("Corregí las filas marcadas en rojo antes de guardar.");
       return;
     }
+
+    setErrorMessage("");
 
     const laborsToSave: LaborToSave[] = rows
       .filter((row) => row.name && row.category && row.price && row.contractor)
@@ -173,34 +201,27 @@ export default function TasksForm({
     saveLabors(laborsToSave, projectId);
   };
 
-  function loadNewLaborRows(newRows: Labor[], warnings: string[]) {
-    const rowsWithMinimum = [...newRows];
-    while (rowsWithMinimum.length < 5) {
-      rowsWithMinimum.push({
-        id: rowsWithMinimum.length,
-        name: "",
-        category: "",
-        price: "",
-        contractor: "",
-        is_partial_price: false,
-      });
-    }
-
-    if (newRows.length > 0) {
-      setLabors(rowsWithMinimum);
-    }
-
-    if (warnings.length > 0) {
-      setErrorMessage(warnings.join(" "));
-    } else {
-      setErrorMessage("");
-    }
-
-    if (newRows.length > 0) {
-      setSuccessMessage(
-        `Se importaron ${newRows.length} labores nuevas. Revise y presione Guardar.`
+  function loadNewLaborRows(newRows: Labor[], _warnings: string[]) {
+    if (newRows.length === 0) return;
+    // Append imported rows after any manually-filled rows. Drop the trailing
+    // empty rows so the imported batch lands at the bottom of the existing
+    // filled-in entries.
+    setLabors((prev) => {
+      const filled = prev.filter(
+        (row) => row.name || row.category || row.price || row.contractor,
       );
-    }
+      let cursor = nextIdRef.current;
+      const renumbered = newRows.map((row) => {
+        const id = cursor++;
+        return { ...row, id };
+      });
+      nextIdRef.current = cursor;
+      return [...filled, ...renumbered];
+    });
+    setErrorMessage("");
+    setSuccessMessage(
+      `Se importaron ${newRows.length} labores. Revisá las filas marcadas en rojo y presioná Guardar.`,
+    );
   }
 
   const handleSkipDuplicates = () => {
@@ -307,15 +328,13 @@ export default function TasksForm({
       );
 
       const importedRows: Labor[] = [];
-      const importErrors: string[] = [];
       const duplicates: { existing: LaborInfo; updated: LaborInfo }[] = [];
 
       const laborByName = new Map(
         (labors || []).map((l) => [l.name.trim().toLowerCase(), l])
       );
 
-      parsedRows.forEach((rawRow, idx) => {
-        const rowNumber = idx + 2;
+      parsedRows.forEach((rawRow) => {
         const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
         const categoryRaw = getValueByAliases(
           rawRow,
@@ -338,81 +357,65 @@ export default function TasksForm({
         const categoryId = categoryByText?.id ?? Number(categoryRaw);
         const priceValue = Number(priceRaw.replace(/\$/g, "").replace(",", "."));
 
-        if (!name) return;
-
-        // Check if labor already exists
-        const existing = laborByName.get(name.trim().toLowerCase());
+        // Detect duplicates against existing labors (BE-side) and queue them
+        // for the overwrite modal.
+        const existing = name ? laborByName.get(name.trim().toLowerCase()) : null;
         if (existing) {
-          if (parsedPartial.provided && !parsedPartial.valid) {
-            importErrors.push(
-              `Fila ${rowNumber}: "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
-            );
-            return;
-          }
           const catName = categoryByText?.name ?? existing.category_name;
           duplicates.push({
             existing,
             updated: {
               ...existing,
               name,
-              price: !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : existing.price,
-              category_id: (categoryId && !Number.isNaN(categoryId)) ? categoryId : existing.category_id,
+              price:
+                !Number.isNaN(priceValue) && priceValue > 0
+                  ? String(priceValue)
+                  : existing.price,
+              category_id:
+                categoryId && !Number.isNaN(categoryId)
+                  ? categoryId
+                  : existing.category_id,
               category_name: catName,
               contractor_name: contractor || existing.contractor_name,
-              is_partial_price: parsedPartial.provided && parsedPartial.valid
-                ? parsedPartial.value
-                : Boolean(existing.is_partial_price),
+              is_partial_price:
+                parsedPartial.provided && parsedPartial.valid
+                  ? parsedPartial.value
+                  : Boolean(existing.is_partial_price),
             },
           });
           return;
         }
 
-        if (!categoryId || Number.isNaN(categoryId)) {
-          importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
-        }
-        if (!priceRaw || Number.isNaN(priceValue) || priceValue <= 0) {
-          importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
-        }
-        if (!contractor) {
-          importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
-        }
-        if (parsedPartial.provided && !parsedPartial.valid) {
-          importErrors.push(
-            `Fila ${rowNumber}: "Estado Precio" inválido ("${priceStatusRaw}"). Use Final o Parcial.`
-          );
-        }
-
-        if (
-          name &&
-          categoryId &&
-          !Number.isNaN(categoryId) &&
-          !Number.isNaN(priceValue) &&
-          priceValue > 0 &&
-          contractor &&
-          (!parsedPartial.provided || parsedPartial.valid)
-        ) {
-          importedRows.push({
-            id: importedRows.length,
-            name,
-            category: String(categoryId),
-            price: String(priceValue),
-            contractor,
-            is_partial_price: parsedPartial.valid ? parsedPartial.value : false,
-          });
-        }
+        // Everything else — even rows with bad/missing data — lands in the
+        // editable form so the user can fix them inline before saving.
+        importedRows.push({
+          id: 0, // assigned by loadNewLaborRows
+          name,
+          category:
+            categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
+          price:
+            !Number.isNaN(priceValue) && priceValue > 0
+              ? String(priceValue)
+              : priceRaw,
+          contractor,
+          is_partial_price:
+            parsedPartial.provided && parsedPartial.valid
+              ? parsedPartial.value
+              : false,
+        });
       });
 
       // If there are duplicates, show modal to let user choose
       if (duplicates.length > 0) {
-        setPendingImport({ newRows: importedRows, duplicates, warnings: importErrors });
+        setPendingImport({ newRows: importedRows, duplicates, warnings: [] });
         setImportModalOpen(true);
         return;
       }
 
       // No duplicates — load directly into form
-      loadNewLaborRows(importedRows, importErrors);
+      loadNewLaborRows(importedRows, []);
 
-      if (importedRows.length === 0 && importErrors.length === 0) {
+      if (importedRows.length === 0) {
         setErrorMessage("No se encontraron filas importables en el archivo.");
       }
     } catch {
@@ -495,106 +498,133 @@ export default function TasksForm({
           <LoadingOverlay show />
         ) : (
           <div className="mt-4">
-            <div className="hidden sm:grid grid-cols-[1fr_1fr_0.5fr_0.45fr_1fr] gap-4 mb-2">
+            <div className="hidden sm:grid grid-cols-[1fr_1fr_0.5fr_0.45fr_1fr_auto] gap-4 mb-2">
               <span className="font-semibold">Labor</span>
               <span className="font-semibold">Rubro</span>
               <span className="font-semibold">Precio</span>
               <span className="font-semibold">Estado precio</span>
               <span className="font-semibold">Contratista</span>
+              <span className="font-semibold sr-only">Acciones</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_0.5fr_0.45fr_1fr] gap-4">
-              {rows.map((row, index) => (
-                <div
-                  key={index}
-                  className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                >
-                  <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
-                      Labor
-                    </label>
-                    <InputField
-                      label=""
-                      name={`labor-${index}`}
-                      value={row.name}
-                      onChange={(e) =>
-                        handleChange(row.id, "name", e.target.value)
-                      }
-                      placeholder="nombre"
-                    />
-                  </div>
-                  <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
-                      Rubro
-                    </label>
-                    <SelectField
-                      key={row.id}
-                      label=""
-                      name={`category-${index}`}
-                      value={row.category.toString()}
-                      onChange={(e) =>
-                        handleChange(row.id, "category", e.target.value)
-                      }
-                      options={categories}
-                    />
-                  </div>
-                  <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
-                      Precio
-                    </label>
-                    <InputField
-                      label=""
-                      name={`precio-${index}`}
-                      value={row.price}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/,/g, ".");
-                        if (/^\d*\.?\d{0,2}$/.test(value)) {
-                          handleChange(row.id, "price", value);
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_0.5fr_0.45fr_1fr_auto] gap-4">
+              {rows.map((row, index) => {
+                const errors = rowErrors[row.id] ?? {};
+                const errorClass = (field: keyof Labor) =>
+                  errors[field] ? "border-red-500 bg-red-50" : "";
+                return (
+                  <div
+                    key={row.id}
+                    className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                  >
+                    <div className="sm:col-span-1">
+                      <label className="sm:hidden text-sm text-gray-600">Labor</label>
+                      <InputField
+                        label=""
+                        name={`labor-${index}`}
+                        value={row.name}
+                        onChange={(e) => handleChange(row.id, "name", e.target.value)}
+                        placeholder="nombre"
+                        inputClassName={errorClass("name")}
+                      />
+                      {errors.name && (
+                        <p className="text-xs text-red-600 mt-1">{errors.name}</p>
+                      )}
+                    </div>
+                    <div className="sm:col-span-1">
+                      <label className="sm:hidden text-sm text-gray-600">Rubro</label>
+                      <SelectField
+                        key={row.id}
+                        label=""
+                        name={`category-${index}`}
+                        value={row.category.toString()}
+                        onChange={(e) => handleChange(row.id, "category", e.target.value)}
+                        options={categories}
+                        className={errorClass("category")}
+                      />
+                      {errors.category && (
+                        <p className="text-xs text-red-600 mt-1">{errors.category}</p>
+                      )}
+                    </div>
+                    <div className="sm:col-span-1">
+                      <label className="sm:hidden text-sm text-gray-600">Precio</label>
+                      <InputField
+                        label=""
+                        name={`precio-${index}`}
+                        value={row.price}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/,/g, ".");
+                          if (/^\d*\.?\d{0,2}$/.test(value)) {
+                            handleChange(row.id, "price", value);
+                          }
+                        }}
+                        placeholder="u$s"
+                        inputClassName={errorClass("price")}
+                      />
+                      {errors.price && (
+                        <p className="text-xs text-red-600 mt-1">{errors.price}</p>
+                      )}
+                    </div>
+                    <div className="sm:col-span-1">
+                      <label className="sm:hidden text-sm text-gray-600">
+                        Estado precio
+                      </label>
+                      <button
+                        type="button"
+                        aria-pressed={Boolean(row.is_partial_price)}
+                        onClick={() =>
+                          handleChange(row.id, "is_partial_price", !row.is_partial_price)
                         }
-                      }}
-                      placeholder="u$s"
-                    />
+                        className={`input-base w-full px-3 py-2 text-sm font-medium transition-colors focus:ring-0 ${
+                          row.is_partial_price
+                            ? "border-blue-200 bg-blue-50 text-blue-700"
+                            : "border-slate-200 bg-white text-slate-500"
+                        }`}
+                      >
+                        Parcial
+                      </button>
+                    </div>
+                    <div className="sm:col-span-1">
+                      <label className="sm:hidden text-sm text-gray-600">
+                        Contratista
+                      </label>
+                      <InputField
+                        label=""
+                        name={`contratista-${index}`}
+                        value={row.contractor}
+                        onChange={(e) =>
+                          handleChange(row.id, "contractor", e.target.value)
+                        }
+                        placeholder="nombre"
+                        inputClassName={errorClass("contractor")}
+                      />
+                      {errors.contractor && (
+                        <p className="text-xs text-red-600 mt-1">{errors.contractor}</p>
+                      )}
+                    </div>
+                    <div className="sm:col-span-1 flex items-start justify-center pt-2">
+                      <button
+                        type="button"
+                        aria-label="Quitar fila"
+                        onClick={() => removeRow(row.id)}
+                        className="text-slate-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
-                      Estado precio
-                    </label>
-                    <button
-                      type="button"
-                      aria-pressed={Boolean(row.is_partial_price)}
-                      onClick={() =>
-                        handleChange(
-                          row.id,
-                          "is_partial_price",
-                          !row.is_partial_price
-                        )
-                      }
-                      className={`input-base w-full px-3 py-2 text-sm font-medium transition-colors focus:ring-0 ${
-                        row.is_partial_price
-                          ? "border-blue-200 bg-blue-50 text-blue-700"
-                          : "border-slate-200 bg-white text-slate-500"
-                      }`}
-                    >
-                      Parcial
-                    </button>
-                  </div>
-                  <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
-                      Contratista
-                    </label>
-                    <InputField
-                      label=""
-                      name={`contratista-${index}`}
-                      value={row.contractor}
-                      onChange={(e) =>
-                        handleChange(row.id, "contractor", e.target.value)
-                      }
-                      placeholder="nombre"
-                    />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            <button
+              type="button"
+              onClick={addRow}
+              className="mt-4 flex items-center gap-1 text-sm font-medium text-primary-700 hover:text-primary-800"
+            >
+              <Plus className="h-4 w-4" />
+              Agregar fila
+            </button>
           </div>
         )}
       </div>
@@ -612,7 +642,7 @@ export default function TasksForm({
             onClick={handleCreateLabors}
             variant="primary"
             className="text-base font-medium"
-            disabled={processing}
+            disabled={processing || hasErrors}
           >
             Guardar
           </Button>
