@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Save, Trash2 } from "lucide-react";
 
@@ -13,6 +13,7 @@ import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { toastError, toastSuccess } from "../../../../lib/toast";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
+import { normalizeEntityName } from "../../../../lib/entityNameMatcher";
 import { useSelection } from "../../../login/context/useSelection";
 import {
   buildProjectPayloadForSave,
@@ -231,6 +232,11 @@ export default function CustomerEditor({
   const [projectDraft, setProjectDraft] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Tracks the name of the project currently loaded into the draft. Used by
+  // updateProjectValue to detect when the user starts typing a brand-new
+  // project name (divergence from this baseline → clear the rest of the
+  // drawer except the customer).
+  const loadedProjectName = useRef<string>("");
   useEffect(() => {
     let cancelled = false;
 
@@ -339,6 +345,7 @@ export default function CustomerEditor({
     if (initialCustomerId === NEW_VALUE) {
       setSelectedProjectId(NEW_VALUE);
       setProjectDraft(createEmptyProject(null));
+      loadedProjectName.current = "";
     }
   }, [initialCustomerId]);
 
@@ -356,6 +363,7 @@ export default function CustomerEditor({
               : null
           )
         );
+        loadedProjectName.current = "";
         return;
       }
 
@@ -363,6 +371,7 @@ export default function CustomerEditor({
         setSelectedProjectId(NEW_VALUE);
         setProjectDraft(createEmptyProject(null));
         setProjectOptions([]);
+        loadedProjectName.current = "";
         return;
       }
 
@@ -397,6 +406,7 @@ export default function CustomerEditor({
 
         setSelectedProjectId(preferredProject?.id ?? NEW_VALUE);
         setProjectDraft(preferredDetail ?? null);
+        loadedProjectName.current = preferredDetail?.name ?? "";
       } catch {
         if (!cancelled) {
           toastError("No se pudieron cargar los proyectos.");
@@ -487,27 +497,35 @@ export default function CustomerEditor({
     if (key !== "name" && (numericValue === null || numericValue < 0)) return;
 
     if (key === "name") {
-      // "Starting over" detection: the user erased the project name while
-      // a loaded project was sitting in the draft. Treat it as a fresh
-      // project — clear managers/investors/fields/lots/etc. and keep only
-      // the customer. The next character the user types will land on a
-      // clean slate.
-      setProjectDraft((prev) => {
-        if (!prev) return prev;
-        const previousName = prev.name.trim();
-        const nextName = value.trim();
-        if (
-          previousName !== "" &&
-          nextName === "" &&
-          isExistingId(selectedProjectId)
-        ) {
-          return { ...createEmptyProject(null), customer: prev.customer, name: value };
-        }
-        return { ...prev, name: value };
-      });
-      if (isExistingId(selectedProjectId) && value.trim() === "") {
+      // "Starting over" detection: the user typed a name that diverged from
+      // the originally loaded project. The signal is structural — when the
+      // current value (normalized) is neither a substring of, nor contains,
+      // the loaded name, the user is no longer editing the same project.
+      // Treat it as a fresh project: clear managers / investors / fields /
+      // lots / etc. and keep only the customer. The empty string also
+      // triggers the reset (deleting everything is a clear "start over"
+      // signal even before typing the new name).
+      const baseline = loadedProjectName.current;
+      const normalizedBaseline = normalizeEntityName(baseline);
+      const normalizedValue = normalizeEntityName(value);
+      const stillEditingLoadedProject =
+        baseline !== "" &&
+        normalizedValue !== "" &&
+        (normalizedBaseline.includes(normalizedValue) ||
+          normalizedValue.includes(normalizedBaseline));
+      const shouldStartOver =
+        isExistingId(selectedProjectId) && baseline !== "" && !stillEditingLoadedProject;
+
+      if (shouldStartOver) {
         setSelectedProjectId(NEW_VALUE);
+        loadedProjectName.current = "";
+        setProjectDraft((prev) =>
+          prev ? { ...createEmptyProject(null), customer: prev.customer, name: value } : prev
+        );
+        return;
       }
+
+      setProjectDraft((prev) => (prev ? { ...prev, name: value } : prev));
       return;
     }
 
@@ -568,8 +586,11 @@ export default function CustomerEditor({
     setLoading(true);
     try {
       const detail = await apiClient.get<ProjectDetailResponse>(`/projects/${project.id}`);
-      setProjectDraft(normalizeProject(detail.data));
+      const loaded = normalizeProject(detail.data);
+      loadedProjectName.current = loaded.name;
+      setProjectDraft(loaded);
     } catch {
+      loadedProjectName.current = project.name;
       setProjectDraft((prev) => (prev ? { ...prev, name: project.name } : prev));
       toastError("No se pudo cargar el proyecto seleccionado.");
     } finally {
@@ -1190,15 +1211,19 @@ export default function CustomerEditor({
       } else if (selectedProjectId === NEW_VALUE) {
         const created = await apiClient.post<{ id: number }>("/projects", projectPayload);
         const detail = await apiClient.get<ProjectDetailResponse>(`/projects/${created.id}`);
+        const refreshed = normalizeProject(detail.data);
         setSelectedProjectId(created.id);
-        setProjectDraft(normalizeProject(detail.data));
+        setProjectDraft(refreshed);
+        loadedProjectName.current = refreshed.name;
         toastSuccess("Proyecto creado.");
       } else {
         await apiClient.put(`/projects/${selectedProjectId}`, projectPayload);
         const detail = await apiClient.get<ProjectDetailResponse>(
           `/projects/${selectedProjectId}`
         );
-        setProjectDraft(normalizeProject(detail.data));
+        const refreshed = normalizeProject(detail.data);
+        setProjectDraft(refreshed);
+        loadedProjectName.current = refreshed.name;
         toastSuccess("Cambios guardados.");
       }
     } catch (saveError) {
