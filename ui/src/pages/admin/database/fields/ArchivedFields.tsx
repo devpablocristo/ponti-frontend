@@ -12,7 +12,11 @@ const columns: Column<Field>[] = [
   { key: "project_id", header: "Proyecto (id)" },
 ];
 
-export default function ArchivedFields() {
+type ArchivedFieldsProps = {
+  onAfterRestore?: () => void;
+};
+
+export default function ArchivedFields({ onAfterRestore }: ArchivedFieldsProps = {}) {
   const {
     archivedFields,
     getArchivedFields,
@@ -26,11 +30,27 @@ export default function ArchivedFields() {
     await getArchivedFields("page=1&per_page=1000");
   }, [getArchivedFields]);
 
+  const restoreAndNotify = useCallback(
+    async (id: number) => {
+      await restoreField(id);
+      onAfterRestore?.();
+    },
+    [restoreField, onAfterRestore],
+  );
+
+  const hardDeleteAndNotify = useCallback(
+    async (id: number) => {
+      await hardDeleteField(id);
+      onAfterRestore?.();
+    },
+    [hardDeleteField, onAfterRestore],
+  );
+
   const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
     useArchiveActions<Field>({
       refetch,
-      restore: restoreField,
-      hardDelete: hardDeleteField,
+      restore: restoreAndNotify,
+      hardDelete: hardDeleteAndNotify,
     });
 
   return (

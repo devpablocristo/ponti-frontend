@@ -20,6 +20,7 @@ import ArchivedLots from "./pages/admin/database/lots/ArchivedLots";
 import ArchivedSupplies from "./pages/admin/database/supplies/ArchivedSupplies";
 import ArchivedWorkOrders from "./pages/admin/database/work-orders/ArchivedWorkOrders";
 import ArchivedFields from "./pages/admin/database/fields/ArchivedFields";
+import FieldsList from "./pages/admin/database/fields/FieldsList";
 import ArchivedManagers from "./pages/admin/database/managers/ArchivedManagers";
 import ManagersList from "./pages/admin/database/managers/ManagersList";
 import ArchivedCampaigns from "./pages/admin/database/campaigns/ArchivedCampaigns";
@@ -197,6 +198,10 @@ export default [
       {
         path: "products/archived",
         element: <ArchivedSupplyMovements />,
+      },
+      {
+        path: "database/fields",
+        element: <FieldsList />,
       },
       {
         path: "database/fields/archived",

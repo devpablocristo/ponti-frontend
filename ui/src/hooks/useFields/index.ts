@@ -2,7 +2,7 @@ import { useMemo } from "react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
-import { Data as Field, Payload } from "./types";
+import { Data as Field, FieldPayloadInput, Payload } from "./types";
 import {
   CrudService,
   useEntityCrud,
@@ -12,7 +12,9 @@ const buildQuery = (queryString?: string) =>
   queryString && queryString !== "" ? `?${queryString}` : "";
 
 const useFields = () => {
-  const service = useMemo<CrudService<Field>>(
+  const service = useMemo<
+    CrudService<Field, FieldPayloadInput, FieldPayloadInput>
+  >(
     () => ({
       list: async (query) => {
         const response = await apiClient.get<SuccessResponse<Payload>>(
@@ -25,6 +27,10 @@ const useFields = () => {
           "/fields/archived" + buildQuery(query),
         );
         return { data: response.data.data, total: response.data.total };
+      },
+      update: async (id, input) => {
+        await apiClient.put<SuccessResponse<string>>(`/fields/${id}`, input);
+        return { id, ...input } as Field;
       },
       archive: async (id) => {
         await apiClient.post<SuccessResponse<string>>(
@@ -45,7 +51,9 @@ const useFields = () => {
     [],
   );
 
-  const crud = useEntityCrud<Field>(service);
+  const crud = useEntityCrud<Field, FieldPayloadInput, FieldPayloadInput>(
+    service,
+  );
 
   return {
     fields: crud.data,
@@ -55,6 +63,7 @@ const useFields = () => {
     error: crud.error,
     getFields: crud.list,
     getArchivedFields: crud.listArchived,
+    updateField: crud.update,
     archiveField: crud.archive,
     restoreField: crud.restore,
     hardDeleteField: crud.hardDelete,
