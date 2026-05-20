@@ -14,6 +14,7 @@ import { toastError, toastSuccess } from "../../../../lib/toast";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import { normalizeEntityName } from "../../../../lib/entityNameMatcher";
+import { collapseInternalSpaces } from "../../../../lib/properName";
 import { useSelection } from "../../../login/context/useSelection";
 import {
   buildProjectPayloadForSave,
@@ -491,7 +492,8 @@ export default function CustomerEditor({
 
   const seasonOptions = SEASON_OPTIONS;
 
-  const updateProjectValue = (key: "name" | "admin_cost" | "planned_cost", value: string) => {
+  const updateProjectValue = (key: "name" | "admin_cost" | "planned_cost", rawValue: string) => {
+    const value = key === "name" ? collapseInternalSpaces(rawValue) : rawValue;
     if (key !== "name" && !COST_INPUT_REGEX.test(value)) return;
     const numericValue = key === "name" ? null : normalizeDecimalInputValue(value);
     if (key !== "name" && (numericValue === null || numericValue < 0)) return;
@@ -535,7 +537,8 @@ export default function CustomerEditor({
     });
   };
 
-  const updateCustomerName = (value: string) => {
+  const updateCustomerName = (rawValue: string) => {
+    const value = collapseInternalSpaces(rawValue);
     setProjectDraft((prev) =>
       prev ? { ...prev, customer: { ...prev.customer, name: value } } : prev
     );
@@ -598,7 +601,8 @@ export default function CustomerEditor({
     }
   };
 
-  const updateCampaignName = (value: string) => {
+  const updateCampaignName = (rawValue: string) => {
+    const value = collapseInternalSpaces(rawValue);
     setProjectDraft((prev) =>
       prev ? { ...prev, campaign: { ...prev.campaign, name: value } } : prev
     );
@@ -615,7 +619,8 @@ export default function CustomerEditor({
     );
   };
 
-  const updateFieldName = (fieldIndex: number, value: string) => {
+  const updateFieldName = (fieldIndex: number, rawValue: string) => {
+    const value = collapseInternalSpaces(rawValue);
     setProjectDraft((prev) =>
       prev
         ? {
@@ -643,7 +648,8 @@ export default function CustomerEditor({
     );
   };
 
-  const updateLotName = (fieldIndex: number, lotIndex: number, value: string) => {
+  const updateLotName = (fieldIndex: number, lotIndex: number, rawValue: string) => {
+    const value = collapseInternalSpaces(rawValue);
     setProjectDraft((prev) =>
       prev
         ? {
@@ -689,8 +695,9 @@ export default function CustomerEditor({
     fieldIndex: number,
     lotIndex: number,
     kind: "previous" | "current",
-    value: string
+    rawValue: string
   ) => {
+    const value = collapseInternalSpaces(rawValue);
     const nameKey = kind === "previous" ? "previous_crop_name" : "current_crop_name";
     updateLotAt(fieldIndex, lotIndex, nameKey, value);
   };
@@ -707,7 +714,8 @@ export default function CustomerEditor({
     updateLotAt(fieldIndex, lotIndex, nameKey, crop.name);
   };
 
-  const updateManagerName = (index: number, value: string) => {
+  const updateManagerName = (index: number, rawValue: string) => {
+    const value = collapseInternalSpaces(rawValue);
     setProjectDraft((prev) =>
       prev
         ? {
@@ -751,8 +759,9 @@ export default function CustomerEditor({
     group: "investors" | "admin_cost_investors",
     index: number,
     key: "name" | "percentage",
-    value: string
+    rawValue: string
   ) => {
+    const value = key === "name" ? collapseInternalSpaces(rawValue) : rawValue;
     const percentage = key === "percentage" ? parseBoundedPercentage(value) : null;
     if (key === "percentage" && percentage === null) return;
 
@@ -919,8 +928,9 @@ export default function CustomerEditor({
     fieldIndex: number,
     investorIndex: number,
     key: "name" | "percentage",
-    value: string
+    rawValue: string
   ) => {
+    const value = key === "name" ? collapseInternalSpaces(rawValue) : rawValue;
     const percentage = key === "percentage" ? parseBoundedPercentage(value) : null;
     if (key === "percentage" && percentage === null) return;
 

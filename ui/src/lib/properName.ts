@@ -55,6 +55,14 @@ const DIACRITICS = /[̀-ͯ]/g;
 const NON_CANONICAL = /[^a-z0-9 ]+/g;
 const WHITESPACE = /\s+/g;
 
+// Used by every input onChange to collapse consecutive spaces while the user
+// is still typing — keeps "agro  lajitas" from staying in the draft. A
+// trailing single space is preserved (it might be a word in progress).
+export function collapseInternalSpaces(value: string): string {
+  if (typeof value !== "string") return "";
+  return value.replace(/ {2,}/g, " ");
+}
+
 export function canonicalizeName(value: unknown): string {
   if (typeof value !== "string") return "";
   return value

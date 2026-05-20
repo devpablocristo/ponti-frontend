@@ -1,6 +1,30 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalizeName, formatProperName } from "./properName";
+import { canonicalizeName, collapseInternalSpaces, formatProperName } from "./properName";
+
+describe("collapseInternalSpaces", () => {
+  it("collapses multiple spaces between words to a single space", () => {
+    expect(collapseInternalSpaces("agro    lajitas")).toBe("agro lajitas");
+    expect(collapseInternalSpaces("a  b  c")).toBe("a b c");
+  });
+
+  it("preserves a single trailing space (still typing a new word)", () => {
+    expect(collapseInternalSpaces("agro ")).toBe("agro ");
+  });
+
+  it("preserves a single leading space (does not trim while typing)", () => {
+    expect(collapseInternalSpaces(" agro")).toBe(" agro");
+  });
+
+  it("collapses leading / trailing double-or-more spaces to a single one", () => {
+    expect(collapseInternalSpaces("   agro")).toBe(" agro");
+    expect(collapseInternalSpaces("agro   ")).toBe("agro ");
+  });
+
+  it("returns empty for non-string input", () => {
+    expect(collapseInternalSpaces(undefined as unknown as string)).toBe("");
+  });
+});
 
 describe("canonicalizeName", () => {
   it("lowercases ASCII input and trims edges", () => {
