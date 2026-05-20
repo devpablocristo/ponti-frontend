@@ -14,7 +14,6 @@ import CustomersList from "./pages/admin/database/customers/CustomersList";
 import CustomerEditor from "./pages/admin/database/customers/CustomerEditor";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
 import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
-import ProjectsList from "./pages/admin/database/projects/ProjectsList";
 import ArchivedInvestors from "./pages/admin/database/investors/ArchivedInvestors";
 import InvestorsList from "./pages/admin/database/investors/InvestorsList";
 import ArchivedLots from "./pages/admin/database/lots/ArchivedLots";
@@ -167,10 +166,6 @@ export default [
       {
         path: "database/customers/:id",
         element: <Navigate to="editor" replace />,
-      },
-      {
-        path: "database/projects",
-        element: <ProjectsList />,
       },
       {
         path: "database/projects/archived",
