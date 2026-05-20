@@ -3,6 +3,7 @@ import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 
 import { apiClient } from "@/api/client";
 import { DataTable } from "@/lib/dataDisplay";
+import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
@@ -541,8 +542,8 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   const tableColumns = useMemo<Column<CustomerProjectRow>[]>(
     () => [
       selectColumn,
-      { key: "customerName", header: "Cliente" },
-      { key: "projectName", header: "Proyecto" },
+      { key: "customerName", header: "Cliente", render: (value) => formatProperName(value) },
+      { key: "projectName", header: "Proyecto", render: (value) => formatProperName(value) },
       {
         key: "campaignCount",
         header: "Cantidad de campañas",

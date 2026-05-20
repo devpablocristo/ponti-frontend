@@ -10,6 +10,7 @@ import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
+import { formatProperName } from "../../../../lib/properName";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useFields from "../../../../hooks/useFields";
@@ -20,7 +21,7 @@ import CustomerEditor from "../customers/CustomerEditor";
 import ArchivedFields from "./ArchivedFields";
 
 const baseColumns: Column<Field>[] = [
-  { key: "name", header: "Nombre" },
+  { key: "name", header: "Nombre", render: (value) => formatProperName(value) },
   {
     key: "lease_type_name",
     header: "Tipo de contrato",

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Download, GitCompare, Plus, Upload, Users } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
+import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import {
   AppFilterBar,
@@ -105,7 +106,7 @@ const columns: Column<Actor>[] = [
   {
     key: "display_name",
     header: "Actor",
-    render: (value) => <strong>{String(value ?? "")}</strong>,
+    render: (value) => <strong>{formatProperName(value)}</strong>,
   },
   {
     key: "actor_kind",

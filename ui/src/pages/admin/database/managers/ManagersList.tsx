@@ -4,6 +4,7 @@ import { Archive, Download, Plus, Upload, UserCog } from "lucide-react";
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
 import { DataTable } from "@/lib/dataDisplay";
+import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
@@ -45,7 +46,7 @@ type ManagerRow = Manager & {
 };
 
 const relationColumns: Column<ManagerRow>[] = [
-  { key: "name", header: "Nombre" },
+  { key: "name", header: "Nombre", render: (value) => formatProperName(value) },
   {
     key: "project_count",
     header: "Proyectos",
