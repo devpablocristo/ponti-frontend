@@ -41,12 +41,18 @@ describe("canonicalizeName", () => {
 });
 
 describe("formatProperName", () => {
-  it("title-cases canonical input", () => {
-    expect(formatProperName("agro lajitas srl")).toBe("Agro Lajitas Srl");
+  it("title-cases canonical input and uppercases legal suffixes", () => {
+    expect(formatProperName("agro lajitas srl")).toBe("Agro Lajitas SRL");
   });
 
   it("title-cases legacy uppercase input by canonicalizing first", () => {
-    expect(formatProperName("AGRO LAJITAS SRL")).toBe("Agro Lajitas Srl");
+    expect(formatProperName("AGRO LAJITAS SRL")).toBe("Agro Lajitas SRL");
+  });
+
+  it("uppercases known acronyms (SA, SAS, SH, INTA)", () => {
+    expect(formatProperName("soalen sa")).toBe("Soalen SA");
+    expect(formatProperName("perez y gomez sh")).toBe("Perez y Gomez SH");
+    expect(formatProperName("inta pergamino")).toBe("INTA Pergamino");
   });
 
   it("keeps Spanish connectors in lowercase except when first", () => {

@@ -33,6 +33,24 @@ const CONNECTORS = new Set([
   "las",
 ]);
 
+// Tokens that render uppercase in display even though storage keeps them
+// lowercase: legal-entity suffixes and common Argentine agro acronyms.
+const UPPERCASE_TOKENS = new Set([
+  "srl",
+  "sa",
+  "sas",
+  "saci",
+  "saca",
+  "sac",
+  "sh",
+  "sc",
+  "scs",
+  "inta",
+  "ypf",
+  "afip",
+  "arba",
+]);
+
 const DIACRITICS = /[̀-ͯ]/g;
 const NON_CANONICAL = /[^a-z0-9 ]+/g;
 const WHITESPACE = /\s+/g;
@@ -53,13 +71,13 @@ export function formatProperName(value: unknown): string {
   if (!canonical) return "";
   return canonical
     .split(" ")
-    .map((word, index) =>
-      index > 0 && CONNECTORS.has(word) ? word : capitalize(word),
-    )
+    .map((word, index) => formatWord(word, index))
     .join(" ");
 }
 
-function capitalize(word: string): string {
+function formatWord(word: string, index: number): string {
   if (!word) return word;
+  if (UPPERCASE_TOKENS.has(word)) return word.toUpperCase();
+  if (index > 0 && CONNECTORS.has(word)) return word;
   return word.charAt(0).toUpperCase() + word.slice(1);
 }
