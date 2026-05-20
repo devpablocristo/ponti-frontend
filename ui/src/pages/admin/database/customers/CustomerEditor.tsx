@@ -13,7 +13,7 @@ import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { toastError, toastSuccess } from "../../../../lib/toast";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
-import { findEntityMatches, normalizeEntityName } from "../../../../lib/entityNameMatcher";
+import { findEntityMatches } from "../../../../lib/entityNameMatcher";
 import { useSelection } from "../../../login/context/useSelection";
 import {
   buildProjectPayloadForSave,
@@ -230,13 +230,6 @@ export default function CustomerEditor({
   const [projectDraft, setProjectDraft] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [confirmedCustomerCreateName, setConfirmedCustomerCreateName] = useState<string | null>(
-    null
-  );
-  const [confirmedEntityCreates, setConfirmedEntityCreates] = useState<Set<string>>(
-    () => new Set()
-  );
-
   useEffect(() => {
     let cancelled = false;
 
@@ -455,15 +448,6 @@ export default function CustomerEditor({
     [customerActorOptions]
   );
 
-  const customerNameMatch = useMemo(
-    () => findEntityMatches(projectDraft?.customer.name ?? "", customerMatchOptions),
-    [customerMatchOptions, projectDraft?.customer.name]
-  );
-
-  const customerCreateConfirmed =
-    confirmedCustomerCreateName !== null &&
-    confirmedCustomerCreateName === customerNameMatch.normalizedInput;
-
   const managerOptions = useMemo(
     () => {
       const filtered = actorOptions.filter(
@@ -496,30 +480,6 @@ export default function CustomerEditor({
 
   const seasonOptions = SEASON_OPTIONS;
 
-  const entityCreateKey = (scope: string, value: string) =>
-    `${scope}:${normalizeEntityName(value)}`;
-
-  const isEntityCreateConfirmed = (scope: string, value: string) =>
-    confirmedEntityCreates.has(entityCreateKey(scope, value));
-
-  const confirmEntityCreate = (scope: string, value: string) => {
-    setConfirmedEntityCreates((prev) => {
-      const next = new Set(prev);
-      next.add(entityCreateKey(scope, value));
-      return next;
-    });
-  };
-
-  const clearEntityCreateConfirmation = (scope: string, previousValue: string) => {
-    setConfirmedEntityCreates((prev) => {
-      const key = entityCreateKey(scope, previousValue);
-      if (!prev.has(key)) return prev;
-      const next = new Set(prev);
-      next.delete(key);
-      return next;
-    });
-  };
-
   const updateProjectValue = (key: "name" | "admin_cost" | "planned_cost", value: string) => {
     if (key !== "name" && !COST_INPUT_REGEX.test(value)) return;
     const numericValue = key === "name" ? null : normalizeDecimalInputValue(value);
@@ -533,32 +493,9 @@ export default function CustomerEditor({
   };
 
   const updateCustomerName = (value: string) => {
-    setConfirmedCustomerCreateName(null);
-    setProjectDraft((prev) => {
-      if (!prev) return prev;
-
-      // Si el texto matchea (normalizado) con el customer actualmente
-      // seleccionado, mantener id/actor_id. El usuario está tipeando
-      // dentro del input pero la identidad no cambió. Esto evita que
-      // editar un proyecto existente pierda el link al cliente original.
-      const currentName = normalizeEntityName(prev.customer.name);
-      const nextName = normalizeEntityName(value);
-      if (prev.customer.id !== null && nextName === currentName) {
-        return { ...prev, customer: { ...prev.customer, name: value } };
-      }
-
-      // Si cambió, resetear id/actor_id. El usuario debe seleccionar
-      // otro del dropdown (selectExistingCustomer) o confirmar crear nuevo.
-      return {
-        ...prev,
-        customer: {
-          ...prev.customer,
-          id: null,
-          actor_id: null,
-          name: value,
-        },
-      };
-    });
+    setProjectDraft((prev) =>
+      prev ? { ...prev, customer: { ...prev.customer, name: value } } : prev
+    );
   };
 
   const loadProjectOptionsForCustomer = async (customerId: number) => {
@@ -574,7 +511,6 @@ export default function CustomerEditor({
   };
 
   const selectExistingCustomer = (actor: ActorOption) => {
-    setConfirmedCustomerCreateName(null);
     const actorId = typeof actor.id === "number" ? actor.id : null;
     const linkedCustomer =
       (actor.customer_id
@@ -602,10 +538,6 @@ export default function CustomerEditor({
     }
   };
 
-  const confirmCustomerCreate = (value: string) => {
-    setConfirmedCustomerCreateName(normalizeEntityName(value));
-  };
-
   const selectProjectOption = async (project: EntityOption) => {
     setSelectedProjectId(project.id);
     setLoading(true);
@@ -620,20 +552,10 @@ export default function CustomerEditor({
     }
   };
 
-  const confirmProjectCreate = (value: string) => {
-    confirmEntityCreate("project", value);
-  };
-
   const updateCampaignName = (value: string) => {
     setProjectDraft((prev) =>
-      prev
-        ? {
-            ...prev,
-            campaign: { ...prev.campaign, id: null, name: value },
-          }
-        : prev
+      prev ? { ...prev, campaign: { ...prev.campaign, name: value } } : prev
     );
-    clearEntityCreateConfirmation("campaign", projectDraft?.campaign.name ?? "");
   };
 
   const selectCampaignOption = (campaign: EntityOption) => {
@@ -653,14 +575,10 @@ export default function CustomerEditor({
         ? {
             ...prev,
             fields: prev.fields.map((field, idx) =>
-              idx === fieldIndex ? { ...field, id: field.id > 0 ? 0 : field.id, name: value } : field
+              idx === fieldIndex ? { ...field, name: value } : field
             ),
           }
         : prev
-    );
-    clearEntityCreateConfirmation(
-      `field:${fieldIndex}`,
-      projectDraft?.fields[fieldIndex]?.name ?? ""
     );
   };
 
@@ -689,19 +607,13 @@ export default function CustomerEditor({
                 ? {
                     ...field,
                     lots: field.lots.map((lot, itemIdx) =>
-                      itemIdx === lotIndex
-                        ? { ...lot, id: lot.id > 0 ? 0 : lot.id, name: value }
-                        : lot
+                      itemIdx === lotIndex ? { ...lot, name: value } : lot
                     ),
                   }
                 : field
             ),
           }
         : prev
-    );
-    clearEntityCreateConfirmation(
-      `lot:${fieldIndex}:${lotIndex}`,
-      projectDraft?.fields[fieldIndex]?.lots[lotIndex]?.name ?? ""
     );
   };
 
@@ -733,14 +645,8 @@ export default function CustomerEditor({
     kind: "previous" | "current",
     value: string
   ) => {
-    const idKey = kind === "previous" ? "previous_crop_id" : "current_crop_id";
     const nameKey = kind === "previous" ? "previous_crop_name" : "current_crop_name";
-    updateLotAt(fieldIndex, lotIndex, idKey, "0");
     updateLotAt(fieldIndex, lotIndex, nameKey, value);
-    clearEntityCreateConfirmation(
-      `crop:${kind}:${fieldIndex}:${lotIndex}`,
-      projectDraft?.fields[fieldIndex]?.lots[lotIndex]?.[nameKey] ?? ""
-    );
   };
 
   const selectCropOption = (
@@ -756,18 +662,16 @@ export default function CustomerEditor({
   };
 
   const updateManagerName = (index: number, value: string) => {
-    const scope = `manager:${index}`;
     setProjectDraft((prev) =>
       prev
         ? {
             ...prev,
             managers: prev.managers.map((manager, idx) =>
-              idx === index ? { ...manager, id: 0, actor_id: null, name: value } : manager
+              idx === index ? { ...manager, name: value } : manager
             ),
           }
         : prev
     );
-    clearEntityCreateConfirmation(scope, projectDraft?.managers[index]?.name ?? "");
   };
 
   const selectManager = (index: number, actor: ActorOption) => {
@@ -806,7 +710,6 @@ export default function CustomerEditor({
     const percentage = key === "percentage" ? parseBoundedPercentage(value) : null;
     if (key === "percentage" && percentage === null) return;
 
-    const scope = `${group}:${index}`;
     setProjectDraft((prev) =>
       prev
         ? {
@@ -815,8 +718,6 @@ export default function CustomerEditor({
               idx === index
                 ? {
                     ...investor,
-                    id: key === "name" ? 0 : investor.id,
-                    actor_id: key === "name" ? null : investor.actor_id,
                     [key]: key === "percentage" ? percentage ?? 0 : value,
                   }
                 : investor
@@ -824,9 +725,6 @@ export default function CustomerEditor({
           }
         : prev
     );
-    if (key === "name") {
-      clearEntityCreateConfirmation(scope, projectDraft?.[group][index]?.name ?? "");
-    }
   };
 
   const selectInvestor = (
@@ -881,13 +779,7 @@ export default function CustomerEditor({
         ? {
             ...prev,
             fields: prev.fields.map((field, idx) =>
-              idx === fieldIndex
-                ? {
-                    ...field,
-                    lease_type_id: 0,
-                    lease_type_name: value,
-                  }
-                : field
+              idx === fieldIndex ? { ...field, lease_type_name: value } : field
             ),
           }
         : prev
@@ -986,7 +878,6 @@ export default function CustomerEditor({
     const percentage = key === "percentage" ? parseBoundedPercentage(value) : null;
     if (key === "percentage" && percentage === null) return;
 
-    const scope = `field-investor:${fieldIndex}:${investorIndex}`;
     setProjectDraft((prev) =>
       prev
         ? {
@@ -999,8 +890,6 @@ export default function CustomerEditor({
                       invIdx === investorIndex
                         ? {
                             ...investor,
-                            id: key === "name" ? 0 : investor.id,
-                            actor_id: key === "name" ? null : investor.actor_id,
                             [key]: key === "percentage" ? percentage ?? 0 : value,
                           }
                         : investor
@@ -1011,12 +900,6 @@ export default function CustomerEditor({
           }
         : prev
     );
-    if (key === "name") {
-      clearEntityCreateConfirmation(
-        scope,
-        projectDraft?.fields[fieldIndex]?.investors[investorIndex]?.name ?? ""
-      );
-    }
   };
 
   const selectFieldInvestorAt = (fieldIndex: number, investorIndex: number, actor: ActorOption) => {
@@ -1181,44 +1064,34 @@ export default function CustomerEditor({
   };
 
   const validateActorEntity = (
-    scope: string,
     label: string,
     entity: { id: number | null; actor_id?: number | null; name: string },
     options: ActorOption[]
   ) => {
     const name = entity.name.trim();
-    if (!name || entity.id || entity.actor_id) return null;
+    if (!name) return null;
 
     const match = findEntityMatches(name, options);
-    if (match.exactMatch) {
-      return `Ya existe "${match.exactMatch.name}" en ${label}. Seleccionalo desde la lista.`;
+    if (!match.exactMatch) return null;
+
+    const matchedActorId =
+      typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
+    const assignedActorId = entity.actor_id ?? null;
+    if (assignedActorId !== null && matchedActorId === assignedActorId) {
+      return null;
     }
 
-    if (match.requiresConfirmation && !isEntityCreateConfirmed(scope, name)) {
-      return `Hay registros parecidos en ${label}. Tocá "Nuevo" para confirmar el alta.`;
-    }
-
-    return null;
+    return `Ya existe "${match.exactMatch.name}" en ${label}. Seleccionalo desde la lista.`;
   };
 
   const validateActorEntities = (draft: Project) => {
-    for (const [index, manager] of draft.managers.entries()) {
-      const error = validateActorEntity(
-        `manager:${index}`,
-        "Responsables",
-        manager,
-        managerOptions
-      );
+    for (const manager of draft.managers) {
+      const error = validateActorEntity("Responsables", manager, managerOptions);
       if (error) return error;
     }
 
-    for (const [index, investor] of draft.investors.entries()) {
-      const error = validateActorEntity(
-        `investors:${index}`,
-        "Inversores",
-        investor,
-        investorOptions
-      );
+    for (const investor of draft.investors) {
+      const error = validateActorEntity("Inversores", investor, investorOptions);
       if (error) return error;
     }
     const investorsPercentageError = validatePercentageGroup(
@@ -1227,13 +1100,8 @@ export default function CustomerEditor({
     );
     if (investorsPercentageError) return investorsPercentageError;
 
-    for (const [index, investor] of draft.admin_cost_investors.entries()) {
-      const error = validateActorEntity(
-        `admin_cost_investors:${index}`,
-        "Costo administrativo",
-        investor,
-        investorOptions
-      );
+    for (const investor of draft.admin_cost_investors) {
+      const error = validateActorEntity("Costo administrativo", investor, investorOptions);
       if (error) return error;
     }
     const adminPercentageError = validatePercentageGroup(
@@ -1243,13 +1111,8 @@ export default function CustomerEditor({
     if (adminPercentageError) return adminPercentageError;
 
     for (const [fieldIndex, field] of draft.fields.entries()) {
-      for (const [investorIndex, investor] of field.investors.entries()) {
-        const error = validateActorEntity(
-          `field-investor:${fieldIndex}:${investorIndex}`,
-          "Arrendatarios",
-          investor,
-          tenantOptions
-        );
+      for (const investor of field.investors) {
+        const error = validateActorEntity("Arrendatarios", investor, tenantOptions);
         if (error) return error;
       }
       const fieldInvestorPercentageError = validatePercentageGroup(
@@ -1283,23 +1146,21 @@ export default function CustomerEditor({
     const customerActorId = projectPayload.customer.actor_id ?? null;
     const match = findEntityMatches(projectPayload.customer.name, customerMatchOptions);
 
-    if (!customerId && !customerActorId && match.exactMatch) {
-      toastError(
-        `Ya existe el actor "${match.exactMatch.name}". Seleccionalo desde la lista para evitar duplicados.`
-      );
-      return;
-    }
-
-    if (
-      !customerId &&
-      !customerActorId &&
-      match.requiresConfirmation &&
-      confirmedCustomerCreateName !== match.normalizedInput
-    ) {
-      toastError(
-        "Hay clientes parecidos. Confirmá que querés crear uno nuevo antes de guardar."
-      );
-      return;
+    if (match.exactMatch) {
+      const matchedActorId =
+        typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
+      const matchedCustomerId =
+        typeof match.exactMatch.customer_id === "number"
+          ? match.exactMatch.customer_id
+          : null;
+      const sameCustomer = customerId !== null && matchedCustomerId === customerId;
+      const sameActor = customerActorId !== null && matchedActorId === customerActorId;
+      if (!sameCustomer && !sameActor) {
+        toastError(
+          `Ya existe un cliente con el nombre "${match.exactMatch.name}". Seleccionalo del dropdown.`
+        );
+        return;
+      }
     }
 
     if (!customerOnly && !selectedProjectId) {
@@ -1380,9 +1241,6 @@ export default function CustomerEditor({
                 entityLabel="Cliente / Sociedad"
                 onChange={updateCustomerName}
                 onSelectExisting={selectExistingCustomer}
-                selectedOptionId={projectDraft.customer.actor_id ?? null}
-                createConfirmed={customerCreateConfirmed}
-                onConfirmCreate={confirmCustomerCreate}
                 size="sm"
               />
               {!customerOnly && (
@@ -1395,9 +1253,6 @@ export default function CustomerEditor({
                     entityLabel="Proyecto"
                     onChange={(value) => updateProjectValue("name", value)}
                     onSelectExisting={selectProjectOption}
-                    selectedOptionId={selectedProjectId === NEW_VALUE ? null : selectedProjectId}
-                    createConfirmed={isEntityCreateConfirmed("project", projectDraft.name)}
-                    onConfirmCreate={confirmProjectCreate}
                     size="sm"
                   />
                   <SmartEntityInput<EntityOption>
@@ -1408,9 +1263,6 @@ export default function CustomerEditor({
                     entityLabel="Campaña"
                     onChange={updateCampaignName}
                     onSelectExisting={selectCampaignOption}
-                    selectedOptionId={projectDraft.campaign.id}
-                    createConfirmed={isEntityCreateConfirmed("campaign", projectDraft.campaign.name)}
-                    onConfirmCreate={(value) => confirmEntityCreate("campaign", value)}
                     size="sm"
                   />
                   <InputField
@@ -1454,11 +1306,8 @@ export default function CustomerEditor({
                     value={manager.name}
                     options={managerOptions}
                     entityLabel="Responsable"
-	                    onChange={(value) => updateManagerName(index, value)}
-	                    onSelectExisting={(actor) => selectManager(index, actor)}
-	                    selectedOptionId={manager.actor_id ?? null}
-                    createConfirmed={isEntityCreateConfirmed(`manager:${index}`, manager.name)}
-                    onConfirmCreate={(value) => confirmEntityCreate(`manager:${index}`, value)}
+                    onChange={(value) => updateManagerName(index, value)}
+                    onSelectExisting={(actor) => selectManager(index, actor)}
                     size="sm"
                   />
                   <RemoveButton label="Quitar responsable" onClick={() => removeManager(index)} />
@@ -1478,11 +1327,8 @@ export default function CustomerEditor({
                     value={investor.name}
                     options={investorOptions}
                     entityLabel="Inversor"
-	                    onChange={(value) => updateInvestor("investors", index, "name", value)}
-	                    onSelectExisting={(actor) => selectInvestor("investors", index, actor)}
-	                    selectedOptionId={investor.actor_id ?? null}
-                    createConfirmed={isEntityCreateConfirmed(`investors:${index}`, investor.name)}
-                    onConfirmCreate={(value) => confirmEntityCreate(`investors:${index}`, value)}
+                    onChange={(value) => updateInvestor("investors", index, "name", value)}
+                    onSelectExisting={(actor) => selectInvestor("investors", index, actor)}
                     size="sm"
                   />
                   <InputField
@@ -1521,16 +1367,8 @@ export default function CustomerEditor({
                     onChange={(value) =>
                       updateInvestor("admin_cost_investors", index, "name", value)
                     }
-	                    onSelectExisting={(actor) =>
-	                      selectInvestor("admin_cost_investors", index, actor)
-	                    }
-	                    selectedOptionId={investor.actor_id ?? null}
-                    createConfirmed={isEntityCreateConfirmed(
-                      `admin_cost_investors:${index}`,
-                      investor.name
-                    )}
-                    onConfirmCreate={(value) =>
-                      confirmEntityCreate(`admin_cost_investors:${index}`, value)
+                    onSelectExisting={(actor) =>
+                      selectInvestor("admin_cost_investors", index, actor)
                     }
                     size="sm"
                   />
@@ -1589,14 +1427,6 @@ export default function CustomerEditor({
                         onSelectExisting={(fieldOption) =>
                           selectFieldOption(fieldIndex, fieldOption)
                         }
-                        selectedOptionId={field.id > 0 ? field.id : null}
-                        createConfirmed={isEntityCreateConfirmed(
-                          `field:${fieldIndex}`,
-                          field.name
-                        )}
-                        onConfirmCreate={(value) =>
-                          confirmEntityCreate(`field:${fieldIndex}`, value)
-                        }
                         size="sm"
                       />
                       <SmartEntityInput<EntityOption>
@@ -1612,8 +1442,6 @@ export default function CustomerEditor({
                         onSelectExisting={(leaseType) =>
                           selectLeaseTypeOption(fieldIndex, leaseType)
                         }
-                        selectedOptionId={field.lease_type_id || null}
-                        allowCreate={false}
                         size="sm"
                       />
                       {(field.lease_type_id === 1 ||
@@ -1671,17 +1499,6 @@ export default function CustomerEditor({
                               }
                               onSelectExisting={(actor) =>
                                 selectFieldInvestorAt(fieldIndex, investorIndex, actor)
-                              }
-                              selectedOptionId={investor.actor_id ?? null}
-                              createConfirmed={isEntityCreateConfirmed(
-                                `field-investor:${fieldIndex}:${investorIndex}`,
-                                investor.name
-                              )}
-                              onConfirmCreate={(value) =>
-                                confirmEntityCreate(
-                                  `field-investor:${fieldIndex}:${investorIndex}`,
-                                  value
-                                )
                               }
                               size="sm"
                             />
@@ -1743,14 +1560,6 @@ export default function CustomerEditor({
                               onSelectExisting={(lotOption) =>
                                 selectLotOption(fieldIndex, lotIndex, lotOption)
                               }
-                              selectedOptionId={lot.id > 0 ? lot.id : null}
-                              createConfirmed={isEntityCreateConfirmed(
-                                `lot:${fieldIndex}:${lotIndex}`,
-                                lot.name
-                              )}
-                              onConfirmCreate={(value) =>
-                                confirmEntityCreate(`lot:${fieldIndex}:${lotIndex}`, value)
-                              }
                               size="sm"
                             />
                             <InputField
@@ -1777,17 +1586,6 @@ export default function CustomerEditor({
                               onSelectExisting={(crop) =>
                                 selectCropOption(fieldIndex, lotIndex, "previous", crop)
                               }
-                              selectedOptionId={lot.previous_crop_id || null}
-                              createConfirmed={isEntityCreateConfirmed(
-                                `crop:previous:${fieldIndex}:${lotIndex}`,
-                                lot.previous_crop_name ?? ""
-                              )}
-                              onConfirmCreate={(value) =>
-                                confirmEntityCreate(
-                                  `crop:previous:${fieldIndex}:${lotIndex}`,
-                                  value
-                                )
-                              }
                               size="sm"
                             />
                             <SmartEntityInput<EntityOption>
@@ -1801,17 +1599,6 @@ export default function CustomerEditor({
                               }
                               onSelectExisting={(crop) =>
                                 selectCropOption(fieldIndex, lotIndex, "current", crop)
-                              }
-                              selectedOptionId={lot.current_crop_id || null}
-                              createConfirmed={isEntityCreateConfirmed(
-                                `crop:current:${fieldIndex}:${lotIndex}`,
-                                lot.current_crop_name ?? ""
-                              )}
-                              onConfirmCreate={(value) =>
-                                confirmEntityCreate(
-                                  `crop:current:${fieldIndex}:${lotIndex}`,
-                                  value
-                                )
                               }
                               size="sm"
                             />

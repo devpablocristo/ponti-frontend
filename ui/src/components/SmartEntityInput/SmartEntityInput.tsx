@@ -9,11 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-import {
-  type EntityNameOption,
-  findEntityMatches,
-  normalizeEntityName,
-} from "../../lib/entityNameMatcher";
+import { type EntityNameOption } from "../../lib/entityNameMatcher";
 import { fuzzySearchOptions } from "../../lib/fuzzySearch";
 
 type SmartEntityInputSize = "sm" | "md" | "lg" | "xs";
@@ -31,13 +27,9 @@ type SmartEntityInputProps<T extends EntityNameOption> = {
   entityLabel: string;
   onChange: (value: string) => void;
   onSelectExisting: (option: T) => void;
-  allowCreate?: boolean;
   disabled?: boolean;
   required?: boolean;
   placeholder?: string;
-  selectedOptionId?: number | string | null;
-  createConfirmed?: boolean;
-  onConfirmCreate?: (value: string) => void;
   size?: SmartEntityInputSize;
   className?: string;
 };
@@ -50,13 +42,9 @@ export function SmartEntityInput<T extends EntityNameOption>({
   entityLabel: _entityLabel,
   onChange,
   onSelectExisting,
-  allowCreate = true,
   disabled = false,
   required = false,
   placeholder,
-  selectedOptionId: _selectedOptionId = null,
-  createConfirmed: _createConfirmed = false,
-  onConfirmCreate,
   size = "md",
   className = "",
 }: SmartEntityInputProps<T>) {
@@ -75,16 +63,11 @@ export function SmartEntityInput<T extends EntityNameOption>({
           ? "text-base py-3 px-4"
           : "text-sm py-2.5 px-3.5";
 
-  const matches = useMemo(() => findEntityMatches(value, options), [options, value]);
-
-  const hasValue = normalizeEntityName(value).length > 0;
-  const canCreateNew = hasValue && !matches.exactMatch && matches.canCreate;
-  const showCreateAction = allowCreate;
   const visibleOptions = useMemo(
     () => fuzzySearchOptions(searchText, options),
     [options, searchText]
   );
-  const showDropdown = open && !disabled && (visibleOptions.length > 0 || showCreateAction);
+  const showDropdown = open && !disabled && visibleOptions.length > 0;
   const dropdownStyle: CSSProperties | undefined = dropdownPosition
     ? {
         position: "fixed",
@@ -159,41 +142,19 @@ export function SmartEntityInput<T extends EntityNameOption>({
         className="overflow-hidden rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
         style={dropdownStyle}
       >
-        {visibleOptions.length > 0 ? (
-          <div className="max-h-64 overflow-y-auto">
-            {visibleOptions.map((match) => (
-              <button
-                key={String(match.id ?? match.name)}
-                type="button"
-                className="flex w-full items-center border-b border-slate-100 px-3 py-2.5 text-left text-slate-900 transition last:border-b-0 hover:bg-primary-50"
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => handleSelectExisting(match)}
-              >
-                <span className="min-w-0 truncate">{match.name}</span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        {showCreateAction ? (
-          <button
-            type="button"
-            className={`flex w-full items-center justify-center px-3 py-2.5 text-sm font-semibold transition ${
-              canCreateNew
-                ? "bg-primary-700 text-white hover:bg-primary-800"
-                : "cursor-not-allowed bg-slate-100 text-slate-400"
-            }`}
-            disabled={!canCreateNew}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => {
-              if (!canCreateNew) return;
-              onConfirmCreate?.(value);
-              setOpen(false);
-            }}
-          >
-            Nuevo
-          </button>
-        ) : null}
+        <div className="max-h-64 overflow-y-auto">
+          {visibleOptions.map((match) => (
+            <button
+              key={String(match.id ?? match.name)}
+              type="button"
+              className="flex w-full items-center border-b border-slate-100 px-3 py-2.5 text-left text-slate-900 transition last:border-b-0 hover:bg-primary-50"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => handleSelectExisting(match)}
+            >
+              <span className="min-w-0 truncate">{match.name}</span>
+            </button>
+          ))}
+        </div>
       </div>
     ) : null;
 
