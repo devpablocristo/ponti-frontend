@@ -1,5 +1,6 @@
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import { findEntityMatches, normalizeEntityName } from "../../../../lib/entityNameMatcher";
+import { canonicalizeName } from "../../../../lib/properName";
 
 type NormalizedDecimalResult = {
   value: number | null;
@@ -143,7 +144,7 @@ function isEmptyLot(lot: Project["fields"][number]["lots"][number]): boolean {
 function sanitizeNamedEntity<T extends NamedEntity>(entity: T): T {
   return {
     ...entity,
-    name: entity.name.trim(),
+    name: canonicalizeName(entity.name),
   };
 }
 
@@ -151,7 +152,7 @@ function sanitizePercentageEntity<T extends PercentageActorEntity>(entity: T): T
   return {
     ...entity,
     id: entity.id ?? 0,
-    name: entity.name.trim(),
+    name: canonicalizeName(entity.name),
     percentage: Number(entity.percentage),
   };
 }
@@ -165,9 +166,12 @@ export function buildProjectPayloadForSave(
   return {
     project: {
       ...project,
-      name: project.name.trim(),
+      name: canonicalizeName(project.name),
       customer: sanitizeNamedEntity(project.customer),
-      campaign: sanitizeNamedEntity(project.campaign),
+      // Campaign codes (e.g. "2025-2026") are catalog identifiers, not free-
+      // text names — keep them as the user typed (only trim) so they round-
+      // trip through the catalog matcher unchanged.
+      campaign: { ...project.campaign, name: project.campaign.name?.trim() ?? "" },
       managers: Array.isArray(project.managers)
         ? project.managers.filter(hasNamedEntityValue).map(sanitizeNamedEntity)
         : [],
@@ -204,8 +208,10 @@ export function buildProjectPayloadForSave(
             return {
               ...field,
               id: idForPayload(field.id, options.editing),
-              name: field.name.trim(),
+              name: canonicalizeName(field.name),
               lease_type_id: Number(field.lease_type_id || 0),
+              // lease_type_name is the enum label (PORCENTAJE / FIJO / MIXTO)
+              // from the catalog — left untouched.
               lease_type_name: field.lease_type_name?.trim(),
               lease_type_percent: percent.value,
               lease_type_value: value.value,
@@ -219,13 +225,13 @@ export function buildProjectPayloadForSave(
                 ? field.lots.filter((lot) => !isEmptyLot(lot)).map((lot) => ({
                     ...lot,
                     id: idForPayload(lot.id, options.editing),
-                    name: lot.name.trim(),
+                    name: canonicalizeName(lot.name),
                     hectares: numericValue(lot.hectares),
                     previous_crop_id: Number(lot.previous_crop_id || 0),
-                    previous_crop_name: lot.previous_crop_name?.trim(),
+                    previous_crop_name: canonicalizeName(lot.previous_crop_name),
                     current_crop_id: Number(lot.current_crop_id || 0),
-                    current_crop_name: lot.current_crop_name?.trim(),
-                    season: lot.season.trim(),
+                    current_crop_name: canonicalizeName(lot.current_crop_name),
+                    season: canonicalizeName(lot.season),
                   }))
                 : [],
             };

@@ -7,6 +7,11 @@ import { apiClient } from "@/api/client";
 import { CustomerData, CustomerPayload, CustomerPayloadInput } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { canonicalizeName } from "@/lib/properName";
+
+function sanitizeInput(input: CustomerPayloadInput): CustomerPayloadInput {
+  return { ...input, name: canonicalizeName(input.name) };
+}
 
 const useCustomers = () => {
   const [{ total, customers, processing, error }, dispatch] =
@@ -110,7 +115,7 @@ const useCustomers = () => {
       try {
         const response = await apiClient.post<SuccessResponse<CustomerData>>(
           "/customers",
-          input,
+          sanitizeInput(input),
         );
 
         if (response.success) {
@@ -140,7 +145,7 @@ const useCustomers = () => {
       try {
         const response = await apiClient.put<SuccessResponse<string>>(
           "/customers/" + id,
-          input,
+          sanitizeInput(input),
         );
 
         if (response.success) {

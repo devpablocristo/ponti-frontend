@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
+import { canonicalizeName } from "@/lib/properName";
 import { CrudService, useEntityCrud } from "../useEntityCrud";
 
 export type ActorKind = "natural_person" | "organization" | "other" | "unknown";
@@ -133,7 +134,8 @@ const useActors = () => {
         return response.data;
       },
       create: async (input) => {
-        const response = await apiClient.post<SuccessResponse<Actor | number>>("/actors", input);
+        const payload = { ...input, display_name: canonicalizeName(input.display_name) };
+        const response = await apiClient.post<SuccessResponse<Actor | number>>("/actors", payload);
         if (typeof response.data === "number") {
           const created = await apiClient.get<SuccessResponse<Actor>>(`/actors/${response.data}`);
           return created.data;
@@ -141,7 +143,8 @@ const useActors = () => {
         return response.data;
       },
       update: async (id, input) => {
-        const response = await apiClient.put<SuccessResponse<Actor>>(`/actors/${id}`, input);
+        const payload = { ...input, display_name: canonicalizeName(input.display_name) };
+        const response = await apiClient.put<SuccessResponse<Actor>>(`/actors/${id}`, payload);
         return response.data;
       },
       archive: async (id) => {

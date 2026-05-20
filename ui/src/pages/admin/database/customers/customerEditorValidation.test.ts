@@ -76,8 +76,33 @@ describe("customerEditorValidation", () => {
     expect(result.project.fields[0].lease_type_value).toBe(10.5);
     expect(result.project.fields[0].lease_type_percent).toBeNull();
     expect(result.project.fields[0].investors).toEqual([
-      { id: 0, actor_id: 44, name: "Arrendatario", percentage: 100 },
+      { id: 0, actor_id: 44, name: "arrendatario", percentage: 100 },
     ]);
+  });
+
+  it("canonicalizes every name field on the save payload", () => {
+    const draft = baseProject();
+    draft.customer.name = "  AGRO LAJITAS S.R.L.  ";
+    draft.name = "LA CONCORDIA";
+    draft.managers[0].name = "Juan de la Torre";
+    draft.fields[0].name = "CAMPO ALEGRE";
+    draft.fields[0].lots[0].name = "LOTE 1";
+    draft.fields[0].lots[0].previous_crop_name = "Soja";
+    draft.fields[0].lots[0].current_crop_name = "POROTO MUNG";
+    draft.fields[0].lots[0].season = "Verano";
+
+    const { project } = buildProjectPayloadForSave(draft, { editing: false });
+
+    expect(project.customer.name).toBe("agro lajitas s r l");
+    expect(project.name).toBe("la concordia");
+    expect(project.managers[0].name).toBe("juan de la torre");
+    expect(project.fields[0].name).toBe("campo alegre");
+    expect(project.fields[0].lots[0].name).toBe("lote 1");
+    expect(project.fields[0].lots[0].previous_crop_name).toBe("soja");
+    expect(project.fields[0].lots[0].current_crop_name).toBe("poroto mung");
+    expect(project.fields[0].lots[0].season).toBe("verano");
+    // Campaign code stays untouched.
+    expect(project.campaign.name).toBe("2025-2026");
   });
 
   it("bloquea inversores de proyecto cuando la suma no da 100", () => {
