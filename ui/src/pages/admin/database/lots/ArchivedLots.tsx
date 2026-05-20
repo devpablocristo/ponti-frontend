@@ -36,14 +36,15 @@ type ArchivedLotsProps = {
 };
 
 // Detecta el conflict 409 del BE "El lote tiene N orden(es) de trabajo asociada(s)".
+// El BE devuelve el 409 con prefijo `BLOCKED_BY_WORKORDERS:<count>|...`
+// (ver `internal/lot/repository.go` HardDeleteLot). Parseamos por código,
+// no por el texto del mensaje, para que sea robusto a cambios de copy.
 const extractBlockedByWorkOrders = (
   message: string,
 ): { count: number } | null => {
-  const match = message.match(
-    /lote tiene (\d+) orden\(es\)?|lot has (\d+) workorder/i,
-  );
+  const match = message.match(/BLOCKED_BY_WORKORDERS:(\d+)/);
   if (!match) return null;
-  const count = Number(match[1] ?? match[2] ?? 0);
+  const count = Number(match[1] ?? 0);
   return count > 0 ? { count } : null;
 };
 
