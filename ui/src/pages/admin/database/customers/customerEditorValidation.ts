@@ -187,9 +187,6 @@ export function buildProjectPayloadForSave(
             if (percent.error) {
               errors.push(`fields[${index}].lease_type_percent ${percent.error}`);
             }
-            if (percent.value !== null && (percent.value <= 0 || percent.value > 100)) {
-              errors.push(`fields[${index}].lease_type_percent debe estar entre 1 y 100.`);
-            }
             if (value.error) {
               errors.push(`fields[${index}].lease_type_value ${value.error}`);
             }
