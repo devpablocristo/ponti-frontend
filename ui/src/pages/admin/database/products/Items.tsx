@@ -16,8 +16,7 @@ import { apiClient } from "../../../../api/client";
 import { units } from "../../../../constants/units";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
-import { SPREADSHEET_ACCEPT } from "../../fileTransfer";
-import { readSpreadsheetRows } from "../../spreadsheetReader";
+import { CSV_ACCEPT } from "../../fileTransfer";
 
 interface Row {
   id: number;
@@ -168,14 +167,6 @@ function parseCsv(content: string) {
     });
     return row;
   });
-}
-
-function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
 }
 
 function getValueByAliases(
@@ -593,25 +584,15 @@ export default function Items({ embedded = false, onCancel, onSaved }: ItemsProp
 
     const lowerName = file.name.toLowerCase();
     const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    const isExcel = lowerName.endsWith(".xlsx");
 
-    if (!isCsv && !isExcel) {
-      setErrorMessage("Formato no soportado. Use .xlsx o .csv.");
+    if (!isCsv) {
+      setErrorMessage("Formato no soportado. Use .csv.");
       return;
     }
 
     try {
-      let parsedRows: Record<string, string>[] = [];
-      if (isCsv) {
-        const text = await file.text();
-        parsedRows = parseCsv(text);
-      } else {
-        parsedRows = (
-          await readSpreadsheetRows(file, {
-            preferredSheetNameIncludes: ["stock", "insumo"],
-          })
-        ).map(normalizeSpreadsheetRow);
-      }
+      const text = await file.text();
+      const parsedRows = parseCsv(text);
 
       if (parsedRows.length === 0) {
         setErrorMessage(
@@ -746,7 +727,7 @@ export default function Items({ embedded = false, onCancel, onSaved }: ItemsProp
       // No duplicates — load directly into form
       loadNewRows(importedRows, importWarnings);
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .xlsx o .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .csv.");
     }
   };
 
@@ -794,7 +775,7 @@ export default function Items({ embedded = false, onCancel, onSaved }: ItemsProp
             <input
               ref={fileInputRef}
               type="file"
-              accept={SPREADSHEET_ACCEPT}
+              accept={CSV_ACCEPT}
               onChange={handleImportFromFile}
               className="hidden"
             />

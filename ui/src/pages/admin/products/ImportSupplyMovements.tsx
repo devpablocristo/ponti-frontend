@@ -13,12 +13,10 @@ import {
   parseCsv,
   parseImportDate,
   toCanonicalMovementType,
-  normalizeSpreadsheetRow,
   getValueByAliases,
   MAX_IMPORT_FILE_SIZE_MB,
 } from "./importUtils";
 import { SuccessResponse } from "@/api/types";
-import { readSpreadsheetRows } from "../spreadsheetReader";
 
 const HEADER_ALIASES = {
   movementType: ["ingreso", "tipo_ingreso", "movement_type"],
@@ -224,29 +222,18 @@ export default function ImportSupplyMovements({
 
       const lowerName = file.name.toLowerCase();
       const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-      const isExcel = lowerName.endsWith(".xlsx");
 
-      if (!isCsv && !isExcel) {
+      if (!isCsv) {
         if (!cancelled) {
           setPreviewRows([]);
-          setParseError("Formato no soportado. Use .xlsx o .csv.");
+          setParseError("Formato no soportado. Use .csv.");
           setParsedFileKey(fileKey);
         }
         return;
       }
 
       try {
-        let parsedRows: Record<string, string>[] = [];
-
-        if (isCsv) {
-          parsedRows = parseCsv(await file.text());
-        } else {
-          parsedRows = (
-            await readSpreadsheetRows(file, {
-              preferredSheetNameIncludes: ["insumo", "remito"],
-            })
-          ).map(normalizeSpreadsheetRow);
-        }
+        const parsedRows = parseCsv(await file.text());
 
         if (parsedRows.length === 0) {
           if (!cancelled) {
@@ -539,7 +526,7 @@ export default function ImportSupplyMovements({
       } catch {
         if (!cancelled) {
           setPreviewRows([]);
-          setParseError("No se pudo leer el archivo. Use .xlsx o .csv válidos.");
+          setParseError("No se pudo leer el archivo. Use .csv válido.");
           setParsedFileKey(fileKey);
         }
       }

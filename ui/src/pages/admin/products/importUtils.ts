@@ -99,14 +99,6 @@ export function toCanonicalMovementType(rawValue: string): string | null {
   return MOVEMENT_TYPE_CANONICAL_MAP[key] ?? null;
 }
 
-export function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
-}
-
 export function getValueByAliases(
   row: Record<string, string>,
   aliases: readonly string[]

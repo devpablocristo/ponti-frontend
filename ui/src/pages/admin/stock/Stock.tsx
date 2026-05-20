@@ -773,7 +773,7 @@ export function Stock() {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("stock", "xlsx", projectId));
+      downloadBlob(response, buildTimestampedFilename("stock", "csv", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el stock.");
     }

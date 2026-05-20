@@ -528,7 +528,7 @@ export function Products() {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("insumos", "xlsx", projectId));
+      downloadBlob(response, buildTimestampedFilename("insumos", "csv", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el listado de insumos.");
     }

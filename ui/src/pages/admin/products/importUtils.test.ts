@@ -4,7 +4,6 @@ import {
   parseCsv,
   parseImportDate,
   toCanonicalMovementType,
-  normalizeSpreadsheetRow,
   getValueByAliases,
   MAX_IMPORT_FILE_SIZE_MB,
 } from "./importUtils";
@@ -145,17 +144,6 @@ describe("toCanonicalMovementType", () => {
   it("returns null for unknown type", () => {
     expect(toCanonicalMovementType("desconocido")).toBeNull();
     expect(toCanonicalMovementType("")).toBeNull();
-  });
-});
-
-describe("normalizeSpreadsheetRow", () => {
-  it("normalizes keys and stringifies values", () => {
-    const row = { "Número Remito": 42, Fecha: null, Insumo: "Glifosato" };
-    expect(normalizeSpreadsheetRow(row)).toEqual({
-      numero_remito: "42",
-      fecha: "",
-      insumo: "Glifosato",
-    });
   });
 });
 

@@ -283,7 +283,7 @@ function Lots() {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("lotes", "xlsx", projectId));
+      downloadBlob(response, buildTimestampedFilename("lotes", "csv", projectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de lotes.");
     }

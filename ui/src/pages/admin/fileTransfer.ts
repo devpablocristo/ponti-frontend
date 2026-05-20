@@ -1,9 +1,8 @@
-export const SPREADSHEET_ACCEPT =
-  ".xlsx,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+export const CSV_ACCEPT = ".csv,text/csv";
 
 export function buildTimestampedFilename(
   prefix: string,
-  extension: "csv" | "xlsx",
+  extension: "csv",
   id?: number | string | null,
 ) {
   const suffix = id == null ? "" : `_${id}`;

@@ -80,14 +80,6 @@ export function parseCsv(content: string) {
   });
 }
 
-export function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
-}
-
 export function getValueByAliases(
   row: Record<string, string>,
   aliases: readonly string[]

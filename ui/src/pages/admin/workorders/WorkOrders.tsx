@@ -1028,7 +1028,7 @@ export function WorkOrders() {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("ordenes", "xlsx", effectiveProjectId));
+      downloadBlob(response, buildTimestampedFilename("ordenes", "csv", effectiveProjectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de órdenes.");
     }

@@ -29,8 +29,7 @@ import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
 import { WORKORDER_ENTITY } from "../entities";
-import { buildTimestampedFilename, downloadBlob, SPREADSHEET_ACCEPT } from "../fileTransfer";
-import { readSpreadsheetRows } from "../spreadsheetReader";
+import { buildTimestampedFilename, downloadBlob, CSV_ACCEPT } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
@@ -97,14 +96,6 @@ function parseCsv(content: string) {
     });
     return row;
   });
-}
-
-function normalizeSpreadsheetRow(row: Record<string, unknown>) {
-  const normalized: Record<string, string> = {};
-  Object.entries(row).forEach(([key, value]) => {
-    normalized[normalizeText(key)] = String(value ?? "").trim();
-  });
-  return normalized;
 }
 
 function getValueByAliases(row: Record<string, string>, aliases: readonly string[]) {
@@ -816,10 +807,9 @@ export function Tasks() {
 
     const lowerName = file.name.toLowerCase();
     const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    const isExcel = lowerName.endsWith(".xlsx");
 
-    if (!isCsv && !isExcel) {
-      setImportError("Formato no soportado. Use .xlsx o .csv.");
+    if (!isCsv) {
+      setImportError("Formato no soportado. Use .csv.");
       return;
     }
 
@@ -827,13 +817,8 @@ export function Tasks() {
       setImportError(null);
       setImportMessage(null);
 
-      let parsedRows: Record<string, string>[] = [];
-      if (isCsv) {
-        const text = await file.text();
-        parsedRows = parseCsv(text);
-      } else {
-        parsedRows = (await readSpreadsheetRows(file)).map(normalizeSpreadsheetRow);
-      }
+      const text = await file.text();
+      const parsedRows = parseCsv(text);
 
       if (parsedRows.length === 0) {
         setImportError("El archivo no tiene datos válidos. Verifique encabezados y filas.");
@@ -907,7 +892,7 @@ export function Tasks() {
         setImportMessage(`Se importaron ${laborsToSave.length} labores con éxito.`);
       }
     } catch {
-      setImportError("No se pudo leer el archivo. Use .xlsx o .csv.");
+      setImportError("No se pudo leer el archivo. Use .csv.");
     }
   };
 
@@ -924,7 +909,7 @@ export function Tasks() {
         responseType: "blob",
       });
 
-      downloadBlob(response, buildTimestampedFilename("labores", "xlsx", projectId));
+      downloadBlob(response, buildTimestampedFilename("labores", "csv", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el listado de labores.");
     }
@@ -941,7 +926,7 @@ export function Tasks() {
       <input
         ref={fileInputRef}
         type="file"
-        accept={SPREADSHEET_ACCEPT}
+        accept={CSV_ACCEPT}
         onChange={handleImportLaborsFromFile}
         className="hidden"
       />

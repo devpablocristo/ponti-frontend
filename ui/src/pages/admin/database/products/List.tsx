@@ -329,7 +329,7 @@ export default function ListItems({ editorOnly = false }: ListItemsProps) {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("insumosbd", "xlsx", projectId));
+      downloadBlob(response, buildTimestampedFilename("insumosbd", "csv", projectId));
     } catch {
       // error exporting products
     }

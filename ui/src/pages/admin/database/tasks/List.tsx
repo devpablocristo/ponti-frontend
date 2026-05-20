@@ -237,7 +237,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("labores", "xlsx", projectId));
+      downloadBlob(response, buildTimestampedFilename("labores", "csv", projectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de labores.");
     }

@@ -16,13 +16,11 @@ import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
 import {
   getValueByAliases,
   LABOR_HEADER_ALIASES,
-  normalizeSpreadsheetRow,
   normalizeText,
   parseCsv,
   parsePartialPrice,
 } from "./importUtils";
-import { SPREADSHEET_ACCEPT } from "../../fileTransfer";
-import { readSpreadsheetRows } from "../../spreadsheetReader";
+import { CSV_ACCEPT } from "../../fileTransfer";
 
 interface Labor {
   id: number;
@@ -287,25 +285,15 @@ export default function TasksForm({
 
     const lowerName = file.name.toLowerCase();
     const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    const isExcel = lowerName.endsWith(".xlsx");
 
-    if (!isCsv && !isExcel) {
-      setErrorMessage("Formato no soportado. Use .xlsx o .csv.");
+    if (!isCsv) {
+      setErrorMessage("Formato no soportado. Use .csv.");
       return;
     }
 
     try {
-      let parsedRows: Record<string, string>[] = [];
-      if (isCsv) {
-        const text = await file.text();
-        parsedRows = parseCsv(text);
-      } else {
-        parsedRows = (
-          await readSpreadsheetRows(file, {
-            preferredSheetNameIncludes: ["labor"],
-          })
-        ).map(normalizeSpreadsheetRow);
-      }
+      const text = await file.text();
+      const parsedRows = parseCsv(text);
 
       if (parsedRows.length === 0) {
         setErrorMessage(
@@ -428,7 +416,7 @@ export default function TasksForm({
         setErrorMessage("No se encontraron filas importables en el archivo.");
       }
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .xlsx o .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .csv.");
     }
   };
 
@@ -464,7 +452,7 @@ export default function TasksForm({
             <input
               ref={fileInputRef}
               type="file"
-              accept={SPREADSHEET_ACCEPT}
+              accept={CSV_ACCEPT}
               onChange={handleImportLaborsFromFile}
               className="hidden"
             />
