@@ -12,9 +12,10 @@ import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import { LOT_ENTITY as ENTITY } from "../entities";
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
+import { DrawerShell } from "../../../components/Drawer/DrawerShell";
+import CustomerEditor from "../database/customers/CustomerEditor";
 import useLots from "../../../hooks/useLots";
 import { LotsData, LotsDataUpdate } from "../../../hooks/useLots/types";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -41,12 +42,12 @@ import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedLots from "../database/lots/ArchivedLots";
 
 function Lots() {
-  const navigate = useNavigate();
   const pagination = usePagination({ perPage: 10 });
   const resetPage = pagination.resetPage;
 
   const [lot, setLot] = useState<LotsDataUpdate | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [editorDrawerOpen, setEditorDrawerOpen] = useState(false);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -292,9 +293,7 @@ function Lots() {
       return;
     }
 
-    if (selectedField?.project_id) {
-      navigate(`/admin/database/customers/${selectedField.project_id}`);
-    }
+    setEditorDrawerOpen(true);
   };
 
   function handleLotChange<K extends keyof LotsDataUpdate>(
@@ -550,6 +549,23 @@ function Lots() {
           onLotChange={handleLotChange}
           onSave={handleSave}
         />
+
+        <DrawerShell
+          open={editorDrawerOpen}
+          onClose={() => setEditorDrawerOpen(false)}
+          title="Nuevo Lote"
+        >
+          <CustomerEditor
+            embedded
+            mode="project"
+            customerId={selectedCustomer?.id ?? null}
+            initialProjectId={selectedField?.project_id ?? projectId ?? null}
+            onClose={() => {
+              setEditorDrawerOpen(false);
+              loadCurrentLots();
+            }}
+          />
+        </DrawerShell>
 
         <ArchivedDrawer
           open={archivedDrawerOpen}
