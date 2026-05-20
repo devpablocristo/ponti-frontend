@@ -534,19 +534,31 @@ export default function CustomerEditor({
 
   const updateCustomerName = (value: string) => {
     setConfirmedCustomerCreateName(null);
-    setProjectDraft((prev) =>
-      prev
-        ? {
-            ...prev,
-            customer: {
-              ...prev.customer,
-              id: null,
-              actor_id: null,
-              name: value,
-            },
-          }
-        : prev
-    );
+    setProjectDraft((prev) => {
+      if (!prev) return prev;
+
+      // Si el texto matchea (normalizado) con el customer actualmente
+      // seleccionado, mantener id/actor_id. El usuario está tipeando
+      // dentro del input pero la identidad no cambió. Esto evita que
+      // editar un proyecto existente pierda el link al cliente original.
+      const currentName = normalizeEntityName(prev.customer.name);
+      const nextName = normalizeEntityName(value);
+      if (prev.customer.id !== null && nextName === currentName) {
+        return { ...prev, customer: { ...prev.customer, name: value } };
+      }
+
+      // Si cambió, resetear id/actor_id. El usuario debe seleccionar
+      // otro del dropdown (selectExistingCustomer) o confirmar crear nuevo.
+      return {
+        ...prev,
+        customer: {
+          ...prev.customer,
+          id: null,
+          actor_id: null,
+          name: value,
+        },
+      };
+    });
   };
 
   const loadProjectOptionsForCustomer = async (customerId: number) => {
@@ -1241,14 +1253,7 @@ export default function CustomerEditor({
     const customerActorId = projectPayload.customer.actor_id ?? null;
     const match = findEntityMatches(projectPayload.customer.name, customerMatchOptions);
 
-    // Validaciones de "cliente duplicado / requiere confirmación" solo aplican
-    // cuando se está CREANDO. En modo edición (cliente o proyecto existente)
-    // el usuario sabe sobre qué entidad opera; no pedir confirmación.
-    const isEditing = customerOnly
-      ? isExistingId(selectedCustomerId)
-      : selectedProjectId !== NEW_VALUE && selectedProjectId !== "";
-
-    if (!isEditing && !customerId && !customerActorId && match.exactMatch) {
+    if (!customerId && !customerActorId && match.exactMatch) {
       toastError(
         `Ya existe el actor "${match.exactMatch.name}". Seleccionalo desde la lista para evitar duplicados.`
       );
@@ -1256,7 +1261,6 @@ export default function CustomerEditor({
     }
 
     if (
-      !isEditing &&
       !customerId &&
       !customerActorId &&
       match.requiresConfirmation &&
