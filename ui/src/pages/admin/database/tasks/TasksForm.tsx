@@ -22,7 +22,7 @@ import {
 } from "./importUtils";
 import { CSV_ACCEPT } from "../../fileTransfer";
 
-interface Labor {
+export interface Labor {
   id: number;
   name: string;
   category: string;
@@ -40,11 +40,16 @@ interface PendingLaborImport {
 type TasksFormProps = {
   hideWorkspaceFilters?: boolean;
   onCancel?: () => void;
+  // When provided, the form arrives pre-loaded with these rows (e.g. after
+  // importing a CSV in the parent list) and the inline "Importar" button is
+  // hidden — the import already happened.
+  initialRows?: Labor[];
 };
 
 export default function TasksForm({
   hideWorkspaceFilters = false,
   onCancel,
+  initialRows,
 }: TasksFormProps = {}) {
   const { saveLabors, result, error, processing, labors, getLabors } = useLabors();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -61,7 +66,14 @@ export default function TasksForm({
     "campaign",
   ]);
 
-  const nextIdRef = useRef(5);
+  const seedRows = (): Labor[] => {
+    if (initialRows && initialRows.length > 0) {
+      return initialRows.map((row, idx) => ({ ...row, id: idx }));
+    }
+    return Array.from({ length: 5 }, (_, i) => emptyRow(i));
+  };
+  const initialSeedCount = initialRows && initialRows.length > 0 ? initialRows.length : 5;
+  const nextIdRef = useRef(initialSeedCount);
   const emptyRow = (id: number): Labor => ({
     id,
     name: "",
@@ -70,9 +82,8 @@ export default function TasksForm({
     contractor: "",
     is_partial_price: false,
   });
-  const [rows, setLabors] = useState<Labor[]>(
-    Array.from({ length: 5 }, (_, i) => emptyRow(i))
-  );
+  const [rows, setLabors] = useState<Labor[]>(() => seedRows());
+  const hasImportedRows = Boolean(initialRows && initialRows.length > 0);
 
   const addRow = () => {
     const id = nextIdRef.current++;
@@ -452,22 +463,26 @@ export default function TasksForm({
             </h1>
           )}
           <div className="ml-auto flex items-center gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={CSV_ACCEPT}
-              onChange={handleImportLaborsFromFile}
-              className="hidden"
-            />
-            <Button
-              variant="primary"
-              size="sm"
-              className="text-sm font-medium flex items-center gap-1"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Download className="h-4 w-4" />
-              Importar Labores
-            </Button>
+            {!hasImportedRows && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={CSV_ACCEPT}
+                  onChange={handleImportLaborsFromFile}
+                  className="hidden"
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="text-sm font-medium flex items-center gap-1"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Download className="h-4 w-4" />
+                  Importar Labores
+                </Button>
+              </>
+            )}
             {!isEmbedded && (
             <Button
               variant="primary"

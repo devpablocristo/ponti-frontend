@@ -16,7 +16,7 @@ import useLabors from "../../../hooks/useLabors";
 import useWorkOrders from "../../../hooks/useWorkOrders";
 import useCategories from "../../../hooks/useCategories";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
-import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
+import { InvoiceData, Metrics, LaborGroupData } from "../../../hooks/useLabors/types";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -34,7 +34,7 @@ import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import ArchivedWorkOrders from "../database/work-orders/ArchivedWorkOrders";
-import TasksForm from "../database/tasks/TasksForm";
+import TasksForm, { type Labor as LaborRow } from "../database/tasks/TasksForm";
 
 const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
@@ -259,7 +259,6 @@ export function Tasks() {
     processingInvoice,
     errorInvoice,
     resultInvoice,
-    saveLabors,
   } = useLabors();
   const { archiveOrder } = useWorkOrders();
 
@@ -287,6 +286,7 @@ export function Tasks() {
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [importedRows, setImportedRows] = useState<LaborRow[] | undefined>(undefined);
 
   const {
     filters,
@@ -829,70 +829,39 @@ export function Tasks() {
 
       const categoryByName = new Map(categories.map((c) => [normalizeText(c.name), c]));
 
-      const laborsToSave: LaborToSave[] = [];
-      const importErrors: string[] = [];
-
-      parsedRows.forEach((rawRow, idx) => {
-        const rowNumber = idx + 2;
+      // Map every CSV row (good or bad) to a Labor row and hand them off to the
+      // editable preview in TasksForm. The user fixes invalid cells inline and
+      // hits Guardar — no row is silently dropped.
+      const previewRows: LaborRow[] = [];
+      parsedRows.forEach((rawRow) => {
         const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
         const categoryRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.category).trim();
         const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
         const contractor = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.contractor).trim();
-
         if (!name && !categoryRaw && !priceRaw && !contractor) return;
 
         const categoryByText = categoryByName.get(normalizeText(categoryRaw));
         const categoryId = categoryByText?.id ?? Number(categoryRaw);
         const priceValue = Number(priceRaw.replace(/\$/g, "").replace(",", "."));
-
-        if (!name) importErrors.push(`Fila ${rowNumber}: falta "Labor".`);
-        if (!categoryId || Number.isNaN(categoryId))
-          importErrors.push(`Fila ${rowNumber}: "Rubro" inválido.`);
-        if (!priceRaw || Number.isNaN(priceValue) || priceValue <= 0)
-          importErrors.push(`Fila ${rowNumber}: "Precio" inválido.`);
-        if (!contractor) importErrors.push(`Fila ${rowNumber}: falta "Contratista".`);
-
-        if (
-          name &&
-          categoryId &&
-          !Number.isNaN(categoryId) &&
-          !Number.isNaN(priceValue) &&
-          priceValue > 0 &&
-          contractor
-        ) {
-          laborsToSave.push({
-            name,
-            category_id: categoryId,
-            price: String(priceValue),
-            contractor_name: contractor,
-            is_partial_price: false,
-          });
-        }
+        previewRows.push({
+          id: previewRows.length,
+          name,
+          category:
+            categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
+          price:
+            !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : priceRaw,
+          contractor,
+          is_partial_price: false,
+        });
       });
 
-      if (laborsToSave.length === 0) {
-        setImportError(
-          importErrors.length > 0
-            ? importErrors.slice(0, 8).join(" ")
-            : "No se encontraron filas importables en el archivo."
-        );
+      if (previewRows.length === 0) {
+        setImportError("No se encontraron filas importables en el archivo.");
         return;
       }
 
-      await saveLabors(laborsToSave, projectId);
-
-      if (hasWorkspaceSelection) {
-        getLaborGroups(laborQuery);
-        getMetrics(laborQuery);
-      }
-
-      if (importErrors.length > 0) {
-        setImportMessage(
-          `Se importaron ${laborsToSave.length} labores. Se omitieron ${importErrors.length} filas con error.`
-        );
-      } else {
-        setImportMessage(`Se importaron ${laborsToSave.length} labores con éxito.`);
-      }
+      setImportedRows(previewRows);
+      setCreateDrawerOpen(true);
     } catch {
       setImportError("No se pudo leer el archivo. Use .csv.");
     }
@@ -984,12 +953,19 @@ export function Tasks() {
       />
       <DrawerShell
         open={createDrawerOpen}
-        onClose={() => setCreateDrawerOpen(false)}
-        title="Nueva Labor"
+        onClose={() => {
+          setCreateDrawerOpen(false);
+          setImportedRows(undefined);
+        }}
+        title={importedRows ? "Importar labores" : "Nueva Labor"}
       >
         <TasksForm
           hideWorkspaceFilters
-          onCancel={() => setCreateDrawerOpen(false)}
+          initialRows={importedRows}
+          onCancel={() => {
+            setCreateDrawerOpen(false);
+            setImportedRows(undefined);
+          }}
         />
       </DrawerShell>
       <ArchivedDrawer
