@@ -149,7 +149,7 @@ export default [
       },
       {
         path: "database/customers/list",
-        element: <CustomersList />,
+        element: <Navigate to="/admin/database/projects/list" replace />,
       },
       {
         path: "database/projects/list",
