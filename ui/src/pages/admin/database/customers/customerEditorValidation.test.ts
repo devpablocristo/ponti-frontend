@@ -200,12 +200,13 @@ describe("validateCustomerIdentity", () => {
     ).toBeNull();
   });
 
-  it("blocks renaming the assigned customer to another existing customer's name", () => {
-    const err = validateCustomerIdentity(
-      { id: 17, actor_id: 201, name: "AGRO TUC" },
-      customerOptions
-    );
-    expect(err).toContain("AGRO TUC");
+  it("trusts an established customer slot even when the typed name belongs to another customer (BE handles the rename / link)", () => {
+    expect(
+      validateCustomerIdentity(
+        { id: 17, actor_id: 201, name: "AGRO TUC" },
+        customerOptions
+      )
+    ).toBeNull();
   });
 
   it("case 4: permits swapping to a different existing customer", () => {
@@ -258,14 +259,28 @@ describe("validateActorIdentity", () => {
     ).toBeNull();
   });
 
-  it("blocks renaming the assigned actor to another existing one's name", () => {
-    const err = validateActorIdentity(
-      "Responsables",
-      { id: 5, actor_id: 101, name: "MARIA LOPEZ" },
-      managerOptions
-    );
-    expect(err).toContain("Responsables");
-    expect(err).toContain("MARIA LOPEZ");
+  it("trusts an established legacy slot even when the typed name belongs to another actor (BE handles the rename / link)", () => {
+    expect(
+      validateActorIdentity(
+        "Responsables",
+        { id: 5, actor_id: 101, name: "MARIA LOPEZ" },
+        managerOptions
+      )
+    ).toBeNull();
+  });
+
+  it("trusts a legacy slot whose actor_id is null because the actor sync never ran", () => {
+    // Repro of the SOALEN SRL inversor bug: investor has a legacy id but
+    // no actor_id in the GET payload because legacy_actor_map has no row.
+    // The dropdown lists SOALEN SRL with another role (e.g. cliente). The
+    // editor must not block the save.
+    expect(
+      validateActorIdentity(
+        "Inversores",
+        { id: 600, actor_id: null, name: "SOALEN SRL" },
+        [{ id: 999, name: "SOALEN SRL" }]
+      )
+    ).toBeNull();
   });
 
   it("blocks a new manager whose typed name matches another actor", () => {

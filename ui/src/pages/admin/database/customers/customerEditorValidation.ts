@@ -384,8 +384,10 @@ type IdentityEntity = {
 // validateActorIdentity returns an error message when the typed name matches
 // an existing actor option that is NOT the one assigned to this slot. It is
 // the only duplicate guard kept in the editor after removing the explicit
-// "Nuevo" button: a slot may freely rename its assigned actor, but cannot
-// silently steal the identity of a different one.
+// "Nuevo" button: a brand-new slot cannot silently steal the identity of an
+// existing actor, but a slot that already carries a legacy id (manager.id,
+// investor.id, etc.) is treated as having established identity — its rename
+// is the user's intent and the BE resolves the legacy↔actor link.
 export function validateActorIdentity(
   label: string,
   entity: IdentityEntity,
@@ -393,6 +395,12 @@ export function validateActorIdentity(
 ): string | null {
   const name = entity.name.trim();
   if (!name) return null;
+
+  // Slot already has a legacy id → trust it; the BE will rename the linked
+  // actor if applicable. Without this short-circuit the editor incorrectly
+  // blocks renames when the legacy row has no sync entry yet (actor_id is
+  // null in the payload even though the slot is established).
+  if (entity.id) return null;
 
   const match = findEntityMatches(name, options);
   if (!match.exactMatch) return null;
@@ -407,15 +415,19 @@ export function validateActorIdentity(
   return `Ya existe "${match.exactMatch.name ?? name}" en ${label}. Seleccionalo desde la lista.`;
 }
 
-// validateCustomerIdentity is a thin wrapper around validateActorIdentity
-// for the project's customer slot. The semantics match the customer actor
-// options, which carry both `id` (actor id) and `customer_id` (legacy id).
+// validateCustomerIdentity is the customer-slot variant of
+// validateActorIdentity. Same rule: an established customer (id present) is
+// trusted; only brand-new customer slots are checked against the dropdown
+// for duplicate names.
 export function validateCustomerIdentity(
   customer: IdentityEntity,
   options: IdentityOption[]
 ): string | null {
   const name = customer.name.trim();
   if (!name) return null;
+
+  // Slot already has a customer id → trust it; BE handles the rename.
+  if (customer.id) return null;
 
   const match = findEntityMatches(name, options);
   if (!match.exactMatch) return null;
@@ -427,13 +439,14 @@ export function validateCustomerIdentity(
       ? match.exactMatch.customer_id
       : null;
   const assignedActorId = customer.actor_id ?? null;
-  const assignedCustomerId = customer.id ?? null;
 
   const sameByActor =
     assignedActorId !== null && matchedActorId === assignedActorId;
-  const sameByCustomer =
-    assignedCustomerId !== null && matchedCustomerId === assignedCustomerId;
-  if (sameByActor || sameByCustomer) return null;
+  if (sameByActor) return null;
+  // matchedCustomerId without an assigned customer.id (handled above) is
+  // unreachable here, but keep the variable accessible for callers reading
+  // the option shape.
+  void matchedCustomerId;
 
   return `Ya existe un cliente con el nombre "${
     match.exactMatch.name ?? name
