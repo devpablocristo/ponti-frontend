@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Plus, Trash2 } from "lucide-react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
@@ -37,6 +37,15 @@ interface PendingLaborImport {
   warnings: string[];
 }
 
+const emptyRow = (id: number): Labor => ({
+  id,
+  name: "",
+  category: "",
+  price: "",
+  contractor: "",
+  is_partial_price: false,
+});
+
 type TasksFormProps = {
   hideWorkspaceFilters?: boolean;
   onCancel?: () => void;
@@ -74,14 +83,6 @@ export default function TasksForm({
   };
   const initialSeedCount = initialRows && initialRows.length > 0 ? initialRows.length : 5;
   const nextIdRef = useRef(initialSeedCount);
-  const emptyRow = (id: number): Labor => ({
-    id,
-    name: "",
-    category: "",
-    price: "",
-    contractor: "",
-    is_partial_price: false,
-  });
   const [rows, setLabors] = useState<Labor[]>(() => seedRows());
   const hasImportedRows = Boolean(initialRows && initialRows.length > 0);
 
@@ -139,10 +140,10 @@ export default function TasksForm({
     }
   }, [projectId, getLabors]);
 
-  function cleanForm() {
+  const cleanForm = useCallback(() => {
     nextIdRef.current = 5;
     setLabors(Array.from({ length: 5 }, (_, i) => emptyRow(i)));
-  }
+  }, []);
 
   useEffect(() => {
     if (result !== "") {
@@ -155,7 +156,7 @@ export default function TasksForm({
     }
     setErrorMessage("");
     setSuccessMessage(result);
-  }, [result]);
+  }, [result, cleanForm]);
 
   useEffect(() => {
     if (error) {

@@ -61,7 +61,7 @@ export function parseCsv(content: string) {
   // Strip UTF-8 BOM written by csvexport.Write so the first header normalizes
   // cleanly. Strip the "sep=;" hint that Excel reads to pick a separator —
   // it is not a data row.
-  const cleaned = content.replace(/^﻿/, "");
+  const cleaned = content.replace(/^\uFEFF/, "");
   const lines = cleaned
     .split(/\r?\n/)
     .map((line) => line.trim())

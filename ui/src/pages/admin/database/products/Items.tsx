@@ -150,7 +150,7 @@ function parseCsvLine(line: string) {
 
 function parseCsv(content: string) {
   // Strip BOM + sep= hint so files exported by the BE re-import cleanly.
-  const cleaned = content.replace(/^﻿/, "");
+  const cleaned = content.replace(/^\uFEFF/, "");
   const lines = cleaned
     .split(/\r?\n/)
     .map((line) => line.trim())

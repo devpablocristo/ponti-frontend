@@ -40,8 +40,9 @@ describe("ponti-ui install guard", () => {
 
     const guardedPackages = getGuardedPackages(getPontiUiCommand(composeFile));
 
-    expect(guardedPackages).toContain("xlsx");
+    expect(guardedPackages.length).toBeGreaterThan(0);
     expect(guardedPackages).not.toContain("read-excel-file");
+    expect(guardedPackages).not.toContain("xlsx");
 
     for (const packageName of guardedPackages) {
       expect(

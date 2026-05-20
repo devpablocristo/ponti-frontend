@@ -59,7 +59,7 @@ type ActorsListProps = {
 
 function parseCsv(text: string) {
   // Strip BOM + sep= hint so files exported by the BE re-import cleanly.
-  const cleaned = text.replace(/^﻿/, "");
+  const cleaned = text.replace(/^\uFEFF/, "");
   const lines = cleaned
     .split(/\r?\n/)
     .map((line) => line.trim())
