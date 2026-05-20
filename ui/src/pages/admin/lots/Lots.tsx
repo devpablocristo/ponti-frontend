@@ -20,7 +20,6 @@ import useLots from "../../../hooks/useLots";
 import { LotsData, LotsDataUpdate } from "../../../hooks/useLots/types";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { Column } from "../types";
-import { LotDrawer } from "./components/LotDrawer";
 import { LotsHeader } from "./components/LotsHeader";
 import { LotsIndicators } from "./components/LotsIndicators";
 import {
@@ -45,9 +44,9 @@ function Lots() {
   const pagination = usePagination({ perPage: 10 });
   const resetPage = pagination.resetPage;
 
-  const [lot, setLot] = useState<LotsDataUpdate | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editorDrawerOpen, setEditorDrawerOpen] = useState(false);
+  const [editorContext, setEditorContext] = useState<{
+    initialProjectId: number | null;
+  } | null>(null);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -60,11 +59,7 @@ function Lots() {
     getLots,
     getLotsKpis,
     lots,
-    crops,
     getCrops,
-    createLot,
-    updateLot,
-    updateLotError,
     result,
     processing,
     error,
@@ -77,13 +72,11 @@ function Lots() {
 
   const {
     selectedCustomer,
-    selectedProject,
     projectId,
     selectedCampaignId,
     selectedField,
     fields,
     filters,
-    seasons,
     hasWorkspaceSelection,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const selectedFieldId = selectedField?.id;
@@ -203,12 +196,6 @@ function Lots() {
     reloadFromFirstPage();
   }, [reloadFromFirstPage, result]);
 
-  useEffect(() => {
-    if (!updateLotError) return;
-    setErrorMessage(updateLotError);
-    setSuccessMessage("");
-  }, [updateLotError]);
-
   const filteredLots = useMemo(
     () => (hasWorkspaceSelection ? filterLots(lots, columnsFilters) : []),
     [columnsFilters, hasWorkspaceSelection, lots]
@@ -235,23 +222,9 @@ function Lots() {
   const lotsAmount = filteredLots.length;
 
   const openEditDrawer = useCallback((item: LotsData) => {
-    setLot({
-      id: item.id,
-      field_id: item.field_id,
-      project_name: item.project_name,
-      field_name: item.field_name,
-      lot_name: item.lot_name,
-      previous_crop_id: item.previous_crop_id,
-      current_crop_id: item.current_crop_id,
-      variety: item.variety,
-      sowed_area: item.sowed_area ?? "",
-      dates: item.dates,
-      season: item.season,
-      updated_at: item.updated_at ?? new Date().toISOString(),
-    });
     setSuccessMessage("");
     setErrorMessage("");
-    setDrawerOpen(true);
+    setEditorContext({ initialProjectId: item.project_id });
   }, []);
 
   const bulk = useBulkActions<LotsData>({
@@ -293,56 +266,7 @@ function Lots() {
       return;
     }
 
-    setEditorDrawerOpen(true);
-  };
-
-  function handleLotChange<K extends keyof LotsDataUpdate>(
-    key: K,
-    value: LotsDataUpdate[K]
-  ) {
-    setLot((previousLot) => ({
-      ...previousLot,
-      id: previousLot?.id || 0,
-      lot_name: previousLot?.lot_name || "",
-      field_id: previousLot?.field_id || 0,
-      previous_crop_id: previousLot?.previous_crop_id || 0,
-      current_crop_id: previousLot?.current_crop_id || 0,
-      variety: previousLot?.variety || "",
-      sowed_area: previousLot?.sowed_area || "",
-      dates: previousLot?.dates || [],
-      season: previousLot?.season || "",
-      [key]: value,
-      updated_at: previousLot?.updated_at || new Date().toISOString(),
-    }));
-  }
-
-  const handleSave = () => {
-    if (!lot) return;
-
-    const invalidDate = lot.dates?.find(
-      (date) =>
-        date?.harvest_date && (!date.sowing_date || date.sowing_date === "")
-    );
-    if (invalidDate) {
-      setErrorMessage(
-        "Si hay fecha de cosecha, debe cargar también la fecha de siembra."
-      );
-      return;
-    }
-
-    if (!lot.sowed_area || lot.sowed_area === "0") {
-      setErrorMessage("Area de siembra obligatoria");
-      return;
-    }
-
-    setSuccessMessage("");
-    setErrorMessage("");
-    if (lot.id > 0) {
-      updateLot({ ...lot });
-      return;
-    }
-
-    createLot({ ...lot });
+    setEditorContext({ initialProjectId: selectedField?.project_id ?? projectId ?? null });
   };
 
   const handleExport = async () => {
@@ -534,37 +458,23 @@ function Lots() {
       <div className="relative mt-3">
         <LoadingOverlay show={processing} />
 
-        <LotDrawer
-          open={drawerOpen}
-          lot={lot}
-          selectedFieldName={selectedField?.name}
-          crops={crops}
-          seasons={seasons}
-          processing={processing}
-          errorMessage={errorMessage}
-          successMessage={successMessage}
-          onClose={() => setDrawerOpen(false)}
-          onDismissError={() => setErrorMessage("")}
-          onDismissSuccess={() => setSuccessMessage("")}
-          onLotChange={handleLotChange}
-          onSave={handleSave}
-        />
-
         <DrawerShell
-          open={editorDrawerOpen}
-          onClose={() => setEditorDrawerOpen(false)}
-          title="Nuevo Lote"
+          open={editorContext !== null}
+          onClose={() => setEditorContext(null)}
+          title={editorContext?.initialProjectId ? "Editar Proyecto" : "Nuevo Proyecto"}
         >
-          <CustomerEditor
-            embedded
-            mode="project"
-            customerId={selectedCustomer?.id ?? null}
-            initialProjectId={selectedField?.project_id ?? projectId ?? null}
-            onClose={() => {
-              setEditorDrawerOpen(false);
-              loadCurrentLots();
-            }}
-          />
+          {editorContext && (
+            <CustomerEditor
+              embedded
+              mode="project"
+              customerId={selectedCustomer?.id ?? null}
+              initialProjectId={editorContext.initialProjectId}
+              onClose={() => {
+                setEditorContext(null);
+                loadCurrentLots();
+              }}
+            />
+          )}
         </DrawerShell>
 
         <ArchivedDrawer

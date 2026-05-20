@@ -46,14 +46,13 @@ test("lotes carga datos reales, comercializacion y paginacion compartida", async
 
   const selectableLot = page.getByRole("checkbox", { name: /Seleccionar lote/ }).first();
   await selectableLot.check();
-	  await page
-	    .getByRole("toolbar", { name: "Acciones masivas" })
-	    .getByRole("button", { name: "Editar" })
-	    .click();
-	  await expect(page.getByRole("heading", { name: new RegExp(firstLotName.trim()) })).toBeVisible();
-	  await expect(page.locator('input[name="sowingDate1"]')).toBeVisible();
-	  await expect(page.locator('input[name="variety"]')).toBeVisible();
-	});
+  await page
+    .getByRole("toolbar", { name: "Acciones masivas" })
+    .getByRole("button", { name: "Editar" })
+    .click();
+  // The lot editor is now the unified project editor (CustomerEditor).
+  await expect(page.getByRole("heading", { name: "Editar Proyecto" })).toBeVisible();
+});
 
 test("nuevo lote sin campo especifico muestra warning estándar", async ({ page }) => {
   const lotsResponse = page.waitForResponse(
@@ -71,5 +70,5 @@ test("nuevo lote sin campo especifico muestra warning estándar", async ({ page 
   await expect(
     page.getByText("Para crear un lote, seleccioná un campo específico."),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Nuevo lote" })).not.toBeVisible();
+  await expect(page.getByRole("heading", { name: "Nuevo Proyecto" })).not.toBeVisible();
 });

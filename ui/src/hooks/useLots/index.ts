@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import * as actions from "./actions";
 import useLotsReducer from "./useLotsReducer";
 import { apiClient } from "@/api/client";
-import { Crop, LotsDataUpdate, Payload, LotKPIs } from "./types";
+import { Crop, Payload, LotKPIs } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
@@ -15,7 +15,6 @@ const useLots = () => {
   const [processingKpis, setProcessingKpis] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorKpis, setErrorKpis] = useState<string | null>(null);
-  const [updateLotError, setUpdateLotError] = useState<string | null>(null);
 
   const [processingTons, setProcessingTons] = useState(false);
   const [errorTons, setErrorTons] = useState<string | null>(null);
@@ -112,69 +111,6 @@ const useLots = () => {
       setProcessing(false);
     }
   }, [dispatch]);
-
-  const updateLot = React.useCallback(
-    async (lot: LotsDataUpdate) => {
-      setProcessing(true);
-      setUpdateLotError(null);
-      dispatch({
-        type: actions.SET_RESULT,
-        payload: "",
-      });
-
-      try {
-        const response = await apiClient.put<LotMutationResponse>(
-          `/lots/${lot.id}`,
-          lot
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT,
-            payload: "Se ha modificado el lote con éxito!",
-          });
-          return;
-        }
-
-        setUpdateLotError("Ocurrio un error en la modificacion del lote");
-      } catch (error) {
-        setUpdateLotError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
-      } finally {
-        setProcessing(false);
-      }
-    },
-    [dispatch]
-  );
-
-  const createLot = React.useCallback(
-    async (lot: LotsDataUpdate) => {
-      setProcessing(true);
-      setUpdateLotError(null);
-      dispatch({
-        type: actions.SET_RESULT,
-        payload: "",
-      });
-
-      try {
-        const response = await apiClient.post<LotMutationResponse>("/lots", lot);
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT,
-            payload: "Se ha creado el lote con éxito!",
-          });
-          return;
-        }
-
-        setUpdateLotError("Ocurrió un error en la creación del lote");
-      } catch (error) {
-        setUpdateLotError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
-      } finally {
-        setProcessing(false);
-      }
-    },
-    [dispatch]
-  );
 
   const getArchivedLots = React.useCallback(
     async (queryString: string) => {
@@ -289,8 +225,6 @@ const useLots = () => {
   return {
     lots,
     pageInfo,
-    createLot,
-    updateLot,
     updateTons,
     getLots,
     getArchivedLots,
@@ -302,7 +236,6 @@ const useLots = () => {
     getCrops,
     processing,
     error,
-    updateLotError,
     result,
     processingTons,
     errorTons,

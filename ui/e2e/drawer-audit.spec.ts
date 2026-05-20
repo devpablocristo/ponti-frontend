@@ -30,7 +30,7 @@ const scenarios: DrawerScenario[] = [
   {
     id: "lots-edit",
     route: "/admin/lots",
-    title: /LOTE|Nuevo lote/,
+    title: "Editar Proyecto",
     open: async (page) => {
       await page
         .getByRole("checkbox", { name: /Seleccionar lote/i })
