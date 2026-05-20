@@ -35,80 +35,13 @@ import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import ArchivedWorkOrders from "../database/work-orders/ArchivedWorkOrders";
 import TasksForm, { type Labor as LaborRow } from "../database/tasks/TasksForm";
+import {
+  getValueByAliases,
+  LABOR_HEADER_ALIASES,
+  normalizeText,
+  parseCsv,
+} from "../database/tasks/importUtils";
 
-const LABOR_HEADER_ALIASES = {
-  name: ["labor", "nombre", "name"],
-  category: ["rubro", "categoria", "category"],
-  price: ["precio", "precio_usd", "usd", "u$s"],
-  contractor: ["contratista", "contractor", "proveedor"],
-} as const;
-
-function normalizeText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, "_");
-}
-
-function parseCsvLine(line: string) {
-  const values: string[] = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-      continue;
-    }
-    if (char === "," && !insideQuotes) {
-      values.push(current.trim());
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-  values.push(current.trim());
-  return values;
-}
-
-function parseCsv(content: string) {
-  // Strip BOM + sep= hint so files exported by the BE re-import cleanly.
-  const cleaned = content.replace(/^﻿/, "");
-  const lines = cleaned
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !/^sep=.$/i.test(line));
-
-  if (lines.length < 2) return [];
-
-  const headers = parseCsvLine(lines[0]).map((h) => normalizeText(h));
-  return lines.slice(1).map((line) => {
-    const values = parseCsvLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] ?? "";
-    });
-    return row;
-  });
-}
-
-function getValueByAliases(row: Record<string, string>, aliases: readonly string[]) {
-  for (const alias of aliases) {
-    const normalizedAlias = normalizeText(alias);
-    if (row[normalizedAlias] !== undefined) {
-      return row[normalizedAlias];
-    }
-  }
-  return "";
-}
 
 const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
   Pendiente: {
@@ -647,7 +580,10 @@ export function Tasks() {
   useEffect(() => {
     setVisibleColumns(latestAllColumnKeysRef.current);
     resetPage();
-    getCategories("");
+    // Only labor categories (type_id=4) — the import lookup needs the id that
+    // TasksForm's dropdown will actually render. Loading all types could match
+    // a same-named category from another type and break the selection.
+    getCategories("type_id=4");
 
     if (!hasWorkspaceSelection) return;
 

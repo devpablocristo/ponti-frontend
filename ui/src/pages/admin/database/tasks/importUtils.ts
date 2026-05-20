@@ -9,7 +9,9 @@ export const parsePartialPrice = _parsePartialPrice;
 export const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
   category: ["rubro", "categoria", "category"],
-  price: ["precio", "precio_usd", "usd", "u$s"],
+  // "COSTO U$ /HA" comes from the project labor report export — same number as
+  // the catalog price, so it lets a re-imported report round-trip cleanly.
+  price: ["precio", "precio_usd", "usd", "u$s", "COSTO U$ /HA", "COSTO U$/HA"],
   contractor: ["contratista", "contractor", "proveedor"],
   priceStatus: [
     "estado_precio",

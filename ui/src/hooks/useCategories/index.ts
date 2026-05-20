@@ -4,7 +4,6 @@ import * as actions from "./actions";
 
 import { apiClient } from "@/api/client";
 import { TypeData, CategoryData } from "./types";
-import { SuccessResponse } from "@/api/types";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import useCategoriesReducer from "./useCategoriesReducer";
 
@@ -25,11 +24,14 @@ const useCategories = () => {
       }
 
       try {
-        const response = await apiClient.get<SuccessResponse<CategoryData[]>>(
-          "/categories" + queryParams
-        );
+        // BE returns `{data: [...], page_info: ...}` — no `success` field —
+        // so checking `response.success` (per the old SuccessResponse type)
+        // always failed and categories never loaded.
+        const response = await apiClient.get<{
+          data?: CategoryData[];
+        }>("/categories" + queryParams);
 
-        if (response.success) {
+        if (response.data) {
           dispatch({
             type: actions.SET_CATEGORIES,
             payload: response.data,
@@ -52,9 +54,9 @@ const useCategories = () => {
     setError(null);
 
     try {
-      const response = await apiClient.get<SuccessResponse<TypeData[]>>("/types");
+      const response = await apiClient.get<{ data?: TypeData[] }>("/types");
 
-      if (response.success) {
+      if (response.data) {
         dispatch({
           type: actions.SET_TYPES,
           payload: response.data,
