@@ -1241,7 +1241,14 @@ export default function CustomerEditor({
     const customerActorId = projectPayload.customer.actor_id ?? null;
     const match = findEntityMatches(projectPayload.customer.name, customerMatchOptions);
 
-    if (!customerId && !customerActorId && match.exactMatch) {
+    // Validaciones de "cliente duplicado / requiere confirmación" solo aplican
+    // cuando se está CREANDO. En modo edición (cliente o proyecto existente)
+    // el usuario sabe sobre qué entidad opera; no pedir confirmación.
+    const isEditing = customerOnly
+      ? isExistingId(selectedCustomerId)
+      : selectedProjectId !== NEW_VALUE && selectedProjectId !== "";
+
+    if (!isEditing && !customerId && !customerActorId && match.exactMatch) {
       toastError(
         `Ya existe el actor "${match.exactMatch.name}". Seleccionalo desde la lista para evitar duplicados.`
       );
@@ -1249,6 +1256,7 @@ export default function CustomerEditor({
     }
 
     if (
+      !isEditing &&
       !customerId &&
       !customerActorId &&
       match.requiresConfirmation &&
