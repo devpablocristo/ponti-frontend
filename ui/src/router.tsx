@@ -152,6 +152,10 @@ export default [
         element: <CustomersList />,
       },
       {
+        path: "database/projects/list",
+        element: <CustomersList projectsOnly />,
+      },
+      {
         path: "database/customers/archived",
         element: <ArchivedCustomers />,
       },

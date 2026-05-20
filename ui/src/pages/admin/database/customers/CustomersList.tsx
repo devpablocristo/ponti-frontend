@@ -186,7 +186,19 @@ async function loadProjectDetails(projects: RawProject[]) {
   );
 }
 
-export default function CustomersList() {
+type CustomersListProps = {
+  /**
+   * Si es true, la pantalla se centra en proyectos:
+   *   - lista solo filas de tipo project (sin customers vacíos)
+   *   - botón "+ Nuevo" crea proyecto (no cliente)
+   *   - títulos y copy adaptados
+   * Se monta desde `/admin/database/projects/list`. Si es false (default),
+   * comportamiento histórico de "Clientes y Proyectos" mezclados.
+   */
+  projectsOnly?: boolean;
+};
+
+export default function CustomersList({ projectsOnly = false }: CustomersListProps = {}) {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
@@ -225,8 +237,8 @@ export default function CustomersList() {
       allSelection.campaign ||
       allSelection.field,
   );
-  const mode: CustomerProjectMode = hasProjectScope ? "project" : "customer";
-  const isProjectMode = mode === "project";
+  const mode: CustomerProjectMode = projectsOnly || hasProjectScope ? "project" : "customer";
+  const isProjectMode = projectsOnly || mode === "project";
   const archivedShowsProjects = hasProjectScope;
 
   const refresh = useCallback(
@@ -585,9 +597,13 @@ export default function CustomersList() {
       <DrawerShell
         open={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
-        title="Nuevo Cliente"
+        title={projectsOnly ? "Nuevo Proyecto" : "Nuevo Cliente"}
       >
-        <CustomerEditor embedded onClose={() => setCreateDrawerOpen(false)} />
+        <CustomerEditor
+          embedded
+          mode={projectsOnly ? "project" : undefined}
+          onClose={() => setCreateDrawerOpen(false)}
+        />
       </DrawerShell>
 
       <DrawerShell
