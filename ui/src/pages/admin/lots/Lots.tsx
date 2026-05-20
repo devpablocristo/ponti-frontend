@@ -12,6 +12,7 @@ import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import { LOT_ENTITY as ENTITY } from "../entities";
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { apiClient } from "@/api/client";
 import useLots from "../../../hooks/useLots";
@@ -40,6 +41,7 @@ import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedLots from "../database/lots/ArchivedLots";
 
 function Lots() {
+  const navigate = useNavigate();
   const pagination = usePagination({ perPage: 10 });
   const resetPage = pagination.resetPage;
 
@@ -290,24 +292,9 @@ function Lots() {
       return;
     }
 
-    setMessage("");
-    setSuccessMessage("");
-    setErrorMessage("");
-    setLot({
-      id: 0,
-      field_id: selectedFieldId ?? 0,
-      project_name: selectedProject?.name ?? "",
-      field_name: selectedField?.name ?? "",
-      lot_name: "",
-      previous_crop_id: 0,
-      current_crop_id: 0,
-      variety: "",
-      sowed_area: "",
-      dates: [],
-      season: seasons.find((season) => season.id === selectedCampaignId)?.name ?? "",
-      updated_at: new Date().toISOString(),
-    });
-    setDrawerOpen(true);
+    if (selectedField?.project_id) {
+      navigate(`/admin/database/customers/${selectedField.project_id}`);
+    }
   };
 
   function handleLotChange<K extends keyof LotsDataUpdate>(
