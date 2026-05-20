@@ -21,7 +21,7 @@ export type ConfirmModalProps = {
   secondaryLabel?: string;
   /** Si se pasa, el botón primary se deshabilita hasta que el usuario escriba este string exacto. */
   requireTypeToConfirm?: string;
-  /** Slot opcional bajo el mensaje (ej: <DependencyError />). */
+  /** Slot opcional bajo el mensaje para detalle adicional. */
   extraContent?: ReactNode;
   /** Estado de processing: bloquea botones. */
   isSaving?: boolean;
@@ -31,7 +31,7 @@ export type ConfirmModalProps = {
  * Wrapper sobre `<BaseModal>` que estandariza confirmaciones destructivas o
  * decisivas. Mapea `severity` → color del botón primario, soporta
  * `requireTypeToConfirm` para hard-deletes críticos, y permite slot extra
- * para `<DependencyError />`.
+ * vía `extraContent`.
  */
 export function ConfirmModal({
   isOpen,
