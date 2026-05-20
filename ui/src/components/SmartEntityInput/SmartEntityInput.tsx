@@ -11,6 +11,7 @@ import { createPortal } from "react-dom";
 
 import { type EntityNameOption } from "../../lib/entityNameMatcher";
 import { fuzzySearchOptions } from "../../lib/fuzzySearch";
+import { formatProperName } from "../../lib/properName";
 
 type SmartEntityInputSize = "sm" | "md" | "lg" | "xs";
 type DropdownPosition = {
@@ -151,7 +152,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => handleSelectExisting(match)}
             >
-              <span className="min-w-0 truncate">{match.name}</span>
+              <span className="min-w-0 truncate">{formatProperName(match.name)}</span>
             </button>
           ))}
         </div>

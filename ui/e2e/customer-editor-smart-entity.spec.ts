@@ -122,22 +122,27 @@ test("cliente/sociedad muestra lista completa, filtra y selecciona", async ({ pa
   const dropdown = page.getByTestId("project_customer-smart-entity-dropdown");
 
   await customerInput.click();
-  await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).toBeVisible();
-  await expect(dropdown.getByRole("button", { name: "EL SUEÑO 25-26" })).toBeVisible();
+  // Mock data uses legacy uppercase / accented names ("AGRO LAJITAS 25-26",
+  // "EL SUEÑO 25-26"). The dropdown renders them title-cased via
+  // formatProperName ("Agro Lajitas 25 26" / "El Sueno 25 26").
+  await expect(dropdown.getByRole("button", { name: "Agro Lajitas 25 26" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "El Sueno 25 26" })).toBeVisible();
   // After the editor refactor the explicit "Nuevo" action no longer lives in
   // the dropdown — creation is implicit when the typed name has no match.
   await expect(dropdown.getByRole("button", { name: "Nuevo" })).toHaveCount(0);
 
-  await dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" }).click();
+  await dropdown.getByRole("button", { name: "Agro Lajitas 25 26" }).click();
+  // Selecting an existing option commits the raw (legacy) name to the input
+  // so the editor can match against the source dataset.
   await expect(customerInput).toHaveValue("AGRO LAJITAS 25-26");
 
   await customerInput.click();
   await customerInput.fill("sueno");
-  await expect(dropdown.getByRole("button", { name: "EL SUEÑO 25-26" })).toBeVisible();
-  await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).not.toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "El Sueno 25 26" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "Agro Lajitas 25 26" })).not.toBeVisible();
 
   await customerInput.fill("AGRO TUC");
-  await expect(dropdown.getByRole("button", { name: "AGRO TUC" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "Agro Tuc" })).toBeVisible();
 });
 
 test("fallo de actores no rompe la lista de clientes", async ({ page }) => {
@@ -147,5 +152,5 @@ test("fallo de actores no rompe la lista de clientes", async ({ page }) => {
   const dropdown = page.getByTestId("project_customer-smart-entity-dropdown");
   await page.getByLabel("Cliente / Sociedad").click();
 
-  await expect(dropdown.getByRole("button", { name: "AGRO LAJITAS 25-26" })).toBeVisible();
+  await expect(dropdown.getByRole("button", { name: "Agro Lajitas 25 26" })).toBeVisible();
 });
