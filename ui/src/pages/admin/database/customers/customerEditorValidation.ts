@@ -191,6 +191,16 @@ export function buildProjectPayloadForSave(
               errors.push(`fields[${index}].lease_type_value ${value.error}`);
             }
 
+            const leaseTypeId = Number(field.lease_type_id);
+            const requiresPercent = leaseTypeId === 1 || leaseTypeId === 2 || leaseTypeId === 4;
+            if (
+              requiresPercent &&
+              percent.value !== null &&
+              (percent.value <= 0 || percent.value > 100)
+            ) {
+              errors.push(`fields[${index}].lease_type_percent debe estar entre 1 y 100.`);
+            }
+
             return {
               ...field,
               id: idForPayload(field.id, options.editing),

@@ -913,6 +913,32 @@ export default function CustomerEditor({
     );
   };
 
+  const updateFieldLeasePercent = (fieldIndex: number, value: string) => {
+    setProjectDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            fields: prev.fields.map((field, idx) =>
+              idx === fieldIndex ? { ...field, lease_type_percent: value } : field
+            ),
+          }
+        : prev
+    );
+  };
+
+  const updateFieldLeaseValue = (fieldIndex: number, value: string) => {
+    setProjectDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            fields: prev.fields.map((field, idx) =>
+              idx === fieldIndex ? { ...field, lease_type_value: value } : field
+            ),
+          }
+        : prev
+    );
+  };
+
   const addField = () => {
     const newFieldId = -Date.now();
     setProjectDraft((prev) =>
@@ -1579,6 +1605,42 @@ export default function CustomerEditor({
                         allowCreate={false}
                         size="sm"
                       />
+                      {(field.lease_type_id === 1 ||
+                        field.lease_type_id === 2 ||
+                        field.lease_type_id === 4) && (
+                        <InputField
+                          label="Porcentaje (%)"
+                          name={`field_lease_percent_${fieldIndex}`}
+                          type="number"
+                          value={
+                            field.lease_type_percent === null ||
+                            field.lease_type_percent === undefined
+                              ? ""
+                              : String(field.lease_type_percent)
+                          }
+                          onChange={(e) =>
+                            updateFieldLeasePercent(fieldIndex, e.target.value)
+                          }
+                          size="sm"
+                        />
+                      )}
+                      {(field.lease_type_id === 3 || field.lease_type_id === 4) && (
+                        <InputField
+                          label="Valor (USD)"
+                          name={`field_lease_value_${fieldIndex}`}
+                          type="number"
+                          value={
+                            field.lease_type_value === null ||
+                            field.lease_type_value === undefined
+                              ? ""
+                              : String(field.lease_type_value)
+                          }
+                          onChange={(e) =>
+                            updateFieldLeaseValue(fieldIndex, e.target.value)
+                          }
+                          size="sm"
+                        />
+                      )}
                       <div className="space-y-2">
                         {field.investors.map((investor, investorIndex) => (
                           <div key={investorIndex} className="space-y-1.5">
