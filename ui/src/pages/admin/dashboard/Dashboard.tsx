@@ -15,7 +15,7 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useDashboard from "../../../hooks/useDashboard";
 import { DashboardData } from "../../../hooks/useDashboard/types";
 import { formatNumberAr } from "../utils";
-import { clearLocalStorage } from "../../../pages/login/context/useLocalStorage";
+import { clearLocalStorage } from "../../../lib/authStorage";
 
 interface DashboardIndicatorsProps {
   dashboard: DashboardData | null;

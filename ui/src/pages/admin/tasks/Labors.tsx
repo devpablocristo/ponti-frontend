@@ -1,5 +1,5 @@
 import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { Archive, Briefcase, Download, ClockIcon, CheckIcon, FileTextIcon, FileXIcon, Plus, SlidersHorizontal, Upload } from "lucide-react";
+import { Archive, Briefcase, ClockIcon, CheckIcon, Download, FileTextIcon, FileXIcon, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
@@ -14,7 +14,6 @@ import { useBulkActions } from "../../../hooks/useBulkActions";
 
 import useLabors from "../../../hooks/useLabors";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import useCategories from "../../../hooks/useCategories";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { InvoiceData, Metrics, LaborGroupData } from "../../../hooks/useLabors/types";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
@@ -29,18 +28,21 @@ import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
 import { WORKORDER_ENTITY } from "../entities";
-import { buildTimestampedFilename, downloadBlob, CSV_ACCEPT } from "../fileTransfer";
+import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import ArchivedWorkOrders from "../database/work-orders/ArchivedWorkOrders";
-import TasksForm, { type Labor as LaborRow } from "../database/tasks/TasksForm";
+import CreateOrder from "../workorders/CreateOrder";
+// El "Importar" de /admin/tasks NO importa el catálogo de labores
+// (eso está en /admin/database/labors). Acá las filas son las labores
+// aplicadas a Órdenes de Trabajo — mismo importer que /admin/work-orders,
+// solo cambia que el CSV viene sin columnas de insumos (items vacío).
 import {
-  getValueByAliases,
-  LABOR_HEADER_ALIASES,
-  normalizeText,
-  parseCsv,
-} from "../database/tasks/importUtils";
+  parseAndResolveWorkOrdersCsv,
+  WorkOrderPreviewRow,
+} from "../workorders/importWorkOrders";
+import ImportWorkOrdersPreview from "../workorders/ImportWorkOrdersPreview";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
 
 const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
@@ -178,7 +180,7 @@ function TasksIndicators({
   );
 }
 
-export function Tasks() {
+export function Labors() {
   const {
     getLaborGroups,
     laborGroups,
@@ -194,11 +196,6 @@ export function Tasks() {
     resultInvoice,
   } = useLabors();
   const { archiveOrder } = useWorkOrders();
-
-  const { categories, getCategories } = useCategories();
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [importMessage, setImportMessage] = useState<string | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
 
   const pagination = usePagination({ perPage: 10 });
   const resetPage = pagination.resetPage;
@@ -218,8 +215,14 @@ export function Tasks() {
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
-  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
-  const [importedRows, setImportedRows] = useState<LaborRow[] | undefined>(undefined);
+  const [createOrderDrawerOpen, setCreateOrderDrawerOpen] = useState(false);
+
+  // Import de OT (no de catálogo). El CSV de /admin/tasks tiene labores
+  // aplicadas a OTs — el mismo formato que el export de /admin/work-orders
+  // pero sin columnas de insumos. Reusamos el drawer de preview de OT.
+  const [importDrawerOpen, setImportDrawerOpen] = useState(false);
+  const [importRows, setImportRows] = useState<WorkOrderPreviewRow[]>([]);
+  const [importGlobalErrors, setImportGlobalErrors] = useState<string[]>([]);
 
   const {
     filters,
@@ -580,16 +583,12 @@ export function Tasks() {
   useEffect(() => {
     setVisibleColumns(latestAllColumnKeysRef.current);
     resetPage();
-    // Only labor categories (type_id=4) — the import lookup needs the id that
-    // TasksForm's dropdown will actually render. Loading all types could match
-    // a same-named category from another type and break the selection.
-    getCategories("type_id=4");
 
     if (!hasWorkspaceSelection) return;
 
     getLaborGroups(laborQuery);
     getMetrics(laborQuery);
-  }, [hasWorkspaceSelection, laborQuery, getLaborGroups, getMetrics, getCategories, resetPage]);
+  }, [hasWorkspaceSelection, laborQuery, getLaborGroups, getMetrics, resetPage]);
 
   const filteredTasks = useMemo(() => {
     if (!hasWorkspaceSelection) return [];
@@ -733,7 +732,7 @@ export function Tasks() {
     return date instanceof Date && !isNaN(date.getTime());
   };
 
-  const handleImportLaborsFromFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
@@ -743,63 +742,52 @@ export function Tasks() {
       return;
     }
 
-    const lowerName = file.name.toLowerCase();
-    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-
-    if (!isCsv) {
-      setImportError("Formato no soportado. Use .csv.");
-      return;
-    }
+    setWarningMessage(null);
+    setExportErrorMessage(null);
 
     try {
-      setImportError(null);
-      setImportMessage(null);
-
-      const text = await file.text();
-      const parsedRows = parseCsv(text);
-
-      if (parsedRows.length === 0) {
-        setImportError("El archivo no tiene datos válidos. Verifique encabezados y filas.");
-        return;
-      }
-
-      const categoryByName = new Map(categories.map((c) => [normalizeText(c.name), c]));
-
-      // Map every CSV row (good or bad) to a Labor row and hand them off to the
-      // editable preview in TasksForm. The user fixes invalid cells inline and
-      // hits Guardar — no row is silently dropped.
-      const previewRows: LaborRow[] = [];
-      parsedRows.forEach((rawRow) => {
-        const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
-        const categoryRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.category).trim();
-        const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
-        const contractor = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.contractor).trim();
-        if (!name && !categoryRaw && !priceRaw && !contractor) return;
-
-        const categoryByText = categoryByName.get(normalizeText(categoryRaw));
-        const categoryId = categoryByText?.id ?? Number(categoryRaw);
-        const priceValue = Number(priceRaw.replace(/\$/g, "").replace(",", "."));
-        previewRows.push({
-          id: previewRows.length,
-          name,
-          category:
-            categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
-          price:
-            !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : priceRaw,
-          contractor,
-          is_partial_price: false,
-        });
+      // El CSV de /admin/tasks es el mismo modelo que el de /admin/work-orders
+      // (labores aplicadas a OTs) — solo sin columnas de insumos. Reusamos
+      // el parser de OT: cada fila → una OT con items=[].
+      const { rows, globalErrors } = await parseAndResolveWorkOrdersCsv({
+        file,
+        projectId,
+        defaultFieldId: selectedField?.id,
       });
 
-      if (previewRows.length === 0) {
-        setImportError("No se encontraron filas importables en el archivo.");
+      if (rows.length === 0 && globalErrors.length > 0) {
+        setExportErrorMessage(globalErrors.join(" "));
         return;
       }
 
-      setImportedRows(previewRows);
-      setCreateDrawerOpen(true);
-    } catch {
-      setImportError("No se pudo leer el archivo. Use .csv.");
+      setImportRows(rows);
+      setImportGlobalErrors(globalErrors);
+      setImportDrawerOpen(true);
+    } catch (error) {
+      setExportErrorMessage(
+        extractErrorMessage(error, "No se pudo procesar el CSV. Use CSV válido."),
+      );
+    }
+  };
+
+  const handleImportCompleted = (result: {
+    imported: number;
+    errors: string[];
+  }) => {
+    setImportDrawerOpen(false);
+    setImportRows([]);
+    setImportGlobalErrors([]);
+
+    if (result.imported > 0) {
+      setResultInvoiceMessage(
+        result.errors.length
+          ? `Se importaron ${result.imported} órdenes. Se omitieron ${result.errors.length} filas.`
+          : `Se importaron ${result.imported} órdenes correctamente.`,
+      );
+      refreshLabors();
+    }
+    if (result.errors.length > 0) {
+      setExportErrorMessage(result.errors.slice(0, 5).join(" "));
     }
   };
 
@@ -830,13 +818,6 @@ export function Tasks() {
 
   return (
     <div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={CSV_ACCEPT}
-        onChange={handleImportLaborsFromFile}
-        className="hidden"
-      />
       <AppFilterBar
         filters={filters}
         actions={[
@@ -845,7 +826,8 @@ export function Tasks() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            onClick: () => fileInputRef.current?.click(),
+            accept: ".csv,text/csv",
+            onFileChange: handleImport,
           },
           {
             label: "Exportar",
@@ -871,14 +853,14 @@ export function Tasks() {
                 { projectId },
                 ["project"],
                 "crear",
-                "una labor",
+                "una orden de trabajo",
               );
               if (warning) {
                 setWarningMessage(warning);
                 return;
               }
               setWarningMessage(null);
-              setCreateDrawerOpen(true);
+              setCreateOrderDrawerOpen(true);
             },
           },
         ]}
@@ -887,23 +869,28 @@ export function Tasks() {
         message={warningMessage}
         onDismiss={() => setWarningMessage(null)}
       />
-      <DrawerShell
-        open={createDrawerOpen}
-        onClose={() => {
-          setCreateDrawerOpen(false);
-          setImportedRows(undefined);
-        }}
-        title={importedRows ? "Importar labores" : "Nueva Labor"}
-      >
-        <TasksForm
-          hideWorkspaceFilters
-          initialRows={importedRows}
-          onCancel={() => {
-            setCreateDrawerOpen(false);
-            setImportedRows(undefined);
+      <CreateOrder
+        drawerOpen={createOrderDrawerOpen}
+        setDrawerOpen={setCreateOrderDrawerOpen}
+        projectId={projectId}
+        selectedField={selectedField}
+        orderToDuplicate={null}
+        onOrderCreated={refreshLabors}
+      />
+      {projectId ? (
+        <ImportWorkOrdersPreview
+          open={importDrawerOpen}
+          onClose={() => {
+            setImportDrawerOpen(false);
+            setImportRows([]);
+            setImportGlobalErrors([]);
           }}
+          projectId={projectId}
+          rows={importRows}
+          globalErrors={importGlobalErrors}
+          onCompleted={handleImportCompleted}
         />
-      </DrawerShell>
+      ) : null}
       <ArchivedDrawer
         open={archivedDrawerOpen}
         title="Órdenes de trabajo archivadas (por labor)"
@@ -1052,7 +1039,6 @@ export function Tasks() {
             />
           </div>
         </EntityFormDrawer>
-        <SuccessBanner message={importMessage} variant="outlined" />
         {!showInvoiceModal && (
           <SuccessBanner message={resultInvoiceMessage} variant="outlined" />
         )}
@@ -1064,7 +1050,7 @@ export function Tasks() {
           />
         )}
         <ErrorBanner
-          message={importError || exportErrorMessage || error}
+          message={exportErrorMessage || error}
           variant="outlined"
           prefix="Error:"
         />

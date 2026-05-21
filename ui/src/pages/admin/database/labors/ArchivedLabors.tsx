@@ -17,11 +17,11 @@ const columns: Column<LaborInfo>[] = [
   },
 ];
 
-type ArchivedTasksProps = {
+type ArchivedLaborsProps = {
   onAfterRestore?: () => void;
 };
 
-export default function ArchivedTasks({ onAfterRestore }: ArchivedTasksProps = {}) {
+export default function ArchivedLabors({ onAfterRestore }: ArchivedLaborsProps = {}) {
   const {
     labors,
     getArchivedLabors,

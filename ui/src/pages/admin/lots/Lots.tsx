@@ -17,7 +17,7 @@ import { apiClient } from "@/api/client";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import CustomerEditor from "../database/customers/CustomerEditor";
 import useLots from "../../../hooks/useLots";
-import { LotsData, LotsDataUpdate } from "../../../hooks/useLots/types";
+import { LotsData } from "../../../hooks/useLots/types";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { Column } from "../types";
 import { LotsHeader } from "./components/LotsHeader";
@@ -30,15 +30,16 @@ import {
   mapApiLotIndicators,
 } from "./lotTableUtils";
 import { useLotColumns } from "./useLotColumns";
-import {
-  getValueByAliases,
-  parseCsv,
-  parseImportDate,
-} from "../products/importUtils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedLots from "../database/lots/ArchivedLots";
+import {
+  parseAndResolveLotsCsv,
+  LotPreviewRow,
+  ImportLotsResult,
+} from "./importLots";
+import ImportLotsPreview from "./ImportLotsPreview";
 
 function Lots() {
   const pagination = usePagination({ perPage: 10 });
@@ -51,6 +52,13 @@ function Lots() {
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Drawer del preview del import. Mismo patrón que `/admin/work-orders`:
+  // parseamos el CSV, resolvemos lotes+cultivos, mostramos la tabla y dejamos
+  // al usuario destildar las filas con error antes de PUTear.
+  const [importDrawerOpen, setImportDrawerOpen] = useState(false);
+  const [importRows, setImportRows] = useState<LotPreviewRow[]>([]);
+  const [importGlobalErrors, setImportGlobalErrors] = useState<string[]>([]);
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>(
     {}
   );
@@ -60,6 +68,7 @@ function Lots() {
     getLotsKpis,
     lots,
     getCrops,
+    crops,
     result,
     processing,
     error,
@@ -291,6 +300,7 @@ function Lots() {
 
   const handleImport = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
 
     if (!projectId) {
@@ -298,106 +308,48 @@ function Lots() {
       return;
     }
 
-    try {
-      setMessage("");
-      setErrorMessage("");
-      setSuccessMessage("");
+    setMessage("");
+    setErrorMessage("");
+    setSuccessMessage("");
 
-      const rows = parseCsv(await file.text());
-      if (rows.length === 0) {
-        setErrorMessage("El archivo no tiene lotes válidos. Use CSV con encabezados.");
+    try {
+      const { rows, globalErrors } = await parseAndResolveLotsCsv({
+        file,
+        projectId,
+        fallbackLots: lots,
+        crops,
+      });
+
+      if (rows.length === 0 && globalErrors.length > 0) {
+        setErrorMessage(globalErrors.join(" "));
         return;
       }
 
-      const errors: string[] = [];
-      let imported = 0;
-
-      for (const [index, row] of rows.entries()) {
-        const rowNumber = index + 2;
-        const rawId = getValueByAliases(row, ["id", "lot_id", "lote_id"]);
-        const rawName = getValueByAliases(row, ["lote", "lot", "nombre", "lot_name"]);
-        const target = rawId
-          ? lots.find((item) => item.id === Number(rawId))
-          : lots.find(
-              (item) =>
-                item.lot_name.trim().toLowerCase() === rawName.trim().toLowerCase() &&
-                (!selectedFieldId || item.field_id === selectedFieldId),
-            );
-
-        if (!target) {
-          errors.push(`Fila ${rowNumber}: no se encontró el lote "${rawName || rawId}".`);
-          continue;
-        }
-
-        const sowedArea = getValueByAliases(row, [
-          "hectareas",
-          "hectáreas",
-          "superficie",
-          "superficie_has",
-          "sowed_area",
-        ]);
-        const currentCrop = getValueByAliases(row, [
-          "cultivo_actual_id",
-          "current_crop_id",
-        ]);
-        const previousCrop = getValueByAliases(row, [
-          "cultivo_anterior_id",
-          "previous_crop_id",
-        ]);
-        const sowingDate = parseImportDate(
-          getValueByAliases(row, ["fecha_siembra", "sowing_date"]),
-        );
-        const harvestDate = parseImportDate(
-          getValueByAliases(row, ["fecha_cosecha", "harvest_date"]),
-        );
-
-        const payload: LotsDataUpdate = {
-          id: target.id,
-          field_id: target.field_id,
-          project_name: target.project_name,
-          field_name: target.field_name,
-          lot_name: rawName || target.lot_name,
-          previous_crop_id: previousCrop ? Number(previousCrop) : target.previous_crop_id,
-          current_crop_id: currentCrop ? Number(currentCrop) : target.current_crop_id,
-          variety: getValueByAliases(row, ["variedad", "variety"]) || target.variety || "",
-          sowed_area: sowedArea || target.sowed_area || target.hectares || "0",
-          dates:
-            sowingDate || harvestDate
-              ? [
-                  {
-                    sowing_date: sowingDate || target.dates?.[0]?.sowing_date || "",
-                    harvest_date: harvestDate || target.dates?.[0]?.harvest_date || null,
-                    sequence: 1,
-                  },
-                ]
-              : target.dates || [],
-          season: getValueByAliases(row, ["periodo", "campaña", "season"]) || target.season || "",
-          updated_at: target.updated_at ?? new Date().toISOString(),
-        };
-
-        if (!payload.sowed_area || Number(payload.sowed_area) <= 0) {
-          errors.push(`Fila ${rowNumber}: falta superficie/hectáreas.`);
-          continue;
-        }
-
-        await apiClient.put(`/lots/${target.id}`, payload);
-        imported += 1;
-      }
-
-      if (imported > 0) {
-        setSuccessMessage(
-          errors.length
-            ? `Se importaron ${imported} lotes. Se omitieron ${errors.length} filas.`
-            : `Se importaron ${imported} lotes correctamente.`,
-        );
-        reloadFromFirstPage();
-      }
-
-      if (errors.length > 0) {
-        setErrorMessage(errors.slice(0, 5).join(" "));
-      }
+      // Abrimos el drawer aunque haya globalErrors: el usuario los ve arriba
+      // y puede igual revisar las filas.
+      setImportRows(rows);
+      setImportGlobalErrors(globalErrors);
+      setImportDrawerOpen(true);
     } catch {
-      setErrorMessage("No se pudo importar lotes. Use CSV válido.");
+      setErrorMessage("No se pudo procesar el CSV. Use CSV válido.");
+    }
+  };
+
+  const handleImportCompleted = (result: ImportLotsResult) => {
+    setImportDrawerOpen(false);
+    setImportRows([]);
+    setImportGlobalErrors([]);
+
+    if (result.imported > 0) {
+      setSuccessMessage(
+        result.errors.length
+          ? `Se crearon ${result.imported} lotes. Se omitieron ${result.errors.length} filas.`
+          : `Se crearon ${result.imported} lotes correctamente.`,
+      );
+      reloadFromFirstPage();
+    }
+    if (result.errors.length > 0) {
+      setErrorMessage(result.errors.slice(0, 5).join(" "));
     }
   };
 
@@ -484,6 +436,17 @@ function Lots() {
         >
           <ArchivedLots onAfterRestore={loadCurrentLots} />
         </ArchivedDrawer>
+        <ImportLotsPreview
+          open={importDrawerOpen}
+          onClose={() => {
+            setImportDrawerOpen(false);
+            setImportRows([]);
+            setImportGlobalErrors([]);
+          }}
+          rows={importRows}
+          globalErrors={importGlobalErrors}
+          onCompleted={handleImportCompleted}
+        />
 
         {!hasWorkspaceSelection ? (
           <EmptyState

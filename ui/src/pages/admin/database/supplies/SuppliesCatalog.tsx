@@ -184,13 +184,13 @@ function getValueByAliases(
   return "";
 }
 
-type ItemsProps = {
+type SuppliesCatalogProps = {
   embedded?: boolean;
   onCancel?: () => void;
   onSaved?: (message: string) => void;
 };
 
-export default function Items({ embedded = false, onCancel, onSaved }: ItemsProps) {
+export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }: SuppliesCatalogProps) {
   const { saveSupplies, result, error, supplies, getSupplies } = useSupplies();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const confirm = useConfirmDialog();
@@ -795,7 +795,7 @@ export default function Items({ embedded = false, onCancel, onSaved }: ItemsProp
                 variant="primary"
                 size="sm"
                 className="text-sm font-medium flex items-center gap-1"
-                href="/admin/database/items/list"
+                href="/admin/database/supplies/list"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

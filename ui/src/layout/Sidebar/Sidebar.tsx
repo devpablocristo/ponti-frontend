@@ -283,7 +283,7 @@ const menuItems: MenuItem[] = [
         />
       </svg>
     ),
-    route: "/admin/products",
+    route: "/admin/supply-movements",
   },
   {
     name: "Stock",

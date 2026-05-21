@@ -4,9 +4,9 @@ import { Navigate } from "react-router-dom";
 import { BaseLayout } from "./layout/BaseLayout";
 import SignInPage from "./pages/login/Login";
 import { Dashboard } from "./pages/admin/dashboard/Dashboard";
-import { Products } from "./pages/admin/products/Products";
+import { SupplyMovements } from "./pages/admin/supply-movements/SupplyMovements";
 import { Profile } from "./pages/admin/profile/Profile";
-import { Tasks } from "./pages/admin/tasks/Tasks";
+import { Labors } from "./pages/admin/tasks/Labors";
 import { WorkOrders } from "./pages/admin/workorders/WorkOrders";
 import { Stock } from "./pages/admin/stock/Stock";
 import Access from "./pages/admin/access/Access";
@@ -26,20 +26,20 @@ import ManagersList from "./pages/admin/database/managers/ManagersList";
 import ArchivedCampaigns from "./pages/admin/database/campaigns/ArchivedCampaigns";
 import CampaignsList from "./pages/admin/database/campaigns/CampaignsList";
 import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
-import DatabaseTasksForm from "./pages/admin/database/tasks/TasksForm";
+import DatabaseLaborsCatalog from "./pages/admin/database/labors/LaborsCatalog";
 import Lots from "./pages/admin/lots/Lots";
-import Items from "./pages/admin/database/products/Items";
+import SuppliesCatalog from "./pages/admin/database/supplies/SuppliesCatalog";
 import DollarForm from "./pages/admin/database/dollar/DollarForm";
 import CommerceForm from "./pages/admin/database/commerce/CommerceForm";
-import ListItems from "./pages/admin/database/products/List";
-import ListTasks from "./pages/admin/database/tasks/List";
-import ArchivedTasks from "./pages/admin/database/tasks/ArchivedTasks";
+import ListSupplies from "./pages/admin/database/supplies/List";
+import ListTasks from "./pages/admin/database/labors/List";
+import ArchivedLabors from "./pages/admin/database/labors/ArchivedLabors";
 import ByFieldOrCropReport from "./pages/admin/reports/ByFieldOrCropReport.tsx";
 import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
 import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionReportV2.tsx";
 import AIAssistant from "./pages/admin/ai-assistant/AIAssistant";
 import Notifications from "./pages/admin/notifications/Notifications";
-import ArchivedSupplyMovements from "./pages/admin/products/ArchivedSupplyMovements";
+import ArchivedSupplyMovements from "./pages/admin/supply-movements/ArchivedSupplyMovements";
 import ActorsList from "./pages/admin/database/actors/ActorsList";
 import ArchivedActors from "./pages/admin/database/actors/ArchivedActors";
 import DuplicateActors from "./pages/admin/database/actors/DuplicateActors";
@@ -96,12 +96,12 @@ export default [
         element: <Lots />,
       },
       {
-        path: "products",
-        element: <Products />,
+        path: "supply-movements",
+        element: <SupplyMovements />,
       },
       {
         path: "tasks",
-        element: <Tasks />,
+        element: <Labors />,
       },
       {
         path: "stock",
@@ -200,7 +200,7 @@ export default [
         element: <ArchivedWorkOrders />,
       },
       {
-        path: "products/archived",
+        path: "supply-movements/archived",
         element: <ArchivedSupplyMovements />,
       },
       {
@@ -240,24 +240,24 @@ export default [
         element: <DataIntegrity />,
       },
       {
-        path: "database/tasks",
-        element: <DatabaseTasksForm />,
+        path: "database/labors",
+        element: <DatabaseLaborsCatalog />,
       },
       {
-        path: "database/items",
-        element: <Items />,
+        path: "database/supplies",
+        element: <SuppliesCatalog />,
       },
       {
-        path: "database/items/list",
-        element: <ListItems editorOnly />,
+        path: "database/supplies/list",
+        element: <ListSupplies editorOnly />,
       },
       {
-        path: "database/tasks/list",
+        path: "database/labors/list",
         element: <ListTasks editorOnly />,
       },
       {
-        path: "database/tasks/archived",
-        element: <ArchivedTasks />,
+        path: "database/labors/archived",
+        element: <ArchivedLabors />,
       },
       {
         path: "database/dollar",

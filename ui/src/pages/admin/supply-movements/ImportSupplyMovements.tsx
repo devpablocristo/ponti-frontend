@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { DrawerFormActions } from "../../../components/Drawer/DrawerFormActions";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
+import { Checkbox } from "../../../components/Input/Checkbox";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useProviders from "../../../hooks/useProviders";
 import useSupplies from "../../../hooks/useSupplies";
-import useSupplyMovements from "../../../hooks/useSupplyMovement";
+import useSupplyMovements from "../../../hooks/useSupplyMovements";
 import { apiClient } from "@/api/client";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { replaceSupplyIdsWithNames } from "../utils";
@@ -91,7 +93,30 @@ type PreviewRow = {
   destinationProjectId?: number;
   destinationCampaignId?: number;
 
+  // `existing: true` cuando el remito + insumo (+ proyecto destino si es
+  // movimiento interno) ya existe en el proyecto. El importador de archivos
+  // nunca actualiza datos repetidos — la fila se marca amarilla, el checkbox
+  // queda deshabilitado y no se envía en el submit.
+  existing: boolean;
   errors: string[];
+};
+
+type Filter = "all" | "ok" | "errors" | "existing";
+
+function statusOf(row: PreviewRow): "ok" | "error" | "existing" {
+  if (row.existing) return "existing";
+  if (row.errors.length > 0) return "error";
+  return "ok";
+}
+
+// Entry shape mínima del BFF `/supply_movements/:projectId` para detectar
+// duplicados. No tipamos todos los campos — solo los que importan para el
+// match key.
+type ExistingMovementEntry = {
+  reference_number?: string;
+  supply_name?: string;
+  entry_type?: string;
+  destination_project_id?: number | null;
 };
 
 type CustomerOption = {
@@ -158,6 +183,13 @@ export default function ImportSupplyMovements({
   const [lookupReady, setLookupReady] = useState(false);
   const [importAttempted, setImportAttempted] = useState(false);
 
+  // Set de keys de movimientos ya existentes en el proyecto. Se fetcheó
+  // directo del BFF (sin pasar por el hook de listing) para no pisar el
+  // estado de la página `/admin/supply-movements`.
+  const [existingKeys, setExistingKeys] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Record<number, boolean>>({});
+  const [filter, setFilter] = useState<Filter>("all");
+
   const investors = useMemo(
     () =>
       selectedProject?.investors
@@ -173,10 +205,51 @@ export default function ImportSupplyMovements({
 
     let cancelled = false;
 
+    // Fetch directo al BFF (sin pasar por `useSupplyMovements.getSupplyMovements`
+    // para no pisar el estado de la página listadora).
+    const fetchExistingMovements = async (): Promise<ExistingMovementEntry[]> => {
+      try {
+        const body = await apiClient.get<{
+          success?: boolean;
+          data?: { entries?: ExistingMovementEntry[] };
+        }>(`/supply_movements/${projectId}`);
+        return body?.data?.entries ?? [];
+      } catch {
+        return [];
+      }
+    };
+
     const loadLookups = async () => {
       setLookupReady(false);
       try {
-        await Promise.all([getProject(projectId), getProviders(""), getSupplies(projectId)]);
+        const [, , , existing] = await Promise.all([
+          getProject(projectId),
+          getProviders(""),
+          getSupplies(projectId),
+          fetchExistingMovements(),
+        ]);
+
+        if (!cancelled) {
+          // Misma clave de dedup que usamos dentro del CSV en el parser:
+          //   - movimientos internos: ref+supply+destination_project_id
+          //   - resto: ref+supply
+          // Se compara contra los entries existentes del BE (entry_type es
+          // el equivalente al movement_type canonical).
+          const next = new Set<string>();
+          for (const e of existing) {
+            const ref = e.reference_number ?? "";
+            const supply = e.supply_name ?? "";
+            if (!ref || !supply) continue;
+            const refKey = normalizeText(ref);
+            const supplyKey = normalizeText(supply);
+            const isInternal = (e.entry_type ?? "") === "Movimiento interno";
+            const key = isInternal
+              ? `${refKey}::${supplyKey}::${e.destination_project_id ?? 0}`
+              : `${refKey}::${supplyKey}`;
+            next.add(key);
+          }
+          setExistingKeys(next);
+        }
       } finally {
         if (!cancelled) {
           setLookupReady(true);
@@ -198,6 +271,9 @@ export default function ImportSupplyMovements({
       setParsedFileKey("");
       setLookupReady(false);
       setImportAttempted(false);
+      setExistingKeys(new Set());
+      setSelected({});
+      setFilter("all");
     }
   }, [open]);
 
@@ -478,18 +554,32 @@ export default function ImportSupplyMovements({
             }
           }
 
+          // Dedup contra DB y dentro del CSV. Si el remito+insumo ya existe
+          // en el proyecto (o aparece en una fila anterior del mismo CSV),
+          // marcamos esta fila como `existing` → amarilla, checkbox bloqueado.
+          // Regla del producto: el importador de archivos nunca actualiza.
+          let isExisting = false;
           if (rawReferenceNumber && supply) {
+            const refKey = normalizeText(rawReferenceNumber);
+            const supplyKey = normalizeText(supply.name);
+            const dbKey =
+              movementType === "Movimiento interno"
+                ? `${refKey}::${supplyKey}::${destinationProjectId ?? 0}`
+                : `${refKey}::${supplyKey}`;
+
+            if (existingKeys.has(dbKey)) {
+              isExisting = true;
+            }
+
             const duplicateKey =
               movementType === "Movimiento interno"
-                ? `${normalizeText(rawReferenceNumber)}::${supply.id}::${destinationProjectId ?? 0}`
-                : `${normalizeText(rawReferenceNumber)}::${supply.id}`;
+                ? `${refKey}::${supply.id}::${destinationProjectId ?? 0}`
+                : `${refKey}::${supply.id}`;
             const firstIndex = duplicateRowsByKey.get(duplicateKey);
             if (firstIndex !== undefined) {
-              const duplicateMessage = `Fila ${rowIndex}: el remito "${rawReferenceNumber}" repite el insumo "${supply.name}".`;
-              errors.push(duplicateMessage);
-              nextRows[firstIndex].errors.push(
-                `Fila ${nextRows[firstIndex].rowIndex}: el remito "${rawReferenceNumber}" repite el insumo "${supply.name}".`
-              );
+              // Duplicado dentro del CSV: la primera fila se queda, las
+              // siguientes se marcan amarillas también — solo una pasa.
+              isExisting = true;
             } else {
               duplicateRowsByKey.set(duplicateKey, nextRows.length);
             }
@@ -515,12 +605,18 @@ export default function ImportSupplyMovements({
             destinationProjectId,
             destinationCampaignId,
 
+            existing: isExisting,
             errors,
           });
         });
 
         if (!cancelled) {
           setPreviewRows(nextRows);
+          // Pre-tildamos solo las filas OK. Errores y duplicadas quedan
+          // destildadas; las duplicadas además tienen checkbox deshabilitado.
+          const initialSel: Record<number, boolean> = {};
+          for (const r of nextRows) initialSel[r.rowIndex] = statusOf(r) === "ok";
+          setSelected(initialSel);
           setParsedFileKey(fileKey);
         }
       } catch {
@@ -548,9 +644,48 @@ export default function ImportSupplyMovements({
     supplies,
     selectedProject,
     projectId,
+    existingKeys,
   ]);
 
-  const rowErrors = useMemo(() => previewRows.flatMap((row) => row.errors), [previewRows]);
+  const counts = useMemo(() => {
+    let ok = 0;
+    let errs = 0;
+    let existing = 0;
+    for (const r of previewRows) {
+      const s = statusOf(r);
+      if (s === "ok") ok += 1;
+      else if (s === "error") errs += 1;
+      else existing += 1;
+    }
+    return { ok, errs, existing, total: previewRows.length };
+  }, [previewRows]);
+
+  const filteredRows = useMemo(() => {
+    if (filter === "all") return previewRows;
+    return previewRows.filter(
+      (r) => statusOf(r) === (filter === "errors" ? "error" : filter),
+    );
+  }, [filter, previewRows]);
+
+  const selectedCount = useMemo(
+    () => previewRows.filter((r) => selected[r.rowIndex]).length,
+    [previewRows, selected],
+  );
+
+  const toggleRow = (rowIndex: number) => {
+    setSelected((prev) => ({ ...prev, [rowIndex]: !prev[rowIndex] }));
+  };
+
+  const toggleAllFiltered = () => {
+    const toggleable = filteredRows.filter((r) => !r.existing);
+    if (toggleable.length === 0) return;
+    const allOn = toggleable.every((r) => selected[r.rowIndex]);
+    setSelected((prev) => {
+      const next = { ...prev };
+      for (const r of toggleable) next[r.rowIndex] = !allOn;
+      return next;
+    });
+  };
 
   const displayError = useMemo(() => {
     if (parseError) return parseError;
@@ -597,12 +732,17 @@ export default function ImportSupplyMovements({
   }, [open, importAttempted, resultCreation, onImported]);
 
   const handleImport = () => {
-    if (previewRows.length === 0 || rowErrors.length > 0) return;
+    // Solo filas seleccionadas. Regla del producto: las filas `existing`
+    // nunca se mandan (red de seguridad — el checkbox ya está deshabilitado).
+    const toSubmit = previewRows.filter(
+      (r) => selected[r.rowIndex] && !r.existing && r.errors.length === 0,
+    );
+    if (toSubmit.length === 0) return;
 
     setImportAttempted(true);
     saveImportedSupplyMovement(projectId, {
       mode: "strict",
-      items: previewRows.map((row) => ({
+      items: toSubmit.map((row) => ({
         movement_type: row.movementType,
         movement_date: new Date(row.movementDate),
         reference_number: row.referenceNumber,
@@ -636,10 +776,14 @@ export default function ImportSupplyMovements({
       footer={
         <DrawerFormActions
           cancelLabel="Cancelar"
-          submitLabel={processingCreation ? "Importando..." : "Confirmar Importacion"}
+          submitLabel={
+            processingCreation
+              ? "Importando..."
+              : `Importar ${selectedCount} movimientos`
+          }
           onCancel={onClose}
           onSubmit={handleImport}
-          disabled={processingCreation || previewRows.length === 0 || rowErrors.length > 0}
+          disabled={processingCreation || selectedCount === 0}
         />
       }
     >
@@ -654,30 +798,52 @@ export default function ImportSupplyMovements({
         </ErrorBanner>
       )}
 
-      {rowErrors.length > 0 && (
-        <ErrorBanner>
-          <span className="font-semibold">
-            Se detectaron {rowErrors.length} error
-            {rowErrors.length !== 1 ? "es" : ""} antes de guardar:
-          </span>
-          <ul className="mt-2 list-disc pl-5">
-            {rowErrors.slice(0, 10).map((rowError, index) => (
-              <li key={`${rowError}-${index}`}>{rowError}</li>
-            ))}
-          </ul>
-          {rowErrors.length > 10 && (
-            <p className="mt-2">
-              Y {rowErrors.length - 10} error
-              {rowErrors.length - 10 !== 1 ? "es" : ""} mas.
-            </p>
-          )}
-        </ErrorBanner>
-      )}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <FilterChip
+          label={`Todas (${counts.total})`}
+          active={filter === "all"}
+          onClick={() => setFilter("all")}
+        />
+        <FilterChip
+          label={`Listas (${counts.ok})`}
+          active={filter === "ok"}
+          tone="green"
+          onClick={() => setFilter("ok")}
+        />
+        <FilterChip
+          label={`Errores (${counts.errs})`}
+          active={filter === "errors"}
+          tone="red"
+          onClick={() => setFilter("errors")}
+        />
+        <FilterChip
+          label={`Ya existen (${counts.existing})`}
+          active={filter === "existing"}
+          tone="yellow"
+          onClick={() => setFilter("existing")}
+        />
+      </div>
 
       <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="sticky top-0 bg-gray-50">
             <tr>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">
+                {(() => {
+                  const toggleable = filteredRows.filter((r) => !r.existing);
+                  return (
+                    <Checkbox
+                      checked={
+                        toggleable.length > 0 &&
+                        toggleable.every((r) => selected[r.rowIndex])
+                      }
+                      disabled={toggleable.length === 0}
+                      onChange={toggleAllFiltered}
+                    />
+                  );
+                })()}
+              </th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700">Estado</th>
               <th className="px-3 py-3 text-left font-semibold text-gray-700">Fila</th>
               <th className="px-3 py-3 text-left font-semibold text-gray-700">Ingreso</th>
               <th className="px-3 py-3 text-left font-semibold text-gray-700">Fecha</th>
@@ -689,59 +855,129 @@ export default function ImportSupplyMovements({
               <th className="px-3 py-3 text-left font-semibold text-gray-700">Cliente destino</th>
               <th className="px-3 py-3 text-left font-semibold text-gray-700">Proyecto destino</th>
               <th className="px-3 py-3 text-left font-semibold text-gray-700">Campaña destino</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Estado</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
-            {previewRows.length === 0 ? (
+            {filteredRows.length === 0 ? (
               <tr>
-                <td colSpan={12} className="px-4 py-8 text-center text-gray-500">
-                  No hay filas importadas para previsualizar.
+                <td colSpan={13} className="px-4 py-8 text-center text-gray-500">
+                  No hay filas en esta vista.
                 </td>
               </tr>
             ) : (
-              previewRows.map((row) => (
-                <tr key={`${row.rowIndex}-${row.referenceNumber}-${row.supplyName}`}>
-                  <td className="px-3 py-3 align-top text-gray-700">{row.rowIndex}</td>
-                  <td className="px-3 py-3 align-top text-gray-700">{row.movementType}</td>
-                  <td className="px-3 py-3 align-top text-gray-700">{row.movementDate || "—"}</td>
-                  <td className="px-3 py-3 align-top font-medium text-gray-900">
-                    {row.referenceNumber || "—"}
-                  </td>
-                  <td className="px-3 py-3 align-top text-gray-700">{row.providerName || "—"}</td>
-                  <td className="px-3 py-3 align-top text-gray-700">{row.investorName || "—"}</td>
-                  <td className="px-3 py-3 align-top text-gray-700">{row.supplyName || "—"}</td>
-                  <td className="px-3 py-3 align-top text-gray-700">{row.quantity || "—"}</td>
-                  <td className="px-3 py-3 align-top text-gray-700">
-                    {row.destinationCustomerName || "—"}
-                  </td>
-                  <td className="px-3 py-3 align-top text-gray-700">
-                    {row.destinationProjectName || "—"}
-                  </td>
-                  <td className="px-3 py-3 align-top text-gray-700">
-                    {row.destinationCampaignName || "—"}
-                  </td>
-                  <td className="px-3 py-3 align-top">
-                    {row.errors.length > 0 ? (
-                      <div className="space-y-1">
-                        {row.errors.map((error) => (
-                          <p key={error} className="text-xs text-red-700">
-                            {replaceSupplyIdsWithNames(error, supplies)}
-                          </p>
-                        ))}
-                      </div>
-                    ) : (
-                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                        Lista para importar
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
+              filteredRows.map((row) => {
+                const status = statusOf(row);
+                const bg =
+                  status === "error"
+                    ? "bg-red-50"
+                    : status === "existing"
+                      ? "bg-amber-50"
+                      : "";
+                return (
+                  <tr
+                    key={`${row.rowIndex}-${row.referenceNumber}-${row.supplyName}`}
+                    className={bg}
+                  >
+                    <td className="px-3 py-3 align-top">
+                      <Checkbox
+                        checked={!row.existing && !!selected[row.rowIndex]}
+                        disabled={row.existing}
+                        title={
+                          row.existing
+                            ? "Ya existe. El importador nunca actualiza — eliminá el movimiento primero y volvé a importar."
+                            : undefined
+                        }
+                        onChange={() => toggleRow(row.rowIndex)}
+                      />
+                    </td>
+                    <td className="px-3 py-3 align-top">
+                      <StatusBadge status={status} reasons={row.errors} />
+                    </td>
+                    <td className="px-3 py-3 align-top text-gray-700">{row.rowIndex}</td>
+                    <td className="px-3 py-3 align-top text-gray-700">{row.movementType}</td>
+                    <td className="px-3 py-3 align-top text-gray-700">{row.movementDate || "—"}</td>
+                    <td className="px-3 py-3 align-top font-medium text-gray-900">
+                      {row.referenceNumber || "—"}
+                    </td>
+                    <td className="px-3 py-3 align-top text-gray-700">{row.providerName || "—"}</td>
+                    <td className="px-3 py-3 align-top text-gray-700">{row.investorName || "—"}</td>
+                    <td className="px-3 py-3 align-top text-gray-700">{row.supplyName || "—"}</td>
+                    <td className="px-3 py-3 align-top text-gray-700">{row.quantity || "—"}</td>
+                    <td className="px-3 py-3 align-top text-gray-700">
+                      {row.destinationCustomerName || "—"}
+                    </td>
+                    <td className="px-3 py-3 align-top text-gray-700">
+                      {row.destinationProjectName || "—"}
+                    </td>
+                    <td className="px-3 py-3 align-top text-gray-700">
+                      {row.destinationCampaignName || "—"}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
     </DrawerShell>
+  );
+}
+
+type FilterChipProps = {
+  label: string;
+  active: boolean;
+  tone?: "green" | "red" | "yellow";
+  onClick: () => void;
+};
+
+function FilterChip({ label, active, tone, onClick }: FilterChipProps) {
+  const base =
+    "px-3 py-1 text-xs font-medium rounded-full border transition-colors cursor-pointer";
+  const idle = "bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
+  const activeCls =
+    tone === "green"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+      : tone === "red"
+        ? "bg-red-50 text-red-700 border-red-300"
+        : tone === "yellow"
+          ? "bg-amber-50 text-amber-700 border-amber-300"
+          : "bg-blue-50 text-blue-700 border-blue-300";
+  return (
+    <button type="button" onClick={onClick} className={`${base} ${active ? activeCls : idle}`}>
+      {label}
+    </button>
+  );
+}
+
+type StatusBadgeProps = {
+  status: "ok" | "error" | "existing";
+  reasons: string[];
+};
+
+function StatusBadge({ status, reasons }: StatusBadgeProps) {
+  if (status === "error") {
+    return (
+      <span
+        title={reasons.join("; ")}
+        className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-red-700"
+      >
+        <XCircle className="h-3 w-3" /> Error
+      </span>
+    );
+  }
+  if (status === "existing") {
+    return (
+      <span
+        title="Ya existe un movimiento con este remito + insumo en el proyecto"
+        className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700"
+      >
+        <AlertTriangle className="h-3 w-3" /> Ya existe
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">
+      <CheckCircle2 className="h-3 w-3" /> Ok
+    </span>
   );
 }

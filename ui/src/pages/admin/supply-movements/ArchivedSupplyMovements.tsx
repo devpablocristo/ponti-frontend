@@ -2,8 +2,8 @@ import { useCallback } from "react";
 
 import { ArchivedListPage } from "../../../components/ArchivedListPage/ArchivedListPage";
 import { useArchiveActions } from "../../../hooks/useArchiveActions";
-import useSupplyMovements from "../../../hooks/useSupplyMovement";
-import { SupplyMovement } from "../../../hooks/useSupplyMovement/types";
+import useSupplyMovements from "../../../hooks/useSupplyMovements";
+import { SupplyMovement } from "../../../hooks/useSupplyMovements/types";
 import { Column } from "../types";
 
 const MOVEMENT_ENTITY = {

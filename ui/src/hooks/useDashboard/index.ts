@@ -6,7 +6,7 @@ import { DashboardData } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
-import { clearLocalStorage } from "@/pages/login/context/useLocalStorage";
+import { clearLocalStorage } from "@/lib/authStorage";
 
 const useDashboard = () => {
   const [{ dashboard }, dispatch] = useDashboardReducer();

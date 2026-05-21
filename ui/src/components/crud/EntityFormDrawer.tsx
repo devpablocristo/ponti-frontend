@@ -34,7 +34,7 @@ type EntityFormDrawerProps = {
 
 /**
  * Drawer estándar para formularios de Create/Edit. Encapsula el patrón duplicado
- * en LotDrawer / CreateItem / CreateOrder / UpdateOrder / CreateStockItem:
+ * en LotDrawer / CreateSupplyMovement / CreateOrder / UpdateOrder / CreateStockItem:
  * Drawer + header + body scrollable + banners contextuales + footer Cancel/Save.
  */
 export function EntityFormDrawer({

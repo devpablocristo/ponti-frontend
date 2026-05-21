@@ -51,7 +51,7 @@ const useOrders = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_ORDERS,
-            payload: response.data.data ?? [],
+            payload: response.data.data ?? response.data.items ?? [],
           });
 
           dispatch({

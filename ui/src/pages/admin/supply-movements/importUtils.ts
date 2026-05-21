@@ -1,14 +1,8 @@
-export function normalizeText(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s./-]+/g, "_")
-    .replace(/[^a-z0-9_]/g, "")
-    .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
+// Re-export del helper compartido. Esta p\u00e1gina usa la versi\u00f3n estricta
+// (drop de `$`, `/`, etc.) porque los CSVs de movimientos traen headers
+// con puntuaci\u00f3n variable.
+import { normalizeHeader as _normalizeHeader } from "@/lib/importHelpers";
+export const normalizeText = _normalizeHeader;
 
 function detectSeparator(firstLine: string): string {
   const commaCount = (firstLine.match(/,/g) ?? []).length;

@@ -213,7 +213,7 @@ function CloseStockDate({
   );
 }
 
-function ItemsIndicators({
+function StockIndicators({
   summary,
   selectedDate,
   onDateChange,
@@ -825,7 +825,7 @@ export function Stock() {
       />
       {hasWorkspaceSelection && !error && (
         <div className="my-3">
-          <ItemsIndicators
+          <StockIndicators
             summary={derivedSummary}
             selectedDate={selectedDate}
             disabledCloseStock={disabledCloseStock || !projectId}

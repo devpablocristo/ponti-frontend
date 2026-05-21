@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Download, Plus, Upload } from "lucide-react";
 
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
@@ -15,6 +15,7 @@ import useLabors from "../../../../hooks/useLabors";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import useCategories from "../../../../hooks/useCategories";
+import { CATEGORY_TYPE_ID, categoryTypeQuery } from "@/lib/categoryTypes";
 import { apiClient } from "../../../../api/client";
 import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
@@ -23,9 +24,17 @@ import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { Checkbox } from "../../../../components/Input/Checkbox";
-import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
+import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
+import { buildTimestampedFilename, downloadBlob, CSV_ACCEPT } from "../../fileTransfer";
 
 import { LABOR_ENTITY as ENTITY } from "../../entities";
+import LaborsCatalog, { type Labor as LaborRow } from "./LaborsCatalog";
+import {
+  getValueByAliases,
+  LABOR_HEADER_ALIASES,
+  normalizeText,
+  parseCsv,
+} from "./importUtils";
 
 function renderPriceCell(value: unknown, row: LaborInfo) {
   return (
@@ -72,6 +81,9 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [importDrawerOpen, setImportDrawerOpen] = useState(false);
+  const [importedRows, setImportedRows] = useState<LaborRow[] | undefined>(undefined);
   const pagination = usePagination({ perPage: 10 });
   const { buildPagination, resetPage } = pagination;
   const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
@@ -117,7 +129,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
   useEffect(() => {
     if (projectId) {
       getLabors(projectId);
-      getCategories("type_id=4");
+      getCategories(categoryTypeQuery(CATEGORY_TYPE_ID.LABORES));
     }
   }, [projectId, getCategories, getLabors]);
 
@@ -226,6 +238,71 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     }
   };
 
+  const handleImportFromFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!projectId) {
+      setErrorMessage("Para importar labores, seleccioná un proyecto.");
+      return;
+    }
+
+    const lowerName = file.name.toLowerCase();
+    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
+    if (!isCsv) {
+      setErrorMessage("Formato no soportado. Use .csv.");
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+      const text = await file.text();
+      const parsedRows = parseCsv(text);
+      if (parsedRows.length === 0) {
+        setErrorMessage("El archivo no tiene datos válidos. Verifique encabezados y filas.");
+        return;
+      }
+
+      const categoryByName = new Map(
+        safeCategories.map((c) => [normalizeText(c.name), c]),
+      );
+
+      const previewRows: LaborRow[] = [];
+      parsedRows.forEach((rawRow) => {
+        const name = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.name).trim();
+        const categoryRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.category).trim();
+        const priceRaw = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.price).trim();
+        const contractor = getValueByAliases(rawRow, LABOR_HEADER_ALIASES.contractor).trim();
+        if (!name && !categoryRaw && !priceRaw && !contractor) return;
+
+        const categoryByText = categoryByName.get(normalizeText(categoryRaw));
+        const categoryId = categoryByText?.id ?? Number(categoryRaw);
+        const priceValue = Number(priceRaw.replace(/\$/g, "").replace(",", "."));
+        previewRows.push({
+          id: previewRows.length,
+          name,
+          category:
+            categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
+          price:
+            !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : priceRaw,
+          contractor,
+          is_partial_price: false,
+        });
+      });
+
+      if (previewRows.length === 0) {
+        setErrorMessage("No se encontraron filas importables en el archivo.");
+        return;
+      }
+
+      setImportedRows(previewRows);
+      setImportDrawerOpen(true);
+    } catch {
+      setErrorMessage("No se pudo leer el archivo. Use .csv.");
+    }
+  };
+
   const handleExport = async () => {
     if (!projectId) return;
 
@@ -245,9 +322,24 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
 
   return (
     <div className="w-full mx-auto">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={CSV_ACCEPT}
+        onChange={handleImportFromFile}
+        className="hidden"
+      />
       <AppFilterBar
         filters={filters}
         actions={[
+          {
+            label: "Importar",
+            icon: <Download className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            disabled: !projectId,
+            onClick: () => fileInputRef.current?.click(),
+          },
           {
             label: "Exportar",
             icon: <Upload className="h-4 w-4" />,
@@ -269,6 +361,23 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
           },
         ]}
       />
+      <DrawerShell
+        open={importDrawerOpen}
+        onClose={() => {
+          setImportDrawerOpen(false);
+          setImportedRows(undefined);
+        }}
+        title="Importar labores"
+      >
+        <LaborsCatalog
+          hideWorkspaceFilters
+          initialRows={importedRows}
+          onCancel={() => {
+            setImportDrawerOpen(false);
+            setImportedRows(undefined);
+          }}
+        />
+      </DrawerShell>
       <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
         <ErrorBanner
           message={errorMessage || null}
@@ -289,7 +398,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
               variant="primary"
               size="sm"
               className="text-sm font-medium flex items-center gap-1"
-              href="/admin/database/tasks"
+              href="/admin/database/labors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

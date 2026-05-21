@@ -1,6 +1,6 @@
 import { AxiosError } from "axios";
 import { createAuthenticatedAxiosClient } from "@devpablocristo/core-authn/http/axios";
-import { authTokenStorage } from "@/pages/login/context/useLocalStorage";
+import { authTokenStorage } from "@/lib/authStorage";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 const TIMEOUT = 30_000;
@@ -67,4 +67,41 @@ apiClient.raw().interceptors.request.use((config) => {
     config.headers["X-Tenant-Id"] = tenantId.trim();
   }
   return config;
+});
+
+// Envolvemos las responses 2xx en `{success: true, data: <body>}` porque los
+// hooks legacy hacen `if (response.success) { ... response.data.X }` esperando
+// esa shape. El BE devuelve el payload directo (sin `success`), así que sin
+// este interceptor los dispatches nunca corren y las listas quedan vacías.
+//
+// IMPORTANTE: saltear cuando la response es binaria (Blob/ArrayBuffer) — los
+// exports `responseType: "blob"` pasan por acá y no deben envolverse.
+apiClient.raw().interceptors.response.use((response) => {
+  if (!response) return response;
+
+  const isBinaryResponse =
+    response.config?.responseType === "blob" ||
+    response.config?.responseType === "arraybuffer" ||
+    response.data instanceof Blob ||
+    response.data instanceof ArrayBuffer;
+
+  if (isBinaryResponse) {
+    return response;
+  }
+
+  if (response.data === undefined) {
+    // 204 No Content y similares: garantizar que `response.success` sea true
+    // para que los flujos de mutación no caigan al else.
+    response.data = { success: true };
+    return response;
+  }
+
+  if (
+    typeof response.data === "object" &&
+    response.data !== null &&
+    !Object.prototype.hasOwnProperty.call(response.data, "success")
+  ) {
+    response.data = { success: true, data: response.data };
+  }
+  return response;
 });

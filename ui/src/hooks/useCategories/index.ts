@@ -24,17 +24,18 @@ const useCategories = () => {
       }
 
       try {
-        // BE returns `{data: [...], page_info: ...}` — no `success` field —
-        // so checking `response.success` (per the old SuccessResponse type)
-        // always failed and categories never loaded.
+        // El interceptor en `api/client.ts` envuelve la respuesta del BE en
+        // `{success: true, data: <body>}`, así que `response.data` es el body
+        // del BE: `{data: CategoryData[], page_info}`.
         const response = await apiClient.get<{
-          data?: CategoryData[];
+          success?: boolean;
+          data?: { data?: CategoryData[] };
         }>("/categories" + queryParams);
 
-        if (response.data) {
+        if (response.data?.data) {
           dispatch({
             type: actions.SET_CATEGORIES,
-            payload: response.data,
+            payload: response.data.data,
           });
           return;
         }
@@ -54,12 +55,17 @@ const useCategories = () => {
     setError(null);
 
     try {
-      const response = await apiClient.get<{ data?: TypeData[] }>("/types");
+      // `response.data` viene envuelto por el interceptor: contiene el body
+      // del BE, que es `{data: TypeData[], page_info}`.
+      const response = await apiClient.get<{
+        success?: boolean;
+        data?: { data?: TypeData[] };
+      }>("/types");
 
-      if (response.data) {
+      if (response.data?.data) {
         dispatch({
           type: actions.SET_TYPES,
-          payload: response.data,
+          payload: response.data.data,
         });
         return;
       }

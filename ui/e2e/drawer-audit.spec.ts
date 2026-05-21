@@ -51,16 +51,16 @@ const scenarios: DrawerScenario[] = [
     },
   },
   {
-    id: "products-new",
-    route: "/admin/products",
+    id: "supply-movements-new",
+    route: "/admin/supply-movements",
     title: /Ingreso de Insumo|Editar Insumo/,
     open: async (page) => {
       await page.getByRole("button", { name: "Nuevo" }).click();
     },
   },
   {
-    id: "products-archived",
-    route: "/admin/products",
+    id: "supply-movements-archived",
+    route: "/admin/supply-movements",
     title: "Movimientos archivados",
     open: async (page) => {
       await page.getByRole("button", { name: "Archivados" }).click();
@@ -69,7 +69,7 @@ const scenarios: DrawerScenario[] = [
   {
     id: "tasks-new",
     route: "/admin/tasks",
-    title: "Nueva Labor",
+    title: "Nueva Orden de Trabajo",
     open: async (page) => {
       await page.getByRole("button", { name: "Nuevo" }).click();
     },
@@ -123,16 +123,16 @@ const scenarios: DrawerScenario[] = [
     },
   },
   {
-    id: "database-items-new",
-    route: "/admin/database/items/list",
+    id: "database-supplies-new",
+    route: "/admin/database/supplies/list",
     title: /Nuevo insumo|Completar insumo pendiente|Edicion de insumo/,
     open: async (page) => {
       await page.getByRole("button", { name: "Nuevo Insumo" }).click();
     },
   },
   {
-    id: "database-tasks-new",
-    route: "/admin/database/tasks/list",
+    id: "database-labors-new",
+    route: "/admin/database/labors/list",
     title: /Nueva Labor|Edicion de labor/,
     open: async (page) => {
       await page.getByRole("button", { name: "Nueva Labor" }).click();

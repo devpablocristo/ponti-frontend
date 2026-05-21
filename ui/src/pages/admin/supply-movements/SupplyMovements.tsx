@@ -14,10 +14,10 @@ import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { useBulkActions } from "../../../hooks/useBulkActions";
-import CreateItem from "./CreateItem";
-import Items from "../database/products/Items";
-import useSupplyMovements from "../../../hooks/useSupplyMovement";
-import { SupplyMovement } from "../../../hooks/useSupplyMovement/types";
+import CreateSupplyMovement from "./CreateSupplyMovement";
+import SuppliesCatalog from "../database/supplies/SuppliesCatalog";
+import useSupplyMovements from "../../../hooks/useSupplyMovements";
+import { SupplyMovement } from "../../../hooks/useSupplyMovements/types";
 import { Summary } from "@/api/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
@@ -27,7 +27,7 @@ import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedSupplyMovements from "./ArchivedSupplyMovements";
 
-function ItemsIndicators({ summary }: { summary?: Summary }) {
+function SupplyMovementsIndicators({ summary }: { summary?: Summary }) {
   const safeSummary = summary ?? {
     total_kg: 0,
     total_lt: 0,
@@ -56,7 +56,7 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
   );
 }
 
-export function Products() {
+export function SupplyMovements() {
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
   const {
     getSupplyMovements,
@@ -83,7 +83,11 @@ export function Products() {
     null
   );
 
-  const isInternalMovementEditionBlocked = (entryType?: string) => {
+  // Aligned with BE `UpdateSupplyMovement`: rechaza editar movimientos internos
+  // (afectan stock en dos proyectos a la vez) y movimientos de stock (overwrite
+  // del conteo real, no metadata editable). Las filas "Consumo OT" tampoco son
+  // editables — son una vista virtual de `workorder_items` desde el BE.
+  const isMovementEditionBlocked = (entryType?: string) => {
     const normalized = String(entryType ?? "")
       .toLowerCase()
       .trim();
@@ -91,7 +95,9 @@ export function Products() {
     return (
       normalized === "movimiento interno" ||
       normalized === "movimiento interno de entrada" ||
-      normalized === "movimiento interno entrada"
+      normalized === "movimiento interno entrada" ||
+      normalized === "stock" ||
+      normalized === "consumo ot"
     );
   };
 
@@ -182,6 +188,36 @@ export function Products() {
           supplyMovements,
           columnsFilters
         ),
+        render: (value) => {
+          const text = String(value ?? "");
+          if (text === "Movimiento interno entrada") {
+            return (
+              <span className="inline-flex items-center gap-1.5">
+                <span>{text}</span>
+                <span
+                  title="Generado automáticamente al recibir un movimiento interno"
+                  className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-300"
+                >
+                  Auto
+                </span>
+              </span>
+            );
+          }
+          if (text === "Consumo OT") {
+            return (
+              <span className="inline-flex items-center gap-1.5">
+                <span>{text}</span>
+                <span
+                  title="Insumo consumido por una orden de trabajo (workorder_items). No editable desde acá."
+                  className="inline-flex items-center rounded-md bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 border border-blue-200"
+                >
+                  OT
+                </span>
+              </span>
+            );
+          }
+          return text;
+        },
       },
       {
         key: "reference_number",
@@ -381,7 +417,13 @@ export function Products() {
   }, [errorCreation]);
 
   const handleEdit = (movement: SupplyMovement) => {
-    if (isInternalMovementEditionBlocked(movement.entry_type)) return;
+    if (isMovementEditionBlocked(movement.entry_type)) {
+      setActionErrorMessage(
+        `No se puede editar un ${movement.entry_type}: afecta stock en dos proyectos o es un conteo de stock terminal.`,
+      );
+      setSuccessMessage(null);
+      return;
+    }
     setActionErrorMessage(null);
     setSuccessMessage(null);
     setEditingMovement(movement);
@@ -470,7 +512,13 @@ export function Products() {
   });
 
   const selectColumn = useMemo<Column<SupplyMovement>>(
-    () => makeSelectColumn<SupplyMovement>(bulk, (item) => item.supply_name, movementEntity),
+    () =>
+      makeSelectColumn<SupplyMovement>(
+        bulk,
+        (item) => item.supply_name,
+        movementEntity,
+        (item) => !isMovementEditionBlocked(item.entry_type),
+      ),
     [bulk, movementEntity],
   );
 
@@ -598,7 +646,7 @@ export function Products() {
       <SuccessBanner message={successMessage} variant="outlined" />
       {hasWorkspaceSelection && !error && (
         <div className="my-3">
-          <ItemsIndicators summary={derivedSummary} />
+          <SupplyMovementsIndicators summary={derivedSummary} />
         </div>
       )}
       <div className="mt-3 relative">
@@ -611,7 +659,7 @@ export function Products() {
         />
         {projectId && (
           <>
-            <CreateItem
+            <CreateSupplyMovement
               customers={customers}
               drawerOpen={drawerOpen}
               setDrawerOpen={setDrawerOpen}
@@ -633,7 +681,7 @@ export function Products() {
               title="Importar insumos"
               subtitle="Cargá insumos manualmente o importalos desde Excel/CSV para el proyecto seleccionado."
             >
-              <Items
+              <SuppliesCatalog
                 embedded
                 onCancel={() => setImportDrawerOpen(false)}
                 onSaved={handleImported}

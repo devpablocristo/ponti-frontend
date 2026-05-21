@@ -9,12 +9,12 @@ import { Plus, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
 import useProviders from "../../../hooks/useProviders";
-import useSupplyMovements from "../../../hooks/useSupplyMovement";
+import useSupplyMovements from "../../../hooks/useSupplyMovements";
 import {
   SupplyMovement,
   SupplyMovementRequest,
   UpdateSupplyMovementRequest,
-} from "../../../hooks/useSupplyMovement/types";
+} from "../../../hooks/useSupplyMovements/types";
 
 import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import { DEFAULT_ITEM_ROW_COUNT, replaceSupplyIdsWithNames } from "../utils";
@@ -57,7 +57,7 @@ const formatAvailableQty = (value: number) => value.toFixed(2).replace(/\.?0+$/,
 
 const DEVOLUTION_TYPE_ID = 4;
 
-export default function CreateItem({
+export default function CreateSupplyMovement({
   drawerOpen,
   setDrawerOpen,
   projectId,

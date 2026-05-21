@@ -110,7 +110,7 @@ const useSupplyMovements = () => {
           withQuery("/supply_movements", query)
         );
 
-        if (response.success) {
+        if (response) {
           const summaryPayload = response.data.summary ?? {
             total_kg: 0,
             total_lt: 0,
@@ -162,7 +162,7 @@ const useSupplyMovements = () => {
             : `/supply_movements/archived`;
         const response = await apiClient.get<SuccessResponse<SupplyResponse>>(path);
 
-        if (response.success) {
+        if (response) {
           dispatch({
             type: actions.SET_SUMMARY,
             payload: response.data.summary ?? {
@@ -219,7 +219,7 @@ const useSupplyMovements = () => {
           supplyMovement
         );
 
-        if (response.success) {
+        if (response) {
           dispatch({
             type: actions.SET_RESULT_CREATION,
             payload: response.data,
@@ -259,7 +259,7 @@ const useSupplyMovements = () => {
           supplyMovement
         );
 
-        if (response.success) {
+        if (response) {
           dispatch({
             type: actions.SET_RESULT_CREATION,
             payload: response.data,
@@ -303,7 +303,7 @@ const useSupplyMovements = () => {
           supplyMovement
         );
 
-      if (response.success) {
+      if (response) {
         dispatch({
           type: actions.SET_RESULT_CREATION,
           payload: response.data,
@@ -341,7 +341,7 @@ const useSupplyMovements = () => {
           `/supply_movements/${id}/project/${projectId}/hard`
         );
 
-        if (response.success) {
+        if (response) {
           setDeleteResult(true);
           return;
         }
@@ -377,7 +377,7 @@ const useSupplyMovements = () => {
           {}
         );
 
-        if (response.success) {
+        if (response) {
           setDeleteResult(true);
           return;
         }
@@ -406,7 +406,7 @@ const useSupplyMovements = () => {
           {}
         );
 
-        if (response.success) {
+        if (response) {
           setDeleteResult(true);
           return;
         }
@@ -434,7 +434,7 @@ const useSupplyMovements = () => {
           `/supply_movements/${id}/project/${projectId}/hard`
         );
 
-        if (response.success) {
+        if (response) {
           setDeleteResult(true);
           return;
         }
@@ -458,7 +458,7 @@ const useSupplyMovements = () => {
         `/supply_movements/${id}`
       );
 
-      if (response.success) {
+      if (response) {
         dispatch({
           type: actions.SET_SELECTED_SUPPLY_MOVEMENT,
           payload: response.data,

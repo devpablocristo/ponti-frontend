@@ -30,12 +30,12 @@ import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import {
-  getValueByAliases,
-  parseCsv,
-  parseImportDate,
-} from "../products/importUtils";
 import ArchivedWorkOrders from "../database/work-orders/ArchivedWorkOrders";
+import {
+  parseAndResolveWorkOrdersCsv,
+  WorkOrderPreviewRow,
+} from "./importWorkOrders";
+import ImportWorkOrdersPreview from "./ImportWorkOrdersPreview";
 
 const FILTER_HIERARCHY: Record<string, string[]> = {
   project_name: ["field_name", "lot_name"],
@@ -276,6 +276,14 @@ export function WorkOrders() {
   const [drawerUpdateOpen, setDrawerUpdateOpen] = useState(false);
   const [orderToDuplicate, setOrderToDuplicate] =
     useState<WorkorderData | null>(null);
+
+  // Drawer del preview/editor del import. El flujo: clic Importar → parseamos
+  // el CSV y resolvemos nombres → abrimos este drawer con las filas detectadas
+  // → el usuario revisa/destilda/edita → clic "Importar X filas" → POST.
+  const [importDrawerOpen, setImportDrawerOpen] = useState(false);
+  const [importRows, setImportRows] = useState<WorkOrderPreviewRow[]>([]);
+  const [importGlobalErrors, setImportGlobalErrors] = useState<string[]>([]);
+  const [, setImportLoading] = useState(false);
 
   const {
     getOrders,
@@ -691,7 +699,7 @@ export function WorkOrders() {
           primaryButtonText: "Ir a Insumos",
           secondaryButtonText: "Cerrar",
           onConfirm: () => {
-            navigate("/admin/database/items/list");
+            navigate("/admin/database/supplies/list");
           },
         });
         setIsModalOpen(true);
@@ -1032,6 +1040,7 @@ export function WorkOrders() {
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
     if (!file) return;
 
     if (!effectiveProjectId) {
@@ -1039,96 +1048,55 @@ export function WorkOrders() {
       return;
     }
 
-    try {
-      setErrorMessage("");
-      setWarningMessage("");
-      setSuccessMessage("");
+    setErrorMessage("");
+    setWarningMessage("");
+    setSuccessMessage("");
+    setImportLoading(true);
 
-      const rows = parseCsv(await file.text());
-      if (rows.length === 0) {
-        setErrorMessage("El archivo no tiene órdenes válidas. Use CSV con encabezados.");
+    try {
+      const { rows, globalErrors } = await parseAndResolveWorkOrdersCsv({
+        file,
+        projectId: effectiveProjectId,
+        defaultFieldId: selectedField?.id,
+      });
+
+      if (rows.length === 0 && globalErrors.length > 0) {
+        setErrorMessage(globalErrors.join(" "));
         return;
       }
 
-      const errors: string[] = [];
-      let imported = 0;
-
-      for (const [index, row] of rows.entries()) {
-        const rowNumber = index + 2;
-        const number = getValueByAliases(row, ["numero", "nro", "n", "number"]);
-        const fieldId = Number(
-          getValueByAliases(row, ["campo_id", "field_id"]) || selectedField?.id || 0,
-        );
-        const lotId = Number(getValueByAliases(row, ["lote_id", "lot_id"]));
-        const cropId = Number(getValueByAliases(row, ["cultivo_id", "crop_id"]));
-        const laborId = Number(getValueByAliases(row, ["labor_id", "labor_id"]));
-        const investorId = Number(getValueByAliases(row, ["inversor_id", "investor_id"]) || 0);
-        const supplyId = Number(getValueByAliases(row, ["insumo_id", "supply_id"]) || 0);
-        const effectiveArea = Number(
-          getValueByAliases(row, ["superficie", "superficie_has", "effective_area"]) || 0,
-        );
-        const totalUsed = Number(
-          getValueByAliases(row, ["consumo", "cantidad", "total_used"]) || 0,
-        );
-        const finalDose = Number(getValueByAliases(row, ["dosis", "dose", "final_dose"]) || 0);
-        const date = parseImportDate(getValueByAliases(row, ["fecha", "date"]));
-
-        if (!number) errors.push(`Fila ${rowNumber}: falta número.`);
-        if (!date) errors.push(`Fila ${rowNumber}: fecha inválida.`);
-        if (!fieldId) errors.push(`Fila ${rowNumber}: falta campo_id.`);
-        if (!lotId) errors.push(`Fila ${rowNumber}: falta lote_id.`);
-        if (!cropId) errors.push(`Fila ${rowNumber}: falta cultivo_id.`);
-        if (!laborId) errors.push(`Fila ${rowNumber}: falta labor_id.`);
-        if (!investorId) errors.push(`Fila ${rowNumber}: falta inversor_id.`);
-        if (!effectiveArea) errors.push(`Fila ${rowNumber}: falta superficie.`);
-        if (supplyId && (!totalUsed || !finalDose)) {
-          errors.push(`Fila ${rowNumber}: insumo_id requiere consumo y dosis.`);
-        }
-
-        const rowHasErrors = errors.some((message) => message.startsWith(`Fila ${rowNumber}:`));
-        if (rowHasErrors) continue;
-
-        await apiClient.post("/work-orders", {
-          number,
-          project_id: effectiveProjectId,
-          field_id: fieldId,
-          lot_id: lotId,
-          crop_id: cropId,
-          labor_id: laborId,
-          contractor: getValueByAliases(row, ["contratista", "contractor"]),
-          observations: getValueByAliases(row, ["observaciones", "observations"]),
-          date,
-          investor_id: investorId,
-          effective_area: effectiveArea,
-          items: supplyId
-            ? [
-                {
-                  supply_id: supplyId,
-                  total_used: totalUsed,
-                  final_dose: finalDose,
-                },
-              ]
-            : [],
-        });
-        imported += 1;
-      }
-
-      if (imported > 0) {
-        setSuccessMessage(
-          errors.length
-            ? `Se importaron ${imported} órdenes. Se omitieron ${errors.length} filas.`
-            : `Se importaron ${imported} órdenes correctamente.`,
-        );
-        handleOrderCreated();
-      }
-
-      if (errors.length > 0) {
-        setErrorMessage(errors.slice(0, 5).join(" "));
-      }
+      // Abrimos el drawer aunque haya globalErrors: el usuario los ve arriba
+      // y puede igual revisar las filas (algunos catálogos pueden estar OK).
+      setImportRows(rows);
+      setImportGlobalErrors(globalErrors);
+      setImportDrawerOpen(true);
     } catch (error) {
       setErrorMessage(
-        extractErrorMessage(error, "No se pudo importar órdenes. Use CSV válido."),
+        extractErrorMessage(error, "No se pudo procesar el CSV. Use CSV válido."),
       );
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const handleImportCompleted = (result: {
+    imported: number;
+    errors: string[];
+  }) => {
+    setImportDrawerOpen(false);
+    setImportRows([]);
+    setImportGlobalErrors([]);
+
+    if (result.imported > 0) {
+      setSuccessMessage(
+        result.errors.length
+          ? `Se importaron ${result.imported} órdenes. Se omitieron ${result.errors.length} filas.`
+          : `Se importaron ${result.imported} órdenes correctamente.`,
+      );
+      handleOrderCreated();
+    }
+    if (result.errors.length > 0) {
+      setErrorMessage(result.errors.slice(0, 5).join(" "));
     }
   };
 
@@ -1228,6 +1196,20 @@ export function WorkOrders() {
         >
           <ArchivedWorkOrders onAfterRestore={handleOrderCreated} />
         </ArchivedDrawer>
+        {effectiveProjectId ? (
+          <ImportWorkOrdersPreview
+            open={importDrawerOpen}
+            onClose={() => {
+              setImportDrawerOpen(false);
+              setImportRows([]);
+              setImportGlobalErrors([]);
+            }}
+            projectId={effectiveProjectId}
+            rows={importRows}
+            globalErrors={importGlobalErrors}
+            onCompleted={handleImportCompleted}
+          />
+        ) : null}
         {selectedSupplyFilter.id && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
             <span>

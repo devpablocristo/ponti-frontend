@@ -1,5 +1,5 @@
 import { request } from "@devpablocristo/core-http/fetch";
-import { getAccessToken } from "@/pages/login/context/useLocalStorage";
+import { getAccessToken } from "@/lib/authStorage";
 
 export type InsightItem = {
   id: string;

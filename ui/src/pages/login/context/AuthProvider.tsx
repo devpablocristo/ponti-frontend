@@ -16,7 +16,7 @@ import {
   getAccessToken,
   getRefreshToken,
   setLocalStorage,
-} from "./useLocalStorage";
+} from "@/lib/authStorage";
 import { AuthContext } from "./AuthContext";
 
 export function AuthProvider({ children }: { children: ReactNode }) {

@@ -4,6 +4,7 @@ import { Plus, Save, Trash2 } from "lucide-react";
 
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { leaseTypeHasFixedValue, leaseTypeHasPercent } from "@/lib/leaseTypes";
 import Button from "../../../../components/Button/Button";
 import { IconActionButton } from "../../../../components/Button/IconActionButton";
 import InputField from "../../../../components/Input/InputField";
@@ -1478,9 +1479,7 @@ export default function CustomerEditor({
                         }
                         size="sm"
                       />
-                      {(field.lease_type_id === 1 ||
-                        field.lease_type_id === 2 ||
-                        field.lease_type_id === 4) && (
+                      {leaseTypeHasPercent(field.lease_type_id) && (
                         <InputField
                           label="Porcentaje (%)"
                           name={`field_lease_percent_${fieldIndex}`}
@@ -1497,7 +1496,7 @@ export default function CustomerEditor({
                           size="sm"
                         />
                       )}
-                      {(field.lease_type_id === 3 || field.lease_type_id === 4) && (
+                      {leaseTypeHasFixedValue(field.lease_type_id) && (
                         <InputField
                           label="Valor (USD)"
                           name={`field_lease_value_${fieldIndex}`}

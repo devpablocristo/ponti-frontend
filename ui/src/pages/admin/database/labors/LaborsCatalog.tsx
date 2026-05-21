@@ -6,6 +6,7 @@ import SelectField from "../../../../components/Input/SelectField";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import useCategories from "../../../../hooks/useCategories";
+import { CATEGORY_TYPE_ID, categoryTypeQuery } from "@/lib/categoryTypes";
 import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
@@ -46,7 +47,7 @@ const emptyRow = (id: number): Labor => ({
   is_partial_price: false,
 });
 
-type TasksFormProps = {
+type LaborsCatalogProps = {
   hideWorkspaceFilters?: boolean;
   onCancel?: () => void;
   // When provided, the form arrives pre-loaded with these rows (e.g. after
@@ -55,11 +56,11 @@ type TasksFormProps = {
   initialRows?: Labor[];
 };
 
-export default function TasksForm({
+export default function LaborsCatalog({
   hideWorkspaceFilters = false,
   onCancel,
   initialRows,
-}: TasksFormProps = {}) {
+}: LaborsCatalogProps = {}) {
   const { saveLabors, result, error, processing, labors, getLabors } = useLabors();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -131,7 +132,7 @@ export default function TasksForm({
   const hasErrors = Object.keys(rowErrors).length > 0;
 
   useEffect(() => {
-    getCategories("type_id=4");
+    getCategories(categoryTypeQuery(CATEGORY_TYPE_ID.LABORES));
   }, [getCategories]);
 
   useEffect(() => {
@@ -489,7 +490,7 @@ export default function TasksForm({
               variant="primary"
               size="sm"
               className="text-sm font-medium flex items-center gap-1"
-              href="/admin/database/tasks/list"
+              href="/admin/database/labors/list"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
