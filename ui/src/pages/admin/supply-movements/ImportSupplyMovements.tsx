@@ -764,15 +764,6 @@ export default function ImportSupplyMovements({
       open={open}
       onClose={onClose}
       title="Importar Insumos"
-      subtitle={
-        <>
-          El archivo puede contener multiples remitos, fechas, proveedores e inversores. La
-          importacion se guarda de forma atomica.
-          {file ? (
-            <span className="mt-2 block font-medium text-slate-700">Archivo: {file.name}</span>
-          ) : null}
-        </>
-      }
       footer={
         <DrawerFormActions
           cancelLabel="Cancelar"

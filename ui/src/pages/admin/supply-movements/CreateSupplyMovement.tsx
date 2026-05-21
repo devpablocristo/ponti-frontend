@@ -2,10 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
-import { Checkbox } from "../../../components/Input/Checkbox";
 import useSupplies from "../../../hooks/useSupplies";
 import useStock from "../../../hooks/useStock";
-import { Plus, Trash } from "lucide-react";
+import { Plus } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Entity } from "../../../hooks/useDatabase/options/types";
 import useProviders from "../../../hooks/useProviders";
@@ -16,17 +15,16 @@ import {
   UpdateSupplyMovementRequest,
 } from "../../../hooks/useSupplyMovements/types";
 
-import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import { DEFAULT_ITEM_ROW_COUNT, replaceSupplyIdsWithNames } from "../utils";
-import { IconActionButton } from "../../../components/Button/IconActionButton";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
+import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
+import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 import { Campaign, Customer, Project } from "../../../hooks/useWorkspaceFilters";
 import useCampaigns from "../../../hooks/useCampaigns";
-import { getUnitName, units } from "../../../constants/units";
-import useCategories from "../../../hooks/useCategories";
+import { getUnitName } from "../../../constants/units";
 
 const emptyItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
   item: "",
@@ -144,166 +142,6 @@ export default function CreateSupplyMovement({
     setType(null);
     setSelectedProjectDestination(null);
   };
-
-  function CreateSupplyInline({
-    projectId,
-    onCreated,
-    onCancel,
-  }: {
-    projectId: number | null;
-    onCreated: (createdName: string) => void;
-    onCancel: () => void;
-  }) {
-    const { saveSupplies, result, error } = useSupplies();
-    const { categories, types, getCategories, getTypes } = useCategories();
-    const [saving, setSaving] = useState(false);
-    const [success, setSuccess] = useState<string | null>(null);
-
-    const [name, setName] = useState("");
-    const [unit, setUnit] = useState("");
-    const [price, setPrice] = useState("");
-    const [isPartialPrice, setIsPartialPrice] = useState(false);
-    const [category, setCategory] = useState("");
-    const [type, setType] = useState("");
-
-    const normalizedName = name.trim().replace(/\s+/g, " ").toUpperCase();
-
-    useEffect(() => {
-      getCategories("");
-      getTypes();
-    }, [getCategories, getTypes]);
-
-    useEffect(() => {
-      if (!result) return;
-      setSaving(false);
-      setSuccess("Insumo creado correctamente");
-    }, [result]);
-
-    useEffect(() => {
-      if (error) setSaving(false);
-    }, [error]);
-
-    return (
-      <div className="space-y-4">
-        {success && (
-          <SuccessBanner size="sm">
-            <div className="flex items-center justify-between">
-              <span>{success}</span>
-              <Button
-                size="xs"
-                variant="primary"
-                onClick={() => {
-                  setSuccess(null);
-                  onCreated(normalizedName);
-                }}
-              >
-                OK
-              </Button>
-            </div>
-          </SuccessBanner>
-        )}
-
-        {!success && (
-          <>
-            {error && <ErrorBanner message={error} size="sm" />}
-
-            <InputField
-              label="Nombre del insumo"
-              name="suplyName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              size="sm"
-            />
-
-            <SelectField
-              label="Unidad"
-              name="unit"
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              options={units}
-              size="sm"
-            />
-
-            <InputField
-              label="Precio"
-              name="supplyPrice"
-              value={price}
-              onChange={(e) => {
-                const value = e.target.value.replace(/,/g, ".");
-                if (/^\d*\.?\d{0,2}$/.test(value)) setPrice(value);
-              }}
-              size="sm"
-            />
-
-            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-              <Checkbox
-                tone="form"
-                checked={isPartialPrice}
-                onChange={(e) => setIsPartialPrice(e.target.checked)}
-              />
-              Precio parcial
-            </label>
-
-            <SelectField
-              label="Rubro"
-              name="category"
-              value={category}
-              onChange={(e) => {
-                const selectedCategory = categories.find(
-                  (c: { id: number; type_id?: number }) => c.id === Number(e.target.value)
-                );
-                setCategory(e.target.value);
-                setType(selectedCategory?.type_id?.toString() || "");
-              }}
-              options={categories}
-              size="sm"
-            />
-
-            <SelectField
-              label="Tipo / Clase"
-              name="type"
-              value={type}
-              options={types}
-              disabled
-              onChange={() => {}}
-              size="sm"
-            />
-
-            <div className="drawer-footer-actions justify-end pt-4">
-              <Button variant="secondary" onClick={onCancel} disabled={saving}>
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                disabled={saving}
-                onClick={() => {
-                  if (!projectId || !name || !unit || !price || !category || !type) {
-                    return;
-                  }
-                  setSaving(true);
-                  saveSupplies(
-                    [
-                      {
-                        name: normalizedName,
-                        unit: Number(unit),
-                        price: Number(price),
-                        category: Number(category),
-                        type: Number(type),
-                        is_partial_price: isPartialPrice,
-                      },
-                    ],
-                    projectId
-                  );
-                }}
-              >
-                {saving ? "Guardando..." : "Guardar Insumo"}
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
 
   useEffect(() => {
     setSuccessMessage(null);
@@ -899,91 +737,44 @@ export default function CreateSupplyMovement({
                 Crear Nuevo Insumo
               </Button>
             </div>
-            <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
-              <span className="font-sm text-gray-900">Insumo</span>
-              <span className="font-sm text-gray-900">Cantidad</span>
-              <div></div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
-              {items.map((item, i) => (
-                <div
-                  key={i}
-                  className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                >
-                  <div className="sm:col-span-1">
-                    <SupplyDropdown
-                      options={availableSupplies.map((s) => ({
-                        id: s.id,
-                        name: s.name,
-                        badge: (
-                          <span className="ml-1 text-xs text-gray-400 font-normal">
-                            <span className={s.qty < 0 ? "text-red-600" : undefined}>
-                              {formatAvailableQty(s.qty)}
-                            </span>{" "}
-                            {s.unit}
-                          </span>
-                        ),
-                      }))}
-                      value={item.item ? Number(item.item) : null}
-                      onSelect={(option) => handleItemChange(i, "item", String(option.id))}
-                      onCreateNew={() => {
-                        setItemIndexToUpdate(i);
-                        setOpenCreateSupply(true);
-                      }}
-                      hasError={!!itemErrors[i]}
-                    />
-                  </div>
-                  <div className="sm:col-span-1">
-                    <InputField
-                      label=""
-                      placeholder="Lt/Kg/Bolsas"
-                      name={`quantity${i}`}
-                      type="text"
-                      value={item.quantity}
-                      inputClassName={
-                        itemErrors[i]
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                          : ""
-                      }
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/,/g, ".");
-                        if (/^\d*\.?\d{0,3}$/.test(value)) {
-                          handleItemChange(i, "quantity", value);
-                        }
-                      }}
-                      size="sm"
-                    />
-                    {itemErrors[i] && <p className="mt-1 text-xs text-red-600">{itemErrors[i]}</p>}
-                  </div>
-                  <div>
-                    <IconActionButton
-                      label="Eliminar insumo"
-                      icon={<Trash size={14} />}
-                      tone="danger"
-                      onClick={() => {
-                        const newItems = [...items];
-                        newItems.splice(i, 1);
-                        setItems(newItems);
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {!isEditing && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  iconLeft={<Plus className="h-4 w-4" />}
-                  onClick={() => {
-                    setItems([...items, { item: "", quantity: "" }]);
-                  }}
-                  className="max-w-fit"
-                >
-                  Agregar Insumo
-                </Button>
-              )}
-            </div>
+            <SupplyItemsTable
+              items={items.map(({ item, quantity }) => ({
+                supplyId: item ? Number(item) : null,
+                quantity,
+              }))}
+              options={availableSupplies.map((s) => ({
+                id: s.id,
+                name: s.name,
+                availableQty: s.qty,
+                unitName: s.unit,
+              }))}
+              itemErrors={itemErrors}
+              onItemChange={(rowIndex, field, value) => {
+                if (field === "supplyId") {
+                  handleItemChange(
+                    rowIndex,
+                    "item",
+                    value === null ? "" : String(value),
+                  );
+                } else if (field === "quantity") {
+                  handleItemChange(rowIndex, "quantity", String(value));
+                }
+              }}
+              onAddRow={
+                isEditing
+                  ? undefined
+                  : () => setItems([...items, { item: "", quantity: "" }])
+              }
+              onRemoveRow={(rowIndex) => {
+                const newItems = [...items];
+                newItems.splice(rowIndex, 1);
+                setItems(newItems);
+              }}
+              onRequestCreateSupply={(rowIndex) => {
+                setItemIndexToUpdate(rowIndex);
+                setOpenCreateSupply(true);
+              }}
+            />
           </section>
           <ErrorBanner message={error} prefix="Error:" />
           <SuccessBanner

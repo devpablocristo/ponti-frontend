@@ -130,7 +130,6 @@ export default function ImportWorkOrdersPreview({
       open={open}
       onClose={onClose}
       title="Importar Órdenes de Trabajo"
-      subtitle={`${counts.total} filas en el CSV — ${counts.ok} ok, ${counts.errs} con errores, ${counts.existing} ya existen`}
       footer={
         <DrawerFooter>
           <div className="flex w-full items-center justify-between gap-3">

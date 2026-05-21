@@ -7,18 +7,19 @@ import { Field } from "../../../hooks/useWorkspaceFilters";
 import useLabors from "../../../hooks/useLabors";
 import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useSupplies from "../../../hooks/useSupplies";
-import useCategories from "../../../hooks/useCategories";
 import useStock from "../../../hooks/useStock";
-import { getUnitName, units } from "../../../constants/units";
+import { getUnitName } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
+import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
+import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
 import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
 import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
 
@@ -38,8 +39,6 @@ const emptyItems: WorkOrderItem[] = Array.from({ length: 7 }, () => ({
   totalUsed: "",
   dose: "",
 }));
-
-const formatAvailableQty = (value: number) => value.toFixed(2).replace(/\.?0+$/, "");
 
 export default function CreateOrder({
   drawerOpen,
@@ -76,12 +75,6 @@ export default function CreateOrder({
   const [openCreateSupply, setOpenCreateSupply] = useState(false);
   const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
   const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(null);
-  const [openSupplyDropdown, setOpenSupplyDropdown] = useState<number | null>(null);
-  const [supplySearch, setSupplySearch] = useState<Record<number, string>>({});
-  const [highlightedSupplyIndex, setHighlightedSupplyIndex] = useState<Record<number, number>>({});
-  const supplyListRefs = useRef<Record<number, HTMLUListElement | null>>({});
-  const typeaheadBufferByRowRef = useRef<Record<number, string>>({});
-  const lastTypeaheadAtByRowRef = useRef<Record<number, number>>({});
   const [investor, setInvestor] = useState<{ id: number; name: string } | null>(null);
   const [splitByInvestor, setSplitByInvestor] = useState(false);
   const [investorSplits, setInvestorSplits] = useState<InvestorSplit[]>([
@@ -95,175 +88,8 @@ export default function CreateOrder({
   );
   const [preciseDoseByRow, setPreciseDoseByRow] = useState<Record<number, number>>({});
 
-  function CreateSupplyInline({
-    projectId,
-    onCreated,
-    onCancel,
-  }: {
-    projectId: number | null;
-    onCreated: (createdName: string) => void;
-    onCancel: () => void;
-  }) {
-    const { saveSupplies, result, error } = useSupplies();
-    const { categories, types, getCategories, getTypes } = useCategories();
-    const [saving, setSaving] = useState(false);
-    const [success, setSuccess] = useState<string | null>(null);
-
-    const [name, setName] = useState("");
-    const [unit, setUnit] = useState("");
-    const [price, setPrice] = useState("");
-    const [isPartialPrice, setIsPartialPrice] = useState(false);
-    const [category, setCategory] = useState("");
-    const [type, setType] = useState("");
-
-    // Forzar mayúsculas en el nombre
-    const normalizedName = name.trim().replace(/\s+/g, " ").toUpperCase();
-    useEffect(() => {
-      getCategories("");
-      getTypes();
-    }, [getCategories, getTypes]);
-
-    useEffect(() => {
-      if (!result) return;
-
-      setSaving(false);
-      setSuccess("Insumo creado correctamente");
-    }, [result]);
-
-    useEffect(() => {
-      if (error) {
-        setSaving(false);
-      }
-    }, [error]);
-
-    return (
-      <div className="space-y-4">
-        {success && (
-          <SuccessBanner size="sm">
-            <div className="flex items-center justify-between">
-              <span>{success}</span>
-              <Button
-                size="xs"
-                variant="primary"
-                onClick={() => {
-                  setSuccess(null);
-                  onCreated(normalizedName);
-                }}
-              >
-                OK
-              </Button>
-            </div>
-          </SuccessBanner>
-        )}
-
-        {!success && (
-          <>
-            {error && <ErrorBanner message={error} size="sm" />}
-            <InputField
-              label="Nombre del insumo"
-              name="suplyName"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              size="sm"
-            />
-
-            <SelectField
-              label="Unidad"
-              name="unit"
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              options={units}
-              size="sm"
-            />
-
-            <InputField
-              label="Precio"
-              name="supplyPrice"
-              value={price}
-              onChange={(e) => {
-                const value = e.target.value.replace(/,/g, ".");
-                if (/^\d*\.?\d{0,2}$/.test(value)) {
-                  setPrice(value);
-                }
-              }}
-              size="sm"
-            />
-
-            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-              <Checkbox
-                tone="form"
-                checked={isPartialPrice}
-                onChange={(e) => setIsPartialPrice(e.target.checked)}
-              />
-              Precio parcial
-            </label>
-
-            <SelectField
-              label="Rubro"
-              name="category"
-              value={category}
-              onChange={(e) => {
-                const selectedCategory = categories.find(
-                  (c: { id: number; type_id?: number }) => c.id === Number(e.target.value)
-                );
-                setCategory(e.target.value);
-                setType(selectedCategory?.type_id?.toString() || "");
-              }}
-              options={categories}
-              size="sm"
-            />
-
-            <SelectField
-              label="Tipo / Clase"
-              name="type"
-              value={type}
-              options={types}
-              disabled
-              onChange={() => {}}
-              size="sm"
-            />
-
-            <div className="drawer-footer-actions justify-end pt-4">
-              <Button variant="secondary" onClick={onCancel} disabled={saving}>
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                disabled={saving}
-                onClick={() => {
-                  if (!projectId || !name || !unit || !price || !category || !type) {
-                    return;
-                  }
-                  setSaving(true);
-                  setSuccess(null);
-                  saveSupplies(
-                    [
-                      {
-                        name: normalizedName,
-                        unit: Number(unit),
-                        price: Number(price),
-                        category: Number(category),
-                        type: Number(type),
-                        is_partial_price: isPartialPrice,
-                      },
-                    ],
-                    projectId
-                  );
-                }}
-              >
-                {saving ? "Guardando..." : "Guardar Insumo"}
-              </Button>
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
-
   const clearForm = useCallback(() => {
     setItems(emptyItems.map((item) => ({ ...item })));
-    setOpenSupplyDropdown(null);
-    setSupplySearch({});
     setOpenCreateSupply(false);
     setItemIndexToUpdate(null);
     setPendingCreatedSupplyName(null);
@@ -348,21 +174,6 @@ export default function CreateOrder({
     setPendingCreatedSupplyName(null);
     setItemIndexToUpdate(null);
   }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
-
-  useEffect(() => {
-    if (openSupplyDropdown === null) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      const row = document.querySelector(`[data-supply-row="${openSupplyDropdown}"]`);
-      const target = event.target as Node;
-      if (row && !row.contains(target)) {
-        setOpenSupplyDropdown(null);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    return () => document.removeEventListener("mousedown", handlePointerDown);
-  }, [openSupplyDropdown]);
 
   useEffect(() => {
     if (!selectedProject) return;
@@ -536,72 +347,6 @@ export default function CreateOrder({
   }, [formatDose]);
 
   const formatTotalUsedFromDose = (value: number) => roundTo(value, 0).toFixed(2);
-
-  const scrollHighlightedSupplyIntoView = (rowIndex: number, optionIndex: number) => {
-    requestAnimationFrame(() => {
-      const list = supplyListRefs.current[rowIndex];
-      if (!list) return;
-      const option = list.querySelector<HTMLLIElement>(
-        `[data-supply-option-index="${optionIndex}"]`
-      );
-      option?.scrollIntoView({ block: "nearest" });
-    });
-  };
-
-  const handleSupplyTypeahead = (
-    rowIndex: number,
-    typedKey: string,
-    selectedSupplyId: number | null
-  ) => {
-    const safeSupplies = Array.isArray(supplies) ? supplies : [];
-    if (safeSupplies.length === 0) return;
-
-    const now = Date.now();
-    const lowerKey = typedKey.toLowerCase();
-    const previousBuffer = typeaheadBufferByRowRef.current[rowIndex] || "";
-    const lastTypedAt = lastTypeaheadAtByRowRef.current[rowIndex] || 0;
-    const withinWindow = now - lastTypedAt <= 700;
-
-    const findByPrefix = (prefix: string, startIndex = 0) => {
-      if (!prefix) return null;
-      const normalizedPrefix = prefix.toLowerCase();
-      const ordered = [...safeSupplies.slice(startIndex), ...safeSupplies.slice(0, startIndex)];
-      return ordered.find((s) => s.name.toLowerCase().startsWith(normalizedPrefix)) || null;
-    };
-
-    const shouldCycleSameLetter =
-      withinWindow && previousBuffer.length === 1 && previousBuffer === lowerKey;
-
-    let matchedSupply = null;
-
-    if (shouldCycleSameLetter) {
-      const currentIndex = selectedSupplyId
-        ? safeSupplies.findIndex((s) => s.id === selectedSupplyId)
-        : -1;
-      matchedSupply = findByPrefix(lowerKey, currentIndex + 1);
-      typeaheadBufferByRowRef.current[rowIndex] = lowerKey;
-    } else {
-      const nextBuffer = withinWindow ? `${previousBuffer}${lowerKey}` : lowerKey;
-
-      matchedSupply = findByPrefix(nextBuffer);
-
-      if (!matchedSupply && nextBuffer.length > 1) {
-        matchedSupply = findByPrefix(lowerKey);
-        typeaheadBufferByRowRef.current[rowIndex] = lowerKey;
-      } else {
-        typeaheadBufferByRowRef.current[rowIndex] = nextBuffer;
-      }
-    }
-
-    lastTypeaheadAtByRowRef.current[rowIndex] = now;
-
-    if (!matchedSupply) return;
-
-    handleItemChange(rowIndex, "itemId", matchedSupply.id);
-    handleItemChange(rowIndex, "dose", "");
-    handleItemChange(rowIndex, "totalUsed", "");
-    setSupplySearch((prev) => ({ ...prev, [rowIndex]: "" }));
-  };
 
   const handleSaveOrder = () => {
     setError(null);
@@ -994,285 +739,69 @@ export default function CreateOrder({
                 Crear Nuevo Insumo
               </Button>
             </div>
-            <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4 mb-2">
-              <span className="font-sm text-gray-900">Insumo</span>
-              <span className="font-sm text-gray-900">Total utilizado</span>
-              <span className="font-sm text-gray-900">Dosis final</span>
-              <div></div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1fr_0.5fr] gap-4">
-              {items.map((item, i) => {
-                const filteredSupplies = availableSupplies.filter(
-                  (s) =>
-                    !supplySearch[i] || s.name.toLowerCase().includes(supplySearch[i].toLowerCase())
-                );
-                const highlightedIndex = highlightedSupplyIndex[i] ?? 0;
-                const selectedSupply = availableSupplies.find((s) => s.id === Number(item.itemId));
-
-                return (
-                  <div
-                    key={i}
-                    className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
-                  >
-                    <div className="sm:col-span-1 relative" data-supply-row={i}>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        aria-haspopup="listbox"
-                        aria-expanded={openSupplyDropdown === i}
-                        className="input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between"
-                        onClick={() => {
-                          const nextOpen = openSupplyDropdown === i ? null : i;
-                          setOpenSupplyDropdown(nextOpen);
-                          if (nextOpen !== null) {
-                            setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
-                          }
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            const nextOpen = openSupplyDropdown === i ? null : i;
-                            setOpenSupplyDropdown(nextOpen);
-                            if (nextOpen !== null) {
-                              setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
-                            }
-                          }
-                          if (e.key === "Escape" && openSupplyDropdown === i) {
-                            e.preventDefault();
-                            setOpenSupplyDropdown(null);
-                          }
-                          if (
-                            openSupplyDropdown !== i &&
-                            e.key.length === 1 &&
-                            !e.altKey &&
-                            !e.ctrlKey &&
-                            !e.metaKey
-                          ) {
-                            e.preventDefault();
-                            handleSupplyTypeahead(i, e.key, item.itemId);
-                          }
-                        }}
-                      >
-                        {item.itemId ? (
-                          <span className="truncate font-semibold text-gray-900">
-                            {selectedSupply?.name || "Seleccionar..."}
-                            {selectedSupply && (
-                              <span className="ml-1 text-xs text-gray-400 font-normal">
-                                <span
-                                  className={
-                                    selectedSupply.availableQty < 0 ? "text-red-600" : undefined
-                                  }
-                                >
-                                  {formatAvailableQty(selectedSupply.availableQty)}
-                                </span>{" "}
-                                {selectedSupply.availableUnit}
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">Seleccionar...</span>
-                        )}
-                        <ChevronDown size={16} className="text-slate-400 shrink-0" />
-                      </div>
-                      {openSupplyDropdown === i && (
-                        <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
-                          <input
-                            type="text"
-                            placeholder="Buscar insumo..."
-                            className="w-full px-3 py-2 text-sm border-b outline-none"
-                            value={supplySearch[i] || ""}
-                            onChange={(e) => {
-                              setSupplySearch((prev) => ({
-                                ...prev,
-                                [i]: e.target.value,
-                              }));
-                              setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: 0 }));
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "ArrowDown") {
-                                e.preventDefault();
-                                if (filteredSupplies.length === 0) return;
-                                const nextIndex =
-                                  highlightedIndex < filteredSupplies.length - 1
-                                    ? highlightedIndex + 1
-                                    : 0;
-                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
-                                scrollHighlightedSupplyIntoView(i, nextIndex);
-                                return;
-                              }
-                              if (e.key === "ArrowUp") {
-                                e.preventDefault();
-                                if (filteredSupplies.length === 0) return;
-                                const nextIndex =
-                                  highlightedIndex > 0
-                                    ? highlightedIndex - 1
-                                    : filteredSupplies.length - 1;
-                                setHighlightedSupplyIndex((prev) => ({ ...prev, [i]: nextIndex }));
-                                scrollHighlightedSupplyIntoView(i, nextIndex);
-                                return;
-                              }
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                const selected = filteredSupplies[highlightedIndex];
-                                if (!selected) return;
-                                handleItemChange(i, "itemId", selected.id);
-                                handleItemChange(i, "dose", "");
-                                handleItemChange(i, "totalUsed", "");
-                                setOpenSupplyDropdown(null);
-                                setSupplySearch((prev) => ({ ...prev, [i]: "" }));
-                                return;
-                              }
-                              if (e.key === "Escape") {
-                                e.preventDefault();
-                                setOpenSupplyDropdown(null);
-                                return;
-                              }
-                              if (e.key === "Tab") {
-                                setOpenSupplyDropdown(null);
-                              }
-                            }}
-                            autoFocus
-                          />
-                          <ul
-                            className="max-h-[200px] overflow-y-auto"
-                            ref={(el) => {
-                              supplyListRefs.current[i] = el;
-                            }}
-                          >
-                            <li
-                              className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                handleItemChange(i, "itemId", null);
-                                setItemIndexToUpdate(i);
-                                setOpenCreateSupply(true);
-                                setOpenSupplyDropdown(null);
-                                setSupplySearch((prev) => ({ ...prev, [i]: "" }));
-                              }}
-                            >
-                              + Crear Nuevo Insumo
-                            </li>
-                            {filteredSupplies.map((s, supplyIdx) => (
-                              <li
-                                key={s.id}
-                                data-supply-option-index={supplyIdx}
-                                className={`px-3 py-2 cursor-pointer font-semibold text-gray-900 ${
-                                  highlightedIndex === supplyIdx
-                                    ? "bg-gray-100"
-                                    : "hover:bg-gray-100"
-                                }`}
-                                onMouseEnter={() =>
-                                  setHighlightedSupplyIndex((prev) => ({
-                                    ...prev,
-                                    [i]: supplyIdx,
-                                  }))
-                                }
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  handleItemChange(i, "itemId", s.id);
-                                  handleItemChange(i, "dose", "");
-                                  handleItemChange(i, "totalUsed", "");
-                                  setOpenSupplyDropdown(null);
-                                  setSupplySearch((prev) => ({ ...prev, [i]: "" }));
-                                }}
-                              >
-                                <span>{s.name}</span>
-                                <span className="ml-1 text-xs text-gray-400 font-normal">
-                                  <span className={s.availableQty < 0 ? "text-red-600" : undefined}>
-                                    {formatAvailableQty(s.availableQty)}
-                                  </span>{" "}
-                                  {s.availableUnit}
-                                </span>
-                              </li>
-                            ))}
-                            {filteredSupplies.length === 0 && (
-                              <li className="px-3 py-2 text-sm text-gray-400">Sin resultados</li>
-                            )}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                    <div className="sm:col-span-1">
-                      <InputField
-                        label=""
-                        placeholder="Lt/Kg/Bolsas"
-                        name={`totalUsed${i}`}
-                        type="text"
-                        value={item.totalUsed}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/,/g, ".");
-                          if (/^\d*\.?\d{0,3}$/.test(value)) {
-                            handleItemChange(i, "totalUsed", value);
-                            if (surface && surface !== "" && surface !== "0") {
-                              const preciseDose = Number(value) / Number(surface);
-                              setPreciseDoseByRow((prev) => ({
-                                ...prev,
-                                [i]: preciseDose,
-                              }));
-                              handleItemChange(i, "dose", formatDose(preciseDose));
-                            }
-                          }
-                        }}
-                        size="sm"
-                      />
-                    </div>
-                    <div className="sm:col-span-1">
-                      <InputField
-                        label=""
-                        placeholder="Total/superficie"
-                        name={`dose${i}`}
-                        type="text"
-                        value={item.dose}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/,/g, ".");
-                          if (/^\d*\.?\d{0,3}$/.test(value)) {
-                            handleItemChange(i, "dose", value);
-                            if (surface && surface !== "" && surface !== "0") {
-                              const preciseDose = preciseDoseByRow[i];
-                              const doseForCalc =
-                                typeof preciseDose === "number" && formatDose(preciseDose) === value
-                                  ? preciseDose
-                                  : Number(value);
-                              handleItemChange(
-                                i,
-                                "totalUsed",
-                                formatTotalUsedFromDose(doseForCalc * Number(surface))
-                              );
-                            }
-                          }
-                        }}
-                        size="sm"
-                      />
-                    </div>
-                    <div>
-                      <Button
-                        variant="danger"
-                        size="xs"
-                        iconLeft={<Trash2 className="h-3.5 w-3.5" />}
-                        onClick={() => {
-                          const newItems = [...items];
-                          newItems.splice(i, 1);
-                          setItems(newItems);
-                        }}
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-              <Button
-                variant="secondary"
-                size="xs"
-                iconLeft={<Plus className="h-3.5 w-3.5" />}
-                onClick={() => {
-                  setItems([...items, { itemId: null, totalUsed: "", dose: "" }]);
-                }}
-              >
-                Agregar Fila de Insumo
-              </Button>
-            </div>
+            <SupplyItemsTable
+              items={items.map(({ itemId, totalUsed, dose }) => ({
+                supplyId: itemId,
+                quantity: totalUsed,
+                dose,
+              }))}
+              options={availableSupplies.map((s) => ({
+                id: s.id,
+                name: s.name,
+                availableQty: s.availableQty,
+                unitName: s.availableUnit,
+              }))}
+              showDoseColumn
+              dosePlaceholder="Total/superficie"
+              addRowLabel="Agregar Fila de Insumo"
+              onItemChange={(rowIndex, field, value) => {
+                if (field === "supplyId") {
+                  const supplyId = value === null ? null : Number(value);
+                  handleItemChange(rowIndex, "itemId", supplyId);
+                  handleItemChange(rowIndex, "dose", "");
+                  handleItemChange(rowIndex, "totalUsed", "");
+                } else if (field === "quantity") {
+                  const strValue = String(value);
+                  handleItemChange(rowIndex, "totalUsed", strValue);
+                  if (surface && surface !== "" && surface !== "0") {
+                    const preciseDose = Number(strValue) / Number(surface);
+                    setPreciseDoseByRow((prev) => ({
+                      ...prev,
+                      [rowIndex]: preciseDose,
+                    }));
+                    handleItemChange(rowIndex, "dose", formatDose(preciseDose));
+                  }
+                } else if (field === "dose") {
+                  const strValue = String(value);
+                  handleItemChange(rowIndex, "dose", strValue);
+                  if (surface && surface !== "" && surface !== "0") {
+                    const preciseDose = preciseDoseByRow[rowIndex];
+                    const doseForCalc =
+                      typeof preciseDose === "number" &&
+                      formatDose(preciseDose) === strValue
+                        ? preciseDose
+                        : Number(strValue);
+                    handleItemChange(
+                      rowIndex,
+                      "totalUsed",
+                      formatTotalUsedFromDose(doseForCalc * Number(surface)),
+                    );
+                  }
+                }
+              }}
+              onAddRow={() =>
+                setItems([...items, { itemId: null, totalUsed: "", dose: "" }])
+              }
+              onRemoveRow={(rowIndex) => {
+                const newItems = [...items];
+                newItems.splice(rowIndex, 1);
+                setItems(newItems);
+              }}
+              onRequestCreateSupply={(rowIndex) => {
+                setItemIndexToUpdate(rowIndex);
+                setOpenCreateSupply(true);
+              }}
+            />
           </section>
           <section className="drawer-section">
             <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>

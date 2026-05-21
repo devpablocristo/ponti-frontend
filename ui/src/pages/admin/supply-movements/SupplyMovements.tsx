@@ -8,14 +8,13 @@ import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
-import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import CreateSupplyMovement from "./CreateSupplyMovement";
-import SuppliesCatalog from "../database/supplies/SuppliesCatalog";
+import ImportSupplyMovements from "./ImportSupplyMovements";
 import useSupplyMovements from "../../../hooks/useSupplyMovements";
 import { SupplyMovement } from "../../../hooks/useSupplyMovements/types";
 import { Summary } from "@/api/types";
@@ -58,6 +57,10 @@ function SupplyMovementsIndicators({ summary }: { summary?: Summary }) {
 
 export function SupplyMovements() {
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
+  // Archivo elegido por el usuario en el file-picker del botón Importar.
+  // Lo pasamos al drawer `ImportSupplyMovements` que parsea + previsualiza
+  // + permite tildar por fila antes de confirmar. Misma mecánica que OT/Lotes.
+  const [importFile, setImportFile] = useState<File | null>(null);
   const {
     getSupplyMovements,
     supplyMovements,
@@ -101,7 +104,11 @@ export function SupplyMovements() {
     );
   };
 
-  const openImportDrawer = () => {
+  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
     if (!projectId) {
       setWarningMessage("Para importar insumos, seleccioná un proyecto.");
       return;
@@ -110,6 +117,7 @@ export function SupplyMovements() {
     setWarningMessage(null);
     setActionErrorMessage(null);
     setSuccessMessage(null);
+    setImportFile(file);
     setImportDrawerOpen(true);
   };
 
@@ -436,11 +444,21 @@ export function SupplyMovements() {
     getSupplyMovements(supplyMovementQuery);
   };
 
-  const handleImported = useCallback((message: string) => {
-    setSuccessMessage(message);
-    setActionErrorMessage(null);
-    setImportDrawerOpen(false);
-  }, []);
+  const handleImported = useCallback(
+    (message: string) => {
+      setSuccessMessage(message);
+      setActionErrorMessage(null);
+      setImportDrawerOpen(false);
+      setImportFile(null);
+      // Refrescamos la lista con la query actual para que los nuevos
+      // movimientos aparezcan inmediatamente. Sin esto, el usuario tiene
+      // que hacer un filtro o navegar para verlos.
+      if (hasWorkspaceSelection) {
+        getSupplyMovements(supplyMovementQuery);
+      }
+    },
+    [hasWorkspaceSelection, supplyMovementQuery, getSupplyMovements],
+  );
 
   const filteredMovements = useMemo(() => {
     if (!hasWorkspaceSelection) return [];
@@ -599,7 +617,8 @@ export function SupplyMovements() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            onClick: openImportDrawer,
+            accept: ".csv,text/csv",
+            onFileChange: handleImportFile,
           },
           {
             label: "Exportar",
@@ -675,18 +694,16 @@ export function SupplyMovements() {
               }}
             />
 
-            <DrawerShell
+            <ImportSupplyMovements
               open={importDrawerOpen}
-              onClose={() => setImportDrawerOpen(false)}
-              title="Importar insumos"
-              subtitle="Cargá insumos manualmente o importalos desde Excel/CSV para el proyecto seleccionado."
-            >
-              <SuppliesCatalog
-                embedded
-                onCancel={() => setImportDrawerOpen(false)}
-                onSaved={handleImported}
-              />
-            </DrawerShell>
+              file={importFile}
+              projectId={projectId}
+              onClose={() => {
+                setImportDrawerOpen(false);
+                setImportFile(null);
+              }}
+              onImported={handleImported}
+            />
           </>
         )}
         <ArchivedDrawer
