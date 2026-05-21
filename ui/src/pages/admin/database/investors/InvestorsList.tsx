@@ -7,7 +7,7 @@ import { DataTable } from "@/lib/dataDisplay";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
@@ -459,7 +459,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
     <div>
       <div className="relative">
         <LoadingOverlay show={processing || projectsProcessing || loadingDetails} />
-        {(error || projectsError) && <ErrorBanner message={error || projectsError} />}
+        {(error || projectsError) && <Notification variant="error" message={error || projectsError} />}
         <AppFilterBar
           filters={[
             {

@@ -7,7 +7,7 @@ import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
@@ -20,7 +20,7 @@ import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { useSelection } from "../../../login/context/useSelection";
-import { toastError, toastSuccess } from "../../../../lib/toast";
+import { notify } from "../../../../lib/notify";
 import { Column } from "../../types";
 import { CUSTOMER_ENTITY, PROJECT_ENTITY } from "../../entities";
 import { formatNumberAr } from "../../utils";
@@ -38,6 +38,8 @@ type CustomerProjectRow = {
   customerId: number;
   customerName: string;
   projectName: string;
+  campaignLabel?: string;
+  groupSize?: number;
   campaignCount: number;
   fieldCount: number;
 };
@@ -318,7 +320,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   const visibleProjectRows = useMemo<CustomerProjectRow[]>(() => {
     if (!hasWorkspaceSelection) return [];
 
-    return visibleCustomers.flatMap((customer): CustomerProjectRow[] => {
+    const baseRows = visibleCustomers.flatMap((customer): CustomerProjectRow[] => {
       const allProjects = projectsByCustomer[customer.id] ?? [];
       const projectIds = allProjects
         .map((project) => project.id)
@@ -365,9 +367,24 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
         customerId: customer.id,
         customerName: customer.name,
         projectName: project.name ?? "Sin proyecto",
+        campaignLabel: campaignName(project) || undefined,
         campaignCount: campaignName(project) ? 1 : 0,
         fieldCount: Array.isArray(project.fields) ? project.fields.length : 0,
       }));
+    });
+
+    // Annotate project rows with the size of their (customerId, projectName)
+    // group so the renderer can disambiguate homónimos with the campaign label.
+    const groupSizes = new Map<string, number>();
+    for (const row of baseRows) {
+      if (row.mode !== "project") continue;
+      const key = `${row.customerId}|${normalizeFilter(row.projectName)}`;
+      groupSizes.set(key, (groupSizes.get(key) ?? 0) + 1);
+    }
+    return baseRows.map((row) => {
+      if (row.mode !== "project") return row;
+      const key = `${row.customerId}|${normalizeFilter(row.projectName)}`;
+      return { ...row, groupSize: groupSizes.get(key) ?? 1 };
     });
   }, [
     projectsByCustomer,
@@ -416,15 +433,15 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
 
         const uniqueNames = Array.from(new Set(names));
         if (uniqueNames.length === 0) {
-          toastError("El archivo no tiene clientes válidos.");
+          notify.error("El archivo no tiene clientes válidos.");
           return;
         }
 
         await Promise.all(uniqueNames.map((name) => createCustomer({ name })));
-        toastSuccess(`Se importaron ${uniqueNames.length} clientes.`);
+        notify.success(`Se importaron ${uniqueNames.length} clientes.`);
         refresh();
       } catch {
-        toastError("No se pudo importar clientes. Usá CSV con una columna Cliente.");
+        notify.error("No se pudo importar clientes. Usá CSV con una columna Cliente.");
       }
     },
     [createCustomer, refresh],
@@ -543,7 +560,17 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     () => [
       selectColumn,
       { key: "customerName", header: "Cliente", render: (value) => formatProperName(value) },
-      { key: "projectName", header: "Proyecto", render: (value) => formatProperName(value) },
+      {
+        key: "projectName",
+        header: "Proyecto",
+        render: (value, row) => {
+          const base = formatProperName(value);
+          if (row.mode === "project" && row.groupSize && row.groupSize > 1 && row.campaignLabel) {
+            return `${base} (${row.campaignLabel})`;
+          }
+          return base;
+        },
+      },
       {
         key: "campaignCount",
         header: "Cantidad de campañas",
@@ -620,6 +647,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
           mode={editingProjectId ? "project" : "customerOnly"}
           customerId={editingCustomerId}
           initialProjectId={editingProjectId}
+          onSaved={() => setDataVersion((v) => v + 1)}
           onClose={() => {
             setEditingCustomerId(null);
             setEditingProjectId(null);
@@ -641,7 +669,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
 
       <div className="relative">
         <LoadingOverlay show={hasWorkspaceSelection && (processing || projectsLoading)} />
-        {error && <ErrorBanner message={error} />}
+        {error && <Notification variant="error" message={error} />}
         {!hasWorkspaceSelection ? (
           <EmptyState
             icon={Briefcase}

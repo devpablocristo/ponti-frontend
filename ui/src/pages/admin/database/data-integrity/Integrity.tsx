@@ -4,7 +4,7 @@ import { AxiosError } from "axios";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import Button from "../../../../components/Button/Button";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { DataTable } from "@/lib/dataDisplay";
 import { apiClient } from "@/api/client";
 import { ErrorResponse } from "@/api/types";
@@ -208,7 +208,7 @@ export default function Integrity() {
           </div>
         )}
       />
-      <ErrorBanner message={error} prefix="Error!" className="mt-4" />
+      <Notification variant="error" message={error} prefix="Error!" className="mt-4" />
     </div>
   );
 }

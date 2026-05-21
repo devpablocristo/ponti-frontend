@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { ArrowUp, Hourglass, Upload, Wallet } from "lucide-react";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { EmptyState } from "../../../components/feedback/EmptyState";
 import { usePDF } from "react-to-pdf";
 
@@ -269,7 +269,7 @@ export function Dashboard() {
       )}
 
       {hasActiveFilters && error && (
-        <ErrorBanner className="mt-4">
+        <Notification variant="error" className="mt-4">
           <div className="flex items-center justify-between gap-3">
             <div>Error al cargar datos del dashboard: {error}</div>
             <Button
@@ -281,7 +281,7 @@ export function Dashboard() {
               Reintentar
             </Button>
           </div>
-        </ErrorBanner>
+        </Notification>
       )}
 
       {hasActiveFilters && (

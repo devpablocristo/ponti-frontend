@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, CalendarRange, Download, Plus, Upload } from "lucide-react";
+import { Archive, CalendarRange, Plus, Upload } from "lucide-react";
 
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
@@ -42,12 +42,38 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
     updateCampaign,
     archiveCampaign,
   } = useCampaigns();
-  const { filters } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+  const {
+    filters: allFilters,
+    selectedCustomer,
+    selectedProject,
+    campaigns: workspaceCampaigns,
+  } = useWorkspaceFilters(["customer", "project"]);
+  // En la pantalla de Campañas el filtro de Campaña es redundante (estás
+  // viendo el catálogo de campañas). useWorkspaceFilters siempre incluye
+  // "campaign" en el set forzado, así que lo descartamos en el render.
+  const filters = useMemo(
+    () => allFilters.filter((f) => f.name !== "campaña" && f.name !== "campaign"),
+    [allFilters],
+  );
 
   const refresh = useCallback(
     () => getCampaigns(""),
     [getCampaigns],
   );
+
+  // Client-side filter using the workspace selection. The workspace's
+  // `campaigns` list is already scoped to the selected customer (one row per
+  // project that uses each campaign), so we project it down to a set of ids
+  // and intersect with the full catalog.
+  const visibleCampaigns = useMemo(() => {
+    if (!selectedCustomer && !selectedProject) return campaigns;
+    const scopedIds = new Set(
+      workspaceCampaigns
+        .filter((c) => !selectedProject || c.project_id === selectedProject.id)
+        .map((c) => c.id),
+    );
+    return campaigns.filter((c) => scopedIds.has(c.id));
+  }, [campaigns, workspaceCampaigns, selectedCustomer, selectedProject]);
 
   const drawer = useEntityFormDrawer<Campaign, CampaignPayloadInput>({
     buildSuccessLabel: (input) => `la campaña "${input.name}"`,
@@ -58,7 +84,7 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
   });
 
   const bulk = useBulkActions<Campaign>({
-    items: campaigns,
+    items: visibleCampaigns,
     entity: ENTITY,
     archive: archiveCampaign,
     onEdit: drawer.openEdit,
@@ -75,26 +101,6 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
       buildTimestampedFilename("campanias", "csv"),
     );
   }, [campaigns]);
-
-  const handleImport = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      const text = await file.text();
-      const names = Array.from(
-        new Set(
-          text
-            .split(/\r?\n/)
-            .map((line) => line.split(/[;,]/)[0]?.replace(/^"|"$/g, "").trim())
-            .filter(Boolean)
-            .filter((name, index) => index > 0 || !/campana|campaña|nombre|name/i.test(name)),
-        ),
-      );
-      await Promise.all(names.map((name) => createCampaign({ name })));
-      refresh();
-    },
-    [createCampaign, refresh],
-  );
 
   useEffect(() => {
     refresh();
@@ -118,14 +124,6 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
       <AppFilterBar
         filters={filters}
         actions={[
-          {
-            label: "Importar",
-            icon: <Download className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            accept: ".csv,text/csv",
-            onFileChange: handleImport,
-          },
           {
             label: "Exportar",
             icon: <Upload className="h-4 w-4" />,
@@ -152,8 +150,8 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
 
       <div className="relative mt-4">
         <LoadingOverlay show={processing} />
-        {error && <ErrorBanner message={error} />}
-        {!processing && campaigns.length === 0 ? (
+        {error && <Notification variant="error" message={error} />}
+        {!processing && visibleCampaigns.length === 0 ? (
           <EmptyState
             icon={CalendarRange}
             title="Aún no hay campañas"
@@ -176,14 +174,14 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
           <>
             <BulkSelectionPanel
               selectedCount={bulk.selectedCount}
-              totalCount={campaigns.length}
+              totalCount={visibleCampaigns.length}
               allSelected={bulk.allSelected}
               onToggleAll={bulk.toggleAll}
               onClear={bulk.clear}
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable data={campaigns} columns={tableColumns} />
+            <DataTable data={visibleCampaigns} columns={tableColumns} />
           </>
         )}
       </div>

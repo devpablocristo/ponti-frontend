@@ -4,8 +4,7 @@ import Button from "../Button/Button";
 import { Checkbox } from "../Input/Checkbox";
 import InputField from "../Input/InputField";
 import SelectField from "../Input/SelectField";
-import { ErrorBanner } from "../feedback/ErrorBanner";
-import { SuccessBanner } from "../feedback/SuccessBanner";
+import { Notification } from "../feedback/Notification";
 import useCategories from "../../hooks/useCategories";
 import useSupplies from "../../hooks/useSupplies";
 import { units } from "../../constants/units";
@@ -55,7 +54,7 @@ export default function CreateSupplyInline({
   return (
     <div className="space-y-4">
       {success && (
-        <SuccessBanner size="sm">
+        <Notification variant="success" size="sm">
           <div className="flex items-center justify-between">
             <span>{success}</span>
             <Button
@@ -69,12 +68,12 @@ export default function CreateSupplyInline({
               OK
             </Button>
           </div>
-        </SuccessBanner>
+        </Notification>
       )}
 
       {!success && (
         <>
-          {error && <ErrorBanner message={error} size="sm" />}
+          {error && <Notification variant="error" message={error} size="sm" />}
           <InputField
             label="Nombre del insumo"
             name="suplyName"

@@ -17,8 +17,7 @@ import SelectField from "../../../../components/Input/SelectField";
 import useCategories from "../../../../hooks/useCategories";
 import { CATEGORY_TYPE_ID, categoryTypeQuery } from "@/lib/categoryTypes";
 import { apiClient } from "../../../../api/client";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
@@ -106,7 +105,6 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     "customer",
     "project",
     "campaign",
-    "field",
   ]);
 
   const refresh = useCallback(() => {
@@ -379,14 +377,12 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         />
       </DrawerShell>
       <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
-        <ErrorBanner
+        <Notification variant="error"
           message={errorMessage || null}
-          variant="alert"
           onDismiss={() => setErrorMessage("")}
         />
-        <SuccessBanner
+        <Notification variant="success"
           message={successMessage || null}
-          variant="alert"
           onDismiss={() => setSuccessMessage("")}
         />
         <div className="flex justify-between items-center">

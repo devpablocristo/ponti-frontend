@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, MapPin } from "lucide-react";
+import { Archive, MapPin, Upload } from "lucide-react";
+
+import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTransfer";
 
 import { DataTable } from "@/lib/dataDisplay";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
@@ -45,21 +47,40 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
     getFields,
     archiveField,
   } = useFields();
-  const { selectedCustomer, filters } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-    "field",
-  ]);
+  const {
+    filters: allFilters,
+    selectedCustomer,
+    selectedProject,
+    selectedCampaignId,
+    fields: workspaceFields,
+  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+  // El catálogo de Campos no necesita filtrar por Campo (estás viendo
+  // campos). Pasamos "field" al hook solo para que la lista de fields del
+  // workspace se cargue, pero lo escondemos del filter bar.
+  const filters = useMemo(
+    () => allFilters.filter((f) => f.name !== "campo" && f.name !== "field"),
+    [allFilters],
+  );
 
   const refresh = useCallback(() => getFields(""), [getFields]);
+
+  // Client-side filter using the workspace selection. workspaceFields is
+  // already scoped to the selected project (or all when no project selected).
+  // We use it as the allow-list when any workspace filter is active and
+  // intersect with the full catalog loaded locally.
+  const visibleFields = useMemo(() => {
+    const isScoped = Boolean(selectedCustomer || selectedProject || selectedCampaignId);
+    if (!isScoped) return fields;
+    const scopedIds = new Set(workspaceFields.map((f) => f.id));
+    return fields.filter((f) => scopedIds.has(f.id));
+  }, [fields, workspaceFields, selectedCustomer, selectedProject, selectedCampaignId]);
 
   const openFieldEditor = useCallback((field: Field) => {
     setEditorContext({ initialProjectId: field.project_id ?? null });
   }, []);
 
   const bulk = useBulkActions<Field>({
-    items: fields,
+    items: visibleFields,
     entity: ENTITY,
     archive: archiveField,
     onEdit: openFieldEditor,
@@ -69,6 +90,18 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  const handleExport = useCallback(() => {
+    const header = ["Nombre", "Tipo de contrato"].join(",");
+    const rows = visibleFields.map((f) =>
+      [csvEscape(f.name), csvEscape(f.lease_type_name ?? "")].join(","),
+    );
+    const csv = [header, ...rows].join("\n");
+    downloadBlob(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      buildTimestampedFilename("campos", "csv"),
+    );
+  }, [visibleFields]);
 
   const selectColumn = useMemo<Column<Field>>(
     () => makeSelectColumn<Field>(bulk, (f) => f.name, ENTITY),
@@ -86,6 +119,13 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
         filters={filters}
         actions={[
           {
+            label: "Exportar",
+            icon: <Upload className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            onClick: handleExport,
+          },
+          {
             label: "Archivados",
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
@@ -97,8 +137,8 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
 
       <div className="relative mt-4">
         <LoadingOverlay show={processing} />
-        {error && <ErrorBanner message={error} />}
-        {!processing && fields.length === 0 ? (
+        {error && <Notification variant="error" message={error} />}
+        {!processing && visibleFields.length === 0 ? (
           <EmptyState
             icon={MapPin}
             title="Aún no hay campos"
@@ -112,14 +152,14 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
           <>
             <BulkSelectionPanel
               selectedCount={bulk.selectedCount}
-              totalCount={fields.length}
+              totalCount={visibleFields.length}
               allSelected={bulk.allSelected}
               onToggleAll={bulk.toggleAll}
               onClear={bulk.clear}
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable data={fields} columns={tableColumns} />
+            <DataTable data={visibleFields} columns={tableColumns} />
           </>
         )}
       </div>

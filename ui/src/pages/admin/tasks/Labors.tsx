@@ -2,9 +2,7 @@ import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { Archive, Briefcase, ClockIcon, CheckIcon, Download, FileTextIcon, FileXIcon, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
-import { WarningBanner } from "../../../components/feedback/WarningBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
@@ -865,7 +863,7 @@ export function Labors() {
           },
         ]}
       />
-      <WarningBanner
+      <Notification variant="warning"
         message={warningMessage}
         onDismiss={() => setWarningMessage(null)}
       />
@@ -903,7 +901,7 @@ export function Labors() {
       {hasWorkspaceSelection && (
       <div className="my-3">
         {errorMetrics ? (
-          <ErrorBanner message={errorMetrics} variant="outlined" prefix="Error:" />
+          <Notification variant="error" message={errorMetrics} prefix="Error:" />
         ) : (
           <TasksIndicators
             metrics={derivedMetrics}
@@ -1040,18 +1038,16 @@ export function Labors() {
           </div>
         </EntityFormDrawer>
         {!showInvoiceModal && (
-          <SuccessBanner message={resultInvoiceMessage} variant="outlined" />
+          <Notification variant="success" message={resultInvoiceMessage} />
         )}
         {!showInvoiceModal && (
-          <ErrorBanner
+          <Notification variant="error"
             message={errorInvoiceMessage}
-            variant="outlined"
             prefix="Error:"
           />
         )}
-        <ErrorBanner
+        <Notification variant="error"
           message={exportErrorMessage || error}
-          variant="outlined"
           prefix="Error:"
         />
       </div>

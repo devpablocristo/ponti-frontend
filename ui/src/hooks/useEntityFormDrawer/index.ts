@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import { toastSuccess } from "../../lib/toast";
+import { notify } from "../../lib/notify";
 import {
   getCreateSuccessCopy,
   getUpdateSuccessCopy,
@@ -62,10 +62,10 @@ export function useEntityFormDrawer<T extends { id: number }, Input>({
       try {
         if (editing) {
           await update(editing.id, input);
-          toastSuccess(getUpdateSuccessCopy(buildSuccessLabel(input)));
+          notify.success(getUpdateSuccessCopy(buildSuccessLabel(input)));
         } else {
           await create(input);
-          toastSuccess(getCreateSuccessCopy(buildSuccessLabel(input)));
+          notify.success(getCreateSuccessCopy(buildSuccessLabel(input)));
         }
         close();
         onAfter?.();

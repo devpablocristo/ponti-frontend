@@ -2,9 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
-import { WarningBanner } from "../../../components/feedback/WarningBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
@@ -658,11 +656,11 @@ export function SupplyMovements() {
           },
         ]}
       />
-      <WarningBanner
+      <Notification variant="warning"
         message={warningMessage}
         onDismiss={() => setWarningMessage(null)}
       />
-      <SuccessBanner message={successMessage} variant="outlined" />
+      <Notification variant="success" message={successMessage} />
       {hasWorkspaceSelection && !error && (
         <div className="my-3">
           <SupplyMovementsIndicators summary={derivedSummary} />
@@ -671,9 +669,8 @@ export function SupplyMovements() {
       <div className="mt-3 relative">
         <LoadingOverlay show={hasWorkspaceSelection && processing} />
 
-        <ErrorBanner
+        <Notification variant="error"
           message={actionErrorMessage || exportErrorMessage || error}
-          variant="outlined"
           prefix="Error:"
         />
         {projectId && (

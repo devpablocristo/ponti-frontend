@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import SelectField from "../../../components/Input/SelectField";
@@ -302,7 +302,7 @@ function ByFieldOrCropReport() {
         ] }
       />
 
-      <ErrorBanner message={error} />
+      <Notification variant="error" message={error} />
 
       { !error && (
         <>

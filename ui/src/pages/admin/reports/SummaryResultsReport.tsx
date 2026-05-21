@@ -17,11 +17,11 @@ import {
   Wallet,
   Wheat,
 } from "lucide-react";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { usePDF } from "react-to-pdf";
 
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useReporting from "../../../hooks/useReporting";
 import type {
@@ -320,7 +320,7 @@ export function SummaryResultsReport() {
     <div className="relative">
       <LoadingOverlay show={isLoading} />
 
-      <FilterBar
+      <AppFilterBar
         filters={reportFilters}
         actions={[
           {
@@ -339,7 +339,7 @@ export function SummaryResultsReport() {
         ]}
       />
 
-      {summaryError && <ErrorBanner message={summaryError} />}
+      {summaryError && <Notification variant="error" message={summaryError} />}
 
       {!summaryError && data && (
         <div
@@ -946,7 +946,7 @@ function integralValueCellClass(row: IntegralRow, index: number) {
 
 function IntegralView({ data, error }: { data: FieldCropReportData | null; error: string | null }) {
   if (error) {
-    return <section><ErrorBanner message={error} /></section>;
+    return <section><Notification variant="error" message={error} /></section>;
   }
 
   if (!data) {

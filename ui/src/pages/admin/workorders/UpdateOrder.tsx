@@ -19,8 +19,7 @@ import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
 import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../components/feedback/Notification";
 
 const emptyItems = Array.from({ length: 7 }, () => ({
   item: "",
@@ -799,10 +798,9 @@ export default function UpdateOrder({
               onChange={(e) => setObservations(e.target.value)}
             />
           </section>
-          <ErrorBanner message={error || null} prefix="Error!" onDismiss={() => setError("")} />
-          <SuccessBanner
+          <Notification variant="error" message={error || null} prefix="Error!" onDismiss={() => setError("")} />
+          <Notification variant="success"
             message={successMessage || null}
-            variant="alert"
             onDismiss={() => setSuccessMessage("")}
           />
         </>

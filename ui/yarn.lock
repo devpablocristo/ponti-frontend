@@ -31,6 +31,15 @@
     "@csstools/css-tokenizer" "^3.0.3"
     lru-cache "^10.4.3"
 
+"@babel/code-frame@^7.10.4":
+  version "7.29.0"
+  resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.29.0.tgz#7cd7a59f15b3cc0dcd803038f7792712a7d0b15c"
+  integrity sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==
+  dependencies:
+    "@babel/helper-validator-identifier" "^7.28.5"
+    js-tokens "^4.0.0"
+    picocolors "^1.1.1"
+
 "@babel/code-frame@^7.26.2":
   version "7.26.2"
   resolved "https://registry.npmjs.org/@babel/code-frame/-/code-frame-7.26.2.tgz"
@@ -119,6 +128,11 @@
   version "7.25.9"
   resolved "https://registry.npmjs.org/@babel/helper-validator-identifier/-/helper-validator-identifier-7.25.9.tgz"
   integrity sha512-Ed61U6XJc3CVRfkERJWDz4dJwKe7iLmmJsbOGu9wSloNSFttHV0I8g6UAgb7qnK5ly5bGLPd4oXZlxCdANBOWQ==
+
+"@babel/helper-validator-identifier@^7.28.5":
+  version "7.28.5"
+  resolved "https://registry.yarnpkg.com/@babel/helper-validator-identifier/-/helper-validator-identifier-7.28.5.tgz#010b6938fab7cb7df74aa2bbc06aa503b8fe5fb4"
+  integrity sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q==
 
 "@babel/helper-validator-option@^7.25.9":
   version "7.25.9"
@@ -222,34 +236,27 @@
   resolved "https://registry.npmjs.org/@csstools/css-tokenizer/-/css-tokenizer-3.0.4.tgz"
   integrity sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==
 
-"@devpablocristo/core-authn@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.npmjs.org/@devpablocristo/core-authn/-/core-authn-0.3.0.tgz"
-  integrity sha512-9Yz1xxNP8G/LxPKtQ19MvdcJchVyLtW8a9zCGb11uZoCucl2M/umgtzj+SGUPuWGzPg9GMIM4t0dmGM5QUWd6g==
-  dependencies:
-    "@devpablocristo/core-browser" "^0.4.0"
-    "@devpablocristo/core-http" "^0.2.0"
-    axios "^1.8.1"
-
-"@devpablocristo/core-browser@^0.4.0":
-  version "0.4.0"
-  resolved "https://registry.npmjs.org/@devpablocristo/core-browser/-/core-browser-0.4.0.tgz"
-  integrity sha512-VVwjzTT0vm1GbuAlVmC82St5wdfHzKtnDy1Ks6+tUq9QdDRqZfKwJV6dapk0sLODJ8he3nsMvSd7GONB4bllMw==
-
-"@devpablocristo/core-http@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.npmjs.org/@devpablocristo/core-http/-/core-http-0.2.0.tgz"
-  integrity sha512-SY7F2Q5WlMb01mQtRq68oIe2InIvdcBH+sL8/akA7Y+/uhe9GHXDTkpvqzVvCo/qC/alkmOUR6ptElB0fzbzHg==
-
-"@devpablocristo/modules-ui-data-display@^0.3.3":
-  version "0.3.3"
-  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-data-display/-/modules-ui-data-display-0.3.3.tgz#7ee4494421c83de89d21497af7aa0d973e3d1ac7"
-  integrity sha512-HcbLk4lREq829nT2sexxyGAweI7m5kux0mNK26Mbv1HBhlz6W7OrEaM8e3z6KLWs8JCvTwa8xxKcYSvPQluhyA==
-
-"@devpablocristo/modules-ui-filters@^0.1.0":
+"@devpablocristo/platform-authn@^0.1.0":
   version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@devpablocristo/modules-ui-filters/-/modules-ui-filters-0.1.0.tgz#757734d149206b97625dd0c4bae676eade4edb41"
-  integrity sha512-qia9gu/R6DmVN63+Y3miK9tE2nPwhUbjhtETTEud6IDwciY37KnYG/nDGeyCkfBX9UwNbJIOsuivcVNDyM7HqQ==
+  resolved "https://registry.yarnpkg.com/@devpablocristo/platform-authn/-/platform-authn-0.1.0.tgz#125cbac6fdcbd02afe443af9188dd11fe300a34d"
+  integrity sha512-tKpxeWIXmuQ86ZGjpoDAMOSWLSzk0O/JIfj61kjOcNvMBJeALkpZHPrSkbEbaFDNTMt+Z7odHSWd2EWvYsvtKQ==
+  dependencies:
+    axios "^1.16.0"
+
+"@devpablocristo/platform-browser@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/platform-browser/-/platform-browser-0.1.0.tgz#e8d4f58e20d25c472e4d9452f948ccc26689e284"
+  integrity sha512-6LSuvps9H2r++csRKpJYeqGWEe7eXAPWLuyqeXDb9PPIrFKGIOJ4h6kmCdvzTnjxRT8EO6Hd81P/lPe3WURjJw==
+
+"@devpablocristo/platform-http@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/platform-http/-/platform-http-0.1.0.tgz#5a8450789cdac8f8a9a85c7f8bb4990ab1142f85"
+  integrity sha512-uGw3Q4tE+RU30OF92lw7csMzTJGLFbVEWl/1EM115bYikbFMzKkjLRqPVCA5IAKABtY5yg2sj9dn7/tnO68m6g==
+
+"@devpablocristo/platform-ui-data-display@^0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/platform-ui-data-display/-/platform-ui-data-display-0.1.0.tgz#a471bfa0c272cc21a0667ee24b91ed89e335d31b"
+  integrity sha512-rFwuUptvvglrHaLWNSzkkr4Ik4KP4vaxtSephq+UAOOd8EsFaIAXiv0VbfJK+jQj4pk0Gs48Ebwg9l8P6iJaZg==
 
 "@esbuild/aix-ppc64@0.25.0":
   version "0.25.0"
@@ -644,6 +651,20 @@
   dependencies:
     postcss-selector-parser "6.0.10"
 
+"@testing-library/dom@^10.4.1":
+  version "10.4.1"
+  resolved "https://registry.yarnpkg.com/@testing-library/dom/-/dom-10.4.1.tgz#d444f8a889e9a46e9a3b4f3b88e0fcb3efb6cf95"
+  integrity sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==
+  dependencies:
+    "@babel/code-frame" "^7.10.4"
+    "@babel/runtime" "^7.12.5"
+    "@types/aria-query" "^5.0.1"
+    aria-query "5.3.0"
+    dom-accessibility-api "^0.5.9"
+    lz-string "^1.5.0"
+    picocolors "1.1.1"
+    pretty-format "^27.0.2"
+
 "@testing-library/jest-dom@^6.7.0":
   version "6.9.1"
   resolved "https://registry.npmjs.org/@testing-library/jest-dom/-/jest-dom-6.9.1.tgz"
@@ -655,6 +676,18 @@
     dom-accessibility-api "^0.6.3"
     picocolors "^1.1.1"
     redent "^3.0.0"
+
+"@testing-library/react@^16.3.2":
+  version "16.3.2"
+  resolved "https://registry.yarnpkg.com/@testing-library/react/-/react-16.3.2.tgz#672883b7acb8e775fc0492d9e9d25e06e89786d0"
+  integrity sha512-XU5/SytQM+ykqMnAnvB2umaJNIOsLF3PVv//1Ew4CTcpz0/BRyy/af40qqrt7SjKpDdT1saBMc42CUok5gaw+g==
+  dependencies:
+    "@babel/runtime" "^7.12.5"
+
+"@types/aria-query@^5.0.1":
+  version "5.0.4"
+  resolved "https://registry.yarnpkg.com/@types/aria-query/-/aria-query-5.0.4.tgz#1a31c3d378850d2778dabb6374d036dcba4ba708"
+  integrity sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==
 
 "@types/babel__core@^7.20.5":
   version "7.20.5"
@@ -996,6 +1029,11 @@ ansi-styles@^4.0.0, ansi-styles@^4.1.0:
   dependencies:
     color-convert "^2.0.1"
 
+ansi-styles@^5.0.0:
+  version "5.2.0"
+  resolved "https://registry.yarnpkg.com/ansi-styles/-/ansi-styles-5.2.0.tgz#07449690ad45777d1924ac2abb2fc8895dba836b"
+  integrity sha512-Cxwpt2SfTzTtXcfOlzGEee8O+c+MmUgGrNiBcXnuWxuFJHe6a5Hz7qwhwe5OgaSYI0IJvkLqWX1ASG+cJOkEiA==
+
 ansi-styles@^6.1.0:
   version "6.2.1"
   resolved "https://registry.npmjs.org/ansi-styles/-/ansi-styles-6.2.1.tgz"
@@ -1024,7 +1062,7 @@ argparse@^2.0.1:
   resolved "https://registry.npmjs.org/argparse/-/argparse-2.0.1.tgz"
   integrity sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==
 
-aria-query@^5.0.0:
+aria-query@5.3.0, aria-query@^5.0.0:
   version "5.3.0"
   resolved "https://registry.npmjs.org/aria-query/-/aria-query-5.3.0.tgz"
   integrity sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A==
@@ -1053,7 +1091,7 @@ autoprefixer@^10.4.20:
     picocolors "^1.0.1"
     postcss-value-parser "^4.2.0"
 
-axios@^1.16.0, axios@^1.8.1:
+axios@^1.16.0:
   version "1.16.0"
   resolved "https://registry.yarnpkg.com/axios/-/axios-1.16.0.tgz#f8e5dd931cef2a5f8c32216d5784eda2f8750eb7"
   integrity sha512-6hp5CwvTPlN2A31g5dxnwAX0orzM7pmCRDLnZSX772mv8WDqICwFjowHuPs04Mc8deIld1+ejhtaMn5vp6b+1w==
@@ -1371,6 +1409,11 @@ dlv@^1.1.3:
   version "1.1.3"
   resolved "https://registry.npmjs.org/dlv/-/dlv-1.1.3.tgz"
   integrity sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==
+
+dom-accessibility-api@^0.5.9:
+  version "0.5.16"
+  resolved "https://registry.yarnpkg.com/dom-accessibility-api/-/dom-accessibility-api-0.5.16.tgz#5a7429e6066eb3664d911e33fb0e45de8eb08453"
+  integrity sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==
 
 dom-accessibility-api@^0.6.3:
   version "0.6.3"
@@ -2202,6 +2245,11 @@ lucide-react@^0.477.0:
   resolved "https://registry.npmjs.org/lucide-react/-/lucide-react-0.477.0.tgz"
   integrity sha512-yCf7aYxerFZAbd8jHJxjwe1j7jEMPptjnaOqdYeirFnEy85cNR3/L+o0I875CYFYya+eEVzZSbNuRk8BZPDpVw==
 
+lz-string@^1.5.0:
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/lz-string/-/lz-string-1.5.0.tgz#c1ab50f77887b712621201ba9fd4e3a6ed099941"
+  integrity sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==
+
 magic-string@^0.30.17:
   version "0.30.21"
   resolved "https://registry.npmjs.org/magic-string/-/magic-string-0.30.21.tgz"
@@ -2876,7 +2924,7 @@ performance-now@^2.1.0:
   resolved "https://registry.npmjs.org/performance-now/-/performance-now-2.1.0.tgz"
   integrity sha512-7EAHlyLHI56VEIdK57uwHdHKIaAGbnXPiw0yWbarQZOKaKpvUIgW0jWRVLiatnM+XXlSwsanIBH/hzGMJulMow==
 
-picocolors@^1.0.0, picocolors@^1.0.1, picocolors@^1.1.1:
+picocolors@1.1.1, picocolors@^1.0.0, picocolors@^1.0.1, picocolors@^1.1.1:
   version "1.1.1"
   resolved "https://registry.npmjs.org/picocolors/-/picocolors-1.1.1.tgz"
   integrity sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==
@@ -2986,6 +3034,15 @@ prettier@^3.8.1:
   resolved "https://registry.npmjs.org/prettier/-/prettier-3.8.1.tgz"
   integrity sha512-UOnG6LftzbdaHZcKoPFtOcCKztrQ57WkHDeRD9t/PTQtmT0NHSeWWepj6pS0z/N7+08BHFDQVUrfmfMRcZwbMg==
 
+pretty-format@^27.0.2:
+  version "27.5.1"
+  resolved "https://registry.yarnpkg.com/pretty-format/-/pretty-format-27.5.1.tgz#2181879fdea51a7a5851fb39d920faa63f01d88e"
+  integrity sha512-Qb1gy5OrP5+zDf2Bvnzdl3jsTf1qXVMazbvCoKhtKqVs4/YK4ozX4gKQJJVyNe+cajNPn0KoC0MC3FUmaHWEmQ==
+  dependencies:
+    ansi-regex "^5.0.1"
+    ansi-styles "^5.0.0"
+    react-is "^17.0.1"
+
 property-information@^7.0.0:
   version "7.1.0"
   resolved "https://registry.npmjs.org/property-information/-/property-information-7.1.0.tgz"
@@ -3019,6 +3076,11 @@ react-dom@^19.0.0:
   integrity sha512-4GV5sHFG0e/0AD4X+ySy6UJd3jVl1iNsNHdpad0qhABJ11twS3TTBnseqsKurKcsNqCEFeGL3uLpVChpIO3QfQ==
   dependencies:
     scheduler "^0.25.0"
+
+react-is@^17.0.1:
+  version "17.0.2"
+  resolved "https://registry.yarnpkg.com/react-is/-/react-is-17.0.2.tgz#e691d4a8e9c789365655539ab372762b0efb54f0"
+  integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
 react-markdown@^10.1.0:
   version "10.1.0"

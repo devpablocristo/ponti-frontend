@@ -2,9 +2,8 @@ import { ReactNode } from "react";
 
 import { DrawerFormActions } from "../Drawer/DrawerFormActions";
 import { DrawerShell } from "../Drawer/DrawerShell";
-import { ErrorBanner } from "../feedback/ErrorBanner";
+import { Notification } from "../feedback/Notification";
 import { LoadingOverlay } from "../feedback/LoadingOverlay";
-import { SuccessBanner } from "../feedback/SuccessBanner";
 
 type EntityFormDrawerProps = {
   open: boolean;
@@ -78,8 +77,8 @@ export function EntityFormDrawer({
     >
       <LoadingOverlay show={processing} />
       <form className="drawer-form" onSubmit={handleSubmit}>
-        {errorMessage && <ErrorBanner message={errorMessage} onDismiss={onDismissError} />}
-        {successMessage && <SuccessBanner message={successMessage} onDismiss={onDismissSuccess} />}
+        {errorMessage && <Notification variant="error" message={errorMessage} onDismiss={onDismissError} />}
+        {successMessage && <Notification variant="success" message={successMessage} onDismiss={onDismissSuccess} />}
         {children}
       </form>
     </DrawerShell>

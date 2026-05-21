@@ -3,9 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Archive, Briefcase, Download, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
-import { WarningBanner } from "../../../components/feedback/WarningBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
@@ -1155,9 +1153,9 @@ export function WorkOrders() {
           },
         ]}
       />
-      <WarningBanner message={warningMessage || null} />
-      <SuccessBanner message={successMessage || null} variant="outlined" />
-      <ErrorBanner message={errorMessage} variant="outlined" prefix="Error:" />
+      <Notification variant="warning" message={warningMessage || null} />
+      <Notification variant="success" message={successMessage || null} />
+      <Notification variant="error" message={errorMessage} prefix="Error:" />
       {effectiveHasWorkspaceSelection && !processing && !errorMetrics && displayedOrders.length > 0 && (
         <div className="my-3">
           <OrdersIndicators
@@ -1211,17 +1209,22 @@ export function WorkOrders() {
           />
         ) : null}
         {selectedSupplyFilter.id && (
-          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
-            <span>
-              Filtrando órdenes que consumen: <strong>{selectedSupplyFilter.name || `Insumo ${selectedSupplyFilter.id}`}</strong>
-            </span>
-            <button
-              type="button"
-              className="font-semibold text-blue-700 hover:text-blue-900 hover:underline"
-              onClick={() => navigate("/admin/work-orders")}
-            >
-              Quitar filtro
-            </button>
+          <div className="mb-3">
+            <Notification variant="info">
+              <div className="flex items-center justify-between gap-3">
+                <span>
+                  Filtrando órdenes que consumen:{" "}
+                  <strong>{selectedSupplyFilter.name || `Insumo ${selectedSupplyFilter.id}`}</strong>
+                </span>
+                <button
+                  type="button"
+                  className="font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+                  onClick={() => navigate("/admin/work-orders")}
+                >
+                  Quitar filtro
+                </button>
+              </div>
+            </Notification>
           </div>
         )}
         {!effectiveHasWorkspaceSelection ? (

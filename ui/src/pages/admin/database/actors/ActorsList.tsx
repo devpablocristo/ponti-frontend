@@ -12,7 +12,7 @@ import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPan
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
@@ -272,7 +272,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
   return (
     <div className="relative">
       <LoadingOverlay show={processing} />
-      {error && <ErrorBanner message={error} variant="outlined" prefix="Error:" />}
+      {error && <Notification variant="error" message={error} prefix="Error:" />}
 
       <AppFilterBar
         filters={[

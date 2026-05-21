@@ -10,7 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { usePDF } from "react-to-pdf";
 
@@ -296,7 +296,7 @@ function InvestorContributionReportV2() {
         ]}
       />
 
-      <ErrorBanner message={error} />
+      <Notification variant="error" message={error} />
 
       {!error && dashboard && (
         <div ref={targetRef} className="space-y-4">

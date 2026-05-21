@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Button from "../../../components/Button/Button";
 import Header from "../../../components/Header/Header";
 import { useAuth } from "../../login/context/useAuth";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../components/feedback/Notification";
 
 export function Profile() {
   const auth = useAuth();
@@ -58,7 +58,7 @@ export function Profile() {
             </Button>
           </div>
         </form>
-        <ErrorBanner message={message} prefix="Info:" variant="alert" className="mt-4" />
+        <Notification variant="error" message={message} prefix="Info:" className="mt-4" />
       </div>
     </div>
   );

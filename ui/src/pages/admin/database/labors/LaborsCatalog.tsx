@@ -12,8 +12,7 @@ import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import {
   getValueByAliases,
   LABOR_HEADER_ALIASES,
@@ -448,14 +447,12 @@ export default function LaborsCatalog({
             : "w-full p-6 mt-4 bg-white rounded-lg shadow-md"
         }
       >
-        <ErrorBanner
+        <Notification variant="error"
           message={errorMessage || null}
-          variant="alert"
           onDismiss={() => setErrorMessage("")}
         />
-        <SuccessBanner
+        <Notification variant="success"
           message={successMessage || null}
-          variant="alert"
           onDismiss={() => setSuccessMessage("")}
         />
         <div className="flex items-center justify-between gap-3">

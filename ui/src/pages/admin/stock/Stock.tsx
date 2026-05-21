@@ -8,10 +8,8 @@ import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
-import { WarningBanner } from "../../../components/feedback/WarningBanner";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
@@ -799,7 +797,7 @@ export function Stock() {
           },
         ]}
       />
-      <WarningBanner
+      <Notification variant="warning"
         message={warningMessage}
         onDismiss={() => setWarningMessage(null)}
       />
@@ -811,10 +809,9 @@ export function Stock() {
       <div className="mt-3 relative">
         <LoadingOverlay show={hasWorkspaceSelection && processing} />
 
-        <SuccessBanner message={successMessage} variant="outlined" />
-        <ErrorBanner
+        <Notification variant="success" message={successMessage} />
+        <Notification variant="error"
           message={actionErrorMessage || exportErrorMessage || error}
-          variant="outlined"
           prefix="Error:"
         />
         {stockPeriods && stockPeriods.length > 0 && (
@@ -838,9 +835,8 @@ export function Stock() {
           </div>
         )}
         {errorPeriods && (
-          <div className="flex items-center gap-2 p-3 mb-3 text-sm text-amber-800 rounded-xl bg-amber-50 border border-amber-200">
-            <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-            <span>{errorPeriods}</span>
+          <div className="mb-3">
+            <Notification variant="warning" message={errorPeriods} />
           </div>
         )}
         {projectId && customers && (

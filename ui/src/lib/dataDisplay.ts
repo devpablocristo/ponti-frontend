@@ -9,7 +9,7 @@ import {
   DataTable as BaseDataTable,
   type DataTableColumn,
   type DataTableProps,
-} from "@devpablocristo/modules-ui-data-display";
+} from "@devpablocristo/platform-ui-data-display";
 
 type LocalDataTableProps<T> = DataTableProps<T> & {
   actionsHeader?: string;

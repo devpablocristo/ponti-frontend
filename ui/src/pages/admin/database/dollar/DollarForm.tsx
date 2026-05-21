@@ -5,8 +5,7 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import useDollar from "../../../../hooks/useDollar";
 import { DollarData } from "../../../../hooks/useDollar/types";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 
 interface DollarRow {
   month: string;
@@ -141,14 +140,12 @@ export default function DollarForm() {
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
           </div>
         )}
-        <ErrorBanner
+        <Notification variant="error"
           message={errorMessage || null}
-          variant="alert"
           onDismiss={() => setErrorMessage("")}
         />
-        <SuccessBanner
+        <Notification variant="success"
           message={successMessage || null}
-          variant="alert"
           onDismiss={() => setSuccessMessage("")}
         />
         <h1 className="text-custom-text font-semibold text-xl leading-none">

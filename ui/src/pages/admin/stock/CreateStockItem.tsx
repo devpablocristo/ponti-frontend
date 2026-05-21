@@ -5,8 +5,7 @@ import useSupplies from "../../../hooks/useSupplies";
 import useStock from "../../../hooks/useStock";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useStockMovement from "../../../hooks/useStockMovement";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
@@ -330,26 +329,24 @@ export default function CreateStockItem({
         />
 
         {errorMessages.length > 0 && (
-          <ErrorBanner onDismiss={() => setErrorMessages([])}>
+          <Notification variant="error" onDismiss={() => setErrorMessages([])}>
             <ul className="mt-1.5 list-disc list-inside">
               {errorMessages.map((msg, index) => (
                 <li key={index}>{msg}</li>
               ))}
             </ul>
-          </ErrorBanner>
+          </Notification>
         )}
         {error && error !== "" && (
-          <ErrorBanner
+          <Notification variant="error"
             message={error}
-            variant="alert"
             prefix="Error!"
             onDismiss={() => setError("")}
           />
         )}
         {successMessage && successMessage !== "" && (
-          <SuccessBanner
+          <Notification variant="success"
             message={successMessage}
-            variant="alert"
             onDismiss={() => setSuccessMessage("")}
           />
         )}

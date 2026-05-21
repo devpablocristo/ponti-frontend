@@ -14,8 +14,7 @@ import useCategories from "../../../../hooks/useCategories";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
 import { units } from "../../../../constants/units";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { CSV_ACCEPT } from "../../fileTransfer";
 
 interface Row {
@@ -759,14 +758,12 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
             : "p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md"
         }
       >
-        <ErrorBanner
+        <Notification variant="error"
           message={errorMessage || null}
-          variant="alert"
           onDismiss={() => setErrorMessage("")}
         />
-        <SuccessBanner
+        <Notification variant="success"
           message={successMessage || null}
-          variant="alert"
           onDismiss={() => setSuccessMessage("")}
         />
         <div className="flex justify-between items-center">

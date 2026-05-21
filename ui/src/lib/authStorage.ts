@@ -1,7 +1,7 @@
 import {
   createBrowserTokenStorage,
   type TokenPair,
-} from "@devpablocristo/core-authn/browser/storage";
+} from "@devpablocristo/platform-authn/browser/storage";
 
 export const authTokenStorage = createBrowserTokenStorage({
   namespace: "ponti",

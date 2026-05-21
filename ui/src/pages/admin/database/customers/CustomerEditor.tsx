@@ -11,7 +11,7 @@ import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import SmartEntityInput from "../../../../components/SmartEntityInput/SmartEntityInput";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
-import { toastError, toastSuccess } from "../../../../lib/toast";
+import { notify } from "../../../../lib/notify";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import { normalizeEntityName } from "../../../../lib/entityNameMatcher";
@@ -101,6 +101,22 @@ const SEASON_OPTIONS: EntityOption[] = [
   { id: 3, name: "Primavera" },
   { id: 4, name: "Verano" },
 ];
+
+// Natural agricultural cycle (Argentine southern-hemisphere convention) used
+// for auto-rotating crops when the user advances the lot's season by one
+// step. Cycle: Verano(4) → Otoño(1) → Invierno(2) → Primavera(3) → Verano(4).
+const SEASON_ID_CYCLE = [4, 1, 2, 3];
+
+function isSeasonOneStepForward(oldValue: string, newValue: string): boolean {
+  if (!oldValue || !newValue || oldValue === newValue) return false;
+  const oldId = Number(oldValue);
+  const newId = Number(newValue);
+  if (!oldId || !newId) return false;
+  const oldIdx = SEASON_ID_CYCLE.indexOf(oldId);
+  const newIdx = SEASON_ID_CYCLE.indexOf(newId);
+  if (oldIdx === -1 || newIdx === -1) return false;
+  return newIdx === (oldIdx + 1) % SEASON_ID_CYCLE.length;
+}
 
 const extractEntityOptions = (payload: EntityOptionsPayload | undefined): EntityOption[] => {
   if (Array.isArray(payload)) return payload;
@@ -203,6 +219,7 @@ type CustomerEditorProps = {
   customerId?: number | null;
   initialProjectId?: number | null;
   onClose?: () => void;
+  onSaved?: () => void;
 };
 
 export default function CustomerEditor({
@@ -211,6 +228,7 @@ export default function CustomerEditor({
   customerId,
   initialProjectId,
   onClose,
+  onSaved,
 }: CustomerEditorProps = {}) {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -254,7 +272,7 @@ export default function CustomerEditor({
           }
         } catch {
           if (!cancelled) {
-            toastError("No se pudieron cargar los clientes.");
+            notify.error("No se pudieron cargar los clientes.");
           }
         }
       };
@@ -275,7 +293,7 @@ export default function CustomerEditor({
         } catch {
           if (!cancelled) {
             setActorOptions([]);
-            toastError("No se pudieron cargar los actores.");
+            notify.error("No se pudieron cargar los actores.");
           }
         }
       };
@@ -411,7 +429,7 @@ export default function CustomerEditor({
         loadedProjectName.current = preferredDetail?.name ?? "";
       } catch {
         if (!cancelled) {
-          toastError("No se pudieron cargar los proyectos.");
+          notify.error("No se pudieron cargar los proyectos.");
         }
       } finally {
         if (!cancelled) {
@@ -540,8 +558,18 @@ export default function CustomerEditor({
 
   const updateCustomerName = (rawValue: string) => {
     const value = collapseInternalSpaces(rawValue);
+    // Free-text typing signals "this is a new association" — clear the id
+    // and actor_id so the BE looks up by name (or creates) at save time
+    // instead of renaming the currently-linked customer. The dropdown's
+    // onSelectExisting handler restores both fields when the user picks an
+    // existing row.
     setProjectDraft((prev) =>
-      prev ? { ...prev, customer: { ...prev.customer, name: value } } : prev
+      prev
+        ? {
+            ...prev,
+            customer: { ...prev.customer, id: null, actor_id: null, name: value },
+          }
+        : prev
     );
   };
 
@@ -596,7 +624,7 @@ export default function CustomerEditor({
     } catch {
       loadedProjectName.current = project.name;
       setProjectDraft((prev) => (prev ? { ...prev, name: project.name } : prev));
-      toastError("No se pudo cargar el proyecto seleccionado.");
+      notify.error("No se pudo cargar el proyecto seleccionado.");
     } finally {
       setLoading(false);
     }
@@ -604,8 +632,13 @@ export default function CustomerEditor({
 
   const updateCampaignName = (rawValue: string) => {
     const value = collapseInternalSpaces(rawValue);
+    // Same freeSolo semantics as customer: clear the id so the BE treats a
+    // typed value as "lookup-by-name or create" instead of renaming the
+    // currently-linked campaign at save time.
     setProjectDraft((prev) =>
-      prev ? { ...prev, campaign: { ...prev.campaign, name: value } } : prev
+      prev
+        ? { ...prev, campaign: { ...prev.campaign, id: null, name: value } }
+        : prev
     );
   };
 
@@ -717,12 +750,14 @@ export default function CustomerEditor({
 
   const updateManagerName = (index: number, rawValue: string) => {
     const value = collapseInternalSpaces(rawValue);
+    // freeSolo: typing clears id/actor_id so the BE looks up by name (or
+    // creates) at save time instead of renaming the currently-linked manager.
     setProjectDraft((prev) =>
       prev
         ? {
             ...prev,
             managers: prev.managers.map((manager, idx) =>
-              idx === index ? { ...manager, name: value } : manager
+              idx === index ? { ...manager, id: 0, actor_id: null, name: value } : manager
             ),
           }
         : prev
@@ -772,10 +807,19 @@ export default function CustomerEditor({
             ...prev,
             [group]: prev[group].map((investor, idx) =>
               idx === index
-                ? {
-                    ...investor,
-                    [key]: key === "percentage" ? percentage ?? 0 : value,
-                  }
+                ? key === "name"
+                  ? {
+                      // freeSolo: typing the name clears id/actor_id so the BE
+                      // looks up or creates by name at save time.
+                      ...investor,
+                      id: 0,
+                      actor_id: null,
+                      name: value,
+                    }
+                  : {
+                      ...investor,
+                      percentage: percentage ?? 0,
+                    }
                 : investor
             ),
           }
@@ -945,10 +989,19 @@ export default function CustomerEditor({
                     ...field,
                     investors: field.investors.map((investor, invIdx) =>
                       invIdx === investorIndex
-                        ? {
-                            ...investor,
-                            [key]: key === "percentage" ? percentage ?? 0 : value,
-                          }
+                        ? key === "name"
+                          ? {
+                              // freeSolo: typing clears id/actor_id so BE
+                              // looks up or creates by name at save time.
+                              ...investor,
+                              id: 0,
+                              actor_id: null,
+                              name: value,
+                            }
+                          : {
+                              ...investor,
+                              percentage: percentage ?? 0,
+                            }
                         : investor
                     ),
                   }
@@ -1075,6 +1128,44 @@ export default function CustomerEditor({
     );
   };
 
+  // changeLotSeason updates the lot's season and, when the user advances by
+  // exactly one step in the natural seasonal cycle (Verano → Otoño → Invierno
+  // → Primavera → Verano), rotates the current crop into the previous-crop
+  // slot. Multi-step changes (e.g. Primavera → Invierno) and reversals don't
+  // auto-rotate — the user keeps full control to fix things by hand.
+  const changeLotSeason = (fieldIndex: number, lotIndex: number, newSeason: string) => {
+    setProjectDraft((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        fields: prev.fields.map((field, idx) =>
+          idx === fieldIndex
+            ? {
+                ...field,
+                lots: field.lots.map((lot, lotIdx) => {
+                  if (lotIdx !== lotIndex) return lot;
+                  const shouldRotate =
+                    isSeasonOneStepForward(lot.season, newSeason) &&
+                    Number(lot.current_crop_id) > 0;
+                  if (shouldRotate) {
+                    return {
+                      ...lot,
+                      season: newSeason,
+                      previous_crop_id: Number(lot.current_crop_id),
+                      previous_crop_name: lot.current_crop_name ?? "",
+                      current_crop_id: 0,
+                      current_crop_name: "",
+                    };
+                  }
+                  return { ...lot, season: newSeason };
+                }),
+              }
+            : field
+        ),
+      };
+    });
+  };
+
   const addLotAt = (fieldIndex: number) => {
     setProjectDraft((prev) =>
       prev
@@ -1171,7 +1262,7 @@ export default function CustomerEditor({
     const validationErrors = validateProjectForSave(projectPayload, { customerOnly });
     const preflightErrors = [...validationErrors, ...payloadErrors];
     if (preflightErrors.length > 0) {
-      toastError(formatValidationErrors(preflightErrors));
+      notify.error(formatValidationErrors(preflightErrors));
       return;
     }
 
@@ -1190,18 +1281,18 @@ export default function CustomerEditor({
       customerMatchOptions
     );
     if (customerError) {
-      toastError(customerError);
+      notify.error(customerError);
       return;
     }
 
     if (!customerOnly && !selectedProjectId) {
-      toastError("Proyecto: seleccioná o creá un proyecto.");
+      notify.error("Proyecto: seleccioná o creá un proyecto.");
       return;
     }
 
     const actorEntityError = customerOnly ? null : validateActorEntities(projectPayload);
     if (actorEntityError) {
-      toastError(actorEntityError);
+      notify.error(actorEntityError);
       return;
     }
 
@@ -1214,10 +1305,10 @@ export default function CustomerEditor({
         };
         if (customerId) {
           await apiClient.put(`/customers/${customerId}`, payload);
-          toastSuccess("Cliente guardado.");
+          notify.success("Cliente guardado.");
         } else {
           await apiClient.post("/customers", payload);
-          toastSuccess("Cliente creado.");
+          notify.success("Cliente creado.");
         }
       } else if (selectedProjectId === NEW_VALUE) {
         const created = await apiClient.post<{ id: number }>("/projects", projectPayload);
@@ -1226,7 +1317,7 @@ export default function CustomerEditor({
         setSelectedProjectId(created.id);
         setProjectDraft(refreshed);
         loadedProjectName.current = refreshed.name;
-        toastSuccess("Proyecto creado.");
+        notify.success("Proyecto creado.");
       } else {
         await apiClient.put(`/projects/${selectedProjectId}`, projectPayload);
         const detail = await apiClient.get<ProjectDetailResponse>(
@@ -1235,7 +1326,9 @@ export default function CustomerEditor({
         const refreshed = normalizeProject(detail.data);
         setProjectDraft(refreshed);
         loadedProjectName.current = refreshed.name;
-        toastSuccess("Cambios guardados.");
+        notify.success("Cambios guardados.");
+        onSaved?.();
+        onClose?.();
       }
     } catch (saveError) {
       const fallback = customerOnly
@@ -1243,7 +1336,7 @@ export default function CustomerEditor({
         : "No se pudieron guardar los cambios.";
       const message = extractErrorMessage(saveError, fallback);
       const fieldMessage = parseProjectFieldErrorMessage(message);
-      toastError(fieldMessage ? `${message}\n${fieldMessage}` : message);
+      notify.error(fieldMessage ? `${message}\n${fieldMessage}` : message);
     } finally {
       setSaving(false);
     }
@@ -1477,6 +1570,7 @@ export default function CustomerEditor({
                         onSelectExisting={(leaseType) =>
                           selectLeaseTypeOption(fieldIndex, leaseType)
                         }
+                        lockName
                         size="sm"
                       />
                       {leaseTypeHasPercent(field.lease_type_id) && (
@@ -1619,6 +1713,7 @@ export default function CustomerEditor({
                               onSelectExisting={(crop) =>
                                 selectCropOption(fieldIndex, lotIndex, "previous", crop)
                               }
+                              lockName
                               size="sm"
                             />
                             <SmartEntityInput<EntityOption>
@@ -1627,6 +1722,7 @@ export default function CustomerEditor({
                               value={lot.current_crop_name ?? ""}
                               options={cropOptions}
                               entityLabel="Cultivo"
+                              lockName
                               onChange={(value) =>
                                 updateCropName(fieldIndex, lotIndex, "current", value)
                               }
@@ -1640,10 +1736,9 @@ export default function CustomerEditor({
                               name={`lot_season_${fieldIndex}_${lotIndex}`}
                               value={lot.season}
                               onChange={(event) =>
-                                updateLotAt(
+                                changeLotSeason(
                                   fieldIndex,
                                   lotIndex,
-                                  "season",
                                   event.target.value
                                 )
                               }

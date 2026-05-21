@@ -16,8 +16,7 @@ import SelectField from "../../../../components/Input/SelectField";
 import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
@@ -89,7 +88,6 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
     "customer",
     "project",
     "campaign",
-    "field",
   ]);
 
   const refresh = useCallback(() => {
@@ -386,14 +384,12 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
         />
       </DrawerShell>
       <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
-        <ErrorBanner
+        <Notification variant="error"
           message={errorMessage || null}
-          variant="alert"
           onDismiss={() => setErrorMessage("")}
         />
-        <SuccessBanner
+        <Notification variant="success"
           message={successMessage || null}
-          variant="alert"
           onDismiss={() => setSuccessMessage("")}
         />
         <div className="flex justify-between items-center">
@@ -446,9 +442,12 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
             onSubmit={handleSave}
           >
             {suppliesMode === "pending" && (
-              <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-                Este insumo fue creado desde la app con información incompleta.
-                Para que pueda usarse al publicar órdenes, completá los datos faltantes.
+              <div className="mb-3">
+                <Notification
+                  variant="warning"
+                  size="sm"
+                  message="Este insumo fue creado desde la app con información incompleta. Para que pueda usarse al publicar órdenes, completá los datos faltantes."
+                />
               </div>
             )}
             <div className="flex flex-col gap-1">

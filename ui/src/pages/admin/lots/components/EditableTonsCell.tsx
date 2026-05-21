@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import useLots from "../../../../hooks/useLots";
 import { LotsData } from "../../../../hooks/useLots/types";
-import { toastError, toastSuccess } from "../../../../lib/toast";
+import { notify } from "../../../../lib/notify";
 
 type EditableTonsCellProps = {
   item: LotsData;
@@ -31,11 +31,11 @@ export function EditableTonsCell({
 
   useEffect(() => {
     if (errorTons) {
-      toastError(errorTons);
+      notify.error(errorTons);
       return;
     }
     if (resultTons) {
-      toastSuccess(resultTons);
+      notify.success(resultTons);
       setEditing(false);
       onSuccessEdit();
     }

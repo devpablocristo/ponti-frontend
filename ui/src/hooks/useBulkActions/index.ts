@@ -3,7 +3,7 @@ import { Archive, Pencil, type LucideIcon } from "lucide-react";
 
 import { useBulkSelection } from "../useBulkSelection";
 import { useConfirmDialog } from "../useConfirmDialog";
-import { toastError, toastSuccess } from "../../lib/toast";
+import { notify } from "../../lib/notify";
 import {
   type EntityCopy,
   getBulkArchiveCopy,
@@ -61,8 +61,8 @@ export function useBulkActions<T extends Identifiable>({
       const results = await Promise.allSettled(selectedItems.map((it) => op(it.id)));
       const okCount = results.filter((r) => r.status === "fulfilled").length;
       const failed = results.length - okCount;
-      if (failed === 0) toastSuccess(successMsg(okCount));
-      else toastError(partialMsg(okCount, failed, results.length));
+      if (failed === 0) notify.success(successMsg(okCount));
+      else notify.error(partialMsg(okCount, failed, results.length));
       clear();
       onAfter?.();
     },

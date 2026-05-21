@@ -6,8 +6,7 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import useCommercializations from "../../../../hooks/useCommercializations";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 
 interface Commerce {
   id: number;
@@ -194,15 +193,13 @@ useEffect(() => {
         <h1 className="text-custom-text font-semibold text-xl leading-none">
           Datos de comercialización por cultivo
         </h1>
-        <ErrorBanner
+        <Notification variant="error"
           message={errorMessage || null}
-          variant="alert"
           className="my-2"
           onDismiss={() => setErrorMessage("")}
         />
-        <SuccessBanner
+        <Notification variant="success"
           message={successMessage || null}
-          variant="alert"
           className="my-2"
           onDismiss={() => setSuccessMessage("")}
         />

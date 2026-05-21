@@ -6,7 +6,7 @@ import { DataTable } from "@/lib/dataDisplay";
 import { BaseModal } from "../Modal/BaseModal";
 import { BulkSelectionPanel } from "../crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../crud/makeSelectColumn";
-import { ErrorBanner } from "../feedback/ErrorBanner";
+import { Notification } from "../feedback/Notification";
 import { Column } from "../../pages/admin/types";
 import {
   ConfirmCopy,
@@ -16,7 +16,7 @@ import {
 } from "../Modal/copy";
 import { useBulkSelection } from "../../hooks/useBulkSelection";
 import { useWorkspaceFilters } from "../../hooks/useWorkspaceFilters";
-import { toastError, toastSuccess } from "../../lib/toast";
+import { notify } from "../../lib/notify";
 
 // Genérico para vistas de "X Archivados". Encapsula tabla + selección masiva
 // (Restaurar, Eliminar definitivamente) + modal de confirmación.
@@ -477,13 +477,13 @@ export function ArchivedListPage<T extends { id: number }>({
         const ok = results.filter((r) => r.status === "fulfilled").length;
         const failed = results.length - ok;
         if (failed === 0) {
-          toastSuccess(
+          notify.success(
             op === "restore"
               ? `Se restauraron ${ok} ${entityLabelPlural}.`
               : `Se eliminaron definitivamente ${ok} ${entityLabelPlural}.`,
           );
         } else {
-          toastError(
+          notify.error(
             `${ok} de ${results.length} OK; ${failed} fallaron (probablemente por dependencias).`,
           );
         }
@@ -546,9 +546,9 @@ export function ArchivedListPage<T extends { id: number }>({
       )}
       <DataTable data={filteredData as T[]} columns={fullColumns} />
       {error && (
-        <ErrorBanner className="mt-4">
+        <Notification variant="error" className="mt-4">
           <span className="font-medium">Error!</span> {error}
-        </ErrorBanner>
+        </Notification>
       )}
 
       <BaseModal

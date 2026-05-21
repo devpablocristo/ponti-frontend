@@ -29,6 +29,14 @@ type SmartEntityInputProps<T extends EntityNameOption> = {
   onChange: (value: string) => void;
   onSelectExisting: (option: T) => void;
   disabled?: boolean;
+  /**
+   * When true, the input is read-only (the name cannot be edited as free text)
+   * but the dropdown remains usable so the caller can still pick a different
+   * existing entity. Use this for catalog selectors (customer, campaign, ...)
+   * where renaming belongs to the entity's own editor and inline rename
+   * would have surprising side effects on other rows that share the catalog.
+   */
+  lockName?: boolean;
   required?: boolean;
   placeholder?: string;
   size?: SmartEntityInputSize;
@@ -44,6 +52,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
   onChange,
   onSelectExisting,
   disabled = false,
+  lockName = false,
   required = false,
   placeholder,
   size = "md",
@@ -177,6 +186,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
         name={name}
         value={value}
         onChange={(event) => {
+          if (lockName) return;
           setSearchText(event.target.value);
           onChange(event.target.value);
           updateDropdownPosition();
@@ -187,10 +197,11 @@ export function SmartEntityInput<T extends EntityNameOption>({
         onClick={openDropdown}
         placeholder={placeholder}
         disabled={disabled}
+        readOnly={lockName}
         required={required}
         className={`input-base block ${
           disabled ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : ""
-        } ${sizeClasses}`}
+        } ${lockName && !disabled ? "cursor-pointer bg-slate-50" : ""} ${sizeClasses}`}
       />
 
       {dropdown ? createPortal(dropdown, document.body) : null}

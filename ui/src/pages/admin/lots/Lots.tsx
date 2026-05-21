@@ -3,9 +3,7 @@ import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
-import { WarningBanner } from "../../../components/feedback/WarningBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
@@ -390,10 +388,10 @@ function Lots() {
         ]}
       />
 
-      <WarningBanner message={message || null} />
-      <SuccessBanner message={successMessage || null} variant="outlined" />
+      <Notification variant="warning" message={message || null} />
+      <Notification variant="success" message={successMessage || null} />
 
-      <ErrorBanner message={errorMessage || error} variant="outlined" prefix="Error:" />
+      <Notification variant="error" message={errorMessage || error} prefix="Error:" />
 
       {hasWorkspaceSelection && !message && !error ? (
         <div className="my-3">

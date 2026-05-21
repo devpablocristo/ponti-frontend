@@ -20,8 +20,7 @@ import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
 import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { Campaign, Customer, Project } from "../../../hooks/useWorkspaceFilters";
 import useCampaigns from "../../../hooks/useCampaigns";
 import { getUnitName } from "../../../constants/units";
@@ -776,10 +775,9 @@ export default function CreateSupplyMovement({
               }}
             />
           </section>
-          <ErrorBanner message={error} prefix="Error:" />
-          <SuccessBanner
+          <Notification variant="error" message={error} prefix="Error:" />
+          <Notification variant="success"
             message={successMessage || null}
-            variant="alert"
             onDismiss={() => setSuccessMessage("")}
           />
         </>

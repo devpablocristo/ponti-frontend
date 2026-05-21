@@ -8,7 +8,7 @@ import {
 } from "../../../components/Drawer/DrawerShell";
 import Button from "../../../components/Button/Button";
 import { Checkbox } from "../../../components/Input/Checkbox";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { extractErrorMessage } from "@/api/hooks/useApiCall";
 import {
@@ -147,16 +147,15 @@ export default function ImportLotsPreview({
         {globalErrors.length > 0 ? (
           <div className="mb-4 space-y-2">
             {globalErrors.map((msg, i) => (
-              <ErrorBanner key={i} message={msg} variant="outlined" prefix="Catálogo:" />
+              <Notification variant="error" key={i} message={msg} prefix="Catálogo:" />
             ))}
           </div>
         ) : null}
 
         {submitError ? (
           <div className="mb-4">
-            <ErrorBanner
+            <Notification variant="error"
               message={submitError}
-              variant="outlined"
               prefix="Error:"
               onDismiss={() => setSubmitError(null)}
             />

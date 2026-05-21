@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { parseListItemsFromResponse } from "@devpablocristo/core-browser/crud";
+import { parseListItemsFromResponse } from "@devpablocristo/platform-browser/crud";
 import Header from "../../../components/Header/Header";
 import Button from "../../../components/Button/Button";
 import { apiClient } from "@/api/client";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
-import { SuccessBanner } from "../../../components/feedback/SuccessBanner";
+import { Notification } from "../../../components/feedback/Notification";
 
 type Tenant = { id: number; name: string };
 type UserRow = {
@@ -253,8 +252,8 @@ export default function Access() {
           )}
         </div>
 
-        <ErrorBanner message={error} variant="alert" prefix="Error!" />
-        {!error && <SuccessBanner message={result} variant="alert" />}
+        <Notification variant="error" message={error} prefix="Error!" />
+        {!error && <Notification variant="success" message={result} />}
       </div>
     </div>
   );

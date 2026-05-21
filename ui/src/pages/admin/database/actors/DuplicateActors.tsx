@@ -3,7 +3,7 @@ import { GitMerge, RefreshCcw } from "lucide-react";
 
 import Button from "../../../../components/Button/Button";
 import { Checkbox } from "../../../../components/Input/Checkbox";
-import { ErrorBanner } from "../../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../../components/feedback/Notification";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import useActors, {
   ActorKind,
@@ -214,7 +214,7 @@ export default function DuplicateActors({ filters }: DuplicateActorsProps) {
   return (
     <div className="relative">
       <LoadingOverlay show={loading} />
-      {error ? <ErrorBanner message={error} variant="outlined" prefix="Error:" /> : null}
+      {error ? <Notification variant="error" message={error} prefix="Error:" /> : null}
 
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="text-sm font-medium text-slate-600">

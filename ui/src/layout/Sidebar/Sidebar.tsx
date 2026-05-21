@@ -71,7 +71,10 @@ const menuDatabase: SubmenuGroup = {
   ),
   children: [
     { name: "Administrar Actores", route: "/admin/database/actors" },
+    { name: "Campañas", route: "/admin/database/campaigns" },
     { name: "Campos", route: "/admin/database/fields" },
+    { name: "Labores", route: "/admin/database/labors/list" },
+    { name: "Insumos", route: "/admin/database/supplies/list" },
     { name: "Cargar Dólar Promedio", route: "/admin/database/dollar" },
     { name: "Cargar Comercialización", route: "/admin/database/commerce" },
   ],

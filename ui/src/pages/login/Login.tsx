@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { UserData } from "./types";
 import { RequestError } from "@/api/types";
 import Cover from "./Cover";
-import { ErrorBanner } from "../../components/feedback/ErrorBanner";
+import { Notification } from "../../components/feedback/Notification";
 
 function Login() {
   const { login, isAuthenticated, loading } = useAuth();
@@ -148,8 +148,7 @@ function Login() {
             </button>
           </form>
 
-          <ErrorBanner
-            variant="outlined"
+          <Notification variant="error"
             message={error || null}
             className="mt-5 animate-fade-in-up"
           />

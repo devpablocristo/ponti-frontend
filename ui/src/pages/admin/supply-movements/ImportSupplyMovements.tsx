@@ -8,7 +8,7 @@ import useProviders from "../../../hooks/useProviders";
 import useSupplies from "../../../hooks/useSupplies";
 import useSupplyMovements from "../../../hooks/useSupplyMovements";
 import { apiClient } from "@/api/client";
-import { ErrorBanner } from "../../../components/feedback/ErrorBanner";
+import { Notification } from "../../../components/feedback/Notification";
 import { replaceSupplyIdsWithNames } from "../utils";
 import {
   normalizeText,
@@ -779,14 +779,14 @@ export default function ImportSupplyMovements({
       }
     >
       {displayError && (
-        <ErrorBanner>
+        <Notification variant="error">
           <span className="font-semibold">Error:</span>
           <div className="mt-1 space-y-1">
             {displayErrorLines.map((line, index) => (
               <p key={`${line}-${index}`}>{line}</p>
             ))}
           </div>
-        </ErrorBanner>
+        </Notification>
       )}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">

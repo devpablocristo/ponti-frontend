@@ -1,4 +1,4 @@
-import { request } from "@devpablocristo/core-http/fetch";
+import { request } from "@devpablocristo/platform-http/fetch";
 import { getAccessToken } from "@/lib/authStorage";
 
 export type InsightItem = {
