@@ -1,4 +1,19 @@
-import { ChevronDown, Monitor, Moon, Sun } from "lucide-react";
+import {
+  BarChart3,
+  CalendarRange,
+  ChevronDown,
+  DollarSign,
+  MapPin,
+  Monitor,
+  Moon,
+  Package,
+  ShieldCheck,
+  Sprout,
+  Sun,
+  Tag,
+  Users,
+  Wrench,
+} from "lucide-react";
 import React, { ReactNode, useEffect, useState } from "react";
 
 import { Link, useLocation } from "react-router-dom";
@@ -11,75 +26,76 @@ type MenuItem = {
   route: string;
 };
 
-type SidebarLinkSubItem = {
-  kind?: "link";
-  name: string;
-  route: string;
-};
+/**
+ * Helper para envolver iconos Lucide con el contrato MenuItem.icon (color → ReactNode).
+ * Mantiene size=20 (match con los SVG inline de Operación) y strokeWidth=1.5.
+ */
+const lucideIcon =
+  (Icon: typeof Users) =>
+  (color: string): ReactNode => (
+    <Icon size={20} strokeWidth={1.5} color={color} />
+  );
 
-type SidebarSectionSubItem = {
-  kind: "section";
-  name: string;
-};
+const menuReports: MenuItem[] = [
+  {
+    name: "Integridad de Datos",
+    icon: lucideIcon(ShieldCheck),
+    route: "/admin/master-data/data-integrity",
+  },
+  {
+    name: "Aportes por Inversor",
+    icon: lucideIcon(Users),
+    route: "/admin/informes/aportes",
+  },
+  {
+    name: "Por Campo o Cultivo",
+    icon: lucideIcon(Sprout),
+    route: "/admin/informes/campo",
+  },
+  {
+    name: "Resumen de Resultados",
+    icon: lucideIcon(BarChart3),
+    route: "/admin/informes/resumen",
+  },
+];
 
-type SubItem = SidebarLinkSubItem | SidebarSectionSubItem;
-
-type SubmenuGroup = {
-  name: string;
-  icon: ReactNode;
-  children: SubItem[];
-};
-
-const isSubmenuLink = (item: SubItem): item is SidebarLinkSubItem => item.kind !== "section";
-
-const menuReports: SubmenuGroup = {
-  name: "Informes",
-  icon: (
-    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M10 2.66667H12C12.1769 2.66667 12.3464 2.7369 12.4714 2.86193C12.5965 2.98695 12.6667 3.15652 12.6667 3.33333V13.3333C12.6667 13.5101 12.5965 13.6797 12.4714 13.8047C12.3464 13.9298 12.1769 14 12 14H4.00004C3.82323 14 3.65366 13.9298 3.52864 13.8047C3.40361 13.6797 3.33337 13.5101 3.33337 13.3333V3.33333C3.33337 3.15652 3.40361 2.98695 3.52864 2.86193C3.65366 2.7369 3.82323 2.66667 4.00004 2.66667H6.00004M6.00004 4.66667H10M8.00004 8H10M6.00004 8H6.00671M8.00004 10.6667H10M6.00004 10.6667H6.00671M6.66671 2V4.66667H9.33337V2H6.66671Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  children: [
-    { name: "Integridad de Datos", route: "/admin/master-data/data-integrity" },
-    { name: "Aportes por Inversor", route: "/admin/informes/aportes" },
-    { name: "Por Campo o Cultivo", route: "/admin/informes/campo" },
-    { name: "Resumen de Resultados", route: "/admin/informes/resumen" },
-  ],
-};
-
-const menuDatabase: SubmenuGroup = {
-  name: "Datos Maestros",
-  icon: (
-    <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path
-        d="M14 8.66667V7.33333C14 7.15652 13.9298 6.98695 13.8047 6.86193C13.6797 6.7369 13.5101 6.66667 13.3333 6.66667H12.8287L12.3573 5.52867L12.714 5.17133C12.839 5.04631 12.9092 4.87678 12.9092 4.7C12.9092 4.52322 12.839 4.35369 12.714 4.22867L11.7713 3.286C11.6463 3.16102 11.4768 3.09081 11.3 3.09081C11.1232 3.09081 10.9537 3.16102 10.8287 3.286L10.4713 3.64267L9.33333 3.17133V2.66667C9.33333 2.48986 9.2631 2.32029 9.13807 2.19526C9.01305 2.07024 8.84348 2 8.66667 2H7.33333C7.15652 2 6.98695 2.07024 6.86193 2.19526C6.7369 2.32029 6.66667 2.48986 6.66667 2.66667V3.17133L5.52867 3.64267L5.17133 3.286C5.04631 3.16102 4.87678 3.09081 4.7 3.09081C4.52322 3.09081 4.35369 3.16102 4.22867 3.286L3.286 4.22867C3.16102 4.35369 3.09081 4.52322 3.09081 4.7C3.09081 4.87678 3.16102 5.04631 3.286 5.17133L3.64333 5.52867L3.17133 6.66667H2.66667C2.48986 6.66667 2.32029 6.7369 2.19526 6.86193C2.07024 6.98695 2 7.15652 2 7.33333V8.66667C2 8.84348 2.07024 9.01305 2.19526 9.13807C2.32029 9.2631 2.48986 9.33333 2.66667 9.33333H3.17133L3.64267 10.4713L3.286 10.8287C3.16102 10.9537 3.09081 11.1232 3.09081 11.3C3.09081 11.4768 3.16102 11.6463 3.286 11.7713L4.22867 12.714C4.35369 12.839 4.52322 12.9092 4.7 12.9092C4.87678 12.9092 5.04631 12.839 5.17133 12.714L5.52867 12.3573L6.66667 12.8287V13.3333C6.66667 13.5101 6.7369 13.6797 6.86193 13.8047C6.98695 13.9298 7.15652 14 7.33333 14H8.66667C8.84348 14 9.01305 13.9298 9.13807 13.8047C9.2631 13.6797 9.33333 13.5101 9.33333 13.3333V12.8287L10.4713 12.3567L10.8287 12.714C10.9537 12.839 11.1232 12.9092 11.3 12.9092C11.4768 12.9092 11.6463 12.839 11.7713 12.714L12.714 11.7713C12.839 11.6463 12.9092 11.4768 12.9092 11.3C12.9092 11.1232 12.839 10.9537 12.714 10.8287L12.3573 10.4713L12.8287 9.33333H13.3333C13.5101 9.33333 13.6797 9.2631 13.8047 9.13807C13.9298 9.01305 14 8.84348 14 8.66667Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 10C8.53043 10 9.03914 9.78929 9.41421 9.41421C9.78929 9.03914 10 8.53043 10 8C10 7.46957 9.78929 6.96086 9.41421 6.58579C9.03914 6.21071 8.53043 6 8 6C7.46957 6 6.96086 6.21071 6.58579 6.58579C6.21071 6.96086 6 7.46957 6 8C6 8.53043 6.21071 9.03914 6.58579 9.41421C6.96086 9.78929 7.46957 10 8 10Z"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  ),
-  children: [
-    { name: "Administrar Actores", route: "/admin/master-data/actors" },
-    { name: "Administrar Campañas", route: "/admin/master-data/campaigns" },
-    { name: "Administrar Campos", route: "/admin/master-data/fields" },
-    { name: "Administrar Labores", route: "/admin/master-data/labors/list" },
-    { name: "Administrar Insumos", route: "/admin/master-data/supplies/list" },
-    { name: "Cargar Dólar Promedio", route: "/admin/master-data/dollar" },
-    { name: "Cargar Comercialización", route: "/admin/master-data/commerce" },
-  ],
-};
+const menuDatabase: MenuItem[] = [
+  {
+    name: "Administrar Actores",
+    icon: lucideIcon(Users),
+    route: "/admin/master-data/actors",
+  },
+  {
+    name: "Administrar Campañas",
+    icon: lucideIcon(CalendarRange),
+    route: "/admin/master-data/campaigns",
+  },
+  {
+    name: "Administrar Campos",
+    icon: lucideIcon(MapPin),
+    route: "/admin/master-data/fields",
+  },
+  {
+    name: "Administrar Labores",
+    icon: lucideIcon(Wrench),
+    route: "/admin/master-data/labors/list",
+  },
+  {
+    name: "Administrar Insumos",
+    icon: lucideIcon(Package),
+    route: "/admin/master-data/supplies/list",
+  },
+  {
+    name: "Cargar Dólar Promedio",
+    icon: lucideIcon(DollarSign),
+    route: "/admin/master-data/dollar",
+  },
+  {
+    name: "Cargar Comercialización",
+    icon: lucideIcon(Tag),
+    route: "/admin/master-data/commerce",
+  },
+];
 
 const menuAIItems: MenuItem[] = [
   {
@@ -400,67 +416,30 @@ function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
   );
 }
 
-interface SidebarSubmenuProps {
-  setTitle: (title: string) => void;
-  setIsSidebarOpen: () => void;
-  item: SubmenuGroup;
+interface SidebarSectionProps {
+  /** Header de la sección (Operación, Análisis, Configuración, AI, Admin). */
+  name: string;
+  /** Rutas internas; si alguna matchea la URL actual, abrimos por default. */
+  routes: string[];
+  children: ReactNode;
 }
 
-interface SidebarSubItemProps {
-  item: SidebarLinkSubItem;
-  setTitle: (title: string) => void;
-  setIsSidebarOpen: () => void;
-}
-
-function SidebarSubmenuItem({ item, setTitle, setIsSidebarOpen }: SidebarSubItemProps) {
+/**
+ * Sección colapsable del sidebar. Reemplaza el header plano `<span>` por un
+ * botón con chevron que esconde/muestra los items internos. Persistido por nombre
+ * en localStorage (mismo patrón que SidebarSubmenu). Por default abre si la
+ * URL actual cae adentro de alguna de las rutas declaradas — así el usuario
+ * nunca aterriza en una sección colapsada que oculta su página activa.
+ */
+function SidebarSection({ name, routes, children }: SidebarSectionProps) {
   const location = useLocation();
-  const isActive = (route: string) => location.pathname === route;
-  const active = isActive(item.route);
-
-  useEffect(() => {
-    if (active) {
-      setTitle(getSidebarTitle(item.route));
-    }
-  }, [active, item.route, setTitle]);
-
-  return (
-    <Link
-      key={item.route}
-      to={item.route}
-      className={`flex min-h-[32px] w-full items-center gap-2 rounded-lg py-1.5 pl-9 pr-3 text-left text-[13px] leading-5 transition-all duration-200 ${
-        active ? "font-semibold bg-slate-700/40" : "hover:bg-slate-800"
-      }`}
-      style={{ color: active ? "#34D399" : "#94A3B8" }}
-      onClick={() => {
-        setTitle(getSidebarTitle(item.route));
-        if (window.innerWidth < 768) setIsSidebarOpen();
-      }}
-      onMouseEnter={(e) => {
-        if (!active) e.currentTarget.style.color = "#E2E8F0";
-      }}
-      onMouseLeave={(e) => {
-        if (!active) e.currentTarget.style.color = "#94A3B8";
-      }}
-    >
-      <span
-        className={`w-1 h-1 rounded-full flex-shrink-0 ${active ? "bg-emerald-400" : "bg-slate-600"}`}
-      />
-      {item.name}
-    </Link>
-  );
-}
-
-function SidebarSubmenu({ item, setTitle, setIsSidebarOpen }: SidebarSubmenuProps) {
-  const location = useLocation();
-  const storageKey = `sidebar:submenu:${item.name}:open`;
+  const storageKey = `sidebar:section:${name}:open`;
   const [open, setOpen] = useState(() => {
     const stored = typeof window !== "undefined" ? window.localStorage.getItem(storageKey) : null;
     if (stored !== null) return stored === "1";
-    return (
-      item.children?.some(
-        (child) => isSubmenuLink(child) && location.pathname.startsWith(child.route)
-      ) ?? false
-    );
+    // Default: abrir si la URL actual entra en alguno de los routes; si no,
+    // abrir igual (no esconder secciones al primer mount).
+    return routes.some((route) => location.pathname.startsWith(route)) || true;
   });
 
   const toggleOpen = () => {
@@ -475,50 +454,33 @@ function SidebarSubmenu({ item, setTitle, setIsSidebarOpen }: SidebarSubmenuProp
     });
   };
 
-  if (item) {
-    return (
-      <div className="w-full">
-        <button
-          onClick={toggleOpen}
-          className="flex items-center justify-between w-full h-[36px] px-3 rounded-lg hover:bg-slate-800 transition-all duration-200"
-          style={{ color: "#94A3B8" }}
+  return (
+    <div className="w-full">
+      <button
+        type="button"
+        onClick={toggleOpen}
+        className="flex items-center justify-between w-full px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-all duration-200"
+        aria-expanded={open}
+      >
+        <span
+          className="text-[10px] font-semibold uppercase tracking-widest"
+          style={{ color: "#475569" }}
         >
-          <div className="flex items-center gap-2.5" style={{ color: "#94A3B8" }}>
-            <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
-              {item.icon}
-            </span>
-            <span className="text-[13px] font-medium">{item.name}</span>
-          </div>
-          <ChevronDown
-            size={14}
-            className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-            style={{ color: "#64748B" }}
-          />
-        </button>
-        <div
-          className={`overflow-hidden transition-all duration-200 ${open ? "max-h-[1400px] opacity-100 mt-1" : "max-h-0 opacity-0"}`}
-        >
-          <ul className="space-y-1 pl-0.5">
-            {item.children.map((subItem) => (
-              <li key={isSubmenuLink(subItem) ? subItem.route : `section-${subItem.name}`}>
-                {isSubmenuLink(subItem) ? (
-                  <SidebarSubmenuItem
-                    setTitle={setTitle}
-                    item={subItem}
-                    setIsSidebarOpen={setIsSidebarOpen}
-                  />
-                ) : (
-                  <div className="px-9 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    {subItem.name}
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
+          {name}
+        </span>
+        <ChevronDown
+          size={12}
+          className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          style={{ color: "#475569" }}
+        />
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-200 ${open ? "max-h-[1400px] opacity-100 mt-1" : "max-h-0 opacity-0"}`}
+      >
+        {children}
       </div>
-    );
-  }
+    </div>
+  );
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebarOpen }) => {
@@ -529,9 +491,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebar
     ${isSidebarOpen ? "w-64 opacity-100 translate-x-0" : "w-0 opacity-0 -translate-x-full"}`}
       aria-label="Sidebar"
     >
-      <div className="flex flex-col h-full pt-5 px-3 pb-4 gap-1 overflow-y-auto">
+      <div className="flex flex-col h-full pt-5 px-3 pb-4 gap-3 overflow-y-auto">
         {/* Logo */}
-        <div className="flex items-center justify-between h-[36px] w-full px-2 mb-6">
+        <div className="flex items-center justify-between h-[36px] w-full px-2 mb-3">
           <Link
             to="/admin/dashboard"
             onClick={() => setTitle("Dashboard")}
@@ -541,10 +503,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebar
             <img src="/ponti.svg" alt="Ponti" className="w-6 h-6 object-contain" />
 
             <h1
-              className="text-base font-bold tracking-tight font-display"
+              className="text-xl font-semibold tracking-tight font-display"
               style={{ color: "#F1F5F9" }}
             >
-              Ponti Soft
+              Ponti
             </h1>
           </Link>
           <button
@@ -577,94 +539,57 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebar
           </button>
         </div>
 
-        <div className="px-3 mb-2">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-widest"
-            style={{ color: "#475569" }}
-          >
-            Operación
-          </span>
-        </div>
+        <SidebarSection name="Operación" routes={menuItems.map((item) => item.route)}>
+          <ul className="flex flex-col gap-0.5 font-medium">
+            {menuItems.map((item) => (
+              <li key={item.name}>
+                <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
+              </li>
+            ))}
+          </ul>
+        </SidebarSection>
 
-        <ul className="flex flex-col gap-0.5 font-medium">
-          {menuItems.map((item) => (
-            <li key={item.name}>
-              <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
-            </li>
-          ))}
-        </ul>
+        <SidebarSection name="Informes" routes={menuReports.map((item) => item.route)}>
+          <ul className="flex flex-col gap-0.5 font-medium">
+            {menuReports.map((item) => (
+              <li key={item.name}>
+                <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
+              </li>
+            ))}
+          </ul>
+        </SidebarSection>
 
-        <div className="h-3" />
+        <SidebarSection name="Configuración" routes={menuDatabase.map((item) => item.route)}>
+          <ul className="flex flex-col gap-0.5 font-medium">
+            {menuDatabase.map((item) => (
+              <li key={item.name}>
+                <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
+              </li>
+            ))}
+          </ul>
+        </SidebarSection>
 
-        <div className="px-3 mb-2">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-widest"
-            style={{ color: "#475569" }}
-          >
-            Análisis
-          </span>
-        </div>
+        <SidebarSection name="Copiloto" routes={menuAIItems.map((item) => item.route)}>
+          <ul className="flex flex-col gap-0.5 font-medium">
+            {menuAIItems.map((item) => (
+              <li key={item.name}>
+                <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
+              </li>
+            ))}
+          </ul>
+        </SidebarSection>
 
-        <SidebarSubmenu
-          setTitle={() => setTitle("Informes")}
-          item={menuReports}
-          setIsSidebarOpen={setIsSidebarOpen}
-        />
+        <SidebarSection name="Admin" routes={menuAdminItems.map((item) => item.route)}>
+          <ul className="flex flex-col gap-0.5 font-medium">
+            {menuAdminItems.map((item) => (
+              <li key={item.name}>
+                <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
+              </li>
+            ))}
+          </ul>
+        </SidebarSection>
 
-        <div className="px-3 mb-2">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-widest"
-            style={{ color: "#475569" }}
-          >
-            Configuración
-          </span>
-        </div>
-        <SidebarSubmenu
-          setTitle={setTitle}
-          item={menuDatabase}
-          setIsSidebarOpen={setIsSidebarOpen}
-        />
-
-        <div className="h-3" />
-
-        <div className="px-3 mb-2">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-widest"
-            style={{ color: "#475569" }}
-          >
-            AI
-          </span>
-        </div>
-        <ul className="flex flex-col gap-0.5 font-medium">
-          {menuAIItems.map((item) => (
-            <li key={item.name}>
-              <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
-            </li>
-          ))}
-        </ul>
-        <div className="h-3" />
-
-        <div className="px-3 mb-2">
-          <span
-            className="text-[10px] font-semibold uppercase tracking-widest"
-            style={{ color: "#475569" }}
-          >
-            Admin
-          </span>
-        </div>
-        <ul className="flex flex-col gap-0.5 font-medium">
-          {menuAdminItems.map((item) => (
-            <li key={item.name}>
-              <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
-            </li>
-          ))}
-        </ul>
-
-        <div className="h-3" />
-        <div
-          className="border-t pt-3 mt-2"
-          style={{ borderColor: "#1E293B" }}
-        >
+        <div className="border-t pt-3" style={{ borderColor: "#1E293B" }}>
           <ThemeToggle />
         </div>
       </div>

@@ -42,11 +42,19 @@ export function DataTable<T>({
     return [...safeColumns, actionsColumn];
   }, [actionsHeader, columns, renderActions]);
 
-  return createElement(BaseDataTable<T>, {
-    ...props,
-    data: safeData,
-    columns: columnsWithActions,
-  });
+  // Envoltorio con clase `data-table-host` para que `.dark .data-table-host *`
+  // overrides en index.css repinten las celdas/headers/dropdowns que la lib
+  // externa (@devpablocristo/platform-ui-data-display) tiene con bg-white y
+  // text-gray-700 hardcoded sin variants dark:.
+  return createElement(
+    "div",
+    { className: "data-table-host" },
+    createElement(BaseDataTable<T>, {
+      ...props,
+      data: safeData,
+      columns: columnsWithActions,
+    }),
+  );
 }
 
 type BuildPaginationOptions = {

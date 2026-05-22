@@ -82,10 +82,98 @@
    etc.) se cubren a nivel componente con `dark:`.
    ──────────────────────────────────────────────────────────────────── */
 .dark {
-  --color-bg: #0b1220;
-  --color-surface: #111827;
-  --color-surface-hover: #1f2937;
+  /* Paleta slate (Tailwind oficial), 3 niveles de profundidad:
+   * - bg (página)        slate-900 #0F172A
+   * - surface (cards)    slate-800 #1E293B
+   * - surface-hover      slate-700 #334155
+   * El sidebar va a slate-950 (#020617) para tener más profundidad que el bg.
+   */
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
   --color-surface-raised: #1e293b;
+
+  /* Sidebar más oscuro que el bg de la página para dar profundidad. */
+  --color-sidebar: #020617;
+  --color-sidebar-hover: #0f172a;
+  --color-sidebar-active: #1e293b;
+  --color-sidebar-border: #0f172a;
+}
+
+/* El sidebar usa la clase Tailwind hardcoded `bg-sidebar` (definida en
+ * tailwind.config como #0F172A). En dark mode lo bajamos a slate-950 para
+ * tener 3 niveles: sidebar (#020617) < bg página (#0F172A) < cards (#1E293B).
+ */
+.dark .bg-sidebar {
+  background-color: #020617;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * DataTable overrides (platform-ui-data-display lib externa)
+ *
+ * La lib tiene `bg-white`, `text-gray-700`, `bg-slate-50` hardcoded sin
+ * variants dark:. Como no podemos modificar el platform package, envolvemos
+ * el DataTable en `.data-table-host` (ver src/lib/dataDisplay.ts) y acá
+ * reescribimos las clases SOLO dentro de ese wrapper para no afectar el
+ * resto de la app.
+ * ──────────────────────────────────────────────────────────────────────── */
+.dark .data-table-host .bg-white {
+  background-color: #1e293b;
+}
+.dark .data-table-host .bg-slate-50 {
+  background-color: #0f172a;
+}
+.dark .data-table-host .bg-slate-100 {
+  background-color: #334155;
+  color: #e2e8f0;
+}
+.dark .data-table-host .hover\:bg-slate-50:hover {
+  background-color: #334155;
+}
+.dark .data-table-host .hover\:bg-slate-200:hover {
+  background-color: #475569;
+}
+.dark .data-table-host .text-gray-700 {
+  color: #e2e8f0;
+}
+.dark .data-table-host .text-slate-500 {
+  color: #94a3b8;
+}
+.dark .data-table-host .text-slate-600 {
+  color: #cbd5e1;
+}
+.dark .data-table-host .text-slate-400 {
+  color: #64748b;
+}
+.dark .data-table-host .text-slate-300 {
+  color: #475569;
+}
+.dark .data-table-host .text-slate-800 {
+  color: #f1f5f9;
+}
+.dark .data-table-host .border-slate-200,
+.dark .data-table-host .border-slate-200\/80 {
+  border-color: #334155;
+}
+/* Zebra rows: la lib usa hex hardcoded `bg-[#f9f9f9b8]` para fila impar en
+ * softZebra y `bg-slate-50/50` en default. Sobre fondo dark esos colores
+ * mezclados con texto claro quedan ilegibles. Forzamos slate más oscuro. */
+.dark .data-table-host .bg-\[\#f9f9f9b8\] {
+  background-color: #172033;
+}
+.dark .data-table-host .bg-slate-50\/50 {
+  background-color: rgba(15, 23, 42, 0.5);
+}
+.dark .data-table-host .hover\:bg-slate-200:hover {
+  background-color: #475569;
+}
+.dark .data-table-host input,
+.dark .data-table-host select {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+.dark .data-table-host input::placeholder {
+  color: #64748b;
 
   --color-text: #f1f5f9;
   --color-text-secondary: #94a3b8;
