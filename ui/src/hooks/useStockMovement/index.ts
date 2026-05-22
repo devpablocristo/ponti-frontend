@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { AxiosError } from "axios";
 import { apiClient } from "@/api/client";
-import { SuccessResponse, ErrorResponse } from "@/api/types";
+import { SuccessResponse } from "@/api/types";
+import { formatError } from "@/lib/format";
 import { StockMovement, StockMovementRequest } from "./types";
 
 type StockMovementResult = {
@@ -39,24 +39,11 @@ const useStockMovement = () => {
           return;
         }
 
-        setErrorCreation("Ocurrió un error en la creación del movimiento");
+        setErrorCreation("No se pudo crear el movimiento de stock.");
       } catch (error) {
-        const axiosError = error as AxiosError;
-
-        if (axiosError.response) {
-          const errorResponse = axiosError.response.data as ErrorResponse;
-
-          if (errorResponse.error) {
-            const message =
-              errorResponse.error.details ||
-              "Error desconocido en la creación del movimiento.";
-
-            setErrorCreation(message);
-            return;
-          }
-        }
-
-        setErrorCreation("Error en el servicio, inténtalo más tarde.");
+        setErrorCreation(
+          formatError(error, { fallback: "No se pudo crear el movimiento de stock." }),
+        );
       } finally {
         setProcessingCreation(false);
       }

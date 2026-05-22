@@ -6,7 +6,6 @@ import { DataTable } from "@/lib/dataDisplay";
 import { BaseModal } from "../Modal/BaseModal";
 import { BulkSelectionPanel } from "../crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../crud/makeSelectColumn";
-import { Notification } from "../feedback/Notification";
 import { Column } from "../../pages/admin/types";
 import {
   ConfirmCopy,
@@ -17,6 +16,7 @@ import {
 import { useBulkSelection } from "../../hooks/useBulkSelection";
 import { useWorkspaceFilters } from "../../hooks/useWorkspaceFilters";
 import { notify } from "../../lib/notify";
+import { translateBackendError } from "../../lib/translateBackendError";
 
 // Genérico para vistas de "X Archivados". Encapsula tabla + selección masiva
 // (Restaurar, Eliminar definitivamente) + modal de confirmación.
@@ -293,6 +293,11 @@ export function ArchivedListPage<T extends { id: number }>({
     campaigns,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
+  // Error de carga del listado → toast (ya estaba siendo traducido inline).
+  useEffect(() => {
+    if (error) notify.error(translateBackendError(error));
+  }, [error]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -469,7 +474,18 @@ export function ArchivedListPage<T extends { id: number }>({
     }
     try {
       if (items.length === 1) {
-        await handler(items[0]);
+        try {
+          await handler(items[0]);
+          notify.success(
+            op === "restore"
+              ? `Se restauró ${entity.singular}.`
+              : `Se eliminó definitivamente ${entity.singular}.`,
+          );
+        } catch (err) {
+          const raw =
+            err instanceof Error ? err.message : "Ocurrió un error inesperado.";
+          notify.error(translateBackendError(raw));
+        }
       } else {
         const results = await Promise.allSettled(
           items.map((item) => Promise.resolve(handler(item))),
@@ -483,9 +499,28 @@ export function ArchivedListPage<T extends { id: number }>({
               : `Se eliminaron definitivamente ${ok} ${entityLabelPlural}.`,
           );
         } else {
-          notify.error(
-            `${ok} de ${results.length} OK; ${failed} fallaron (probablemente por dependencias).`,
+          // Si todas las fallas comparten el mismo mensaje, lo mostramos
+          // (traducido). Si no, caemos al genérico "X de Y; Z fallaron".
+          const rejected = results.filter(
+            (r): r is PromiseRejectedResult => r.status === "rejected",
           );
+          const messages = new Set(
+            rejected.map((r) =>
+              r.reason instanceof Error ? r.reason.message : String(r.reason),
+            ),
+          );
+          if (messages.size === 1) {
+            const only = rejected[0].reason instanceof Error
+              ? rejected[0].reason.message
+              : String(rejected[0].reason);
+            notify.error(
+              `${ok} de ${results.length} OK; ${failed} fallaron: ${translateBackendError(only)}`,
+            );
+          } else {
+            notify.error(
+              `${ok} de ${results.length} OK; ${failed} fallaron (varias razones).`,
+            );
+          }
         }
         clear();
       }
@@ -545,11 +580,6 @@ export function ArchivedListPage<T extends { id: number }>({
         />
       )}
       <DataTable data={filteredData as T[]} columns={fullColumns} />
-      {error && (
-        <Notification variant="error" className="mt-4">
-          <span className="font-medium">Error!</span> {error}
-        </Notification>
-      )}
 
       <BaseModal
         isOpen={isModalOpen}

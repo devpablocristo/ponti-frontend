@@ -17,7 +17,7 @@ import SelectField from "../../../../components/Input/SelectField";
 import useCategories from "../../../../hooks/useCategories";
 import { CATEGORY_TYPE_ID, categoryTypeQuery } from "@/lib/categoryTypes";
 import { apiClient } from "../../../../api/client";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
@@ -78,6 +78,13 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
   const { categories, getCategories } = useCategories();
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorMessage) notify.error(errorMessage);
+  }, [errorMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
   const [modalOpen, setModalOpen] = useState(false);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -376,15 +383,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
           }}
         />
       </DrawerShell>
-      <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
-        <Notification variant="error"
-          message={errorMessage || null}
-          onDismiss={() => setErrorMessage("")}
-        />
-        <Notification variant="success"
-          message={successMessage || null}
-          onDismiss={() => setSuccessMessage("")}
-        />
+      <div className="p-6 w-full mt-4 mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md">
         <div className="flex justify-between items-center">
           <h1 className="text-custom-text font-semibold text-xl leading-none">
             {editorOnly ? "Editar labores" : "Lista de labores"}
@@ -476,7 +475,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
                   setLabor({ ...labor, contractor_name: e.target.value });
                 }}
               />
-              <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
+              <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700 dark:text-gray-200">
                 <Checkbox
                   tone="warning"
                   checked={Boolean(labor?.is_partial_price)}
@@ -504,7 +503,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
             enableFilters={true}
-            message="No hay labores cargadas en el proyecto"
+            message="Todavía no hay labores en este proyecto."
             pagination={buildPagination(filteredLabors.length)}
           />
         </div>

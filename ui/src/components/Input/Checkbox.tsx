@@ -3,9 +3,9 @@ import type { InputHTMLAttributes } from "react";
 type Tone = "select" | "form" | "warning";
 
 const TONE_CLASS: Record<Tone, string> = {
-  select: "border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer",
-  form: "border-gray-300 text-blue-600 focus:ring-blue-500",
-  warning: "border-gray-300 text-yellow-600 focus:ring-yellow-500",
+  select: "border-slate-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer",
+  form: "border-gray-300 dark:border-slate-600 dark:bg-slate-700 text-blue-600 focus:ring-blue-500",
+  warning: "border-gray-300 dark:border-slate-600 dark:bg-slate-700 text-yellow-600 focus:ring-yellow-500",
 };
 
 type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {

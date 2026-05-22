@@ -3,7 +3,6 @@ import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { Notification } from "../../../components/feedback/Notification";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
@@ -38,6 +37,7 @@ import {
   ImportLotsResult,
 } from "./importLots";
 import ImportLotsPreview from "./ImportLotsPreview";
+import { notify } from "@/lib/notify";
 
 function Lots() {
   const pagination = usePagination({ perPage: 10 });
@@ -50,6 +50,20 @@ function Lots() {
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Estado → toast (ver patrón en CreateOrder.tsx). El error puede venir del
+  // estado local o del hook `useLots()`; ambos se publican al toaster.
+  useEffect(() => {
+    if (message) notify.warning(message);
+  }, [message]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
+  useEffect(() => {
+    if (errorMessage) notify.error(errorMessage);
+  }, [errorMessage]);
+
+  // Errores que vienen del hook `useLots()` se publican al mismo toaster.
 
   // Drawer del preview del import. Mismo patrón que `/admin/work-orders`:
   // parseamos el CSV, resolvemos lotes+cultivos, mostramos la tabla y dejamos
@@ -75,6 +89,10 @@ function Lots() {
     errorKpis,
     archiveLot,
   } = useLots();
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
 
 
   const {
@@ -388,11 +406,6 @@ function Lots() {
         ]}
       />
 
-      <Notification variant="warning" message={message || null} />
-      <Notification variant="success" message={successMessage || null} />
-
-      <Notification variant="error" message={errorMessage || error} prefix="Error:" />
-
       {hasWorkspaceSelection && !message && !error ? (
         <div className="my-3">
           <LotsIndicators
@@ -449,8 +462,8 @@ function Lots() {
         {!hasWorkspaceSelection ? (
           <EmptyState
             icon={Briefcase}
-            title="Seleccioná filtros para ver lotes"
-            description="El listado no carga datos globales automáticamente."
+            title="Seleccioná filtros para ver lotes."
+            description="El listado no carga datos sin un workspace (cliente / proyecto / campaña / campo) seleccionado."
           />
         ) : !message && !error ? (
           <BulkSelectionPanel
@@ -481,7 +494,7 @@ function Lots() {
                 allColumns={allColumns}
               />
             }
-            message="No hay lotes disponibles"
+            message="Todavía no hay lotes con los filtros actuales."
             pagination={pagination.buildPagination(filteredLots.length)}
           />
         ) : null}

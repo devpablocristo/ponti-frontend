@@ -815,11 +815,11 @@ export default function ImportSupplyMovements({
         />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200">
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200 dark:border-gray-700">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
-          <thead className="sticky top-0 bg-gray-50">
+          <thead className="sticky top-0 bg-gray-50 dark:bg-slate-900">
             <tr>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">
                 {(() => {
                   const toggleable = filteredRows.filter((r) => !r.existing);
                   return (
@@ -834,21 +834,21 @@ export default function ImportSupplyMovements({
                   );
                 })()}
               </th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Estado</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Fila</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Ingreso</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Fecha</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Remito</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Proveedor</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Inversor</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Insumo</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Cantidad</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Cliente destino</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Proyecto destino</th>
-              <th className="px-3 py-3 text-left font-semibold text-gray-700">Campaña destino</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Estado</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Fila</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Ingreso</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Fecha</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Remito</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Proveedor</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Inversor</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Insumo</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Cantidad</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Cliente destino</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Proyecto destino</th>
+              <th className="px-3 py-3 text-left font-semibold text-gray-700 dark:text-gray-200">Campaña destino</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
+          <tbody className="divide-y divide-gray-100 bg-white dark:bg-slate-800">
             {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={13} className="px-4 py-8 text-center text-gray-500">
@@ -884,23 +884,23 @@ export default function ImportSupplyMovements({
                     <td className="px-3 py-3 align-top">
                       <StatusBadge status={status} reasons={row.errors} />
                     </td>
-                    <td className="px-3 py-3 align-top text-gray-700">{row.rowIndex}</td>
-                    <td className="px-3 py-3 align-top text-gray-700">{row.movementType}</td>
-                    <td className="px-3 py-3 align-top text-gray-700">{row.movementDate || "—"}</td>
-                    <td className="px-3 py-3 align-top font-medium text-gray-900">
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">{row.rowIndex}</td>
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">{row.movementType}</td>
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">{row.movementDate || "—"}</td>
+                    <td className="px-3 py-3 align-top font-medium text-gray-900 dark:text-gray-100">
                       {row.referenceNumber || "—"}
                     </td>
-                    <td className="px-3 py-3 align-top text-gray-700">{row.providerName || "—"}</td>
-                    <td className="px-3 py-3 align-top text-gray-700">{row.investorName || "—"}</td>
-                    <td className="px-3 py-3 align-top text-gray-700">{row.supplyName || "—"}</td>
-                    <td className="px-3 py-3 align-top text-gray-700">{row.quantity || "—"}</td>
-                    <td className="px-3 py-3 align-top text-gray-700">
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">{row.providerName || "—"}</td>
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">{row.investorName || "—"}</td>
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">{row.supplyName || "—"}</td>
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">{row.quantity || "—"}</td>
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">
                       {row.destinationCustomerName || "—"}
                     </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">
                       {row.destinationProjectName || "—"}
                     </td>
-                    <td className="px-3 py-3 align-top text-gray-700">
+                    <td className="px-3 py-3 align-top text-gray-700 dark:text-gray-200">
                       {row.destinationCampaignName || "—"}
                     </td>
                   </tr>
@@ -924,7 +924,7 @@ type FilterChipProps = {
 function FilterChip({ label, active, tone, onClick }: FilterChipProps) {
   const base =
     "px-3 py-1 text-xs font-medium rounded-full border transition-colors cursor-pointer";
-  const idle = "bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
+  const idle = "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:bg-slate-900";
   const activeCls =
     tone === "green"
       ? "bg-emerald-50 text-emerald-700 border-emerald-300"

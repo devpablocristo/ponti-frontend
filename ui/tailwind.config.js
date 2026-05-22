@@ -2,6 +2,10 @@
 const typography = require("@tailwindcss/typography");
 
 export default {
+  // Dark mode controlado por la clase `dark` en el <html>. El ThemeProvider
+  // (src/lib/theme) la setea/quita según preferencia del usuario (persistida
+  // en localStorage) o `prefers-color-scheme` cuando theme="system".
+  darkMode: "class",
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",

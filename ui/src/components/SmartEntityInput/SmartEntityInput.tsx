@@ -149,7 +149,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
       <div
         ref={dropdownRef}
         data-testid={`${name}-smart-entity-dropdown`}
-        className="overflow-hidden rounded-lg border border-slate-200 bg-white text-sm shadow-lg"
+        className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm shadow-lg"
         style={dropdownStyle}
       >
         <div className="max-h-64 overflow-y-auto">
@@ -157,7 +157,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
             <button
               key={String(match.id ?? match.name)}
               type="button"
-              className="flex w-full items-center border-b border-slate-100 px-3 py-2.5 text-left text-slate-900 transition last:border-b-0 hover:bg-primary-50"
+              className="flex w-full items-center border-b border-slate-100 dark:border-slate-700 px-3 py-2.5 text-left text-slate-900 dark:text-slate-100 transition last:border-b-0 hover:bg-primary-50 dark:hover:bg-slate-700"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => handleSelectExisting(match)}
             >
@@ -173,7 +173,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
       ref={rootRef}
       className={`relative ${className}`.trim()}
     >
-      <label className="mb-1.5 block text-xs font-medium text-slate-600" htmlFor={name}>
+      <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300" htmlFor={name}>
         {label}
       </label>
       <input
@@ -200,8 +200,8 @@ export function SmartEntityInput<T extends EntityNameOption>({
         readOnly={lockName}
         required={required}
         className={`input-base block ${
-          disabled ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : ""
-        } ${lockName && !disabled ? "cursor-pointer bg-slate-50" : ""} ${sizeClasses}`}
+          disabled ? "cursor-not-allowed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 dark:text-slate-400" : ""
+        } ${lockName && !disabled ? "cursor-pointer bg-slate-50 dark:bg-slate-900" : ""} ${sizeClasses}`}
       />
 
       {dropdown ? createPortal(dropdown, document.body) : null}

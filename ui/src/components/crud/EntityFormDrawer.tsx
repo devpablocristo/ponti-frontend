@@ -1,9 +1,9 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 
 import { DrawerFormActions } from "../Drawer/DrawerFormActions";
 import { DrawerShell } from "../Drawer/DrawerShell";
-import { Notification } from "../feedback/Notification";
 import { LoadingOverlay } from "../feedback/LoadingOverlay";
+import { notify } from "../../lib/notify";
 
 type EntityFormDrawerProps = {
   open: boolean;
@@ -58,6 +58,24 @@ export function EntityFormDrawer({
     void onSubmit();
   };
 
+  // Estado → toast. Los onDismiss legacy se invocan apenas se dispara el toast
+  // para que los callers que limpian estado lo hagan sin que el componente
+  // tenga que renderizar nada inline.
+  useEffect(() => {
+    if (errorMessage) {
+      notify.error(errorMessage);
+      onDismissError?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [errorMessage]);
+  useEffect(() => {
+    if (successMessage) {
+      notify.success(successMessage);
+      onDismissSuccess?.();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [successMessage]);
+
   return (
     <DrawerShell
       open={open}
@@ -77,8 +95,6 @@ export function EntityFormDrawer({
     >
       <LoadingOverlay show={processing} />
       <form className="drawer-form" onSubmit={handleSubmit}>
-        {errorMessage && <Notification variant="error" message={errorMessage} onDismiss={onDismissError} />}
-        {successMessage && <Notification variant="success" message={successMessage} onDismiss={onDismissSuccess} />}
         {children}
       </form>
     </DrawerShell>

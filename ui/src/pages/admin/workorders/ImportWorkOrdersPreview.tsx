@@ -10,7 +10,7 @@ import Button from "../../../components/Button/Button";
 import { Checkbox } from "../../../components/Input/Checkbox";
 import { Notification } from "../../../components/feedback/Notification";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import {
   ImportWorkOrdersResult,
   submitWorkOrderRows,
@@ -118,7 +118,7 @@ export default function ImportWorkOrdersPreview({
       onCompleted(result);
     } catch (error) {
       setSubmitError(
-        extractErrorMessage(error, "No se pudo procesar la importación."),
+        formatError(error, { fallback: "No se pudo procesar la importación." }),
       );
     } finally {
       setSubmitting(false);
@@ -133,7 +133,7 @@ export default function ImportWorkOrdersPreview({
       footer={
         <DrawerFooter>
           <div className="flex w-full items-center justify-between gap-3">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-300">
               {selectedCount} seleccionadas / {counts.total} filas
             </span>
             <div className="flex gap-2">
@@ -172,7 +172,6 @@ export default function ImportWorkOrdersPreview({
           <div className="mb-4">
             <Notification variant="error"
               message={submitError}
-              prefix="Error:"
               onDismiss={() => setSubmitError(null)}
             />
           </div>
@@ -204,9 +203,9 @@ export default function ImportWorkOrdersPreview({
           />
         </div>
 
-        <div className="overflow-x-auto rounded-md border border-gray-200">
+        <div className="overflow-x-auto rounded-md border border-gray-200 dark:border-gray-700">
           <table className="min-w-full text-xs">
-            <thead className="bg-gray-50 text-left text-gray-600">
+            <thead className="bg-gray-50 dark:bg-slate-900 text-left text-gray-600 dark:text-gray-300">
               <tr>
                 <th className="px-2 py-2">
                   {(() => {
@@ -254,7 +253,7 @@ export default function ImportWorkOrdersPreview({
                         ? "bg-amber-50"
                         : "";
                   return (
-                    <tr key={r.rowNumber} className={`border-t border-gray-200 ${bg}`}>
+                    <tr key={r.rowNumber} className={`border-t border-gray-200 dark:border-gray-700 ${bg}`}>
                       <td className="px-2 py-2">
                         <Checkbox
                           checked={!r.existing && !!selected[r.rowNumber]}
@@ -321,7 +320,7 @@ type FilterChipProps = {
 function FilterChip({ label, active, tone, onClick }: FilterChipProps) {
   const base =
     "px-3 py-1 text-xs font-medium rounded-full border transition-colors cursor-pointer";
-  const idle = "bg-white text-gray-700 border-gray-300 hover:bg-gray-50";
+  const idle = "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:bg-slate-900";
   const activeCls =
     tone === "green"
       ? "bg-emerald-50 text-emerald-700 border-emerald-300"

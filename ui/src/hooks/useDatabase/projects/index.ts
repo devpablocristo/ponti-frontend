@@ -4,7 +4,7 @@ import * as actions from "./actions";
 import { apiClient } from "@/api/client";
 import { Project, ProjectPayload, ProjectDropdownPayload } from "./types";
 import { SuccessResponse } from "@/api/types";
-import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 
 import useProjectReducer from "./projectReducer";
 
@@ -47,25 +47,12 @@ const useProjects = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrio un error al intentar guardar el proyecto",
+          payload: "No se pudo crear el proyecto.",
         });
       } catch (error) {
-        const status = extractErrorStatus(error);
-        if (status === 409) {
-          dispatch({
-            type: actions.SET_ERROR,
-            payload: "Ya existe un proyecto con el mismo nombre y campaña.",
-          });
-          return;
-        }
-
-        const message = extractErrorMessage(
-          error,
-          "Error desconocido en la creación del proyecto."
-        );
         dispatch({
           type: actions.SET_ERROR,
-          payload: message,
+          payload: formatError(error, { fallback: "No se pudo crear el proyecto." }),
         });
         return;
       } finally {
@@ -110,12 +97,12 @@ const useProjects = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrio un error en la busqueda de proyectos",
+          payload: "No se pudieron cargar los proyectos.",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
+          payload: formatError(error, { fallback: "No se pudieron cargar los proyectos." }),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
@@ -149,12 +136,12 @@ const useProjects = () => {
 
         dispatch({
           type: actions.SET_ERROR_DROPDOWN,
-          payload: "Ocurrio un error en la busqueda de proyectos",
+          payload: "No se pudieron cargar los proyectos del cliente.",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR_DROPDOWN,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
+          payload: formatError(error, { fallback: "No se pudieron cargar los proyectos del cliente." }),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING_DROPDOWN });
@@ -185,12 +172,12 @@ const useProjects = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrio un error en la busqueda del proyecto",
+          payload: "No se pudo cargar el proyecto.",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
+          payload: formatError(error, { fallback: "No se pudo cargar el proyecto." }),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
@@ -221,23 +208,13 @@ const useProjects = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrio un error al intentar editar un proyecto.",
+          payload: "No se pudo actualizar el proyecto.",
         });
       } catch (error) {
-        const status = extractErrorStatus(error);
-        if (status === 404) {
-          dispatch({
-            type: actions.SET_ERROR,
-            payload:
-              "No se encontró el proyecto o no tiene la última versión disponible.",
-          });
-          return;
-        }
-
-        const message = extractErrorMessage(
-          error,
-          "Error desconocido al intentar editar un proyecto."
-        );
+        // 404 / outdated lo cubre translateBackendError vía pattern
+        // "project not found or outdated"; 409 vía "X already exists".
+        // El interceptor global agrega userMessage para 5xx/network/timeout.
+        const message = formatError(error, { fallback: "No se pudo actualizar el proyecto." });
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
@@ -269,14 +246,14 @@ const useProjects = () => {
           return;
         }
 
-        const message = "Ocurrió un error al intentar archivar un proyecto.";
+        const message = "No se pudo archivar el proyecto.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        const message = formatError(error, { fallback: "No se pudo archivar el proyecto." });
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
@@ -324,12 +301,12 @@ const useProjects = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrió un error en la búsqueda de proyectos archivados",
+          payload: "No se pudieron cargar los proyectos archivados.",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
+          payload: formatError(error, { fallback: "No se pudieron cargar los proyectos archivados." }),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
@@ -357,14 +334,14 @@ const useProjects = () => {
           return;
         }
 
-        const message = "Ocurrió un error al intentar restaurar un proyecto.";
+        const message = "No se pudo restaurar el proyecto.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        const message = formatError(error, { fallback: "No se pudo restaurar el proyecto." });
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
@@ -395,14 +372,14 @@ const useProjects = () => {
           return;
         }
 
-        const message = "Ocurrió un error al intentar eliminar un proyecto.";
+        const message = "No se pudo eliminar el proyecto.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        const message = formatError(error, { fallback: "No se pudo eliminar el proyecto." });
         dispatch({
           type: actions.SET_ERROR,
           payload: message,

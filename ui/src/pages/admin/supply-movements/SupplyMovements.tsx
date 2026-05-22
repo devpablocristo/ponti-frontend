@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { Notification } from "../../../components/feedback/Notification";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
+import { notify } from "@/lib/notify";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
@@ -70,6 +70,13 @@ export function SupplyMovements() {
     errorCreation,
   } = useSupplyMovements();
 
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (deleteError) notify.error(deleteError);
+  }, [deleteError]);
+
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const pagination = usePagination({ perPage: 10 });
@@ -83,6 +90,20 @@ export function SupplyMovements() {
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
+
+  // Estado → toast (patrón en CreateOrder.tsx).
+  useEffect(() => {
+    if (warningMessage) notify.warning(warningMessage);
+  }, [warningMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
+  useEffect(() => {
+    if (actionErrorMessage) notify.error(actionErrorMessage);
+  }, [actionErrorMessage]);
+  useEffect(() => {
+    if (exportErrorMessage) notify.error(exportErrorMessage);
+  }, [exportErrorMessage]);
 
   // Aligned with BE `UpdateSupplyMovement`: rechaza editar movimientos internos
   // (afectan stock en dos proyectos a la vez) y movimientos de stock (overwrite
@@ -202,7 +223,7 @@ export function SupplyMovements() {
                 <span>{text}</span>
                 <span
                   title="Generado automáticamente al recibir un movimiento interno"
-                  className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 border border-slate-300"
+                  className="inline-flex items-center rounded-md bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600"
                 >
                   Auto
                 </span>
@@ -305,7 +326,7 @@ export function SupplyMovements() {
           columnsFilters
         ),
         render: (value) => (
-          <span className="font-bold text-gray-900">{String(value ?? "")}</span>
+          <span className="font-bold text-gray-900 dark:text-gray-100">{String(value ?? "")}</span>
         ),
       },
       {
@@ -353,7 +374,7 @@ export function SupplyMovements() {
         ),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -368,7 +389,7 @@ export function SupplyMovements() {
         ),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
     ],
@@ -656,11 +677,6 @@ export function SupplyMovements() {
           },
         ]}
       />
-      <Notification variant="warning"
-        message={warningMessage}
-        onDismiss={() => setWarningMessage(null)}
-      />
-      <Notification variant="success" message={successMessage} />
       {hasWorkspaceSelection && !error && (
         <div className="my-3">
           <SupplyMovementsIndicators summary={derivedSummary} />
@@ -669,10 +685,6 @@ export function SupplyMovements() {
       <div className="mt-3 relative">
         <LoadingOverlay show={hasWorkspaceSelection && processing} />
 
-        <Notification variant="error"
-          message={actionErrorMessage || exportErrorMessage || error}
-          prefix="Error:"
-        />
         {projectId && (
           <>
             <CreateSupplyMovement
@@ -736,7 +748,7 @@ export function SupplyMovements() {
               filters={columnsFilters}
               onFilterChange={handleFilterChange}
               enableFilters={true}
-              message="No hay movimientos disponibles"
+              message="Todavía no hay movimientos de insumos con los filtros actuales."
               pagination={pagination.buildPagination(filteredMovements.length)}
             />
           </>

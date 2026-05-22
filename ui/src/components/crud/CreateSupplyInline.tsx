@@ -104,7 +104,7 @@ export default function CreateSupplyInline({
             size="sm"
           />
 
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
             <Checkbox
               tone="form"
               checked={isPartialPrice}

@@ -229,7 +229,7 @@ const Notifications = () => {
       <div className="flex items-center justify-between">
         <div>
           {unreadCount > 0 && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               <span className="font-medium">
                 {unreadCount} sin leer
                 {highSeverityCount > 0 && (
@@ -240,7 +240,7 @@ const Notifications = () => {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
             <input
               type="checkbox"
               checked={includeResolved}
@@ -257,7 +257,7 @@ const Notifications = () => {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {!loading && insights.length === 0 && !error && (
-        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 p-8 text-center">
           <p className="text-gray-500">No hay notificaciones por ahora.</p>
           <p className="mt-1 text-sm text-gray-400">
             Los insights se generan automáticamente cuando hay cambios en el proyecto.
@@ -274,10 +274,10 @@ const Notifications = () => {
               key={insight.id}
               className={`rounded-lg border p-4 transition-colors ${
                 resolved
-                  ? "bg-gray-50 border-gray-200 opacity-70"
+                  ? "bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-gray-700 opacity-70"
                   : unread
-                    ? "bg-blue-50/40 border-gray-200 hover:border-gray-300"
-                    : "bg-white border-gray-200 hover:border-gray-300"
+                    ? "bg-blue-50/40 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600"
+                    : "bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600"
               }`}
               style={{
                 borderLeftWidth: "4px",
@@ -307,7 +307,7 @@ const Notifications = () => {
                   <h3 className={`text-sm ${unread ? "font-semibold" : "font-medium"} text-gray-900`}>
                     {insight.title}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-600">{insight.body}</p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{insight.body}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className="text-[10px] text-gray-400">{statusLabel(insight.status)}</span>

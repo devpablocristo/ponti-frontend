@@ -98,7 +98,7 @@ export default function ArchivedActors({ filters, onAfterRestore }: ArchivedActo
     [hardDeleteActor, onAfterRestore],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<Actor>({
       refetch,
       restore: restoreAndNotify,
@@ -117,7 +117,7 @@ export default function ArchivedActors({ filters, onAfterRestore }: ArchivedActo
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? error}
+      error={error}
       ignoreWorkspaceFilters
     />
   );

@@ -78,9 +78,9 @@ export default function SupplyItemsTable({
   return (
     <div>
       <div className={`hidden sm:grid ${gridColsClass} gap-4 mb-2`}>
-        <span className="font-sm text-gray-900">Insumo</span>
-        <span className="font-sm text-gray-900">Cantidad</span>
-        {showDoseColumn && <span className="font-sm text-gray-900">Dosis/ha</span>}
+        <span className="font-sm text-gray-900 dark:text-gray-100">Insumo</span>
+        <span className="font-sm text-gray-900 dark:text-gray-100">Cantidad</span>
+        {showDoseColumn && <span className="font-sm text-gray-900 dark:text-gray-100">Dosis/ha</span>}
         <div />
       </div>
 

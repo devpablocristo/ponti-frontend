@@ -73,7 +73,7 @@ export const ByFieldOrCropTable = ({
 
   if (!data || !data.columns) {
     return (
-      <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
+      <div className="p-4 text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-slate-900">
         No hay datos disponibles
       </div>
     );
@@ -105,7 +105,7 @@ export const ByFieldOrCropTable = ({
           width: `${data.columns.length * 360}px`,
         }}
       >
-        <table className="text-sm bg-white border-separate border-spacing-y-1">
+        <table className="text-sm bg-white dark:bg-slate-800 border-separate border-spacing-y-1">
         <thead>
           <tr className="h-14">
             <th></th>
@@ -118,7 +118,7 @@ export const ByFieldOrCropTable = ({
                     <div
                       className={`flex flex-col gap-1 `}
                     >
-                      <span className="uppercase font-medium text-gray-700 whitespace-nowrap">
+                      <span className="uppercase font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
                         {row.field_name}
                       </span>
                       <CropBadge cropName={row.crop_name} />
@@ -166,14 +166,14 @@ export const ByFieldOrCropTable = ({
         <th
           className={
             [
-              !classNameHeader.includes("text-") && "text-gray-600",
+              !classNameHeader.includes("text-") && "text-gray-600 dark:text-gray-300",
               !classNameHeader.includes("font-") && "font-light",
               classNameHeader,
             ]
               .filter(Boolean)
               .join(" ") +
             " p-1 text-left w-[210px] " +
-            (isToggleRow ? "cursor-pointer hover:bg-gray-50" : "")
+            (isToggleRow ? "cursor-pointer hover:bg-gray-50 dark:bg-slate-900" : "")
           }
           onClick={
             isToggleRow ? () => setIsEconomicsOpen(!isEconomicsOpen) : undefined
@@ -196,8 +196,8 @@ export const ByFieldOrCropTable = ({
         {/* Columnas de datos */}
         {data!.columns.map((column, index) => {
           const finalRowClasses = [
-            !classNameRows.includes("text-") && "text-gray-600",
-            !classNameRows.includes("bg-") && "bg-white",
+            !classNameRows.includes("text-") && "text-gray-600 dark:text-gray-300",
+            !classNameRows.includes("bg-") && "bg-white dark:bg-slate-800",
             !classNameRows.includes("font-") && "font-light",
             classNameRows,
             shouldRoundRow && "rounded-xl overflow-hidden",
@@ -210,7 +210,7 @@ export const ByFieldOrCropTable = ({
 
           return (
             <>
-              <td className="w-2 bg-white"></td>
+              <td className="w-2 bg-white dark:bg-slate-800"></td>
               {showIndicator ? (
                 <td
                   key={index}

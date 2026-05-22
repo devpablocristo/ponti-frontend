@@ -44,7 +44,7 @@ export default function ArchivedInvestors({ onAfterRestore }: ArchivedInvestorsP
     [hardDeleteInvestor, onAfterRestore],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<Investor>({
       refetch,
       restore: restoreAndNotify,
@@ -63,7 +63,7 @@ export default function ArchivedInvestors({ onAfterRestore }: ArchivedInvestorsP
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? error}
+      error={error}
     />
   );
 }

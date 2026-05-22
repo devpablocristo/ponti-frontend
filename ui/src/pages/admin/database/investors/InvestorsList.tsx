@@ -7,7 +7,7 @@ import { DataTable } from "@/lib/dataDisplay";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
@@ -248,6 +248,13 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
     getProjects,
   } = useProjects();
 
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (projectsError) notify.error(projectsError);
+  }, [projectsError]);
+
   const refresh = useCallback(
     () => getInvestors("limit=1000"),
     [getInvestors],
@@ -459,7 +466,6 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
     <div>
       <div className="relative">
         <LoadingOverlay show={processing || projectsProcessing || loadingDetails} />
-        {(error || projectsError) && <Notification variant="error" message={error || projectsError} />}
         <AppFilterBar
           filters={[
             {

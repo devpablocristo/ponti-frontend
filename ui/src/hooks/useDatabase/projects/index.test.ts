@@ -54,9 +54,12 @@ describe("useProjects.saveProject", () => {
     );
   });
 
-  it("setea mensaje 409 específico al recibir conflict", async () => {
+  it("traduce 'project already exists' del BE a copy en español", async () => {
     mockedClient.post.mockRejectedValueOnce({
-      response: { status: 409, data: { error: { details: "duplicate" } } },
+      response: {
+        status: 409,
+        data: { error: { details: "project already exists" } },
+      },
     });
     const { result } = renderHook(() => useProjects());
 
@@ -65,9 +68,7 @@ describe("useProjects.saveProject", () => {
     });
 
     await waitFor(() =>
-      expect(result.current.error).toBe(
-        "Ya existe un proyecto con el mismo nombre y campaña.",
-      ),
+      expect(result.current.error).toBe("El proyecto ya existe."),
     );
   });
 });
@@ -87,9 +88,14 @@ describe("useProjects.updateProject", () => {
     );
   });
 
-  it("setea mensaje 404 cuando proyecto no existe", async () => {
+  it("traduce 'project not found or outdated' del BE a copy en español", async () => {
+    // El BE devuelve "project not found or outdated" cuando el update falla
+    // por optimistic-locking (otra persona modificó el registro o ya no existe).
     mockedClient.put.mockRejectedValueOnce({
-      response: { status: 404, data: { error: { details: "not found" } } },
+      response: {
+        status: 409,
+        data: { error: { details: "project not found or outdated" } },
+      },
     });
     const { result } = renderHook(() => useProjects());
 
@@ -99,7 +105,7 @@ describe("useProjects.updateProject", () => {
 
     await waitFor(() =>
       expect(result.current.error).toBe(
-        "No se encontró el proyecto o no tiene la última versión disponible.",
+        "El proyecto fue modificado por otra persona o ya no existe. Recargá la página y volvé a intentar.",
       ),
     );
   });

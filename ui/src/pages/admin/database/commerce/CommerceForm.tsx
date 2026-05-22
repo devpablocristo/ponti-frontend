@@ -6,7 +6,7 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import useCommercializations from "../../../../hooks/useCommercializations";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 
 interface Commerce {
   id: number;
@@ -21,6 +21,13 @@ interface Commerce {
 export default function CommerceForm() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorMessage) notify.error(errorMessage);
+  }, [errorMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
   const [projectCropList, setProjectCropList] = useState<
     { id: number; name: string }[]
   >([]);
@@ -189,20 +196,10 @@ useEffect(() => {
   return (
     <div className="w-full mx-auto">
       <AppFilterBar filters={filters} />
-      <div className="mt-4 p-6 w-full mx-auto bg-white rounded-lg shadow-md">
+      <div className="mt-4 p-6 w-full mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md">
         <h1 className="text-custom-text font-semibold text-xl leading-none">
           Datos de comercialización por cultivo
         </h1>
-        <Notification variant="error"
-          message={errorMessage || null}
-          className="my-2"
-          onDismiss={() => setErrorMessage("")}
-        />
-        <Notification variant="success"
-          message={successMessage || null}
-          className="my-2"
-          onDismiss={() => setSuccessMessage("")}
-        />
         {processingProjects || processing ? (
           <LoadingOverlay show />
         ) : (
@@ -224,7 +221,7 @@ useEffect(() => {
                       className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                     >
                       <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600">
+                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                           Cultivo
                         </label>
                         <InputField
@@ -236,7 +233,7 @@ useEffect(() => {
                         />
                       </div>
                       <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600">
+                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                           Precio pizarra
                         </label>
                         <InputField
@@ -253,7 +250,7 @@ useEffect(() => {
                         />
                       </div>
                       <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600">
+                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                           Costo flete
                         </label>
                         <InputField
@@ -270,7 +267,7 @@ useEffect(() => {
                         />
                       </div>
                       <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600">
+                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                           Gastos comerciales %
                         </label>
                         <InputField
@@ -287,7 +284,7 @@ useEffect(() => {
                         />
                       </div>
                       <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600">
+                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                           Precio neto
                         </label>
                         <InputField

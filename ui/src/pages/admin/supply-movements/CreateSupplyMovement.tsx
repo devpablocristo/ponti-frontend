@@ -20,7 +20,7 @@ import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
 import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
-import { Notification } from "../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { Campaign, Customer, Project } from "../../../hooks/useWorkspaceFilters";
 import useCampaigns from "../../../hooks/useCampaigns";
 import { getUnitName } from "../../../constants/units";
@@ -85,6 +85,13 @@ export default function CreateSupplyMovement({
 
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -775,11 +782,6 @@ export default function CreateSupplyMovement({
               }}
             />
           </section>
-          <Notification variant="error" message={error} prefix="Error:" />
-          <Notification variant="success"
-            message={successMessage || null}
-            onDismiss={() => setSuccessMessage("")}
-          />
         </>
       </EntityFormDrawer>
       <DrawerShell

@@ -24,6 +24,8 @@ import { Column } from "../../../pages/admin/types";
 import { WORKORDER_ENTITY } from "../entities";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
+import { notify } from "@/lib/notify";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
@@ -147,7 +149,7 @@ function OrdersHeader({
   const [showColumnsModal, setShowColumnsModal] = useState(false);
 
   return (
-    <div className="flex justify-end items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
+    <div className="flex justify-end items-center p-4 bg-white dark:bg-slate-800 rounded-t-xl border-b border-gray-100">
       <Button
         variant="primary"
         size="sm"
@@ -174,7 +176,7 @@ function OrdersHeader({
           {allColumns.map((col) => (
             <label
               key={col.key}
-              className="flex items-center text-sm font-medium text-gray-700 gap-2"
+              className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-200 gap-2"
             >
               <input
                 type="checkbox"
@@ -188,7 +190,7 @@ function OrdersHeader({
                     );
                   }
                 }}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
               />
               {col.header}
             </label>
@@ -516,7 +518,7 @@ export function WorkOrders() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("surface_ha"),
         render: (value) => (
-          <span className="font-semibold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-normal text-xs">Has</span></span>
         ),
       },
       {
@@ -532,7 +534,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("consumption"),
-        render: (value) => <span className="font-bold text-gray-900">{String(value)}</span>,
+        render: (value) => <span className="font-bold text-gray-900 dark:text-gray-100">{String(value)}</span>,
       },
       {
         key: "category_name",
@@ -547,7 +549,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("dose"),
-        render: (value) => <span className="font-bold text-gray-900">{String(value)}</span>
+        render: (value) => <span className="font-bold text-gray-900 dark:text-gray-100">{String(value)}</span>
       },
       {
         key: "cost_per_ha",
@@ -557,7 +559,7 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("cost_per_ha"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -568,7 +570,7 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("unit_price"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -579,7 +581,7 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("total_cost"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
     ];
@@ -636,6 +638,19 @@ export function WorkOrders() {
   const [warningMessage, setWarningMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
+  // Convertimos el estado de mensaje en toast: cada vez que cambia y es
+  // non-empty, dispara notify con la severidad correspondiente. Los setters
+  // a "" no producen toast (es la forma de "limpiar" el slot).
+  useEffect(() => {
+    if (warningMessage) notify.warning(warningMessage);
+  }, [warningMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
+  useEffect(() => {
+    if (errorMessage) notify.error(errorMessage);
+  }, [errorMessage]);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -876,10 +891,9 @@ export function WorkOrders() {
         setFilterDatasetOrders([]);
         setFilterDatasetReady(false);
         setErrorMessage(
-          extractErrorMessage(
-            error,
-            "No se pudieron cargar las opciones globales de filtros."
-          )
+          formatError(error, {
+            fallback: "No se pudieron cargar las opciones de filtros.",
+          }),
         );
       });
 
@@ -998,8 +1012,12 @@ export function WorkOrders() {
           : safeOrders
       );
 
+  // El bulk opera sobre TODAS las filas del workspace (post filtros por columna),
+  // no sobre la página visible. Así "Seleccionar todo" marca las 212 filas y no
+  // solo las 10 paginadas. La tabla sigue mostrando solo la página actual; los
+  // checkboxes por fila se renderizan a partir del set global de IDs seleccionados.
   const bulk = useBulkActions<OrdersData>({
-    items: displayedOrders,
+    items: filteredOrders,
     entity: WORKORDER_ENTITY,
     archive: archiveOrder,
     onEdit: handleOpenOrder,
@@ -1070,7 +1088,7 @@ export function WorkOrders() {
       setImportDrawerOpen(true);
     } catch (error) {
       setErrorMessage(
-        extractErrorMessage(error, "No se pudo procesar el CSV. Use CSV válido."),
+        formatError(error, { fallback: "No se pudo procesar el CSV. Verificá que el archivo tenga el formato correcto." }),
       );
     } finally {
       setImportLoading(false);
@@ -1153,9 +1171,6 @@ export function WorkOrders() {
           },
         ]}
       />
-      <Notification variant="warning" message={warningMessage || null} />
-      <Notification variant="success" message={successMessage || null} />
-      <Notification variant="error" message={errorMessage} prefix="Error:" />
       {effectiveHasWorkspaceSelection && !processing && !errorMetrics && displayedOrders.length > 0 && (
         <div className="my-3">
           <OrdersIndicators
@@ -1230,14 +1245,14 @@ export function WorkOrders() {
         {!effectiveHasWorkspaceSelection ? (
           <EmptyState
             icon={Briefcase}
-            title="Seleccioná filtros para ver órdenes de trabajo"
-            description="El listado no carga datos globales automáticamente."
+            title="Seleccioná filtros para ver órdenes de trabajo."
+            description="El listado no carga datos sin un workspace (cliente / proyecto / campaña / campo) seleccionado."
           />
         ) : (
           <>
             <BulkSelectionPanel
               selectedCount={bulk.selectedCount}
-              totalCount={displayedOrders.length}
+              totalCount={filteredOrders.length}
               allSelected={bulk.allSelected}
               onToggleAll={bulk.toggleAll}
               onClear={bulk.clear}
@@ -1284,7 +1299,7 @@ export function WorkOrders() {
                   allColumns={allColumns}
                 />
               }
-              message="No hay ordenes disponibles"
+              message="Todavía no hay órdenes de trabajo con los filtros actuales."
               pagination={pagination.buildPagination(
                 displayedRowsTotal,
                 { serverSide: !hasColumnFilters }

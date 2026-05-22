@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Plus, Save, Trash2 } from "lucide-react";
 
 import { apiClient } from "@/api/client";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import { leaseTypeHasFixedValue, leaseTypeHasPercent } from "@/lib/leaseTypes";
 import Button from "../../../../components/Button/Button";
 import { IconActionButton } from "../../../../components/Button/IconActionButton";
@@ -1334,7 +1334,7 @@ export default function CustomerEditor({
       const fallback = customerOnly
         ? "No se pudo guardar el cliente."
         : "No se pudieron guardar los cambios.";
-      const message = extractErrorMessage(saveError, fallback);
+      const message = formatError(saveError, { fallback });
       const fieldMessage = parseProjectFieldErrorMessage(message);
       notify.error(fieldMessage ? `${message}\n${fieldMessage}` : message);
     } finally {
@@ -1535,14 +1535,14 @@ export default function CustomerEditor({
 
             <div className="space-y-2">
               {projectDraft.fields.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-slate-300 bg-white p-3 text-sm text-slate-500">
+                <p className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-3 text-sm text-slate-500 dark:text-slate-400">
                   Sin campos cargados.
                 </p>
               ) : (
                 projectDraft.fields.map((field, fieldIndex) => (
                   <div
                     key={field.id || fieldIndex}
-                    className="rounded-lg border border-slate-200 bg-slate-50 p-2.5"
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-2.5"
                   >
                     <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1fr_180px_1.2fr]">
                       <SmartEntityInput<EntityOption>
@@ -1666,7 +1666,7 @@ export default function CustomerEditor({
                       </div>
                     </div>
 
-                    <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5">
+                    <div className="mt-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5">
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <h3 className="text-sm font-semibold text-slate-950">Lotes</h3>
                         <AddButton label="Agregar lote" onClick={() => addLotAt(fieldIndex)} />
@@ -1803,7 +1803,7 @@ function EditableList<T>({ title, emptyLabel, items, onAdd, renderItem }: Editab
       </div>
       <div className="space-y-2">
         {items.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-slate-300 bg-white p-2.5 text-sm text-slate-500">
+          <p className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-2.5 text-sm text-slate-500 dark:text-slate-400">
             {emptyLabel}
           </p>
         ) : (

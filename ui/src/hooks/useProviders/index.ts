@@ -5,7 +5,7 @@ import * as actions from "./actions";
 import { apiClient } from "@/api/client";
 import { Payload } from "./types";
 import { SuccessResponse } from "@/api/types";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import useProvidersReducer from "./useProvidersReducer";
 
 const useProviders = () => {
@@ -42,12 +42,12 @@ const useProviders = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrio un error en la busqueda de proveedores",
+          payload: "No se pudieron cargar los proveedores.",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
+          payload: formatError(error, { fallback: "No se pudieron cargar los proveedores." }),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });

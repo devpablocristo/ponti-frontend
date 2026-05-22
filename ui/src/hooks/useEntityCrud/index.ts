@@ -77,7 +77,7 @@ const INITIAL_STATE: State<unknown> = {
 function extractMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
-  return "Error desconocido";
+  return "Ocurrió un error inesperado.";
 }
 
 export function useEntityCrud<T, CreateInput = never, UpdateInput = never>(

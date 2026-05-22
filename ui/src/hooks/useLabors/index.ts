@@ -11,7 +11,7 @@ import {
 } from "./types";
 import { PaginatedResponse, SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
-import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import { withQuery } from "@/lib/workspaceQuery";
 
 type LaborGroupsResponse = SuccessResponse<PaginatedResponse<LaborGroupData>>;
@@ -53,13 +53,16 @@ const extractLaborsArray = (payload: unknown): LaborInfo[] => {
   return [];
 };
 
-const translateLaborError = (message: string): string => {
+// El BE puede devolver un detalle por labor con un prefijo machine-readable
+// como `CONFLICT: labor already exists in this project` (ver
+// `internal/labor/usecases.go`). Lo mapeamos al copy en español acá porque
+// el detail viene como parte de un payload de éxito parcial, no como axios
+// error — formatError no aplica.
+const translateLaborDetail = (message: string): string => {
   const normalized = message.trim();
-
   if (normalized === "CONFLICT: labor already exists in this project") {
     return "La labor ya existe en este proyecto.";
   }
-
   return message;
 };
 
@@ -107,9 +110,9 @@ const useLabors = () => {
           return;
         }
 
-        setError("Ocurrio un error en la busqueda de labores");
+        setError("No se pudieron cargar las labores.");
       } catch (error) {
-        setError(extractErrorMessage(error, "Error desconocido en la busqueda de labores."));
+        setError(formatError(error, { fallback: "No se pudieron cargar las labores." }));
       } finally {
         setProcessing(false);
       }
@@ -135,11 +138,9 @@ const useLabors = () => {
           return;
         }
 
-        setErrorMetrics("Ocurrio un error en la busqueda de kpis");
+        setErrorMetrics("No se pudieron cargar los indicadores.");
       } catch (error) {
-        setErrorMetrics(
-          extractErrorMessage(error, "Error desconocido en la busqueda de metricas.")
-        );
+        setErrorMetrics(formatError(error, { fallback: "No se pudieron cargar los indicadores." }));
       } finally {
         setProcessingMetrics(false);
       }
@@ -162,16 +163,14 @@ const useLabors = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT_INVOICE,
-            payload: "Se ha creado la factura con éxito!",
+            payload: "Se creó la factura.",
           });
           return;
         }
 
-        setErrorInvoice("Ocurrio un error en la creación de la factura");
+        setErrorInvoice("No se pudo crear la factura.");
       } catch (error) {
-        setErrorInvoice(
-          extractErrorMessage(error, "Error desconocido en la creación de la factura.")
-        );
+        setErrorInvoice(formatError(error, { fallback: "No se pudo crear la factura." }));
       } finally {
         setProcessingInvoice(false);
       }
@@ -197,16 +196,14 @@ const useLabors = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT_INVOICE,
-            payload: "Se ha actualizado la factura con éxito!",
+            payload: "Se actualizó la factura.",
           });
           return;
         }
 
-        setErrorInvoice("Ocurrio un error en la actualización de la factura");
+        setErrorInvoice("No se pudo actualizar la factura.");
       } catch (error) {
-        setErrorInvoice(
-          extractErrorMessage(error, "Error desconocido en la actualización de la factura.")
-        );
+        setErrorInvoice(formatError(error, { fallback: "No se pudo actualizar la factura." }));
       } finally {
         setProcessingInvoice(false);
       }
@@ -236,33 +233,26 @@ const useLabors = () => {
 
         if (failedLabors.length > 0) {
           const message = failedLabors
-            .map((labor) => translateLaborError(labor.error_detail?.trim() || ""))
+            .map((labor) => translateLaborDetail(labor.error_detail?.trim() || ""))
             .filter(Boolean)
             .join("\n");
 
-          setError(message || "Ocurrió un error en la creación de las labores.");
+          setError(message || "No se pudieron crear todas las labores.");
           return false;
         }
 
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Se han creado las labores con éxito!",
+            payload: "Se crearon las labores.",
           });
           return true;
         }
 
-        setError("Ocurrio un error en la creación de los labores");
+        setError("No se pudieron crear las labores.");
         return false;
       } catch (error) {
-        if (extractErrorStatus(error) === 409) {
-          setError("Ya existe una labor con el mismo nombre.");
-          return false;
-        }
-
-        setError(
-          extractErrorMessage(error, "Error desconocido en la creación de las labores.")
-        );
+        setError(formatError(error, { fallback: "No se pudieron crear las labores." }));
         return false;
       } finally {
         setProcessing(false);
@@ -293,9 +283,9 @@ const useLabors = () => {
           return;
         }
 
-        setError("Ocurrio un error en la busqueda de labores");
+        setError("No se pudieron cargar las labores del proyecto.");
       } catch (error) {
-        setError(extractErrorMessage(error, "Error desconocido en la busqueda de labores."));
+        setError(formatError(error, { fallback: "No se pudieron cargar las labores del proyecto." }));
       } finally {
         setProcessing(false);
       }
@@ -318,19 +308,14 @@ const useLabors = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Se ha eliminado el labor con éxito!",
+            payload: "Se eliminó la labor.",
           });
           return;
         }
 
-        setError("Ocurrio un error en la eliminación del labor");
+        setError("No se pudo eliminar la labor.");
       } catch (error) {
-        if (extractErrorStatus(error) === 409) {
-          setError("La labor esta siendo usada en una orden de trabajo.");
-          return;
-        }
-
-        setError(extractErrorMessage(error, "Error desconocido en la eliminación de la labor."));
+        setError(formatError(error, { fallback: "No se pudo eliminar la labor." }));
       } finally {
         setProcessing(false);
       }
@@ -347,12 +332,12 @@ const useLabors = () => {
         {},
       );
       if (!response.success) {
-        const message = "Ocurrió un error al archivar la labor.";
+        const message = "No se pudo archivar la labor.";
         setError(message);
         throw new Error(message);
       }
     } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(err, { fallback: "No se pudo archivar la labor." });
       setError(message);
       throw new Error(message);
     } finally {
@@ -369,12 +354,12 @@ const useLabors = () => {
         {},
       );
       if (!response.success) {
-        const message = "Ocurrió un error al restaurar la labor.";
+        const message = "No se pudo restaurar la labor.";
         setError(message);
         throw new Error(message);
       }
     } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(err, { fallback: "No se pudo restaurar la labor." });
       setError(message);
       throw new Error(message);
     } finally {
@@ -390,12 +375,12 @@ const useLabors = () => {
         `/labors/${id}/hard`,
       );
       if (!response.success) {
-        const message = "Ocurrió un error al eliminar la labor.";
+        const message = "No se pudo eliminar la labor.";
         setError(message);
         throw new Error(message);
       }
     } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(err, { fallback: "No se pudo eliminar la labor." });
       setError(message);
       throw new Error(message);
     } finally {
@@ -418,9 +403,9 @@ const useLabors = () => {
           dispatch({ type: actions.SET_LABORS, payload: normalized });
           return;
         }
-        setError("Ocurrió un error al listar labores archivadas.");
+        setError("No se pudieron cargar las labores archivadas.");
       } catch (err) {
-        setError(extractErrorMessage(err, "Error en el servicio, inténtalo más tarde."));
+        setError(formatError(err, { fallback: "No se pudieron cargar las labores archivadas." }));
       } finally {
         setProcessing(false);
       }
@@ -457,18 +442,13 @@ const useLabors = () => {
       );
 
       if (response.success) {
-        setResultUpdate("Se editado el labor con éxito!");
+        setResultUpdate("Se actualizó la labor.");
         return;
       }
 
-      setErrorUpdate("Ocurrio un error en la edicion del labor");
+      setErrorUpdate("No se pudo actualizar la labor.");
     } catch (error) {
-      if (extractErrorStatus(error) === 404) {
-        setErrorUpdate("La labor no existe.");
-        return;
-      }
-
-      setErrorUpdate(extractErrorMessage(error, "Error desconocido en la edición de la labor."));
+      setErrorUpdate(formatError(error, { fallback: "No se pudo actualizar la labor." }));
     } finally {
       setProcessing(false);
     }

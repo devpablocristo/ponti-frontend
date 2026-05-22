@@ -51,7 +51,7 @@ export default function ArchivedProjects({ onAfterRestore }: ArchivedProjectsPro
     [onAfterRestore, restoreProject],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<ProjectData>({
       refetch,
       restore: restoreAndNotify,
@@ -72,7 +72,7 @@ export default function ArchivedProjects({ onAfterRestore }: ArchivedProjectsPro
       getHardDeleteCopy={getProjectHardDeleteCopy}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? error}
+      error={error}
     />
   );
 }

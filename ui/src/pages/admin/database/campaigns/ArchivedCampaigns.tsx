@@ -45,7 +45,7 @@ export default function ArchivedCampaigns({ onAfterRestore }: ArchivedCampaignsP
     [hardDeleteCampaign, onAfterRestore],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<Campaign>({
       refetch,
       restore: restoreAndNotify,
@@ -64,7 +64,7 @@ export default function ArchivedCampaigns({ onAfterRestore }: ArchivedCampaignsP
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? error}
+      error={error}
     />
   );
 }

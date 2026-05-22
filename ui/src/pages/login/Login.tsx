@@ -49,26 +49,26 @@ function Login() {
   return (
     <div className="flex flex-col md:flex-row h-screen">
       <Cover />
-      <div className="w-full md:w-2/5 flex-1 flex items-center justify-center bg-slate-50 p-6">
+      <div className="w-full md:w-2/5 flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-6">
         <div className="w-full max-w-sm animate-fade-in-up">
           {/* Mobile logo */}
           <div className="md:hidden flex items-center justify-center gap-2 mb-8">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-custom-btn to-emerald-500 flex items-center justify-center">
               <span className="text-white font-bold text-lg font-display">P</span>
             </div>
-            <span className="text-2xl font-bold text-slate-800 font-display tracking-tight">Ponti</span>
+            <span className="text-2xl font-bold text-slate-800 dark:text-slate-200 font-display tracking-tight">Ponti</span>
           </div>
 
-          <h2 className="text-3xl font-bold text-slate-800 mb-2 font-display tracking-tight">
+          <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200 mb-2 font-display tracking-tight">
             Bienvenido
           </h2>
-          <p className="text-sm text-slate-500 mb-8 leading-relaxed">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
             Ingresá con tu email o usuario y contraseña para acceder al sistema de gestión.
           </p>
 
           <form className="space-y-5" onSubmit={handleLogin}>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
                 Email o usuario
               </label>
               <div className="relative">
@@ -89,7 +89,7 @@ function Login() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
                 Contraseña
               </label>
               <div className="relative">
@@ -109,7 +109,7 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-300 transition-colors duration-200"
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showPassword ? (

@@ -46,7 +46,12 @@ export function useArchiveActions<T extends { id: number }>({
           await op(item.id);
           await refetch();
         } catch (err) {
-          const message = err instanceof Error ? err.message : "Error desconocido";
+          // Los hooks de la app ya pasan los errores por `formatError`, así
+          // que `err.message` viene en español. El fallback cubre solo el
+          // caso degenerado de un throw no-Error (no debería pasar en flujo
+          // normal).
+          const message =
+            err instanceof Error ? err.message : "Ocurrió un error inesperado.";
           setLastError(message);
           throw err;
         } finally {

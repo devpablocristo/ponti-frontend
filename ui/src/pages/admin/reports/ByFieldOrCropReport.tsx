@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { SquareArrowOutUpRight } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
-import { Notification } from "../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import SelectField from "../../../components/Input/SelectField";
@@ -225,6 +225,10 @@ function ByFieldOrCropReport() {
   
   const { fieldCropReportingData: reportingData, processing, error, getFieldCropReportingData } = useReporting();
 
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+
   const {
     filters,
     projectId,
@@ -302,14 +306,12 @@ function ByFieldOrCropReport() {
         ] }
       />
 
-      <Notification variant="error" message={error} />
-
       { !error && (
         <>
           <div className="rounded-xl border py-6 px-2" ref={ targetRef }>
             <div className="border-b mb-4" style={ { borderColor: "#D1D5DB" } }/>
             <div className="flex items-center gap-8 mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Informe por Campo/Cultivo
               </h2>
               <div className="flex gap-4">

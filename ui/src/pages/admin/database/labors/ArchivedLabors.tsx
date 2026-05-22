@@ -54,7 +54,7 @@ export default function ArchivedLabors({ onAfterRestore }: ArchivedLaborsProps =
     [hardDeleteLabor, onAfterRestore],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<LaborInfo>({
       refetch,
       restore: restoreAndNotify,
@@ -76,7 +76,7 @@ export default function ArchivedLabors({ onAfterRestore }: ArchivedLaborsProps =
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? error}
+      error={error}
     />
   );
 }

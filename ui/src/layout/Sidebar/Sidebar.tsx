@@ -1,8 +1,9 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Monitor, Moon, Sun } from "lucide-react";
 import React, { ReactNode, useEffect, useState } from "react";
 
 import { Link, useLocation } from "react-router-dom";
 import { getSidebarTitle } from "./sidebarTitle";
+import { useTheme, type Theme } from "@/lib/theme";
 
 type MenuItem = {
   name: string;
@@ -322,6 +323,44 @@ interface SidebarItemProps {
   setIsSidebarOpen: () => void;
 }
 
+/**
+ * Toggle de tema (light → dark → system → light). Persistido por ThemeProvider.
+ * Mostrado al pie del sidebar como acción global de la app.
+ */
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+
+  const next: Record<Theme, Theme> = {
+    light: "dark",
+    dark: "system",
+    system: "light",
+  };
+
+  const label: Record<Theme, string> = {
+    light: "Modo claro",
+    dark: "Modo oscuro",
+    system: "Según el sistema",
+  };
+
+  const Icon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
+
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(next[theme])}
+      className="flex items-center gap-2.5 w-full h-[36px] px-3 rounded-lg transition-all duration-200 hover:bg-slate-800 text-[13px]"
+      style={{ color: "#94A3B8" }}
+      aria-label={`Tema: ${label[theme]}. Click para cambiar.`}
+      title={`Tema: ${label[theme]}`}
+    >
+      <span className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="flex-1 text-left truncate">{label[theme]}</span>
+    </button>
+  );
+}
+
 function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
   const location = useLocation();
   const isActive = (route: string) => location.pathname === route;
@@ -620,6 +659,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebar
             </li>
           ))}
         </ul>
+
+        <div className="h-3" />
+        <div
+          className="border-t pt-3 mt-2"
+          style={{ borderColor: "#1E293B" }}
+        >
+          <ThemeToggle />
+        </div>
       </div>
     </aside>
   );

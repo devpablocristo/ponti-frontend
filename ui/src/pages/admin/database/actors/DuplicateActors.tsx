@@ -3,7 +3,7 @@ import { GitMerge, RefreshCcw } from "lucide-react";
 
 import Button from "../../../../components/Button/Button";
 import { Checkbox } from "../../../../components/Input/Checkbox";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import useActors, {
   ActorKind,
@@ -83,6 +83,10 @@ export default function DuplicateActors({ filters }: DuplicateActorsProps) {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -214,10 +218,9 @@ export default function DuplicateActors({ filters }: DuplicateActorsProps) {
   return (
     <div className="relative">
       <LoadingOverlay show={loading} />
-      {error ? <Notification variant="error" message={error} prefix="Error:" /> : null}
 
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="text-sm font-medium text-slate-600">
+        <div className="text-sm font-medium text-slate-600 dark:text-slate-300">
           {totalGroups} grupos de posibles duplicados
         </div>
         <Button
@@ -232,10 +235,10 @@ export default function DuplicateActors({ filters }: DuplicateActorsProps) {
       </div>
 
       {visibleCandidates.length === 0 && !loading ? (
-        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 text-center">
           <GitMerge className="mx-auto mb-3 h-8 w-8 text-slate-400" />
-          <h2 className="text-base font-semibold text-slate-800">No hay posibles duplicados</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="text-base font-semibold text-slate-800 dark:text-slate-200">No hay posibles duplicados</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             La búsqueda por identificador, nombre, alias y razón social no encontró grupos.
           </p>
         </div>
@@ -262,24 +265,24 @@ export default function DuplicateActors({ filters }: DuplicateActorsProps) {
           const impact = impactByGroup[key];
           const busy = actionLoading?.endsWith(key);
           return (
-            <section key={key} className="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <section key={key} className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
               <div className="flex flex-col gap-1 border-b border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-sm font-semibold text-slate-900">
+                  <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {groupLabel(candidate.group_type)}: {candidate.group_key}
                   </h2>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Elegí un destino y uno o más orígenes. Primero simulá, después confirmá.
                   </p>
                 </div>
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   {candidate.actors.length} actores
                 </span>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-slate-100 text-sm">
-                  <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
+                  <thead className="bg-slate-50 dark:bg-slate-900 text-left text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
                     <tr>
                       <th className="px-4 py-3">Destino</th>
                       <th className="px-4 py-3">Origen</th>
@@ -307,11 +310,11 @@ export default function DuplicateActors({ filters }: DuplicateActorsProps) {
                             onChange={() => toggleSource(key, actor.id)}
                           />
                         </td>
-                        <td className="px-4 py-3 font-medium text-slate-900">
+                        <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
                           {actor.display_name}
                         </td>
-                        <td className="px-4 py-3 text-slate-700">{kindLabel(actor.actor_kind)}</td>
-                        <td className="px-4 py-3 text-slate-700">
+                        <td className="px-4 py-3 text-slate-700 dark:text-slate-200">{kindLabel(actor.actor_kind)}</td>
+                        <td className="px-4 py-3 text-slate-700 dark:text-slate-200">
                           {actor.roles.length ? actor.roles.map(roleLabel).join(", ") : "—"}
                         </td>
                       </tr>
@@ -321,20 +324,20 @@ export default function DuplicateActors({ filters }: DuplicateActorsProps) {
               </div>
 
               {impact ? (
-                <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="border-t border-slate-100 bg-slate-50 dark:bg-slate-900 px-4 py-3">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     Impacto simulado
                   </h3>
                   <div className="flex flex-wrap gap-2">
                     {Object.entries(impact.counts).length === 0 ? (
-                      <span className="rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600">
+                      <span className="rounded-md bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                         Sin referencias bloqueantes ni relaciones para mover.
                       </span>
                     ) : (
                       Object.entries(impact.counts).map(([name, count]) => (
                         <span
                           key={`${key}-${name}`}
-                          className="rounded-md bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700"
+                          className="rounded-md bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200"
                         >
                           {name}: {count}
                         </span>

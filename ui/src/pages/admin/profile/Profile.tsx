@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Button from "../../../components/Button/Button";
 import Header from "../../../components/Header/Header";
 import { useAuth } from "../../login/context/useAuth";
-import { Notification } from "../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 
 export function Profile() {
   const auth = useAuth();
@@ -17,18 +17,23 @@ export function Profile() {
     }
   }, [auth?.user, auth?.isAuthenticated]);
 
+  // Es un mensaje informativo (no error), va como notify.info.
+  useEffect(() => {
+    if (message) notify.info(message);
+  }, [message]);
+
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(
-      "La gestion de perfil (alta/baja/cambio de password) se hace via Identity Platform. " +
-        "Si necesitas resetear tu clave, usa el flujo de recuperacion o pedilo a un admin."
+      "La gestión de perfil (alta/baja/cambio de password) se hace vía Identity Platform. " +
+        "Si necesitás resetear tu clave, usá el flujo de recuperación o pedíselo a un admin.",
     );
   };
 
   return (
     <div>
       <Header title="Mi Perfil" />
-      <div className="max-w-3xl mx-auto mt-4 bg-white rounded-lg shadow-md p-8">
+      <div className="max-w-3xl mx-auto mt-4 bg-white dark:bg-slate-800 rounded-lg shadow-md p-8">
         <form onSubmit={onSubmit}>
           <div className="grid gap-6 sm:grid-cols-2 sm:gap-8">
             <div className="sm:col-span-2">
@@ -46,7 +51,7 @@ export function Profile() {
                 id="name"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg focus:ring-indigo-600 focus:border-indigo-600 block w-full p-4 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                className="bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-base rounded-lg focus:ring-indigo-600 focus:border-indigo-600 block w-full p-4 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                 placeholder="Username"
                 required={true}
               />
@@ -58,7 +63,6 @@ export function Profile() {
             </Button>
           </div>
         </form>
-        <Notification variant="error" message={message} prefix="Info:" className="mt-4" />
       </div>
     </div>
   );

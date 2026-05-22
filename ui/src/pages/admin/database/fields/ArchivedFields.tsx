@@ -46,7 +46,7 @@ export default function ArchivedFields({ onAfterRestore }: ArchivedFieldsProps =
     [hardDeleteField, onAfterRestore],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<Field>({
       refetch,
       restore: restoreAndNotify,
@@ -65,7 +65,7 @@ export default function ArchivedFields({ onAfterRestore }: ArchivedFieldsProps =
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? error}
+      error={error}
     />
   );
 }

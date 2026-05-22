@@ -14,7 +14,7 @@ import useCategories from "../../../../hooks/useCategories";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
 import { units } from "../../../../constants/units";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { CSV_ACCEPT } from "../../fileTransfer";
 
 interface Row {
@@ -197,6 +197,10 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (errorMessage) notify.error(errorMessage);
+  }, [errorMessage]);
+
   // Bloquear navegación in-app cuando hay cambios sin guardar.
   // beforeunload (efecto más abajo) cubre el cierre de tab / refresh.
   const blocker = useBlocker(
@@ -227,6 +231,11 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
   }, [blocker, confirm]);
 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
+
   const [initialRows, setInitialRows] = useState<string>("");
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null);
@@ -755,17 +764,9 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
         className={
           embedded
             ? "w-full"
-            : "p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md"
+            : "p-6 w-full mt-4 mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md"
         }
       >
-        <Notification variant="error"
-          message={errorMessage || null}
-          onDismiss={() => setErrorMessage("")}
-        />
-        <Notification variant="success"
-          message={successMessage || null}
-          onDismiss={() => setSuccessMessage("")}
-        />
         <div className="flex justify-between items-center">
           <h1 className="text-custom-text font-semibold text-xl leading-none">
             Agregar insumos
@@ -831,7 +832,7 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
                   className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                 >
                   <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
+                    <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                       Insumo
                     </label>
                     <InputField
@@ -845,7 +846,7 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
                     />
                   </div>
                   <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
+                    <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                       Unidad
                     </label>
                     <SelectField
@@ -860,7 +861,7 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
                     />
                   </div>
                   <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
+                    <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                       Precio
                     </label>
                     <InputField
@@ -878,7 +879,7 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
                     />
                   </div>
                   <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
+                    <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                       Estado precio
                     </label>
                     <button
@@ -894,14 +895,14 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
                       className={`input-base w-full px-3 py-2 text-sm font-medium transition-colors focus:ring-0 ${
                         row.is_partial_price
                           ? "border-blue-200 bg-blue-50 text-blue-700"
-                          : "border-slate-200 bg-white text-slate-500"
+                          : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                       }`}
                     >
                       Parcial
                     </button>
                   </div>
                   <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
+                    <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                       Rubro
                     </label>
                     <SelectField
@@ -924,7 +925,7 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
                     />
                   </div>
                   <div className="sm:col-span-1">
-                    <label className="sm:hidden text-sm text-gray-600">
+                    <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                       Tipo / Clase
                     </label>
                     <SelectField

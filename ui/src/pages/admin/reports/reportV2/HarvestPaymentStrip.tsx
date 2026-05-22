@@ -34,11 +34,11 @@ function Cell({
             style={{ background: dot }}
           />
         )}
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           {label}
         </span>
       </div>
-      <div className="mt-0.5 text-sm font-semibold text-slate-900 tabular-nums">
+      <div className="mt-0.5 text-sm font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
         {value}
       </div>
     </div>
@@ -47,13 +47,13 @@ function Cell({
 
 export function HarvestPaymentStrip({ total, perHa, investors, adjustment }: Props) {
   return (
-    <section className="rounded-xl border bg-white p-4">
+    <section className="rounded-xl border bg-white dark:bg-slate-800 p-4">
       <header className="mb-3 flex items-baseline gap-3">
         <h3 className="text-xl font-medium text-[#020617]">Pagos de cosecha</h3>
-        <span className="text-xs text-slate-500">Liquidación y ajustes</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">Liquidación y ajustes</span>
       </header>
 
-      <div className="flex items-stretch gap-0 flex-wrap rounded-lg border bg-white overflow-hidden">
+      <div className="flex items-stretch gap-0 flex-wrap rounded-lg border bg-white dark:bg-slate-800 overflow-hidden">
         <Cell label="Total cosecha" value={`u$s ${formatNumberAr(total)}`} />
         <Cell label="u$s / ha" value={formatNumberAr(perHa)} />
         {investors.map((inv) => (
@@ -70,7 +70,7 @@ export function HarvestPaymentStrip({ total, perHa, investors, adjustment }: Pro
         >
           <Wallet className="h-4 w-4" />
           <span className="text-left">
-            <span className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+            <span className="block text-[10px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
               Ajuste de pago
             </span>
             <span className="block text-sm font-semibold tabular-nums">

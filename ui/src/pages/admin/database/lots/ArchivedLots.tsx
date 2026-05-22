@@ -99,7 +99,7 @@ export default function ArchivedLots({ onAfterRestore }: ArchivedLotsProps = {})
     [hardDeleteLot, onAfterRestore, lots],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<LotsData>({
       refetch,
       restore: restoreAndNotify,
@@ -131,7 +131,7 @@ export default function ArchivedLots({ onAfterRestore }: ArchivedLotsProps = {})
         onHardDelete={runHardDelete ?? undefined}
         onMount={refetch}
         processing={processing || actionProcessing}
-        error={blockedLot ? null : lastError ?? error}
+        error={blockedLot ? null : error}
       />
 
       {blockedLot && (
@@ -140,13 +140,13 @@ export default function ArchivedLots({ onAfterRestore }: ArchivedLotsProps = {})
           onClick={() => setBlockedLot(null)}
         >
           <div
-            className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+            className="w-full max-w-md rounded-lg bg-white dark:bg-slate-800 p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="mb-2 text-base font-semibold text-slate-900">
+            <h3 className="mb-2 text-base font-semibold text-slate-900 dark:text-slate-100">
               No se puede eliminar el lote
             </h3>
-            <p className="mb-4 text-sm text-slate-700">
+            <p className="mb-4 text-sm text-slate-700 dark:text-slate-200">
               El lote <strong>{blockedLot.lotName}</strong> tiene{" "}
               <strong>{blockedLot.count}</strong> orden(es) de trabajo asociada(s).
               Tenés que eliminarlas o archivarlas primero.
@@ -154,7 +154,7 @@ export default function ArchivedLots({ onAfterRestore }: ArchivedLotsProps = {})
             <div className="flex justify-end gap-2">
               <button
                 type="button"
-                className="rounded-md px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+                className="rounded-md px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-800"
                 onClick={() => setBlockedLot(null)}
               >
                 Cancelar

@@ -6,7 +6,7 @@ import useCustomersReducer from "./useCustomersReducer";
 import { apiClient } from "@/api/client";
 import { CustomerData, CustomerPayload, CustomerPayloadInput } from "./types";
 import { SuccessResponse } from "@/api/types";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import { canonicalizeName } from "@/lib/properName";
 
 function sanitizeInput(input: CustomerPayloadInput): CustomerPayloadInput {
@@ -49,12 +49,12 @@ const useCustomers = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrio un error en la busqueda de clientes",
+          payload: "No se pudieron cargar los clientes.",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
+          payload: formatError(error, { fallback: "No se pudieron cargar los clientes." }),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
@@ -93,12 +93,12 @@ const useCustomers = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "Ocurrió un error en la búsqueda de clientes archivados.",
+          payload: "No se pudieron cargar los clientes archivados.",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
+          payload: formatError(error, { fallback: "No se pudieron cargar los clientes archivados." }),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
@@ -123,11 +123,11 @@ const useCustomers = () => {
           return response.data ?? null;
         }
 
-        const message = "Ocurrió un error al crear el cliente.";
+        const message = "No se pudo crear el cliente.";
         dispatch({ type: actions.SET_ERROR, payload: message });
         throw new Error(message);
       } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        const message = formatError(error, { fallback: "No se pudo crear el cliente." });
         dispatch({ type: actions.SET_ERROR, payload: message });
         throw new Error(message);
       } finally {
@@ -153,11 +153,11 @@ const useCustomers = () => {
           return;
         }
 
-        const message = "Ocurrió un error al actualizar el cliente.";
+        const message = "No se pudo actualizar el cliente.";
         dispatch({ type: actions.SET_ERROR, payload: message });
         throw new Error(message);
       } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        const message = formatError(error, { fallback: "No se pudo actualizar el cliente." });
         dispatch({ type: actions.SET_ERROR, payload: message });
         throw new Error(message);
       } finally {
@@ -183,14 +183,14 @@ const useCustomers = () => {
           return;
         }
 
-        const message = "Ocurrió un error al intentar archivar el cliente.";
+        const message = "No se pudo archivar el cliente.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        const message = formatError(error, { fallback: "No se pudo archivar el cliente." });
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
@@ -219,14 +219,14 @@ const useCustomers = () => {
           return;
         }
 
-        const message = "Ocurrió un error al intentar restaurar el cliente.";
+        const message = "No se pudo restaurar el cliente.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        const message = formatError(error, { fallback: "No se pudo restaurar el cliente." });
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
@@ -254,14 +254,14 @@ const useCustomers = () => {
           return;
         }
 
-        const message = "Ocurrió un error al intentar eliminar el cliente.";
+        const message = "No se pudo eliminar el cliente.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+        const message = formatError(error, { fallback: "No se pudo eliminar el cliente." });
         dispatch({
           type: actions.SET_ERROR,
           payload: message,

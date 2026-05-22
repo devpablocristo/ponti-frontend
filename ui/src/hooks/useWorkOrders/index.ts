@@ -5,7 +5,7 @@ import * as actions from "./actions";
 import useOrdersReducer from "./ordersReducer";
 import { PaginatedResponse, SuccessResponse } from "@/api/types";
 import { Metrics, OrdersData, Workorder, WorkorderData } from "./types";
-import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 
 type OrdersListResponse = SuccessResponse<PaginatedResponse<OrdersData>>;
 type WorkOrderMutationResponse = SuccessResponse<unknown>;
@@ -66,11 +66,9 @@ const useOrders = () => {
           return;
         }
 
-        setError("Ocurrio un error en la busqueda de ordenes");
+        setError("No se pudieron cargar las órdenes de trabajo.");
       } catch (error) {
-        setError(
-          extractErrorMessage(error, "Error desconocido en la busqueda de ordenes.")
-        );
+        setError(formatError(error, { fallback: "No se pudieron cargar las órdenes de trabajo." }));
       } finally {
         setProcessing(false);
       }
@@ -101,11 +99,9 @@ const useOrders = () => {
           return;
         }
 
-        setErrorMetrics("Ocurrio un error en la busqueda de kpis");
+        setErrorMetrics("No se pudieron cargar los indicadores.");
       } catch (error) {
-        setErrorMetrics(
-          extractErrorMessage(error, "Error desconocido en la busqueda de metricas.")
-        );
+        setErrorMetrics(formatError(error, { fallback: "No se pudieron cargar los indicadores." }));
       } finally {
         setProcessingMetrics(false);
       }
@@ -136,15 +132,14 @@ const useOrders = () => {
           return;
         }
 
-        setErrorCreation("Ocurrio un error en la creación de la orden");
+        setErrorCreation("No se pudo crear la orden de trabajo.");
       } catch (error) {
-        if (extractErrorStatus(error) === 409) {
-          setErrorCreation("Ya existe una orden con el mismo número.");
-          return;
-        }
-
+        // No discriminamos por status acá: formatError prioriza
+        // translateBackendError (que mapea "lot is archived",
+        // "work order already exists for ...", etc.) y cae a userMessage
+        // del interceptor para errores genéricos de red / 5xx.
         setErrorCreation(
-          extractErrorMessage(error, "Error desconocido en la creación de la orden.")
+          formatError(error, { fallback: "No se pudo crear la orden de trabajo." }),
         );
       } finally {
         setProcessingCreation(false);
@@ -176,18 +171,10 @@ const useOrders = () => {
           return;
         }
 
-        setErrorCreation("Ocurrio un error en la actualización de la orden");
+        setErrorCreation("No se pudo actualizar la orden de trabajo.");
       } catch (error) {
-        if (extractErrorStatus(error) === 409) {
-          setErrorCreation("Ya existe una orden con el mismo número.");
-          return;
-        }
-
         setErrorCreation(
-          extractErrorMessage(
-            error,
-            "Error desconocido en la actualización de la orden."
-          )
+          formatError(error, { fallback: "No se pudo actualizar la orden de trabajo." }),
         );
       } finally {
         setProcessingCreation(false);
@@ -217,25 +204,10 @@ const useOrders = () => {
         });
         return;
       } catch (error) {
-        const status = extractErrorStatus(error);
-
-        if (status === 404) {
-          setErrorCreation("No se encontro el borrador digital.");
-          return;
-        }
-
-        if (status === 409) {
-          setErrorCreation(
-            "El borrador no se puede editar porque ya fue publicado o el número está en conflicto."
-          );
-          return;
-        }
-
         setErrorCreation(
-          extractErrorMessage(
-            error,
-            "Error desconocido en la actualización del borrador."
-          )
+          formatError(error, {
+            fallback: "No se pudo actualizar el borrador digital. Verificá que siga abierto.",
+          }),
         );
       } finally {
         setProcessingCreation(false);
@@ -262,15 +234,10 @@ const useOrders = () => {
           return;
         }
 
-        setErrorCreation("Ocurrio un error al buscar la orden");
+        setErrorCreation("No se pudo cargar la orden de trabajo.");
       } catch (error) {
-        if (extractErrorStatus(error) === 404) {
-          setErrorCreation("No se encontro la orden.");
-          return;
-        }
-
         setErrorCreation(
-          extractErrorMessage(error, "Error desconocido en la busqueda de la orden.")
+          formatError(error, { fallback: "No se pudo cargar la orden de trabajo." }),
         );
       } finally {
         setProcessingDetail(false);
@@ -297,18 +264,10 @@ const useOrders = () => {
           return;
         }
 
-        setErrorCreation("Ocurrio un error al buscar el borrador digital");
+        setErrorCreation("No se pudo cargar el borrador digital.");
       } catch (error) {
-        if (extractErrorStatus(error) === 404) {
-          setErrorCreation("No se encontro el borrador digital.");
-          return;
-        }
-
         setErrorCreation(
-          extractErrorMessage(
-            error,
-            "Error desconocido en la busqueda del borrador digital."
-          )
+          formatError(error, { fallback: "No se pudo cargar el borrador digital." }),
         );
       } finally {
         setProcessingDetail(false);
@@ -339,32 +298,13 @@ const useOrders = () => {
           return response.data;
         }
 
-        const message = "Ocurrio un error al publicar el borrador";
+        const message = "No se pudo publicar el borrador.";
         setErrorCreation(message);
         throw new Error(message);
-
-            } catch (error) {
-        const status = extractErrorStatus(error);
-
-        if (status === 404) {
-          const message = "No se encontro el borrador digital.";
-          setErrorCreation(message);
-          throw new Error(message);
-        }
-
-        if (status === 409) {
-          const message = extractErrorMessage(
-            error,
-            "No se pudo publicar el borrador porque ya fue publicado o el número está en conflicto."
-          );
-          setErrorCreation(message);
-          throw error;
-        }
-
-        const message = extractErrorMessage(
-          error,
-          "Error desconocido al publicar el borrador."
-        );
+      } catch (error) {
+        const message = formatError(error, {
+          fallback: "No se pudo publicar el borrador digital.",
+        });
         setErrorCreation(message);
         throw error;
       } finally {
@@ -387,22 +327,13 @@ const useOrders = () => {
         return;
       }
 
-      const message = "Ocurrio un error al intentar eliminar el borrador.";
+      const message = "No se pudo eliminar el borrador digital.";
       setError(message);
       throw new Error(message);
     } catch (error) {
-      const status = extractErrorStatus(error);
-
-      if (status === 404) {
-        const message = "No se encontro el borrador digital.";
-        setError(message);
-        throw new Error(message);
-      }
-
-      const message = extractErrorMessage(
-        error,
-        "Error desconocido al intentar eliminar el borrador digital."
-      );
+      const message = formatError(error, {
+        fallback: "No se pudo eliminar el borrador digital.",
+      });
       setError(message);
       throw new Error(message);
     } finally {
@@ -423,14 +354,13 @@ const useOrders = () => {
         return;
       }
 
-      const message = "Ocurrio un error al intentar eliminar una orden.";
+      const message = "No se pudo eliminar la orden de trabajo.";
       setError(message);
       throw new Error(message);
     } catch (error) {
-      const message = extractErrorMessage(
-        error,
-        "Error desconocido al intentar eliminar una orden."
-      );
+      const message = formatError(error, {
+        fallback: "No se pudo eliminar la orden de trabajo.",
+      });
       setError(message);
       throw new Error(message);
     } finally {
@@ -447,12 +377,14 @@ const useOrders = () => {
         {},
       );
       if (!response.success) {
-        const message = "Ocurrió un error al archivar la orden";
+        const message = "No se pudo archivar la orden de trabajo.";
         setError(message);
         throw new Error(message);
       }
     } catch (error) {
-      const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(error, {
+        fallback: "No se pudo archivar la orden de trabajo.",
+      });
       setError(message);
       throw new Error(message);
     } finally {
@@ -469,12 +401,14 @@ const useOrders = () => {
         {},
       );
       if (!response.success) {
-        const message = "Ocurrió un error al restaurar la orden";
+        const message = "No se pudo restaurar la orden de trabajo.";
         setError(message);
         throw new Error(message);
       }
     } catch (error) {
-      const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(error, {
+        fallback: "No se pudo restaurar la orden de trabajo.",
+      });
       setError(message);
       throw new Error(message);
     } finally {
@@ -490,12 +424,14 @@ const useOrders = () => {
         `/work-orders/${id}/hard`,
       );
       if (!response.success) {
-        const message = "Ocurrió un error al eliminar la orden";
+        const message = "No se pudo eliminar la orden de trabajo.";
         setError(message);
         throw new Error(message);
       }
     } catch (error) {
-      const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(error, {
+        fallback: "No se pudo eliminar la orden de trabajo.",
+      });
       setError(message);
       throw new Error(message);
     } finally {
@@ -520,9 +456,9 @@ const useOrders = () => {
           }
           return;
         }
-        setError("Ocurrió un error al listar órdenes archivadas");
+        setError("No se pudieron cargar las órdenes archivadas.");
       } catch (error) {
-        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+        setError(formatError(error, { fallback: "No se pudieron cargar las órdenes archivadas." }));
       } finally {
         setProcessing(false);
       }

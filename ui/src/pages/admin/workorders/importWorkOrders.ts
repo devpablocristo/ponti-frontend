@@ -1,5 +1,5 @@
 import { apiClient } from "@/api/client";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import {
   getValueByAliases,
   normalizeText,
@@ -394,7 +394,7 @@ export async function submitWorkOrderRows(
       imported += 1;
     } catch (error) {
       errors.push(
-        `Fila ${r.rowNumber}: ${extractErrorMessage(error, "error desconocido al crear la OT.")}`,
+        `Fila ${r.rowNumber}: ${formatError(error, { fallback: "No se pudo crear la orden de trabajo." })}`,
       );
     }
   }

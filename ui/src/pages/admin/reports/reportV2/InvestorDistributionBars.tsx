@@ -32,13 +32,13 @@ interface Props {
 
 export function InvestorDistributionBars({ categories, legend }: Props) {
   return (
-    <div className="rounded-xl border bg-white p-3">
+    <div className="rounded-xl border bg-white dark:bg-slate-800 p-3">
       <header className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-slate-500" />
+          <Users className="h-4 w-4 text-slate-500 dark:text-slate-400" />
           <div>
             <h3 className="text-[1.05rem] font-semibold text-[#020617]">Distribución por inversor</h3>
-            <p className="text-[11px] text-slate-500">% y monto aportado por ítem</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">% y monto aportado por ítem</p>
           </div>
         </div>
         <ul className="flex flex-wrap items-center gap-3">
@@ -48,7 +48,7 @@ export function InvestorDistributionBars({ categories, legend }: Props) {
                 className="h-2 w-2 rounded-full"
                 style={{ background: l.color }}
               />
-              <span className="text-[11px] font-semibold text-slate-700">
+              <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
                 {l.name}
               </span>
               <span
@@ -69,14 +69,14 @@ export function InvestorDistributionBars({ categories, legend }: Props) {
             className="grid gap-2 rounded-lg border px-2.5 py-2 md:grid-cols-[220px_minmax(0,1fr)] md:items-center"
           >
             <div className="flex min-w-0 items-center gap-2">
-              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F3F4F6] text-slate-600">
+              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F3F4F6] text-slate-600 dark:text-slate-300">
                 {cat.icon}
               </span>
               <div className="min-w-0">
-                <div className="text-[0.8rem] font-semibold leading-tight text-slate-800">
+                <div className="text-[0.8rem] font-semibold leading-tight text-slate-800 dark:text-slate-200">
                   {cat.label}
                 </div>
-                <div className="text-[0.78rem] font-semibold tabular-nums text-slate-900">
+                <div className="text-[0.78rem] font-semibold tabular-nums text-slate-900 dark:text-slate-100">
                   u$s {formatNumberAr(cat.total)}
                 </div>
               </div>
@@ -104,7 +104,7 @@ export function InvestorDistributionBars({ categories, legend }: Props) {
                 {cat.slices.map((s) => (
                   <span
                     key={s.investor_id}
-                    className="truncate text-center text-[10px] text-slate-500 tabular-nums"
+                    className="truncate text-center text-[10px] text-slate-500 dark:text-slate-400 tabular-nums"
                     title={`${s.name}: u$s ${formatNumberAr(s.amount)}`}
                   >
                     u$s {formatNumberAr(s.amount)}

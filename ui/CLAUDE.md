@@ -74,6 +74,73 @@ Cuándo se podría deprecar:
 - Hoy todavía se necesita porque hay flujos (importación, ETL) que escriben texto sin `actor_id`.
 - Tracking: revisar `actorsync.LegacyInvoiceCompany` cuando se haga el cleanup masivo del catálogo.
 
+## Notificaciones y dark mode
+
+**Sistema único de notificaciones**: usar SIEMPRE `notify.success/error/warning/info`
+desde `@/lib/notify`. Internamente despacha `toast.custom` con el componente
+`<Notification>` (`src/components/feedback/Notification.tsx`). Configuración
+global en `src/main.tsx` (top-right, closeButton). Duración por severidad
+definida en `src/copy/notifications.ts` (success 3.5s, info 4s, warning 6s,
+error 8s — error persiste más, por UX writing rule "más crítico → más
+tiempo").
+
+- **No usar `<Notification>` inline** salvo excepciones documentadas:
+  `ErrorBoundary`, `ImportXPreview` (drawer header), `Dashboard` y `WorkOrders`
+  banners con botones interactivos, `Login`, `CreateSupplyInline`.
+- **No invocar `toast.X` directo de Sonner**: todo pasa por `notify.X`.
+- Patrón estándar para errores de estado: `useEffect(() => { if (error)
+  notify.error(error); }, [error]);` — convierte el state existente en toast
+  sin tocar el resto del código.
+- Patrón estándar para errores de catch: `formatError(err, { fallback: "No
+  se pudo X." })` — combina interceptor axios + `translateBackendError` +
+  copy fallback.
+
+**Dark mode**: app global con toggle en sidebar (Sun → Moon → Monitor) que
+cicla `light | dark | system`. `ThemeProvider` ([src/lib/theme/ThemeProvider.tsx](src/lib/theme/ThemeProvider.tsx))
+persiste en `localStorage` (`ponti:theme`) y aplica la clase `.dark` al
+`<html>`. Tailwind con `darkMode: "class"`. Los design tokens (`--color-bg`,
+`--color-surface`, ...) se redefinen bajo `.dark` en
+[src/index.css](src/index.css); componentes que usan Tailwind hardcoded
+(`bg-white`, `text-slate-700`, etc.) tienen variantes `dark:` adyacentes.
+
+Cuando agregues nueva UI:
+- Si usás `bg-white`, agregá también `dark:bg-slate-800`.
+- Si usás `text-slate-700/800/900`, agregá `dark:text-slate-100/200`.
+- Si usás `border-slate-200/300`, agregá `dark:border-slate-700/600`.
+- Si usás colores semánticos (red/amber/blue/green) para badges, usar
+  `dark:bg-X-950/40 dark:text-X-200`.
+
+## UX writing — copy de la app
+
+**Fuente única**: [src/copy/](src/copy/) (entidades, verbos, plantillas
+feedback, validaciones, mapping HTTP) + helpers en [src/lib/format/](src/lib/format/).
+Documentación completa de tono, terminología y patrones en
+[src/copy/README.md](src/copy/README.md).
+
+Reglas mínimas que se aplican siempre:
+
+- **Voseo argentino** para imperativos ("Iniciá sesión", "Restaurá el lote").
+  Nunca tuteo ("Inicia sesión"). Tercera persona impersonal para success ("Se
+  archivó el cliente.").
+- **BE en inglés siempre**: `domainerr.Conflict("lot is archived")`. Los logs y
+  los mensajes internos quedan en inglés. La traducción ocurre en el FE vía
+  `translateBackendError` ([src/lib/translateBackendError.ts](src/lib/translateBackendError.ts)).
+  Si agregás un nuevo mensaje BE, agregá su pattern al translator.
+- **Errores al usuario**: SIEMPRE vía `formatError(err, { fallback: "..." })`
+  desde `@/lib/format`. Nunca `extractErrorMessage(err, "fallback inglés")`
+  directamente. Nunca fallbacks crípticos como "Error en el servicio" o
+  "Error desconocido".
+- **Acciones CRUDAR**: el verbo canónico es **Archivar** (soft-delete),
+  **Restaurar** (undelete), **Eliminar permanentemente** / **Eliminar
+  definitivamente** (hard-delete), **Crear**, **Editar**/**Actualizar**,
+  **Importar**, **Exportar**. Sinónimos como "borrar", "dar de baja",
+  "reactivar" están prohibidos.
+- **Empty states**: plantilla `Todavía no hay {plural}…` vía `emptyList` o
+  `formatEmpty`. Loading: `Cargando {plural}…` vía `loadingList` o
+  `formatLoading`.
+- **Sin prefix "Error:"** en `<Notification variant="error">`. El ícono y el
+  color de la variante ya comunican el rol.
+
 ## Convenciones rápidas
 
 - **Filtros workspace**: `useWorkspaceFilters(["customer","project","campaign","field"])`. Si una página depende de `projectId` para crear/exportar, usar `getGuardedWorkspaceActionWarning` antes de abrir el drawer.

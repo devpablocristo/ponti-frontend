@@ -53,7 +53,7 @@ describe("useLabors.saveLabors", () => {
       sampleLabor,
     ]);
     expect(returned).toBe(true);
-    expect(result.current.result).toBe("Se han creado las labores con éxito!");
+    expect(result.current.result).toBe("Se crearon las labores.");
   });
 
   it("devuelve false y setea error cuando alguna labor falla", async () => {
@@ -81,9 +81,14 @@ describe("useLabors.saveLabors", () => {
     await waitFor(() => expect(result.current.error).toBeTruthy());
   });
 
-  it("setea mensaje 409 específico al recibir conflict", async () => {
+  it("traduce el mensaje real del BE 'labor already exists' a copy en español", async () => {
+    // El BE devuelve "labor already exists" para uniqueness; translateBackendError
+    // lo mapea vía el pattern "X already exists" + el diccionario de entidades.
     mockedClient.post.mockRejectedValueOnce({
-      response: { status: 409, data: { error: { details: "duplicate" } } },
+      response: {
+        status: 409,
+        data: { error: { details: "labor already exists" } },
+      },
     });
     const { result } = renderHook(() => useLabors());
 
@@ -94,7 +99,7 @@ describe("useLabors.saveLabors", () => {
 
     expect(returned).toBe(false);
     await waitFor(() =>
-      expect(result.current.error).toBe("Ya existe una labor con el mismo nombre."),
+      expect(result.current.error).toBe("La labor ya existe."),
     );
   });
 });
@@ -141,8 +146,6 @@ describe("useLabors.createInvoice", () => {
     });
 
     expect(mockedClient.post).toHaveBeenCalled();
-    expect(result.current.resultInvoice).toBe(
-      "Se ha creado la factura con éxito!",
-    );
+    expect(result.current.resultInvoice).toBe("Se creó la factura.");
   });
 });

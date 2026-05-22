@@ -5,7 +5,7 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import useDollar from "../../../../hooks/useDollar";
 import { DollarData } from "../../../../hooks/useDollar/types";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 
 interface DollarRow {
   month: string;
@@ -32,6 +32,13 @@ const months = [
 export default function DollarForm() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorMessage) notify.error(errorMessage);
+  }, [errorMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
 
   const { dollars, getDollarInfo, saveDollarInfo, processing, error, result } =
     useDollar();
@@ -134,20 +141,12 @@ export default function DollarForm() {
   return (
     <div className="w-full mx-auto">
       <AppFilterBar filters={filters} />
-      <div className="mt-4 p-6 w-full mx-auto bg-white rounded-lg shadow-md">
+      <div className="mt-4 p-6 w-full mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md">
         {processing && (
           <div className="flex items-center justify-center w-full h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
           </div>
         )}
-        <Notification variant="error"
-          message={errorMessage || null}
-          onDismiss={() => setErrorMessage("")}
-        />
-        <Notification variant="success"
-          message={successMessage || null}
-          onDismiss={() => setSuccessMessage("")}
-        />
         <h1 className="text-custom-text font-semibold text-xl leading-none">
           Valor promedio del dólar según{" "}
           <a
@@ -176,13 +175,13 @@ export default function DollarForm() {
                     className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                   >
                     <div className="sm:col-span-1 flex justify-end">
-                      <label className="sm:hidden text-sm text-gray-600">
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                         Mes
                       </label>
                       <span>{row.month}</span>
                     </div>
                     <div className="sm:col-span-1 text-right">
-                      <label className="sm:hidden text-sm text-gray-600">
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                         Valor inicial $
                       </label>
                       <InputField
@@ -200,7 +199,7 @@ export default function DollarForm() {
                       />
                     </div>
                     <div className="sm:col-span-1 text-right">
-                      <label className="sm:hidden text-sm text-gray-600">
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                         Valor final $
                       </label>
                       <InputField
@@ -218,7 +217,7 @@ export default function DollarForm() {
                       />
                     </div>
                     <div className="sm:col-span-1">
-                      <label className="sm:hidden text-sm text-gray-600">
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                         Valor promedio $
                       </label>
                       <InputField

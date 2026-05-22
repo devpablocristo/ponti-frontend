@@ -57,7 +57,7 @@ export default function ArchivedWorkOrders({
     [hardDeleteOrder, onAfterRestore],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<OrdersData>({
       refetch,
       restore: restoreAndNotify,
@@ -81,7 +81,7 @@ export default function ArchivedWorkOrders({
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? (error ?? undefined)}
+      error={error ?? undefined}
     />
   );
 }

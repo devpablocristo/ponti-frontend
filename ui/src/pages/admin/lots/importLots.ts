@@ -1,5 +1,5 @@
 import { apiClient } from "@/api/client";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import {
   getValueByAliases,
   normalizeText,
@@ -317,8 +317,11 @@ export async function submitLotRows(
       await apiClient.post("/lots", payload);
       imported += 1;
     } catch (error) {
+      // Reporte por fila: usamos formatError para que cada renglón muestre la
+      // copy traducida (ej: "el lote ya existe", "el campo está archivado")
+      // en lugar del mensaje inglés crudo del BE.
       errors.push(
-        `Fila ${r.rowNumber}: ${extractErrorMessage(error, "error desconocido al crear el lote.")}`,
+        `Fila ${r.rowNumber}: ${formatError(error, { fallback: "No se pudo crear el lote." })}`,
       );
     }
   }

@@ -15,12 +15,12 @@ import useSupplies from "../../../hooks/useSupplies";
 import useStock from "../../../hooks/useStock";
 import { getUnitName } from "../../../constants/units";
 import { apiClient } from "@/api/client";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
+import { notify } from "@/lib/notify";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
 import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
-import { Notification } from "../../../components/feedback/Notification";
 
 type WorkOrderItem = {
   itemId: number | null;
@@ -59,6 +59,15 @@ export default function CreateOrder({
 
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Conversión del estado de mensaje a toast: cada cambio non-empty dispara
+  // notify con la severidad correspondiente; "" / null limpia sin toast.
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
   const [field, setField] = useState<Field | null>(null);
   const [lots, setLots] = useState<Plot[]>([]);
   const { getSupplies, supplies } = useSupplies();
@@ -443,7 +452,11 @@ export default function CreateOrder({
         clearForm();
         refreshStock();
       } catch (err) {
-        setError(extractErrorMessage(err, "Error al crear la orden con división por inversor."));
+        setError(
+          formatError(err, {
+            fallback: "No se pudo crear la orden con división por inversor.",
+          }),
+        );
       } finally {
         setProcessingSplit(false);
       }
@@ -610,7 +623,7 @@ export default function CreateOrder({
           <section className="drawer-section">
             <div className="flex items-center justify-between">
               <span className="drawer-section-title">Inversor del labor</span>
-              <label className="inline-flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <label className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 cursor-pointer">
                 <Checkbox
                   tone="form"
                   checked={splitByInvestor}
@@ -803,20 +816,15 @@ export default function CreateOrder({
             />
           </section>
           <section className="drawer-section">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Observaciones</label>
             <textarea
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 min-h-[80px]"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 min-h-[80px]"
               placeholder="Escriba observaciones"
               name="observaciones"
               value={observations}
               onChange={(e) => setObservations(e.target.value)}
             />
           </section>
-          <Notification variant="error" message={error || null} prefix="Error!" onDismiss={() => setError("")} />
-          <Notification variant="success"
-            message={successMessage || null}
-            onDismiss={() => setSuccessMessage("")}
-          />
         </>
       </EntityFormDrawer>
 

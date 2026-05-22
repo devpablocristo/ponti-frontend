@@ -12,7 +12,8 @@ import {
   SupplyResponse,
   UpdateSupplyMovementRequest,
 } from "./types";
-import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { extractErrorStatus } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 
 type SupplyMovementResult = {
   supply_movement_id: number;
@@ -34,7 +35,7 @@ function getBatchErrorMessage(error: unknown): string {
   const data = getBatchErrorData(error);
 
   if (!data) {
-    return "Error inesperado al importar insumos.";
+    return "No se pudo importar el movimiento. Verificá los datos del archivo.";
   }
 
   const failures = data.failures ?? data.error?.context?.failures;
@@ -75,7 +76,7 @@ function getBatchErrorMessage(error: unknown): string {
     return data.message;
   }
 
-  return "Error inesperado al importar insumos.";
+  return "No se pudo importar el movimiento. Verificá los datos del archivo.";
 }
 
 const useSupplyMovements = () => {
@@ -138,11 +139,9 @@ const useSupplyMovements = () => {
           });
           return;
         }
-        setError("Ocurrio un error en la busqueda de movimientos");
+        setError("No se pudieron cargar los movimientos de insumos.");
       } catch (error) {
-        setError(
-          extractErrorMessage(error, "Error desconocido en la busqueda de movimientos.")
-        );
+        setError(formatError(error, { fallback: "No se pudieron cargar los movimientos de insumos." }));
       } finally {
         setProcessing(false);
       }
@@ -189,11 +188,9 @@ const useSupplyMovements = () => {
           return;
         }
 
-        setError("Ocurrio un error en la busqueda de movimientos archivados");
+        setError("No se pudieron cargar los movimientos archivados.");
       } catch (error) {
-        setError(
-          extractErrorMessage(error, "Error desconocido en la busqueda de movimientos archivados.")
-        );
+        setError(formatError(error, { fallback: "No se pudieron cargar los movimientos archivados." }));
       } finally {
         setProcessing(false);
       }
@@ -227,7 +224,7 @@ const useSupplyMovements = () => {
           return;
         }
 
-        setErrorCreation("Ocurrio un error en la creación del movimiento");
+        setErrorCreation("No se pudo crear el movimiento de insumo.");
       } catch (error) {
         const payload = getBatchErrorData(error) ?? null;
         setErrorCreationPayload(payload);
@@ -267,7 +264,7 @@ const useSupplyMovements = () => {
           return;
         }
 
-        setErrorCreation("Ocurrio un error en la importación del movimiento");
+        setErrorCreation("No se pudo importar el movimiento de insumo.");
       } catch (error) {
         const payload = getBatchErrorData(error) ?? null;
         setErrorCreationPayload(payload);
@@ -310,15 +307,10 @@ const useSupplyMovements = () => {
         });
         return true;
       }
-      setErrorCreation("Ocurrio un error en la actualización del movimiento");
+      setErrorCreation("No se pudo actualizar el movimiento.");
       return false;
     } catch (error) {
-      setErrorCreation(
-        extractErrorMessage(
-          error,
-          "Error desconocido en la actualización del movimiento."
-        )
-      );
+      setErrorCreation(formatError(error, { fallback: "No se pudo actualizar el movimiento." }));
       return false;
     } finally {
       setProcessingCreation(false);
@@ -346,18 +338,18 @@ const useSupplyMovements = () => {
           return;
         }
 
-        setDeleteError("Ocurrio un error en la eliminación del movimiento");
+        setDeleteError("No se pudo eliminar el movimiento.");
       } catch (error) {
+        // El 409 acá tiene un copy específico que el BE no provee: el cierre
+        // de stock asociado bloquea el delete. Lo mantenemos como caso especial.
         if (extractErrorStatus(error) === 409) {
           setDeleteError(
-            "No puede eliminar el movimiento porque existe un cierre de stock asociado."
+            "No se puede eliminar el movimiento porque existe un cierre de stock asociado.",
           );
           return;
         }
 
-        setDeleteError(
-          extractErrorMessage(error, "Error desconocido en la eliminación del movimiento.")
-        );
+        setDeleteError(formatError(error, { fallback: "No se pudo eliminar el movimiento." }));
       } finally {
         setProcessingDelete(false);
       }
@@ -382,11 +374,9 @@ const useSupplyMovements = () => {
           return;
         }
 
-        setDeleteError("Ocurrio un error al archivar el movimiento");
+        setDeleteError("No se pudo archivar el movimiento.");
       } catch (error) {
-        setDeleteError(
-          extractErrorMessage(error, "Error desconocido al archivar el movimiento.")
-        );
+        setDeleteError(formatError(error, { fallback: "No se pudo archivar el movimiento." }));
       } finally {
         setProcessingDelete(false);
       }
@@ -411,11 +401,9 @@ const useSupplyMovements = () => {
           return;
         }
 
-        setDeleteError("Ocurrio un error al restaurar el movimiento");
+        setDeleteError("No se pudo restaurar el movimiento.");
       } catch (error) {
-        setDeleteError(
-          extractErrorMessage(error, "Error desconocido al restaurar el movimiento.")
-        );
+        setDeleteError(formatError(error, { fallback: "No se pudo restaurar el movimiento." }));
       } finally {
         setProcessingDelete(false);
       }
@@ -439,11 +427,9 @@ const useSupplyMovements = () => {
           return;
         }
 
-        setDeleteError("Ocurrio un error al eliminar definitivamente el movimiento");
+        setDeleteError("No se pudo eliminar el movimiento permanentemente.");
       } catch (error) {
-        setDeleteError(
-          extractErrorMessage(error, "Error desconocido al eliminar definitivamente el movimiento.")
-        );
+        setDeleteError(formatError(error, { fallback: "No se pudo eliminar el movimiento permanentemente." }));
       } finally {
         setProcessingDelete(false);
       }
@@ -466,16 +452,9 @@ const useSupplyMovements = () => {
         return;
       }
 
-      setErrorCreation("Ocurrio un error en la busqueda del movimiento");
+      setErrorCreation("No se pudo cargar el movimiento.");
     } catch (error) {
-      if (extractErrorStatus(error) === 404) {
-        setErrorCreation("No se encontro el movimiento.");
-        return;
-      }
-
-      setErrorCreation(
-        extractErrorMessage(error, "Error desconocido en la busqueda del movimiento.")
-      );
+      setErrorCreation(formatError(error, { fallback: "No se pudo cargar el movimiento." }));
     } finally {
       setProcessingDetail(false);
     }

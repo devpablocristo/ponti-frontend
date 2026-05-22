@@ -12,7 +12,7 @@ import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import {
   getValueByAliases,
   LABOR_HEADER_ALIASES,
@@ -65,6 +65,13 @@ export default function LaborsCatalog({
 
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorMessage) notify.error(errorMessage);
+  }, [errorMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [pendingImport, setPendingImport] = useState<PendingLaborImport | null>(null);
   const [overwriting, setOverwriting] = useState(false);
@@ -444,17 +451,9 @@ export default function LaborsCatalog({
         className={
           isEmbedded
             ? "w-full"
-            : "w-full p-6 mt-4 bg-white rounded-lg shadow-md"
+            : "w-full p-6 mt-4 bg-white dark:bg-slate-800 rounded-lg shadow-md"
         }
       >
-        <Notification variant="error"
-          message={errorMessage || null}
-          onDismiss={() => setErrorMessage("")}
-        />
-        <Notification variant="success"
-          message={successMessage || null}
-          onDismiss={() => setSuccessMessage("")}
-        />
         <div className="flex items-center justify-between gap-3">
           {!isEmbedded && (
             <h1 className="text-custom-text font-semibold text-xl leading-none">
@@ -532,7 +531,7 @@ export default function LaborsCatalog({
                     className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                   >
                     <div className="sm:col-span-1">
-                      <label className="sm:hidden text-sm text-gray-600">Labor</label>
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">Labor</label>
                       <InputField
                         label=""
                         name={`labor-${index}`}
@@ -546,7 +545,7 @@ export default function LaborsCatalog({
                       )}
                     </div>
                     <div className="sm:col-span-1">
-                      <label className="sm:hidden text-sm text-gray-600">Rubro</label>
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">Rubro</label>
                       <SelectField
                         key={row.id}
                         label=""
@@ -561,7 +560,7 @@ export default function LaborsCatalog({
                       )}
                     </div>
                     <div className="sm:col-span-1">
-                      <label className="sm:hidden text-sm text-gray-600">Precio</label>
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">Precio</label>
                       <InputField
                         label=""
                         name={`precio-${index}`}
@@ -580,7 +579,7 @@ export default function LaborsCatalog({
                       )}
                     </div>
                     <div className="sm:col-span-1">
-                      <label className="sm:hidden text-sm text-gray-600">
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                         Estado precio
                       </label>
                       <button
@@ -592,14 +591,14 @@ export default function LaborsCatalog({
                         className={`input-base w-full px-3 py-2 text-sm font-medium transition-colors focus:ring-0 ${
                           row.is_partial_price
                             ? "border-blue-200 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-500"
+                            : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400"
                         }`}
                       >
                         Parcial
                       </button>
                     </div>
                     <div className="sm:col-span-1">
-                      <label className="sm:hidden text-sm text-gray-600">
+                      <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
                         Contratista
                       </label>
                       <InputField

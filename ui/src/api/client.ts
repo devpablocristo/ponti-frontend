@@ -1,6 +1,7 @@
 import { AxiosError } from "axios";
 import { createAuthenticatedAxiosClient } from "@devpablocristo/platform-authn/http/axios";
 import { authTokenStorage } from "@/lib/authStorage";
+import { httpErrorCopy } from "@/copy";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 const TIMEOUT = 30_000;
@@ -104,4 +105,18 @@ apiClient.raw().interceptors.response.use((response) => {
     response.data = { success: true, data: response.data };
   }
   return response;
+});
+
+// Interceptor de errores global. Anota `error.userMessage` con la copy en
+// español apropiada para network / timeout / HTTP 401-403-404-409-5xx — así
+// los hooks no tienen que reimplementar la traducción por endpoint. Los
+// errores con un mensaje de dominio del BE (ej: "lot is archived") siguen
+// llegando intactos: `formatError` da prioridad a `translateBackendError`
+// sobre `userMessage`, así no perdemos contexto de negocio.
+apiClient.raw().interceptors.response.use(undefined, (error) => {
+  const copy = httpErrorCopy(error);
+  if (copy && error && typeof error === "object") {
+    (error as { userMessage?: string }).userMessage = copy;
+  }
+  return Promise.reject(error);
 });

@@ -16,6 +16,7 @@ import SelectField from "../../../../components/Input/SelectField";
 import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
+import { notify } from "@/lib/notify";
 import { Notification } from "../../../../components/feedback/Notification";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
@@ -73,6 +74,13 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
 
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (errorMessage) notify.error(errorMessage);
+  }, [errorMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [item, setItem] = useState<Supply | null>(null);
@@ -383,15 +391,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
           }}
         />
       </DrawerShell>
-      <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
-        <Notification variant="error"
-          message={errorMessage || null}
-          onDismiss={() => setErrorMessage("")}
-        />
-        <Notification variant="success"
-          message={successMessage || null}
-          onDismiss={() => setSuccessMessage("")}
-        />
+      <div className="p-6 w-full mt-4 mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md">
         <div className="flex justify-between items-center">
           <h1 className="text-custom-text font-semibold text-xl leading-none">
             {editorOnly ? "Editar insumos del proyecto" : "Lista de insumos del proyecto"}
@@ -492,7 +492,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
                   />
                 </div>
               </div>
-              <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700">
+              <label className="inline-flex items-center gap-2 mt-2 text-sm text-gray-700 dark:text-gray-200">
                 <Checkbox
                   tone="warning"
                   checked={Boolean(item?.is_partial_price)}
@@ -576,7 +576,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
             enableFilters={true}
-            message="No hay insumos cargados en el proyecto"
+            message="Todavía no hay insumos en este proyecto."
             pagination={pagination.buildPagination(filteredSupplies.length)}
           />
         </div>

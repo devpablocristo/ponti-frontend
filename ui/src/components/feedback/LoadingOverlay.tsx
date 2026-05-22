@@ -27,11 +27,11 @@ export function LoadingOverlay({
 
   return (
     <div
-      className={`${positionClass} inset-0 z-10 flex items-center justify-center bg-white bg-opacity-70 backdrop-blur-sm ${className}`}
+      className={`${positionClass} inset-0 z-10 flex items-center justify-center bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm ${className}`}
       role="status"
       aria-live="polite"
     >
-      <LoaderCircle className={`${SIZES[size]} animate-spin text-blue-600`} />
+      <LoaderCircle className={`${SIZES[size]} animate-spin text-blue-600 dark:text-blue-400`} />
       <span className="sr-only">Cargando…</span>
     </div>
   );

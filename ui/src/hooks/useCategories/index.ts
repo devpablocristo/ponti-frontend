@@ -4,7 +4,7 @@ import * as actions from "./actions";
 
 import { apiClient } from "@/api/client";
 import { TypeData, CategoryData } from "./types";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import useCategoriesReducer from "./useCategoriesReducer";
 
 const useCategories = () => {
@@ -40,9 +40,9 @@ const useCategories = () => {
           return;
         }
 
-        setError("Ocurrio un error en la busqueda de categorías");
+        setError("No se pudieron cargar las categorías.");
       } catch (error) {
-        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+        setError(formatError(error, { fallback: "No se pudieron cargar las categorías." }));
       } finally {
         setProcessing(false);
       }
@@ -70,9 +70,9 @@ const useCategories = () => {
         return;
       }
 
-      setError("Ocurrio un error en la busqueda de tipos");
+      setError("No se pudieron cargar los tipos.");
     } catch (error) {
-      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+      setError(formatError(error, { fallback: "No se pudieron cargar los tipos." }));
     } finally {
       setProcessing(false);
     }

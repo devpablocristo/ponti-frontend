@@ -44,7 +44,7 @@ export default function ArchivedManagers({ onAfterRestore }: ArchivedManagersPro
     [hardDeleteManager, onAfterRestore],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<Manager>({
       refetch,
       restore: restoreAndNotify,
@@ -63,7 +63,7 @@ export default function ArchivedManagers({ onAfterRestore }: ArchivedManagersPro
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? error}
+      error={error}
     />
   );
 }

@@ -30,7 +30,7 @@ const ROUTE_OPTIONS: { value: PontiRouteHint | ""; label: string }[] = [
 ];
 
 const MARKDOWN_CLASS =
-  "prose prose-sm max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-code:rounded prose-code:bg-gray-200 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-table:text-xs prose-th:border prose-th:border-gray-300 prose-th:bg-gray-50 prose-th:px-2 prose-th:py-1 prose-td:border prose-td:border-gray-300 prose-td:px-2 prose-td:py-1 prose-headings:mb-1 prose-headings:mt-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0";
+  "prose prose-sm max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-code:rounded prose-code:bg-gray-200 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-table:text-xs prose-th:border prose-th:border-gray-300 dark:border-gray-600 prose-th:bg-gray-50 dark:bg-slate-900 prose-th:px-2 prose-th:py-1 prose-td:border prose-td:border-gray-300 dark:border-gray-600 prose-td:px-2 prose-td:py-1 prose-headings:mb-1 prose-headings:mt-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0";
 
 const AssistantMarkdown = ({ content }: { content: string }) => (
   <div className={MARKDOWN_CLASS}>
@@ -327,8 +327,8 @@ const AIAssistant = () => {
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-        <aside className="w-full shrink-0 rounded-lg border border-gray-200 bg-white lg:w-64">
-          <div className="flex h-12 items-center justify-between gap-2 border-b border-gray-100 px-3 text-sm font-medium text-gray-700">
+        <aside className="w-full shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 lg:w-64">
+          <div className="flex h-12 items-center justify-between gap-2 border-b border-gray-100 px-3 text-sm font-medium text-gray-700 dark:text-gray-200">
             <span>Conversaciones</span>
             <Button
               size="sm"
@@ -344,8 +344,8 @@ const AIAssistant = () => {
               <li key={c.id}>
                 <button
                   type="button"
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${
-                    activeId === c.id ? "bg-primary-50 text-primary-900" : "text-gray-800"
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:bg-slate-900 ${
+                    activeId === c.id ? "bg-primary-50 text-primary-900" : "text-gray-800 dark:text-gray-200"
                   }`}
                   onClick={() => void loadConversation(c.id)}
                 >
@@ -362,9 +362,9 @@ const AIAssistant = () => {
           </ul>
         </aside>
 
-        <section className="flex h-[32rem] flex-1 flex-col rounded-lg border border-gray-200 bg-white">
+        <section className="flex h-[32rem] flex-1 flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800">
           <div className="flex h-12 flex-wrap items-center gap-3 border-b border-gray-100 px-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
+            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
               <span>Contexto</span>
               <select
                 className="rounded-md bg-primary-500 px-2 py-1 text-sm text-white"
@@ -393,7 +393,7 @@ const AIAssistant = () => {
                 className={`rounded-lg px-3 py-2 text-sm ${
                   m.role === "user"
                     ? "ml-auto max-w-[90%] bg-primary-700 text-white"
-                    : "w-full bg-gray-100 text-gray-900"
+                    : "w-full bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-gray-100"
                 }`}
               >
                 {m.role === "assistant" ? (
@@ -404,9 +404,9 @@ const AIAssistant = () => {
               </div>
             ))}
             {streamDraft && (
-              <div className="w-full rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800">
+              <div className="w-full rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-200">
                 {streamDraft.activity.length > 0 && (
-                  <ul className="mb-2 list-inside list-disc text-xs text-gray-600">
+                  <ul className="mb-2 list-inside list-disc text-xs text-gray-600 dark:text-gray-300">
                     {streamDraft.activity.map((line, i) => (
                       <li key={`${i}-${line}`}>{line}</li>
                     ))}
@@ -425,7 +425,7 @@ const AIAssistant = () => {
 
           <div className="border-t border-gray-100 p-3">
             <textarea
-              className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              className="mb-2 w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm"
               rows={1}
               placeholder="Mensaje…"
               value={input}

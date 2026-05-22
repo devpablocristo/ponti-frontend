@@ -1,58 +1,52 @@
-// Copy estandarizado para confirmaciones y mensajes del sistema CRUDAR.
-// Cada CRUD del proyecto debe usar estas funciones para que los modales y
-// mensajes sean idénticos en tono, terminología y formato.
+// Compat shim. La definición canónica vive en `@/copy`. Este archivo se
+// mantiene mientras los callers existentes (`useBulkActions`,
+// `useEntityRowActions`, `ArchivedListPage`, etc.) sigan importando desde
+// acá. Cuando todos migren, este archivo se puede borrar.
 
-export type ConfirmCopy = {
-  title: string;
-  message: string;
-  primaryButtonText: string;
-  secondaryButtonText: string;
-};
+import {
+  confirmBulkArchive,
+  confirmBulkHardDelete,
+  confirmBulkRestore,
+  successCreate,
+  successUpdate,
+  type ConfirmCopy as CatalogConfirmCopy,
+  type Entity,
+} from "@/copy";
+
+export type ConfirmCopy = CatalogConfirmCopy;
 
 /**
- * Tres formas léxicas de la entidad usadas a lo largo del sistema CRUDAR:
- *   - article + singular ("el inversor") para confirm copy.
- *   - singular ("inversor") para aria-label de checkboxes de selección.
- *   - plural ("inversores") para bulk copy y resumen de selección.
- *
- * Cada página declara una sola constante EntityCopy y la pasa a las
- * primitivas (useEntityRowActions, useBulkActions, makeSelectColumn,
- * BulkSelectionPanel, ArchivedListPage), que derivan internamente la
- * forma que necesitan.
+ * Alias para el `Entity` del catálogo. Históricamente este shape se llamaba
+ * `EntityCopy` en el código antiguo; lo mantenemos como alias para que las
+ * páginas existentes sigan compilando sin tener que tocarlas en esta fase.
  */
-export type EntityCopy = {
-  article: string;
-  singular: string;
-  plural: string;
-};
+export type EntityCopy = Entity;
 
-// ─── Confirmaciones de acción ────────────────────────────────────────────────
+// ─── Confirmaciones (firma legacy: count + plural string) ────────────────────
 
-export const getBulkArchiveCopy = (count: number, entityLabelPlural: string): ConfirmCopy => ({
-  title: "Confirmar archivado",
-  message: `¿Archivar ${count} ${entityLabelPlural}? Podés restaurarlos más tarde desde la vista de archivados.`,
-  primaryButtonText: "Archivar",
-  secondaryButtonText: "Cancelar",
-});
+/**
+ * Firma legacy de los helpers de bulk: reciben count y el plural del label
+ * (string suelto). Adentro construimos una Entity sintética para reutilizar
+ * el copy canónico. Cuando migremos los callers a `(entity, count)` esto
+ * desaparece.
+ */
+function syntheticEntity(label: string): Entity {
+  return { article: "el", singular: label, plural: label };
+}
 
-export const getBulkRestoreCopy = (count: number, entityLabelPlural: string): ConfirmCopy => ({
-  title: "Confirmar restauración",
-  message: `¿Restaurar ${count} ${entityLabelPlural}?`,
-  primaryButtonText: "Restaurar",
-  secondaryButtonText: "Cancelar",
-});
+export const getBulkArchiveCopy = (count: number, entityLabelPlural: string): ConfirmCopy =>
+  confirmBulkArchive(syntheticEntity(entityLabelPlural), count);
 
-export const getBulkHardDeleteCopy = (count: number, entityLabelPlural: string): ConfirmCopy => ({
-  title: "Confirmar eliminación definitiva",
-  message: `¿Eliminar definitivamente ${count} ${entityLabelPlural}? Esta acción no se puede deshacer. Los items que tengan datos relacionados no se podrán eliminar.`,
-  primaryButtonText: "Eliminar definitivamente",
-  secondaryButtonText: "Cancelar",
-});
+export const getBulkRestoreCopy = (count: number, entityLabelPlural: string): ConfirmCopy =>
+  confirmBulkRestore(syntheticEntity(entityLabelPlural), count);
 
-// ─── Mensajes post-acción (toast / banner) ──────────────────────────────────
+export const getBulkHardDeleteCopy = (count: number, entityLabelPlural: string): ConfirmCopy =>
+  confirmBulkHardDelete(syntheticEntity(entityLabelPlural), count);
+
+// ─── Mensajes post-acción ─────────────────────────────────────────────────────
 
 export const getCreateSuccessCopy = (entityLabel: string): string =>
-  `Se creó ${entityLabel} correctamente.`;
+  successCreate({ article: "el", singular: entityLabel, plural: entityLabel });
 
 export const getUpdateSuccessCopy = (entityLabel: string): string =>
-  `Se actualizó ${entityLabel}.`;
+  successUpdate({ article: "el", singular: entityLabel, plural: entityLabel });

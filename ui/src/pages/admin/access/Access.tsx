@@ -3,7 +3,7 @@ import { parseListItemsFromResponse } from "@devpablocristo/platform-browser/cru
 import Header from "../../../components/Header/Header";
 import Button from "../../../components/Button/Button";
 import { apiClient } from "@/api/client";
-import { Notification } from "../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 
 type Tenant = { id: number; name: string };
 type UserRow = {
@@ -37,6 +37,13 @@ export default function Access() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState("");
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (result) notify.success(result);
+  }, [result]);
 
   const [newTenantName, setNewTenantName] = useState("");
 
@@ -120,11 +127,11 @@ export default function Access() {
       <Header title="Accesos" />
 
       <div className="grid grid-cols-1 gap-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Crear Tenant</h2>
           <form onSubmit={createTenant} className="flex flex-col gap-3">
             <input
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg block w-full p-3"
+              className="bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-base rounded-lg block w-full p-3"
               placeholder="Nombre del tenant (ej: default)"
               value={newTenantName}
               onChange={(e) => setNewTenantName(e.target.value)}
@@ -144,7 +151,7 @@ export default function Access() {
               </Button>
             </div>
           </form>
-          <div className="mt-4 text-sm text-slate-700">
+          <div className="mt-4 text-sm text-slate-700 dark:text-slate-200">
             Tenants:{" "}
             {tenants.length === 0
               ? "ninguno"
@@ -152,11 +159,11 @@ export default function Access() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Crear Usuario</h2>
           <form onSubmit={createUser} className="flex flex-col gap-3">
             <input
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg block w-full p-3"
+              className="bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-base rounded-lg block w-full p-3"
               placeholder="Usuario o email (ej: juan o juan@dominio.com)"
               value={usernameOrEmail}
               onChange={(e) => setUsernameOrEmail(e.target.value)}
@@ -164,7 +171,7 @@ export default function Access() {
               required
             />
             <input
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg block w-full p-3"
+              className="bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-base rounded-lg block w-full p-3"
               placeholder="Password"
               type="password"
               value={password}
@@ -174,14 +181,14 @@ export default function Access() {
             />
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg block w-full p-3"
+                className="bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-base rounded-lg block w-full p-3"
                 placeholder="Tenant (default)"
                 value={tenantName}
                 onChange={(e) => setTenantName(e.target.value)}
                 disabled={loading}
               />
               <select
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-base rounded-lg block w-full p-3"
+                className="bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 text-base rounded-lg block w-full p-3"
                 value={roleName}
                 onChange={(e) => setRoleName(e.target.value)}
                 disabled={loading}
@@ -192,7 +199,7 @@ export default function Access() {
                   </option>
                 ))}
               </select>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                 <input
                   type="checkbox"
                   checked={sendResetLink}
@@ -224,15 +231,15 @@ export default function Access() {
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold mb-4">Usuarios (Tenant Actual)</h2>
           {users.length === 0 ? (
-            <div className="text-sm text-slate-700">Sin usuarios para mostrar.</div>
+            <div className="text-sm text-slate-700 dark:text-slate-200">Sin usuarios para mostrar.</div>
           ) : (
             <div className="overflow-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-left text-slate-600">
+                  <tr className="text-left text-slate-600 dark:text-slate-300">
                     <th className="py-2 pr-3">Email</th>
                     <th className="py-2 pr-3">Role</th>
                     <th className="py-2 pr-3">Tenant</th>
@@ -252,8 +259,6 @@ export default function Access() {
           )}
         </div>
 
-        <Notification variant="error" message={error} prefix="Error!" />
-        {!error && <Notification variant="success" message={result} />}
       </div>
     </div>
   );

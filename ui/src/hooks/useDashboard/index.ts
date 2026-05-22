@@ -6,6 +6,7 @@ import { DashboardData } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 import { clearLocalStorage } from "@/lib/authStorage";
 
 const useDashboard = () => {
@@ -34,18 +35,20 @@ const useDashboard = () => {
         return;
       }
 
-      setError("Ocurrió un error en la búsqueda del dashboard");
+      setError("No se pudo cargar el dashboard.");
     } catch (error) {
       dispatch({
         type: actions.SET_DASHBOARD,
         payload: null,
       });
 
-      // If the error is auth-related (token invalid/expired), force re-login
-      // instead of leaving the dashboard in a broken state.
+      // Si el error es por sesión inválida o token vencido, forzamos re-login
+      // en vez de dejar el dashboard en estado roto. El raw del BE acá nos
+      // sirve como heurística para detectar tokens; los demás casos van por
+      // formatError que ya prioriza el userMessage del interceptor.
       const status = extractErrorStatus(error);
-      const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
-      const msgLower = message.toLowerCase();
+      const rawMessage = extractErrorMessage(error, "");
+      const msgLower = rawMessage.toLowerCase();
       if (
         (status === 401 || status === 403) &&
         (msgLower.includes("invalid token") ||
@@ -59,7 +62,7 @@ const useDashboard = () => {
         return;
       }
 
-      setError(message);
+      setError(formatError(error, { fallback: "No se pudo cargar el dashboard." }));
     } finally {
       setProcessing(false);
     }

@@ -52,7 +52,7 @@ export default function ArchivedSupplies({ onAfterRestore }: ArchivedSuppliesPro
   const adaptedRestore = restoreAdapter(restoreSupply);
   const adaptedHardDelete = hardDeleteAdapter(hardDeleteSupply);
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<Supply>({
       refetch,
       restore: adaptedRestore
@@ -81,7 +81,7 @@ export default function ArchivedSupplies({ onAfterRestore }: ArchivedSuppliesPro
       onHardDelete={runHardDelete ?? undefined}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? (error ?? undefined)}
+      error={error ?? undefined}
     />
   );
 }

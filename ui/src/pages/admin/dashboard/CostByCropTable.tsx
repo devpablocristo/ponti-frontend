@@ -8,11 +8,11 @@ interface CostByCropTableProps {
 export function CostByCropTable({ dashboard }: CostByCropTableProps) {
   if (!dashboard || !dashboard.crop_incidence.items?.length) {
     return (
-      <div className="bg-white rounded-xl border p-4 w-full">
+      <div className="bg-white dark:bg-slate-800 rounded-xl border p-4 w-full">
         <h3 className="font-semibold text-[#020617] font-sans mb-4">
           Incidencia de Costos por Cultivo
         </h3>
-        <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
+        <div className="p-4 text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-slate-900">
           No hay datos de cultivos disponibles
         </div>
       </div>
@@ -34,9 +34,9 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
   );
 
   const getCropBackgroundClass = (cropName: string) => {
-    if (!cropName || !cropColors[cropName]) return "bg-gray-50";
+    if (!cropName || !cropColors[cropName]) return "bg-gray-50 dark:bg-slate-900";
     const match = cropColors[cropName].match(/bg-\[[^\]]+]/);
-    return match ? match[0] : "bg-gray-50";
+    return match ? match[0] : "bg-gray-50 dark:bg-slate-900";
   };
 
   const totalRotationPct = Math.round(
@@ -46,20 +46,20 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
   );
 
   return (
-    <div className="bg-white rounded-xl border p-4 w-full">
+    <div className="bg-white dark:bg-slate-800 rounded-xl border p-4 w-full">
       <h3 className="font-medium text-[#020617] font-sans mb-4 text-xl">
         Incidencia de Costos por Cultivo
       </h3>
 
       <div className="grid grid-cols-4 text-sm font-semibold mb-2">
         <div></div>
-        <div className="bg-[#E5E7EB] text-gray-900 mx-1 rounded h-[43px] text-center flex justify-center items-center">
+        <div className="bg-[#E5E7EB] text-gray-900 dark:text-gray-100 mx-1 rounded h-[43px] text-center flex justify-center items-center">
           Superficie Has
         </div>
-        <div className="bg-[#E5E7EB] text-gray-900 mx-1 rounded text-center flex justify-center items-center">
+        <div className="bg-[#E5E7EB] text-gray-900 dark:text-gray-100 mx-1 rounded text-center flex justify-center items-center">
           % Rotación
         </div>
-        <div className="bg-[#E5E7EB] text-gray-900 mx-1 rounded text-center flex justify-center items-center">
+        <div className="bg-[#E5E7EB] text-gray-900 dark:text-gray-100 mx-1 rounded text-center flex justify-center items-center">
           Costo u$/Ha
         </div>
       </div>
@@ -76,7 +76,7 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
         </div>
       ))}
 
-      <div className="grid grid-cols-4 text-sm font-semibold text-slate-700 mt-1 rounded">
+      <div className="grid grid-cols-4 text-sm font-semibold text-slate-700 dark:text-slate-200 mt-1 rounded">
         <div className="h-[45px]"></div>
         <div className="bg-[#E5E7EB] h-[45px] text-center content-center rounded-l-[5px]">{Math.round(totalHectares)} Has</div>
         <div className="bg-[#E5E7EB] h-[45px] text-center content-center">

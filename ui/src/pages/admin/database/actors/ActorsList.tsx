@@ -12,7 +12,7 @@ import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPan
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
@@ -127,7 +127,7 @@ const columns: Column<Actor>[] = [
           {roles.map((role) => (
             <span
               key={`${actor.id}-${role}`}
-              className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"
+              className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-200"
             >
               {roleLabel(role)}
             </span>
@@ -173,6 +173,10 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
   const [duplicatesDrawerOpen, setDuplicatesDrawerOpen] = useState(false);
   const { actors, processing, error, getActors, createActor, updateActor, archiveActor } =
     useActors();
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
 
   const refresh = useCallback(() => {
     const params = new URLSearchParams({ page: "1", per_page: "1000" });
@@ -272,7 +276,6 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
   return (
     <div className="relative">
       <LoadingOverlay show={processing} />
-      {error && <Notification variant="error" message={error} prefix="Error:" />}
 
       <AppFilterBar
         filters={[

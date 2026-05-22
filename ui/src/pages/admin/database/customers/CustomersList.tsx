@@ -7,7 +7,7 @@ import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
@@ -20,7 +20,6 @@ import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { useSelection } from "../../../login/context/useSelection";
-import { notify } from "../../../../lib/notify";
 import { Column } from "../../types";
 import { CUSTOMER_ENTITY, PROJECT_ENTITY } from "../../entities";
 import { formatNumberAr } from "../../utils";
@@ -215,6 +214,10 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     createCustomer,
     archiveCustomer,
   } = useCustomers();
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
   const [projectsByCustomer, setProjectsByCustomer] = useState<Record<number, RawProject[]>>({});
   const [projectsLoading, setProjectsLoading] = useState(false);
   const { deleteProject } = useProjects();
@@ -669,7 +672,6 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
 
       <div className="relative">
         <LoadingOverlay show={hasWorkspaceSelection && (processing || projectsLoading)} />
-        {error && <Notification variant="error" message={error} />}
         {!hasWorkspaceSelection ? (
           <EmptyState
             icon={Briefcase}

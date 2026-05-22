@@ -193,7 +193,7 @@ export default function ActorFormDrawer({
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-slate-600">Tipo de actor</label>
+          <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">Tipo de actor</label>
           <select
             className="input-base block w-full px-3.5 py-2 text-sm"
             value={actorKind}
@@ -229,13 +229,13 @@ export default function ActorFormDrawer({
         />
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-800">Roles</h3>
+      <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+        <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Roles</h3>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {ACTOR_ROLE_OPTIONS.map((role) => (
             <label
               key={role.value}
-              className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700"
+              className="flex items-center gap-2 rounded-md border border-slate-200 dark:border-slate-700 px-3 py-2 text-sm text-slate-700 dark:text-slate-200"
             >
               <Checkbox
                 tone="form"
@@ -249,8 +249,8 @@ export default function ActorFormDrawer({
       </section>
 
       {actorKind === "natural_person" && (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-slate-800">Persona</h3>
+        <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Persona</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <InputField
               label="Nombre"
@@ -285,8 +285,8 @@ export default function ActorFormDrawer({
       )}
 
       {actorKind === "organization" && (
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
-          <h3 className="mb-3 text-sm font-semibold text-slate-800">Empresa / Sociedad</h3>
+        <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Empresa / Sociedad</h3>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <InputField
               label="Razón social"
@@ -328,9 +328,9 @@ export default function ActorFormDrawer({
         </section>
       )}
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-slate-800">Identificadores</h3>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Identificadores</h3>
           <Button
             variant="light"
             size="xs"
@@ -342,14 +342,14 @@ export default function ActorFormDrawer({
         </div>
         <div className="space-y-3">
           {identifiers.length === 0 && (
-            <div className="rounded-md border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500">
+            <div className="rounded-md border border-dashed border-slate-300 dark:border-slate-600 px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
               Sin identificadores
             </div>
           )}
           {identifiers.map((identifier, index) => (
             <div
               key={identifier.id ?? index}
-              className="grid grid-cols-1 gap-3 rounded-md border border-slate-100 bg-slate-50 p-3 sm:grid-cols-[0.7fr_1fr_1.4fr_auto_auto]"
+              className="grid grid-cols-1 gap-3 rounded-md border border-slate-100 bg-slate-50 dark:bg-slate-900 p-3 sm:grid-cols-[0.7fr_1fr_1.4fr_auto_auto]"
             >
               <InputField
                 label="País"
@@ -375,7 +375,7 @@ export default function ActorFormDrawer({
                 }
                 size="sm"
               />
-              <label className="flex items-end gap-2 pb-2 text-xs font-medium text-slate-600">
+              <label className="flex items-end gap-2 pb-2 text-xs font-medium text-slate-600 dark:text-slate-300">
                 <Checkbox
                   tone="form"
                   checked={Boolean(identifier.is_primary)}
@@ -400,9 +400,9 @@ export default function ActorFormDrawer({
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-slate-800">Aliases</h3>
+          <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Aliases</h3>
           <Button
             variant="light"
             size="xs"
@@ -419,14 +419,14 @@ export default function ActorFormDrawer({
         </div>
         <div className="space-y-3">
           {aliases.length === 0 && (
-            <div className="rounded-md border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500">
+            <div className="rounded-md border border-dashed border-slate-300 dark:border-slate-600 px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
               Sin aliases
             </div>
           )}
           {aliases.map((alias, index) => (
             <div
               key={alias.id ?? index}
-              className="grid grid-cols-[1fr_auto] gap-3 rounded-md border border-slate-100 bg-slate-50 p-3"
+              className="grid grid-cols-[1fr_auto] gap-3 rounded-md border border-slate-100 bg-slate-50 dark:bg-slate-900 p-3"
             >
               <InputField
                 label="Alias"

@@ -5,7 +5,7 @@ import useLotsReducer from "./useLotsReducer";
 import { apiClient } from "@/api/client";
 import { Crop, Payload, LotKPIs } from "./types";
 import { SuccessResponse } from "@/api/types";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 
 type LotMutationResponse = SuccessResponse<unknown>;
 
@@ -47,9 +47,9 @@ const useLots = () => {
           return;
         }
 
-        setError("Ocurrio un error en la busqueda de lotes");
+        setError("No se pudieron cargar los lotes.");
       } catch (error) {
-        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+        setError(formatError(error, { fallback: "No se pudieron cargar los lotes." }));
       } finally {
         setProcessing(false);
       }
@@ -79,9 +79,9 @@ const useLots = () => {
           return;
         }
 
-        setErrorKpis("Ocurrio un error en la busqueda de kpis");
+        setErrorKpis("No se pudieron cargar los indicadores de lotes.");
       } catch (error) {
-        setErrorKpis(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+        setErrorKpis(formatError(error, { fallback: "No se pudieron cargar los indicadores de lotes." }));
       } finally {
         setProcessingKpis(false);
       }
@@ -104,9 +104,9 @@ const useLots = () => {
         return;
       }
 
-      setError("Ocurrio un error en la busqueda de lotes");
+      setError("No se pudieron cargar los cultivos.");
     } catch (error) {
-      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+      setError(formatError(error, { fallback: "No se pudieron cargar los cultivos." }));
     } finally {
       setProcessing(false);
     }
@@ -128,9 +128,9 @@ const useLots = () => {
           dispatch({ type: actions.SET_PAGE_INFO, payload: response.data.page_info });
           return;
         }
-        setError("Ocurrió un error al listar lotes archivados");
+        setError("No se pudieron cargar los lotes archivados.");
       } catch (err) {
-        setError(extractErrorMessage(err, "Error en el servicio, inténtalo más tarde."));
+        setError(formatError(err, { fallback: "No se pudieron cargar los lotes archivados." }));
       } finally {
         setProcessing(false);
       }
@@ -144,12 +144,12 @@ const useLots = () => {
     try {
       const response = await apiClient.post<LotMutationResponse>(`/lots/${id}/archive`, {});
       if (!response.success) {
-        const message = "Ocurrió un error al archivar el lote";
+        const message = "No se pudo archivar el lote.";
         setError(message);
         throw new Error(message);
       }
     } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(err, { fallback: "No se pudo archivar el lote." });
       setError(message);
       throw new Error(message);
     } finally {
@@ -163,12 +163,12 @@ const useLots = () => {
     try {
       const response = await apiClient.post<LotMutationResponse>(`/lots/${id}/restore`, {});
       if (!response.success) {
-        const message = "Ocurrió un error al restaurar el lote";
+        const message = "No se pudo restaurar el lote.";
         setError(message);
         throw new Error(message);
       }
     } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(err, { fallback: "No se pudo restaurar el lote." });
       setError(message);
       throw new Error(message);
     } finally {
@@ -182,12 +182,12 @@ const useLots = () => {
     try {
       const response = await apiClient.delete<LotMutationResponse>(`/lots/${id}/hard`);
       if (!response.success) {
-        const message = "Ocurrió un error al eliminar el lote";
+        const message = "No se pudo eliminar el lote.";
         setError(message);
         throw new Error(message);
       }
     } catch (err) {
-      const message = extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.");
+      const message = formatError(err, { fallback: "No se pudo eliminar el lote." });
       setError(message);
       throw new Error(message);
     } finally {
@@ -208,13 +208,13 @@ const useLots = () => {
         );
 
         if (response.success) {
-          setResultTons("Se han actualizado las toneladas con éxito");
+          setResultTons("Se actualizaron las toneladas del lote.");
           return;
         }
 
-        setErrorTons("Ocurrio un error en la modificacion del lote");
+        setErrorTons("No se pudieron actualizar las toneladas del lote.");
       } catch (error) {
-        setErrorTons(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+        setErrorTons(formatError(error, { fallback: "No se pudieron actualizar las toneladas del lote." }));
       } finally {
         setProcessingTons(false);
       }

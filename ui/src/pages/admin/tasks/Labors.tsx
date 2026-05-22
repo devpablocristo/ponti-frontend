@@ -2,7 +2,6 @@ import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
 import { Archive, Briefcase, ClockIcon, CheckIcon, Download, FileTextIcon, FileXIcon, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { Notification } from "../../../components/feedback/Notification";
 import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
@@ -40,7 +39,8 @@ import {
   WorkOrderPreviewRow,
 } from "../workorders/importWorkOrders";
 import ImportWorkOrdersPreview from "../workorders/ImportWorkOrdersPreview";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
+import { notify } from "@/lib/notify";
 
 
 const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
@@ -57,7 +57,7 @@ const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
     icon: <FileTextIcon className="w-3.5 h-3.5" />,
   },
   NoFacturada: {
-    classes: "bg-gray-50 text-gray-500 border border-gray-200",
+    classes: "bg-gray-50 dark:bg-slate-900 text-gray-500 border border-gray-200 dark:border-gray-700",
     icon: <FileXIcon className="w-3.5 h-3.5" />,
   },
 };
@@ -84,7 +84,7 @@ function LaborsHeader({
   const [showColumnsModal, setShowColumnsModal] = useState(false);
 
   return (
-    <div className="flex justify-end items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
+    <div className="flex justify-end items-center p-4 bg-white dark:bg-slate-800 rounded-t-xl border-b border-gray-100">
       <Button
         variant="primary"
         size="sm"
@@ -111,7 +111,7 @@ function LaborsHeader({
           {allColumns.map((col) => (
             <label
               key={col.key}
-              className="flex items-center text-sm font-medium text-gray-700 gap-2"
+              className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-200 gap-2"
             >
               <input
                 type="checkbox"
@@ -123,7 +123,7 @@ function LaborsHeader({
                     setSelectedColumns(selectedColumns.filter((k) => k !== col.key));
                   }
                 }}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                className="w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
               />
               {col.header}
             </label>
@@ -195,6 +195,17 @@ export function Labors() {
   } = useLabors();
   const { archiveOrder } = useWorkOrders();
 
+  // Errores del hook (data load, metrics, invoice) llegan al toaster.
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (errorMetrics) notify.error(errorMetrics);
+  }, [errorMetrics]);
+  useEffect(() => {
+    if (errorInvoice) notify.error(errorInvoice);
+  }, [errorInvoice]);
+
   const pagination = usePagination({ perPage: 10 });
   const resetPage = pagination.resetPage;
   const [taskFilters, setTaskFilters] = useState<Record<string, unknown>>({});
@@ -209,9 +220,25 @@ export function Labors() {
   });
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [resultInvoiceMessage, setResultInvoiceMessage] = useState<string | null>(null);
-    const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
+  const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
+
+  // Estado → toast (patrón documentado en CreateOrder.tsx).
+  useEffect(() => {
+    if (warningMessage) notify.warning(warningMessage);
+  }, [warningMessage]);
+  useEffect(() => {
+    if (resultInvoiceMessage) notify.success(resultInvoiceMessage);
+  }, [resultInvoiceMessage]);
+  useEffect(() => {
+    if (errorInvoiceMessage) notify.error(errorInvoiceMessage);
+  }, [errorInvoiceMessage]);
+  useEffect(() => {
+    if (exportErrorMessage) notify.error(exportErrorMessage);
+  }, [exportErrorMessage]);
+
+  // Errores que vienen del hook se publican al toaster directamente.
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [createOrderDrawerOpen, setCreateOrderDrawerOpen] = useState(false);
 
@@ -304,7 +331,7 @@ export function Labors() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("workorder_number", laborGroups, taskFilters),
-        render: (value) => <strong className="text-gray-900">{String(value ?? "")}</strong>,
+        render: (value) => <strong className="text-gray-900 dark:text-gray-100">{String(value ?? "")}</strong>,
       },
       {
         key: "date",
@@ -389,9 +416,9 @@ export function Labors() {
         filterable: true,
         filterOptions: getFilterOptionsForColumn("surface_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-semibold text-gray-900">
+          <span className="font-semibold text-gray-900 dark:text-gray-100">
             {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}{" "}
-            <span className="text-gray-900 font-normal text-xs">Has</span>
+            <span className="text-gray-900 dark:text-gray-100 font-normal text-xs">Has</span>
           </span>
         ),
       },
@@ -401,7 +428,7 @@ export function Labors() {
         filterable: true,
         filterOptions: getFilterOptionsForColumn("cost_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-gray-900 dark:text-gray-100">
             $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -411,7 +438,7 @@ export function Labors() {
         header: "Total $ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-gray-900 dark:text-gray-100">
             $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -421,7 +448,7 @@ export function Labors() {
         header: "Total $ IVA",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-gray-900 dark:text-gray-100">
             $ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -438,7 +465,7 @@ export function Labors() {
         header: "u$ Prom",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-gray-900 dark:text-gray-100">
             u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -450,7 +477,7 @@ export function Labors() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("usd_cost_ha", laborGroups, taskFilters),
         render: (value) => (
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-gray-900 dark:text-gray-100">
             u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -460,7 +487,7 @@ export function Labors() {
         header: "Total u$ Neto",
         filterable: false,
         render: (value) => (
-          <span className="font-bold text-gray-900">
+          <span className="font-bold text-gray-900 dark:text-gray-100">
             u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
           </span>
         ),
@@ -474,7 +501,7 @@ export function Labors() {
         render: (value) => (
           <input
             type="text"
-            className="block w-full min-w-[80px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm disabled:opacity-50"
+            className="block w-full min-w-[80px] py-1 px-2 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-slate-900 text-sm disabled:opacity-50"
             value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
             disabled={true}
           />
@@ -489,7 +516,7 @@ export function Labors() {
         render: (value) => (
           <input
             type="text"
-            className="block w-full min-w-[80px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm disabled:opacity-50"
+            className="block w-full min-w-[80px] py-1 px-2 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-slate-900 text-sm disabled:opacity-50"
             value={typeof value === "string" || typeof value === "number" ? String(value) : ""}
             disabled={true}
           />
@@ -510,7 +537,7 @@ export function Labors() {
             return (
               <input
                 type="text"
-                className="block w-full min-w-[80px] py-1 px-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm disabled:opacity-50"
+                className="block w-full min-w-[80px] py-1 px-2 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-slate-900 text-sm disabled:opacity-50"
                 value=""
                 disabled={true}
               />
@@ -534,7 +561,7 @@ export function Labors() {
             typeof status === "string" && status ? status : invoiceEmptyStatus;
 
           const config = statusConfig[normalizedStatus] || {
-            classes: "bg-gray-100 text-gray-700",
+            classes: "bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-200",
             icon: null,
           };
 
@@ -763,7 +790,7 @@ export function Labors() {
       setImportDrawerOpen(true);
     } catch (error) {
       setExportErrorMessage(
-        extractErrorMessage(error, "No se pudo procesar el CSV. Use CSV válido."),
+        formatError(error, { fallback: "No se pudo procesar el CSV. Verificá que el archivo tenga el formato correcto." }),
       );
     }
   };
@@ -863,10 +890,6 @@ export function Labors() {
           },
         ]}
       />
-      <Notification variant="warning"
-        message={warningMessage}
-        onDismiss={() => setWarningMessage(null)}
-      />
       <CreateOrder
         drawerOpen={createOrderDrawerOpen}
         setDrawerOpen={setCreateOrderDrawerOpen}
@@ -898,18 +921,14 @@ export function Labors() {
             de labors), por lo que el drawer muestra órdenes de trabajo archivadas. */}
         <ArchivedWorkOrders onAfterRestore={refreshLabors} />
       </ArchivedDrawer>
-      {hasWorkspaceSelection && (
-      <div className="my-3">
-        {errorMetrics ? (
-          <Notification variant="error" message={errorMetrics} prefix="Error:" />
-        ) : (
+      {hasWorkspaceSelection && !errorMetrics && (
+        <div className="my-3">
           <TasksIndicators
             metrics={derivedMetrics}
             processing={processing}
             laborsAmount={filteredTasks.length}
           />
-        )}
-      </div>
+        </div>
       )}
 
       <div className="mt-3 relative">
@@ -940,7 +959,7 @@ export function Labors() {
               onFilterChange={handleFilterChange}
               className={`${processing ? "pointer-events-none opacity-60" : ""}`}
               enableFilters={true}
-              message="No hay labores disponibles"
+              message="Todavía no hay labores con los filtros actuales."
               headerComponent={
                 <LaborsHeader
                   selectedColumns={selectedColumns}
@@ -1037,19 +1056,6 @@ export function Labors() {
             />
           </div>
         </EntityFormDrawer>
-        {!showInvoiceModal && (
-          <Notification variant="success" message={resultInvoiceMessage} />
-        )}
-        {!showInvoiceModal && (
-          <Notification variant="error"
-            message={errorInvoiceMessage}
-            prefix="Error:"
-          />
-        )}
-        <Notification variant="error"
-          message={exportErrorMessage || error}
-          prefix="Error:"
-        />
       </div>
     </div>
   );

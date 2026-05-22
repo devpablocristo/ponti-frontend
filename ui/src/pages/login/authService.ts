@@ -34,16 +34,20 @@ export class AuthService {
 
       if (axiosError.response) {
         const errorResponse = axiosError.response.data as ErrorResponse;
-
-        if (errorResponse.error) {
-          const status = errorResponse.error.status;
-          const message =
-            errorResponse.error.details || "Error desconocido en el login.";
-          throw new RequestError(status, message);
-        }
+        const status = errorResponse?.error?.status ?? axiosError.response.status;
+        // En login no traducimos vía formatError: el BE devuelve mensajes
+        // específicos (credenciales inválidas, usuario bloqueado) que el
+        // usuario necesita ver tal cual. Si no hay details, fallback claro.
+        const message =
+          errorResponse?.error?.details ||
+          "No se pudo iniciar sesión. Verificá tus credenciales.";
+        throw new RequestError(status, message);
       }
 
-      throw new RequestError(500, "Error en el servicio, inténtalo más tarde.");
+      throw new RequestError(
+        500,
+        "No se pudo conectar con el servidor. Verificá tu conexión a internet.",
+      );
     }
   }
 
@@ -60,7 +64,7 @@ export class AuthService {
 
       throw new RequestError(
         axiosError.response?.status,
-        "Ocurrió un error en la busqueda de datos, por favor intente mas tarde."
+        "No se pudo cerrar sesión. Intentá nuevamente.",
       );
     }
   }
@@ -83,7 +87,7 @@ export class AuthService {
 
       throw new RequestError(
         axiosError.response?.status,
-        "Error al refrescar el token, por favor intente más tarde."
+        "Tu sesión expiró. Iniciá sesión nuevamente.",
       );
     }
   }
@@ -96,7 +100,7 @@ export class AuthService {
 
       throw new RequestError(
         axiosError.response?.status,
-        "Ocurrió un error en la busqueda de datos, por favor intente mas tarde."
+        "Tu sesión expiró. Iniciá sesión nuevamente.",
       );
     }
   }

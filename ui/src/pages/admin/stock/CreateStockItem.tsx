@@ -5,7 +5,7 @@ import useSupplies from "../../../hooks/useSupplies";
 import useStock from "../../../hooks/useStock";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useStockMovement from "../../../hooks/useStockMovement";
-import { Notification } from "../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
@@ -41,6 +41,17 @@ export default function CreateStockItem({
   const [error, setError] = useState<string | null>(null);
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Estado → toast.
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (errorMessages.length > 0) notify.error(errorMessages.join("\n"));
+  }, [errorMessages]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
 
   const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState("");
@@ -328,28 +339,6 @@ export default function CreateStockItem({
           }}
         />
 
-        {errorMessages.length > 0 && (
-          <Notification variant="error" onDismiss={() => setErrorMessages([])}>
-            <ul className="mt-1.5 list-disc list-inside">
-              {errorMessages.map((msg, index) => (
-                <li key={index}>{msg}</li>
-              ))}
-            </ul>
-          </Notification>
-        )}
-        {error && error !== "" && (
-          <Notification variant="error"
-            message={error}
-            prefix="Error!"
-            onDismiss={() => setError("")}
-          />
-        )}
-        {successMessage && successMessage !== "" && (
-          <Notification variant="success"
-            message={successMessage}
-            onDismiss={() => setSuccessMessage("")}
-          />
-        )}
       </EntityFormDrawer>
 
       <DrawerShell

@@ -57,14 +57,14 @@ export function BulkActionBar({
 
   return (
     <div
-      className={`sticky top-0 z-20 mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 shadow-sm ${className}`}
+      className={`sticky top-0 z-20 mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-900/60 dark:bg-blue-950/40 px-4 py-2.5 shadow-sm ${className}`}
       role="toolbar"
       aria-label="Acciones masivas"
     >
       <div className="flex items-center gap-2">
         {dangerActions.map(renderAction)}
         {showSelectionSummary && (
-          <div className="flex items-center gap-3 text-sm text-blue-900">
+          <div className="flex items-center gap-3 text-sm text-blue-900 dark:text-blue-100">
           <span className="font-medium">
             {selectedCount} {itemLabel} seleccionado{selectedCount === 1 ? "" : "s"}
           </span>

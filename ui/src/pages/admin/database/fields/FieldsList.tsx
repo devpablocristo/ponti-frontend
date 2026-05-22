@@ -5,7 +5,7 @@ import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTra
 
 import { DataTable } from "@/lib/dataDisplay";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
@@ -47,6 +47,10 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
     getFields,
     archiveField,
   } = useFields();
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
   const {
     filters: allFilters,
     selectedCustomer,
@@ -137,7 +141,6 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
 
       <div className="relative mt-4">
         <LoadingOverlay show={processing} />
-        {error && <Notification variant="error" message={error} />}
         {!processing && visibleFields.length === 0 ? (
           <EmptyState
             icon={MapPin}

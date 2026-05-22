@@ -19,14 +19,14 @@ const Navbar: React.FC<NavbarProps> = ({
   setIsLogoutModalOpen,
 }) => {
   return (
-    <nav className="relative z-[900] w-full bg-white border-b border-slate-200/80">
+    <nav className="relative z-[900] w-full bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-700/60">
       <div className="mx-auto px-5 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           {!isSidebarOpen && (
             <button
               onClick={(e) => toggleSidebar(e)}
               type="button"
-              className="inline-flex items-center p-2 rounded-lg hover:bg-slate-100 transition-colors duration-200"
+              className="inline-flex items-center p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200"
               style={{ color: "#94A3B8" }}
             >
               <span className="sr-only">Open sidebar</span>

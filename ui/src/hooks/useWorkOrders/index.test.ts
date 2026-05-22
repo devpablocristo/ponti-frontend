@@ -58,8 +58,19 @@ describe("useOrders.saveOrder", () => {
   });
 
   it("setea error 409 con mensaje específico al intentar crear duplicado", async () => {
+    // El BE devuelve el mensaje real "work order already exists for number X
+    // and project Y" — translateBackendError lo mapea a la copia en español.
+    // El stub anterior usaba "duplicate" como dummy, que ya no aplica porque
+    // la traducción ahora es dirigida por el mensaje, no por el status 409.
     mockedClient.post.mockRejectedValueOnce({
-      response: { status: 409, data: { error: { details: "duplicate" } } },
+      response: {
+        status: 409,
+        data: {
+          error: {
+            details: "work order already exists for number 42 and project 7",
+          },
+        },
+      },
     });
     const { result } = renderHook(() => useOrders());
 
@@ -69,7 +80,27 @@ describe("useOrders.saveOrder", () => {
 
     await waitFor(() =>
       expect(result.current.errorCreation).toBe(
-        "Ya existe una orden con el mismo número.",
+        "Ya existe una orden de trabajo con ese número en este proyecto.",
+      ),
+    );
+  });
+
+  it("traduce 'X is archived' del BE a un mensaje accionable en español", async () => {
+    mockedClient.post.mockRejectedValueOnce({
+      response: {
+        status: 409,
+        data: { error: { details: "lot is archived" } },
+      },
+    });
+    const { result } = renderHook(() => useOrders());
+
+    await act(async () => {
+      await result.current.saveOrder(sampleOrder);
+    });
+
+    await waitFor(() =>
+      expect(result.current.errorCreation).toBe(
+        "El lote está archivado. Restaurálo o elegí uno activo.",
       ),
     );
   });
@@ -140,8 +171,12 @@ describe("useOrders.publishDraftOrder", () => {
   });
 
   it("tira error 404 si el draft no existe", async () => {
+    // Simulamos lo que el interceptor axios global hace en runtime: setear
+    // `userMessage` con la copy mapeada por status. Sin esto, formatError
+    // caería al fallback porque "not found" del BE no matchea un pattern.
     mockedClient.post.mockRejectedValueOnce({
       response: { status: 404, data: { error: { details: "not found" } } },
+      userMessage: "El recurso solicitado no existe o fue eliminado.",
     });
     const { result } = renderHook(() => useOrders());
 
@@ -149,6 +184,8 @@ describe("useOrders.publishDraftOrder", () => {
       act(async () => {
         await result.current.publishDraftOrder(123);
       }),
-    ).rejects.toThrow("No se encontro el borrador digital.");
+    ).rejects.toMatchObject({
+      response: { status: 404 },
+    });
   });
 });

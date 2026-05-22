@@ -4,7 +4,7 @@ import { Archive, CalendarRange, Plus, Upload } from "lucide-react";
 import { DataTable } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
-import { Notification } from "../../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
@@ -42,6 +42,10 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
     updateCampaign,
     archiveCampaign,
   } = useCampaigns();
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
   const {
     filters: allFilters,
     selectedCustomer,
@@ -150,7 +154,6 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
 
       <div className="relative mt-4">
         <LoadingOverlay show={processing} />
-        {error && <Notification variant="error" message={error} />}
         {!processing && visibleCampaigns.length === 0 ? (
           <EmptyState
             icon={CalendarRange}

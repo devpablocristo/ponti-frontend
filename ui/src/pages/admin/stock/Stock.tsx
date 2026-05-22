@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
-import { Notification } from "../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../components/feedback/EmptyState";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -117,7 +117,7 @@ const EditableCell = ({
         <input
           type="number"
           min="0"
-          className="block w-full p-2 text-gray-800 border border-gray-300 rounded-lg bg-gray-100 text-sm"
+          className="block w-full p-2 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-slate-800 text-sm"
           value={value}
           onChange={() => { }}
           disabled={true}
@@ -175,7 +175,7 @@ function CloseStockDate({
 
   return (
     <div>
-      <label className="block mb-1.5 text-xs font-medium text-slate-600">
+      <label className="block mb-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
         Cerrar stock a fecha
       </label>
       <div className="flex items-center gap-3">
@@ -184,7 +184,7 @@ function CloseStockDate({
           disabled={disabledCloseStock}
           value={internalDate}
           onChange={(e) => setInternalDate(e.target.value)}
-          className="input-base appearance-none focus:ring-0 block text-sm py-2 px-3.5 disabled:bg-gray-100 disabled:text-gray-400"
+          className="input-base appearance-none focus:ring-0 block text-sm py-2 px-3.5 disabled:bg-gray-100 dark:bg-slate-800 disabled:text-gray-400"
         />
         <label
           className={`inline-flex items-center gap-2 cursor-pointer ${
@@ -202,10 +202,10 @@ function CloseStockDate({
                 setEnabledCloseStock(false);
               }
             }}
-            className="w-4 h-4 text-custom-btn border-gray-300 rounded focus:ring-custom-btn/30"
+            className="w-4 h-4 text-custom-btn border-gray-300 dark:border-gray-600 rounded focus:ring-custom-btn/30"
             disabled={disabledCloseStock}
           />
-          <span className="text-xs font-medium text-slate-600">Cerrar stock</span>
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Cerrar stock</span>
         </label>
       </div>
     </div>
@@ -250,6 +250,20 @@ export function Stock() {
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Estado → toast (patrón en CreateOrder.tsx).
+  useEffect(() => {
+    if (warningMessage) notify.warning(warningMessage);
+  }, [warningMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
+  useEffect(() => {
+    if (actionErrorMessage) notify.error(actionErrorMessage);
+  }, [actionErrorMessage]);
+  useEffect(() => {
+    if (exportErrorMessage) notify.error(exportErrorMessage);
+  }, [exportErrorMessage]);
   const [stockValidationModal, setStockValidationModal] = useState<{
     title: string;
     message: string;
@@ -283,6 +297,20 @@ export function Stock() {
     errorPeriods,
     periods,
   } = useStock();
+
+  // Errores del hook se publican al toaster.
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (errorCloseStock) notify.error(errorCloseStock);
+  }, [errorCloseStock]);
+  useEffect(() => {
+    if (errorPeriods) notify.warning(errorPeriods);
+  }, [errorPeriods]);
+  useEffect(() => {
+    if (resultCloseStock) notify.success(resultCloseStock);
+  }, [resultCloseStock]);
 
   const stockQuery = useMemo(
     () =>
@@ -492,7 +520,7 @@ export function Stock() {
         header: "Ingresados",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
         },
       },
       {
@@ -503,7 +531,7 @@ export function Stock() {
         headerPadding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -520,7 +548,7 @@ export function Stock() {
         padding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -573,7 +601,7 @@ export function Stock() {
 
           if (Number.isNaN(value)) {
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500">
                 -
               </span>
             );
@@ -581,7 +609,7 @@ export function Stock() {
 
           if (!isPositive && !isNegative) {
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500">
                 0
               </span>
             );
@@ -638,7 +666,7 @@ export function Stock() {
         padding: "xs",
         headerPadding: "xs",
         filterable: false,
-        render: (value) => <span className="font-bold text-gray-900">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
+        render: (value) => <span className="font-bold text-gray-900 dark:text-gray-100">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "total_usd",
@@ -649,7 +677,7 @@ export function Stock() {
         render: (value) => {
           const num = Number(value);
           return (
-            <span className="font-bold text-gray-900">
+            <span className="font-bold text-gray-900 dark:text-gray-100">
               {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
             </span>
           );
@@ -797,10 +825,6 @@ export function Stock() {
           },
         ]}
       />
-      <Notification variant="warning"
-        message={warningMessage}
-        onDismiss={() => setWarningMessage(null)}
-      />
       {hasWorkspaceSelection && !error && (
         <div className="my-3">
           <StockIndicators summary={derivedSummary} />
@@ -809,11 +833,6 @@ export function Stock() {
       <div className="mt-3 relative">
         <LoadingOverlay show={hasWorkspaceSelection && processing} />
 
-        <Notification variant="success" message={successMessage} />
-        <Notification variant="error"
-          message={actionErrorMessage || exportErrorMessage || error}
-          prefix="Error:"
-        />
         {stockPeriods && stockPeriods.length > 0 && (
           <div className="mb-4 flex flex-wrap items-end gap-6">
             <SelectField
@@ -834,11 +853,6 @@ export function Stock() {
             />
           </div>
         )}
-        {errorPeriods && (
-          <div className="mb-3">
-            <Notification variant="warning" message={errorPeriods} />
-          </div>
-        )}
         {projectId && customers && (
           <CreateStockItem
             drawerOpen={drawerOpen}
@@ -857,7 +871,7 @@ export function Stock() {
           <DataTable
             data={filteredStock}
             columns={columns}
-            message="No hay stock disponible"
+            message="Todavía no hay stock con los filtros actuales."
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
             enableFilters={true}

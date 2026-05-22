@@ -30,7 +30,7 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
   if (!dashboard) {
     return (
       <div className="flex gap-4">
-        <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
+        <div className="p-4 text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-slate-900">
           No hay datos de dashboard disponibles
         </div>
       </div>
@@ -117,12 +117,12 @@ function DashboardContent({
           {selectedFilters.map((filter) => (
             <div
               key={filter.label}
-              className="p-4 bg-white border rounded-xl"
+              className="p-4 bg-white dark:bg-slate-800 border rounded-xl"
             >
-              <div className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+              <div className="text-xs font-medium tracking-wide text-slate-500 dark:text-slate-400 uppercase">
                 {filter.label}
               </div>
-              <div className="mt-1 text-sm font-semibold text-slate-900">
+              <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 {filter.value}
               </div>
             </div>
@@ -258,7 +258,7 @@ export function Dashboard() {
 
       {!hasActiveFilters && (
         <EmptyState
-          className="mt-10 rounded-xl border border-dashed border-slate-300 bg-white"
+          className="mt-10 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
           title="Seleccioná filtros para ver el dashboard"
           description="El dashboard no carga datos globales automáticamente. Elegí cliente, proyecto, campaña o campo para consultar métricas."
         />
@@ -290,7 +290,7 @@ export function Dashboard() {
 
       {hasActiveFilters && (
         <div className="fixed left-[-10000px] top-0">
-        <div ref={targetRef} className="w-[1280px] p-6 bg-white">
+        <div ref={targetRef} className="w-[1280px] p-6 bg-white dark:bg-slate-800">
           <DashboardContent
             dashboard={dashboard}
             selectedFilters={selectedFilters}

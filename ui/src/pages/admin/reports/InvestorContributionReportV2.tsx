@@ -10,7 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
-import { Notification } from "../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { usePDF } from "react-to-pdf";
 
@@ -123,6 +123,10 @@ function InvestorContributionReportV2() {
     error,
     getInvestorContributionReportingData,
   } = useReporting();
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
 
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
@@ -296,8 +300,6 @@ function InvestorContributionReportV2() {
         ]}
       />
 
-      <Notification variant="error" message={error} />
-
       {!error && dashboard && (
         <div ref={targetRef} className="space-y-4">
           <div className="grid grid-cols-1 gap-2 xl:grid-cols-[170px_minmax(0,1fr)] xl:items-stretch">
@@ -328,7 +330,7 @@ function InvestorContributionReportV2() {
       )}
 
       {!error && !dashboard && !processing && (
-        <div className="p-4 text-sm text-slate-600 rounded-lg bg-slate-50">
+        <div className="p-4 text-sm text-slate-600 dark:text-slate-300 rounded-lg bg-slate-50 dark:bg-slate-900">
           No hay datos disponibles
         </div>
       )}

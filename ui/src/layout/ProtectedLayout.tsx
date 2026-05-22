@@ -55,7 +55,7 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-custom-bg">
+    <div className="flex h-screen overflow-hidden bg-custom-bg dark:bg-slate-950">
       <Sidebar
         setTitle={setTitle}
         setIsSidebarOpen={() => setIsSidebarOpen(false)}
@@ -71,7 +71,7 @@ const MainLayout: React.FC = () => {
         />
         <main
           id="main-scroll"
-          className="flex-1 overflow-y-auto p-5 bg-custom-bg"
+          className="flex-1 overflow-y-auto p-5 bg-custom-bg dark:bg-slate-950"
         >
           <div className="animate-fade-in">
             <Outlet />

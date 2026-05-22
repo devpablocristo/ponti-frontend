@@ -45,20 +45,20 @@ export function LotsHeader({
   };
 
   return (
-    <div className="flex items-center justify-between rounded-t-xl border-b border-gray-100 bg-white p-4">
+    <div className="flex items-center justify-between rounded-t-xl border-b border-gray-100 bg-white dark:bg-slate-800 p-4">
       <div className="inline-flex rounded-md shadow-xs" role="group">
         {tabs.map((tab, index) => (
           <button
             key={tab}
             type="button"
             className={[
-              "border border-gray-200 px-4 py-2 text-sm font-medium transition-colors duration-150 focus:z-10 focus:outline-none",
+              "border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-medium transition-colors duration-150 focus:z-10 focus:outline-none",
               index === 0 ? "rounded-s-lg" : "",
               index === tabs.length - 1 ? "rounded-e-lg" : "",
               index > 0 ? "border-l-0" : "",
               active === tab
                 ? "bg-custom-btn text-white shadow-sm"
-                : "bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900",
+                : "bg-white dark:bg-slate-800 text-gray-600 hover:bg-gray-50 dark:bg-slate-900 hover:text-gray-900 dark:text-gray-100",
             ].join(" ")}
             onClick={() => selectTab(tab, columnsForTab(tab))}
           >
@@ -94,7 +94,7 @@ export function LotsHeader({
           {allColumns.map((column) => (
             <label
               key={String(column.key)}
-              className="flex items-center gap-2 text-sm font-medium text-gray-700"
+              className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200"
             >
               <input
                 type="checkbox"
@@ -108,7 +108,7 @@ export function LotsHeader({
                     selectedColumns.filter((key) => key !== column.key)
                   );
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
               />
               {column.header}
             </label>

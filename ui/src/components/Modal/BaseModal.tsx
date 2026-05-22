@@ -41,7 +41,7 @@ export function BaseModal({
 
   const defaultIcon = (
     <svg
-      className="mx-auto mb-4 text-slate-800 w-12 h-12"
+      className="mx-auto mb-4 text-slate-800 dark:text-slate-200 w-12 h-12"
       aria-hidden="true"
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
@@ -61,13 +61,13 @@ export function BaseModal({
     <div
       id="popup-modal"
       tabIndex={-1}
-      className={`animate-modal-backdrop fixed top-0 right-0 left-0 z-[1000] flex justify-center items-center w-full h-screen backdrop-blur-sm bg-slate-900/50 ${
+      className={`animate-modal-backdrop fixed top-0 right-0 left-0 z-[1000] flex justify-center items-center w-full h-screen backdrop-blur-sm bg-slate-900/50 dark:bg-black/60 ${
         isOpen ? "flex" : "hidden"
       }`}
     >
       <div className="relative p-4 w-full max-w-md max-h-full">
         <div
-          className="animate-modal-content relative bg-white rounded-2xl"
+          className="animate-modal-content relative bg-white dark:bg-slate-800 rounded-2xl"
           style={{ boxShadow: "var(--shadow-xl)" }}
         >
           <IconActionButton
@@ -81,12 +81,12 @@ export function BaseModal({
           {/* Contenido del modal */}
           <div className="p-4 md:p-5 text-center">
             {icon ? icon : title !== "" ? defaultIcon : null}
-            <h3 className="mb-2 text-lg font-semibold text-slate-800 font-display">{title}</h3>
+            <h3 className="mb-2 text-lg font-semibold text-slate-800 dark:text-slate-100 font-display">{title}</h3>
 
             {children ? (
               <div className="mb-5">{children}</div>
             ) : (
-              <p className="mb-5 text-sm text-slate-600">{message}</p>
+              <p className="mb-5 text-sm text-slate-600 dark:text-slate-300">{message}</p>
             )}
 
             {primaryButtonText && (

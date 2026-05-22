@@ -21,7 +21,7 @@ import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { usePDF } from "react-to-pdf";
 
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
-import { Notification } from "../../../components/feedback/Notification";
+import { notify } from "@/lib/notify";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useReporting from "../../../hooks/useReporting";
 import type {
@@ -221,6 +221,13 @@ export function SummaryResultsReport() {
     getFieldCropReportingData,
   } = useReporting();
 
+  useEffect(() => {
+    if (summaryError) notify.error(summaryError);
+  }, [summaryError]);
+  useEffect(() => {
+    if (fieldCropError) notify.error(fieldCropError);
+  }, [fieldCropError]);
+
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
 
@@ -339,12 +346,11 @@ export function SummaryResultsReport() {
         ]}
       />
 
-      {summaryError && <Notification variant="error" message={summaryError} />}
 
       {!summaryError && data && (
         <div
           ref={targetRef}
-          className="space-y-5 rounded-lg border border-slate-200 bg-white p-4 text-slate-900 shadow-sm"
+          className="space-y-5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-slate-900 dark:text-slate-100 shadow-sm"
           style={{ fontFamily: REPORT_FONT }}
         >
           <ReportHeader activeTab={activeTab} onTabChange={setActiveTab} />
@@ -362,7 +368,7 @@ export function SummaryResultsReport() {
       )}
 
       {!summaryError && !data && !summaryProcessing && (
-        <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
           No hay datos disponibles
         </div>
       )}
@@ -381,13 +387,13 @@ function ReportHeader({
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
         <h2 className="text-[1.05rem] font-semibold text-slate-950">Resumen de Resultados</h2>
-        <p className="mt-0.5 text-[0.72rem] text-slate-500">
+        <p className="mt-0.5 text-[0.72rem] text-slate-500 dark:text-slate-400">
           Visión general del desempeño económico del proyecto.
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-[0.72rem] font-semibold text-slate-600">Vista</span>
-        <div className="grid grid-cols-3 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+        <span className="text-[0.72rem] font-semibold text-slate-600 dark:text-slate-300">Vista</span>
+        <div className="grid grid-cols-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1 shadow-sm">
           {tabs.map((tab) => {
             const selected = activeTab === tab.id;
             return (
@@ -399,7 +405,7 @@ function ReportHeader({
                   "flex min-h-9 min-w-[132px] items-center justify-center gap-2 rounded-md px-4 text-[0.72rem] font-semibold transition-colors",
                   selected
                     ? "bg-[#174B78] text-white shadow-sm"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900 hover:text-slate-900 dark:text-slate-100",
                 ].join(" ")}
               >
                 {tab.icon}
@@ -518,7 +524,7 @@ function KpiCard({
       className={
         isOperating
           ? "min-w-0 rounded-xl bg-[#174B78] px-3 py-4 text-white shadow-sm"
-          : "min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-4 shadow-sm"
+          : "min-w-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-4 shadow-sm"
       }
     >
       <div className="flex items-center gap-2">
@@ -534,7 +540,7 @@ function KpiCard({
               className={
                 isOperating
                   ? "block min-w-0 overflow-hidden whitespace-nowrap font-medium uppercase tracking-wide text-white/85"
-                  : "block min-w-0 overflow-hidden whitespace-nowrap font-medium uppercase tracking-wide text-slate-500"
+                  : "block min-w-0 overflow-hidden whitespace-nowrap font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
               }
               style={{ fontSize: "var(--summary-kpi-label-size)" }}
             >
@@ -568,7 +574,7 @@ function KpiCard({
               className={
                 isOperating
                   ? "mt-2 block min-w-0 overflow-hidden whitespace-nowrap font-semibold text-white/85"
-                  : "mt-2 block min-w-0 overflow-hidden whitespace-nowrap font-semibold text-slate-500"
+                  : "mt-2 block min-w-0 overflow-hidden whitespace-nowrap font-semibold text-slate-500 dark:text-slate-400"
               }
               style={{ fontSize: "var(--summary-kpi-meta-size)" }}
             >
@@ -585,7 +591,7 @@ function KpiCard({
 function CropResults({ crops }: { crops: SummaryCrop[] }) {
   if (crops.length === 0) {
     return (
-      <section className="rounded-lg bg-white p-4 text-sm text-slate-600 shadow-sm">
+      <section className="rounded-lg bg-white dark:bg-slate-800 p-4 text-sm text-slate-600 dark:text-slate-300 shadow-sm">
         No hay cultivos para el filtro seleccionado
       </section>
     );
@@ -608,7 +614,7 @@ function CropCard({ crop }: { crop: SummaryCrop }) {
   const returnPct = n(crop.crop_return_pct);
 
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+    <article className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0 max-w-[65%]">
           <CropBadgeV2 cropName={crop.crop_name} />
@@ -617,7 +623,7 @@ function CropCard({ crop }: { crop: SummaryCrop }) {
           <p className="text-[0.78rem] font-semibold tabular-nums text-slate-950">
             {formatNumberAr(crop.surface_ha)} Has
           </p>
-          <p className="text-[9px] font-medium text-slate-500">del total</p>
+          <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400">del total</p>
         </div>
       </header>
 
@@ -661,7 +667,7 @@ function MetricLine({
           className={
             className?.includes("bg-slate")
               ? "text-[9px] font-medium text-white"
-              : "text-[9px] font-medium text-slate-600"
+              : "text-[9px] font-medium text-slate-600 dark:text-slate-300"
           }
         >
           {label}
@@ -685,10 +691,10 @@ function GeneralSummary({ totals }: { totals: SummaryTotals }) {
   const returnPct = n(totals.project_return_pct);
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
       <h3 className="text-[1.05rem] font-semibold text-slate-950">
         Resumen General{" "}
-        <span className="text-[0.72rem] font-semibold text-slate-500">(Totales del proyecto)</span>
+        <span className="text-[0.72rem] font-semibold text-slate-500 dark:text-slate-400">(Totales del proyecto)</span>
       </h3>
       <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <SummaryItem
@@ -752,25 +758,25 @@ function SummaryItem({
   tone?: "neutral" | "pink";
 }) {
   return (
-    <article className="flex min-w-0 items-center gap-3 border-slate-200 xl:border-r xl:pr-4 xl:last:border-r-0">
+    <article className="flex min-w-0 items-center gap-3 border-slate-200 dark:border-slate-700 xl:border-r xl:pr-4 xl:last:border-r-0">
       <span
         className={
           tone === "pink"
             ? "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FDE4EA] text-[#D43E5F]"
-            : "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
+            : "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
         }
       >
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="truncate text-[9px] font-medium text-slate-500">{label}</p>
+        <p className="truncate text-[9px] font-medium text-slate-500 dark:text-slate-400">{label}</p>
         <div className="mt-1 flex items-center gap-2">
           <p className="truncate text-[0.78rem] font-semibold leading-tight tabular-nums text-slate-950">
             {value}
           </p>
           {indicator !== undefined && <IndicatorDot value={indicator} size="sm" />}
         </div>
-        {meta && <p className="mt-1 text-[0.72rem] font-semibold text-slate-500">{meta}</p>}
+        {meta && <p className="mt-1 text-[0.72rem] font-semibold text-slate-500 dark:text-slate-400">{meta}</p>}
       </div>
     </article>
   );
@@ -787,7 +793,7 @@ function EconomicView({ totals, crops }: { totals: SummaryTotals; crops: Summary
   return (
     <div className="space-y-5">
       <section className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <article className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
           <h3 className="mb-4 text-[1.05rem] font-semibold text-slate-950">
             Composición del Activo
           </h3>
@@ -797,14 +803,14 @@ function EconomicView({ totals, crops }: { totals: SummaryTotals; crops: Summary
               return (
                 <div key={item.label}>
                   <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-500">
+                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                       {item.label}
                     </span>
                     <span className="text-[0.78rem] font-semibold tabular-nums text-slate-950">
                       {money(item.value)}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100">
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                     <div
                       className={`h-2 rounded-full ${item.tone}`}
                       style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
@@ -852,22 +858,22 @@ function EconomicMetric({ label, value }: { label: string; value: string }) {
 function CropEconomicsTable({ crops }: { crops: SummaryCrop[] }) {
   if (crops.length === 0) {
     return (
-      <section className="rounded-xl bg-white p-4 text-sm text-slate-600 shadow-sm">
+      <section className="rounded-xl bg-white dark:bg-slate-800 p-4 text-sm text-slate-600 dark:text-slate-300 shadow-sm">
         No hay cultivos para el filtro seleccionado
       </section>
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-4 py-3">
+    <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+      <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-3">
         <h3 className="text-[1.05rem] font-semibold text-slate-950">
           Resultados Económicos por Cultivo
         </h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-[0.78rem]">
-          <thead className="bg-slate-50 text-[9px] font-medium uppercase tracking-wide text-slate-500">
+          <thead className="bg-slate-50 dark:bg-slate-900 text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
             <tr>
               <th className="px-4 py-3 text-left">Cultivo</th>
               <th className="px-4 py-3 text-right">Ingreso Neto</th>
@@ -931,7 +937,7 @@ function integralMetricCellClass(row: IntegralRow, index: number) {
     return `${base} bg-[#FDE4EA] font-semibold text-slate-950`;
   }
 
-  return `${base} ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} font-medium text-slate-600`;
+  return `${base} ${index % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50 dark:bg-slate-900"} font-medium text-slate-600`;
 }
 
 function integralValueCellClass(row: IntegralRow, index: number) {
@@ -941,17 +947,19 @@ function integralValueCellClass(row: IntegralRow, index: number) {
   if (row.key === "total_invested") return `${base} bg-[#FBD5D5] text-slate-950`;
   if (row.key === "return_pct") return `${base} bg-[#FDE4EA] text-slate-950`;
 
-  return `${base} ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`;
+  return `${base} ${index % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50/50"}`;
 }
 
 function IntegralView({ data, error }: { data: FieldCropReportData | null; error: string | null }) {
   if (error) {
-    return <section><Notification variant="error" message={error} /></section>;
+    // El error ya se publica al toast desde el parent; acá solo evitamos
+    // renderizar el árbol de datos.
+    return null;
   }
 
   if (!data) {
     return (
-      <section className="rounded-xl bg-white p-4 text-sm text-slate-600 shadow-sm">
+      <section className="rounded-xl bg-white dark:bg-slate-800 p-4 text-sm text-slate-600 dark:text-slate-300 shadow-sm">
         No hay datos integrales disponibles
       </section>
     );
@@ -959,28 +967,28 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
 
   if (data.columns.length === 0) {
     return (
-      <section className="rounded-xl bg-white p-4 text-sm text-slate-600 shadow-sm">
+      <section className="rounded-xl bg-white dark:bg-slate-800 p-4 text-sm text-slate-600 dark:text-slate-300 shadow-sm">
         No hay combinaciones campo/cultivo para el filtro seleccionado
       </section>
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-4 py-3">
+    <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+      <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-3">
         <h3 className="text-[1.05rem] font-semibold text-slate-950">Vista Integral</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.78rem]">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 dark:bg-slate-900">
             <tr>
-              <th className="sticky left-0 z-[1] w-[220px] bg-slate-50 px-4 py-3 text-left text-[9px] font-medium uppercase tracking-wide text-slate-500">
+              <th className="sticky left-0 z-[1] w-[220px] bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Métrica
               </th>
               {data.columns.map((column) => (
                 <th key={column.id} className="min-w-[180px] px-4 py-3 text-center">
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-600">
+                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">
                       {column.field_name}
                     </span>
                     <CropBadgeV2 cropName={column.crop_name} />
@@ -1004,7 +1012,7 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
                         className={
                           row.strong
                             ? "font-semibold tabular-nums"
-                            : "font-medium tabular-nums text-slate-700"
+                            : "font-medium tabular-nums text-slate-700 dark:text-slate-200"
                         }
                       >
                         {formatNumberAr(value)}

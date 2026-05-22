@@ -98,10 +98,10 @@ function SearchInput({
   return (
     <div className="w-full">
       {label ? (
-        <label className="mb-1.5 block text-xs font-medium text-slate-600">{label}</label>
+        <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">{label}</label>
       ) : null}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500 dark:text-slate-400" />
         <input
           type="text"
           autoComplete="off"
@@ -114,10 +114,10 @@ function SearchInput({
           onFocus={onFocus}
           placeholder={placeholder}
           className={`input-base block w-full pl-9 pr-8 ${sizeClass(size)} ${
-            disabled ? "cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400" : ""
+            disabled ? "cursor-not-allowed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 dark:text-slate-400" : ""
           }`}
         />
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500 dark:text-slate-400" />
       </div>
     </div>
   );
@@ -174,10 +174,10 @@ function FilterSuggestions({
   const hasOptions = options.length > 0;
 
   return (
-    <ul className="absolute top-full z-[70] mt-1 max-h-[240px] w-full overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+    <ul className="absolute top-full z-[70] mt-1 max-h-[240px] w-full overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-1 shadow-lg">
       {allowAll ? (
         <li
-          className="cursor-pointer px-3.5 py-2.5 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-50"
+          className="cursor-pointer px-3.5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors duration-150 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-700"
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => onSelect({ id: 0, name: allLabel })}
         >
@@ -186,15 +186,15 @@ function FilterSuggestions({
       ) : null}
 
       {filter.loading ? (
-        <li className="px-3.5 py-2.5 text-sm text-slate-500">Cargando...</li>
+        <li className="px-3.5 py-2.5 text-sm text-slate-500 dark:text-slate-400">Cargando...</li>
       ) : null}
 
       {!filter.loading && filter.error ? (
-        <li className="px-3.5 py-2.5 text-sm text-red-600">{filter.error}</li>
+        <li className="px-3.5 py-2.5 text-sm text-red-600 dark:text-red-400">{filter.error}</li>
       ) : null}
 
       {!filter.loading && !filter.error && !hasOptions ? (
-        <li className="px-3.5 py-2.5 text-sm text-slate-500">
+        <li className="px-3.5 py-2.5 text-sm text-slate-500 dark:text-slate-400">
           {filter.emptyMessage ?? "Sin resultados"}
         </li>
       ) : null}
@@ -207,8 +207,8 @@ function FilterSuggestions({
               onClick={() => onSelect(option)}
               className={`cursor-pointer px-3.5 py-2.5 text-sm transition-colors duration-150 ${
                 highlightedIndex === index
-                  ? "bg-primary-50 font-medium text-primary-700"
-                  : "hover:bg-slate-50"
+                  ? "bg-primary-50 dark:bg-primary-900/30 font-medium text-primary-700 dark:text-primary-200"
+                  : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-700"
               }`}
             >
               {option.name}

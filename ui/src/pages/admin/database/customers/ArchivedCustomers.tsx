@@ -51,7 +51,7 @@ export default function ArchivedCustomers({ onAfterRestore }: ArchivedCustomersP
     [onAfterRestore, restoreCustomer],
   );
 
-  const { runRestore, runHardDelete, processing: actionProcessing, lastError } =
+  const { runRestore, runHardDelete, processing: actionProcessing } =
     useArchiveActions<ArchivedCustomer>({
       refetch,
       restore: restoreAndNotify,
@@ -72,7 +72,7 @@ export default function ArchivedCustomers({ onAfterRestore }: ArchivedCustomersP
       getHardDeleteCopy={getCustomerHardDeleteCopy}
       onMount={refetch}
       processing={processing || actionProcessing}
-      error={lastError ?? error}
+      error={error}
     />
   );
 }
