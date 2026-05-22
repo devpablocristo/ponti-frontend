@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
 import * as actions from "./actions";
-import useLotsReducer from "./useLotsReducer";
+import lotsReducer from "./lotsReducer";
 import { apiClient } from "@/api/client";
 import { Crop, Payload, LotKPIs } from "./types";
 import { SuccessResponse } from "@/api/types";
@@ -10,7 +10,7 @@ import { formatError } from "@/lib/format";
 type LotMutationResponse = SuccessResponse<unknown>;
 
 const useLots = () => {
-  const [{ lots, pageInfo, crops, result, kpis }, dispatch] = useLotsReducer();
+  const [{ lots, pageInfo, crops, result, kpis }, dispatch] = lotsReducer();
   const [processing, setProcessing] = useState(false);
   const [processingKpis, setProcessingKpis] = useState(false);
   const [error, setError] = useState<string | null>(null);

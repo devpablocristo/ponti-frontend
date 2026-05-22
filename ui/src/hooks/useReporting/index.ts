@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import useReportingReducer from "./useReportingReducer";
+import reportingReducer from "./reportingReducer";
 import * as actions from "./actions";
 import { FieldCropReportData, InvestorContributionReportData, SummaryResultsReportData } from "./types";
 import { SuccessResponse } from "@/api/types";
@@ -12,7 +12,7 @@ const useReporting = () => {
     fieldCropReportingData,
     investorContributionReportingData,
     summaryResultsReportingData
-  }, dispatch] = useReportingReducer();
+  }, dispatch] = reportingReducer();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

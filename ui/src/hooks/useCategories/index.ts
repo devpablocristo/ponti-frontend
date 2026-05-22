@@ -5,13 +5,13 @@ import * as actions from "./actions";
 import { apiClient } from "@/api/client";
 import { TypeData, CategoryData } from "./types";
 import { formatError } from "@/lib/format";
-import useCategoriesReducer from "./useCategoriesReducer";
+import categoriesReducer from "./categoriesReducer";
 
 const useCategories = () => {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [{ categories, types }, dispatch] = useCategoriesReducer();
+  const [{ categories, types }, dispatch] = categoriesReducer();
 
   const getCategories = React.useCallback(
     async (queryString: string): Promise<void> => {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import useDashboardReducer from "./useDashboardReducer";
+import dashboardReducer from "./dashboardReducer";
 import * as actions from "./actions";
 import { DashboardData } from "./types";
 import { SuccessResponse } from "@/api/types";
@@ -10,7 +10,7 @@ import { formatError } from "@/lib/format";
 import { clearLocalStorage } from "@/lib/authStorage";
 
 const useDashboard = () => {
-  const [{ dashboard }, dispatch] = useDashboardReducer();
+  const [{ dashboard }, dispatch] = dashboardReducer();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

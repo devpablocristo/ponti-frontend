@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 
 import * as actions from "./actions";
 
-import useCustomersReducer from "./useCustomersReducer";
+import customersReducer from "./customersReducer";
 import { apiClient } from "@/api/client";
 import { CustomerData, CustomerPayload, CustomerPayloadInput } from "./types";
 import { SuccessResponse } from "@/api/types";
@@ -15,7 +15,7 @@ function sanitizeInput(input: CustomerPayloadInput): CustomerPayloadInput {
 
 const useCustomers = () => {
   const [{ total, customers, processing, error }, dispatch] =
-    useCustomersReducer();
+    customersReducer();
   const lastQueryRef = useRef<string>("per_page=1000");
 
   const getCustomers = React.useCallback(

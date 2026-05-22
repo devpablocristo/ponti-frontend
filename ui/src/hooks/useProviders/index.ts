@@ -6,11 +6,11 @@ import { apiClient } from "@/api/client";
 import { Payload } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { formatError } from "@/lib/format";
-import useProvidersReducer from "./useProvidersReducer";
+import providersReducer from "./providersReducer";
 
 const useProviders = () => {
   const [{ total, providers, processing, error }, dispatch] =
-    useProvidersReducer();
+    providersReducer();
 
   const getProviders = React.useCallback(
     async (queryString: string): Promise<void> => {

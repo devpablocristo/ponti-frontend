@@ -4,6 +4,9 @@
 .env
 .idea
 
+# yarn es el manager oficial — bloquear package-lock.json espurio
+**/package-lock.json
+
 .cursorignore
 .cursorrules
 .deps/

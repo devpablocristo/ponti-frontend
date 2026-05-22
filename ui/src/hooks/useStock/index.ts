@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { apiClient } from "@/api/client";
 
-import useStockReducer from "./useStockReducer";
+import stockReducer from "./stockReducer";
 import * as actions from "./actions";
 import { SuccessResponse } from "@/api/types";
 import { GetStocksResponse } from "./types";
@@ -11,7 +11,7 @@ import { withQuery } from "@/lib/workspaceQuery";
 type StockMutationResponse = SuccessResponse<unknown>;
 
 const useStock = () => {
-  const [{ currentPage, stock, summary }, dispatch] = useStockReducer();
+  const [{ currentPage, stock, summary }, dispatch] = stockReducer();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
