@@ -10,35 +10,27 @@
 //
 // Tailwind está configurado con `darkMode: "class"` (ver tailwind.config.js),
 // así que basta con togglear la clase para que TODOS los `dark:` se activen.
+//
+// El hook `useTheme` y los tipos viven en archivos separados para no romper
+// la regla `react-refresh/only-export-components` (el .tsx solo debe
+// exportar componentes; tipos y hooks van en .ts adyacente).
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 
-export type Theme = "light" | "dark" | "system";
+import {
+  ThemeContext,
+  type Theme,
+  type ThemeContextValue,
+} from "./ThemeContext";
 
 const STORAGE_KEY = "ponti:theme";
 const VALID: ReadonlySet<Theme> = new Set<Theme>(["light", "dark", "system"]);
-
-type ThemeContextValue = {
-  /** Preferencia almacenada (la que el usuario eligió en el toggle). */
-  theme: Theme;
-  /**
-   * Tema efectivamente aplicado al DOM ("light" | "dark"). Útil cuando
-   * un componente necesita saber el color real (ej. una librería de gráficos
-   * que recibe un theme prop) sin reimplementar la lógica de `system`.
-   */
-  resolvedTheme: "light" | "dark";
-  setTheme: (next: Theme) => void;
-};
-
-const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readStoredTheme(): Theme {
   if (typeof window === "undefined") return "system";
@@ -93,12 +85,4 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-}
-
-export function useTheme(): ThemeContextValue {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) {
-    throw new Error("useTheme debe usarse dentro de <ThemeProvider>");
-  }
-  return ctx;
 }

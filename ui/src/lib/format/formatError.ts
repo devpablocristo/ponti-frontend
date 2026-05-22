@@ -55,7 +55,6 @@ export function formatError(err: unknown, opts: FormatErrorOptions): string {
   // detectar patterns nuevos.
   if (rawBackend) {
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.warn(
         "[formatError] mensaje del BE sin traducción registrada:",
         rawBackend,

@@ -78,7 +78,10 @@ vi.mock("@/api/client", () => {
 
 // CSV con la shape real del export de /admin/work-orders. Headers de 18 cols
 // con separador `;` y prefijo `sep=;` BOM (como lo emite el BE).
-const CSV_CONTENT = `﻿sep=;
+// BOM (U+FEFF) escapado como \uFEFF para que ESLint no marque "irregular
+// whitespace" en el archivo fuente. El parser del CSV en `parseCsv` strippea
+// el BOM, así que el comportamiento testeado es idéntico al CSV real del BE.
+const CSV_CONTENT = "\uFEFF" + `sep=;
 NUMERO DE ORDEN;PROYECTO;CAMPO;LOTE;FECHA;CULTIVO;LABOR;TIPO/CLASE;CONTRATISTA;INVERSOR;SUPERFICIE;INSUMO;CONSUMO;RUBRO;DOSIS;COST U$/HA;PRECIO UNIDAD;TOTAL COSTO
 1885.19;JUJUY (MEALLA/ACHERAL);SJDD;LOTE 54;21/04/2026;Poroto rojo;GESTION DE AGROQ. Y SEMILLAS;Labor;VEDOYA;E.VEDOYA;77.00;GESTION DE AGROQ. Y SEMILLAS;0.00;Otras Labores;0.00;0.65;0.65;50.05
 1885.18;JUJUY (MEALLA/ACHERAL);SJDD;LOTE 15B;21/04/2026;Poroto Alubia;GESTION DE AGROQ. Y SEMILLAS;Labor;VEDOYA;E.VEDOYA;8.00;GESTION DE AGROQ. Y SEMILLAS;0.00;Otras Labores;0.00;0.65;0.65;5.20
@@ -102,7 +105,7 @@ describe("importWorkOrdersFromCsv (round-trip /admin/work-orders)", () => {
   it("reporta diagnóstico claro cuando un catálogo viene vacío", async () => {
     // Mismo CSV pero con un lote que NO existe en el catálogo: debe fallar
     // con el nombre exacto del valor leído (no error genérico).
-    const badCsv = `﻿sep=;
+    const badCsv = `\uFEFFsep=;
 NUMERO DE ORDEN;PROYECTO;CAMPO;LOTE;FECHA;CULTIVO;LABOR;TIPO/CLASE;CONTRATISTA;INVERSOR;SUPERFICIE;INSUMO;CONSUMO;RUBRO;DOSIS;COST U$/HA;PRECIO UNIDAD;TOTAL COSTO
 1999;PROYECTO X;SJDD;LOTE INEXISTENTE;21/04/2026;Poroto rojo;GESTION DE AGROQ. Y SEMILLAS;Labor;VEDOYA;E.VEDOYA;10.00;;0.00;;0.00;0.65;0.65;6.50
 `;

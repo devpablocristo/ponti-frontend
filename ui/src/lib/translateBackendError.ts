@@ -258,7 +258,6 @@ export function translateBackendError(raw: string): string {
   // Fallback: si nada matchea, devolvemos el mensaje crudo. En dev logueamos
   // para detectar patterns nuevos y agregarlos acá.
   if (import.meta.env.DEV && msg && /^[a-z]/i.test(msg)) {
-    // eslint-disable-next-line no-console
     console.warn("[translateBackendError] pattern no cubierto:", msg);
   }
   return raw;
