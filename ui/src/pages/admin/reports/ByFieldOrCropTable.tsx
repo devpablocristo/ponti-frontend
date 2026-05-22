@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { FieldCropReportData, RowToRender } from "../../../hooks/useReporting/types.ts";
 import { cropColors } from "../colors";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -110,8 +110,11 @@ export const ByFieldOrCropTable = ({
           <tr className="h-14">
             <th></th>
             {data.columns &&
+              // Cada columna agrupa field+crop; el par es único por columna.
+              // Usamos Fragment con key explícita para que React no warnee
+              // ni colapse columnas con field_id o crop_id repetidos.
               data.columns.map((row) => (
-                <>
+                <Fragment key={`${row.field_id}-${row.crop_id}`}>
                   <th className="w-2"></th>
                   {/* --- MODIFICACIÓN DEL ENCABEZADO --- */}
                   <th className="p-2 align-middle w-[165px]">
@@ -124,7 +127,7 @@ export const ByFieldOrCropTable = ({
                       <CropBadge cropName={row.crop_name} />
                     </div>
                   </th>
-                </>
+                </Fragment>
               ))}
           </tr>
         </thead>
@@ -209,11 +212,10 @@ export const ByFieldOrCropTable = ({
           const formattedValue = valueFormat.crop(rowValue);
 
           return (
-            <>
+            <Fragment key={`${column.id}-${index}`}>
               <td className="w-2 bg-white dark:bg-slate-800"></td>
               {showIndicator ? (
                 <td
-                  key={index}
                   className={`${finalRowClasses} p-0`}
                 >
                   <div className="flex items-center justify-center h-full w-full gap-1">
@@ -236,7 +238,6 @@ export const ByFieldOrCropTable = ({
                 </td>
               ) : (
                 <td
-                  key={index}
                   className={`${finalRowClasses} p-0`}
                 >
                   <div className="flex items-center justify-center h-full w-full">
@@ -244,7 +245,7 @@ export const ByFieldOrCropTable = ({
                   </div>
                 </td>
               )}
-            </>
+            </Fragment>
           );
         })}
       </tr>
@@ -254,13 +255,17 @@ export const ByFieldOrCropTable = ({
       return rowContent;
     }
 
+    // Cuando hay spacer, renderRow devuelve dos `<tr>` envueltos. El
+    // Fragment necesita key explícita porque renderRow es el ítem del
+    // `rows?.map(...)` en <tbody>. La key del `<tr>` interno se preserva
+    // como identidad fina del rowContent.
     return (
-      <>
+      <Fragment key={key}>
         <tr aria-hidden="true">
           <td colSpan={data!.columns.length * 2 + 1} className={`${spacerBeforeHeight} bg-white`}></td>
         </tr>
         {rowContent}
-      </>
+      </Fragment>
     );
   }
 };

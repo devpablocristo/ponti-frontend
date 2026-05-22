@@ -27,6 +27,12 @@ services:
       # Cross-platform: la UI habla con el BFF por red interna de Docker.
       - BFF_URL=http://ponti-bff:3000
       - YARN_CACHE_FOLDER=/yarn-cache
+      # Force chokidar polling so Vite's file watcher no satura el
+      # `fs.inotify.max_user_watches` del host (defualt 65536 en Linux
+      # crashea con ENOSPC cuando se mira todo `src/`). Polling no usa
+      # inotify; cuesta un poco más de CPU en idle pero arranca siempre.
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=1000
     depends_on:
       ponti-frontend-volumes:
         condition: service_completed_successfully

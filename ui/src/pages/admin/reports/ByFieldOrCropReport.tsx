@@ -339,13 +339,18 @@ function ByFieldOrCropReport() {
                     name="crop"
                     value={ selectedCrop }
                     onChange={ (e) => setSelectedCrop(e.target.value) }
-                    options={ reportingData && reportingData.columns ? [
-                      { id: 0, name: "Todos" },
-                      ...reportingData.columns.map((crop) => ({
-                        id: crop.crop_id,
-                        name: crop.crop_name,
-                      })),
-                    ] : [] }
+                    // Deduplicar por crop_id: un mismo cultivo aparece varias
+                    // veces en `columns` (una por cada campo donde se sembró).
+                    // Sin dedup, React loggea "duplicate key" porque cada
+                    // <option> termina con el mismo crop_id.
+                    options={ reportingData && reportingData.columns
+                      ? reportingData.columns.reduce((acc, crop) => {
+                          if (acc.findIndex(c => c.id === crop.crop_id) === -1) {
+                            acc.push({ id: crop.crop_id, name: crop.crop_name });
+                          }
+                          return acc;
+                        }, [{ id: 0, name: "Todos" }])
+                      : [] }
                     size="sm"
                     fullWidth
                   />

@@ -16,6 +16,7 @@ import useStock from "../../../hooks/useStock";
 import { getUnitName } from "../../../constants/units";
 import { apiClient } from "@/api/client";
 import { formatError } from "@/lib/format";
+import { filterActive } from "@/lib/lifecycle/filterActive";
 import { notify } from "@/lib/notify";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
@@ -185,10 +186,11 @@ export default function CreateOrder({
 
   useEffect(() => {
     if (!selectedProject) return;
-    const projectInvestors = Array.isArray(selectedProject.investors)
-      ? selectedProject.investors
-      : [];
-    const projectFields = Array.isArray(selectedProject.fields) ? selectedProject.fields : [];
+    // filterActive defensivo: el BFF debería devolver solo entidades activas
+    // en los nested arrays (investors/fields/lots) del proyecto. Mientras esa
+    // garantía no esté cerrada en BE (Fase 8), el FE blinda los selectores.
+    const projectInvestors = filterActive(selectedProject.investors);
+    const projectFields = filterActive(selectedProject.fields);
 
     setInvestors(
       projectInvestors.filter((i) => i.id !== null).map((i) => ({ id: i.id!, name: i.name }))
@@ -206,7 +208,7 @@ export default function CreateOrder({
         name: foundField.name,
         project_id: projectId || 0,
       });
-      setLots(Array.isArray(foundField.lots) ? foundField.lots : []);
+      setLots(filterActive(foundField.lots));
     } else {
       setLots([]);
     }
@@ -514,28 +516,22 @@ export default function CreateOrder({
               <SelectField
                 label="Campo"
                 name="field"
-                options={
-                  selectedProject
-                    ? (Array.isArray(selectedProject.fields) ? selectedProject.fields : []).map(
-                        (field) => ({
-                          id: field.id,
-                          name: field.name,
-                        })
-                      )
-                    : []
-                }
+                options={filterActive(selectedProject?.fields).map((field) => ({
+                  id: field.id,
+                  name: field.name,
+                }))}
                 value={field?.id?.toString() || ""}
                 onChange={(e) => {
-                  const selectedField = (
-                    Array.isArray(selectedProject?.fields) ? selectedProject.fields : []
-                  ).find((f) => f.id === Number(e.target.value));
+                  const selectedField = filterActive(selectedProject?.fields).find(
+                    (f) => f.id === Number(e.target.value)
+                  );
                   if (selectedField) {
                     setField({
                       id: selectedField.id,
                       name: selectedField.name,
                       project_id: projectId || 0,
                     });
-                    setLots(Array.isArray(selectedField.lots) ? selectedField.lots : []);
+                    setLots(filterActive(selectedField.lots));
                   }
                 }}
                 disabled={!projectId || processing}
@@ -579,7 +575,7 @@ export default function CreateOrder({
                   label="Labor"
                   placeholder="Selecciona el labor"
                   name="labor"
-                  options={labors}
+                  options={filterActive(labors)}
                   value={labor?.id?.toString() || ""}
                   onChange={(e) => {
                     const selectedLabor = labors.find((l) => l.id === Number(e.target.value));

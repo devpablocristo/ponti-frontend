@@ -30,7 +30,7 @@ import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import ArchivedWorkOrders from "../database/work-orders/ArchivedWorkOrders";
+import ArchivedWorkOrders from "../master-data/work-orders/ArchivedWorkOrders";
 import {
   parseAndResolveWorkOrdersCsv,
   WorkOrderPreviewRow,
@@ -708,11 +708,11 @@ export function WorkOrders() {
           title: "Insumos pendientes",
           message:
             `${message}\n\n` +
-            "Dirigirse a Base de Datos > Insumos > Pendientes para completar la información faltante.",
+            "Dirigirse a Datos Maestros > Administrar Insumos > Pendientes para completar la información faltante.",
           primaryButtonText: "Ir a Insumos",
           secondaryButtonText: "Cerrar",
           onConfirm: () => {
-            navigate("/admin/database/supplies/list");
+            navigate("/admin/master-data/supplies/list");
           },
         });
         setIsModalOpen(true);

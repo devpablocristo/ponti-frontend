@@ -10,39 +10,39 @@ import { Labors } from "./pages/admin/tasks/Labors";
 import { WorkOrders } from "./pages/admin/workorders/WorkOrders";
 import { Stock } from "./pages/admin/stock/Stock";
 import Access from "./pages/admin/access/Access";
-import CustomersList from "./pages/admin/database/customers/CustomersList";
-import CustomerEditor from "./pages/admin/database/customers/CustomerEditor";
-import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
-import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
-import ArchivedInvestors from "./pages/admin/database/investors/ArchivedInvestors";
-import InvestorsList from "./pages/admin/database/investors/InvestorsList";
-import ArchivedLots from "./pages/admin/database/lots/ArchivedLots";
-import ArchivedSupplies from "./pages/admin/database/supplies/ArchivedSupplies";
-import ArchivedWorkOrders from "./pages/admin/database/work-orders/ArchivedWorkOrders";
-import ArchivedFields from "./pages/admin/database/fields/ArchivedFields";
-import FieldsList from "./pages/admin/database/fields/FieldsList";
-import ArchivedManagers from "./pages/admin/database/managers/ArchivedManagers";
-import ManagersList from "./pages/admin/database/managers/ManagersList";
-import ArchivedCampaigns from "./pages/admin/database/campaigns/ArchivedCampaigns";
-import CampaignsList from "./pages/admin/database/campaigns/CampaignsList";
-import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
-import DatabaseLaborsCatalog from "./pages/admin/database/labors/LaborsCatalog";
+import CustomersList from "./pages/admin/master-data/customers/CustomersList";
+import CustomerEditor from "./pages/admin/master-data/customers/CustomerEditor";
+import ArchivedCustomers from "./pages/admin/master-data/customers/ArchivedCustomers";
+import ArchivedProjects from "./pages/admin/master-data/projects/ArchivedProjects";
+import ArchivedInvestors from "./pages/admin/master-data/investors/ArchivedInvestors";
+import InvestorsList from "./pages/admin/master-data/investors/InvestorsList";
+import ArchivedLots from "./pages/admin/master-data/lots/ArchivedLots";
+import ArchivedSupplies from "./pages/admin/master-data/supplies/ArchivedSupplies";
+import ArchivedWorkOrders from "./pages/admin/master-data/work-orders/ArchivedWorkOrders";
+import ArchivedFields from "./pages/admin/master-data/fields/ArchivedFields";
+import FieldsList from "./pages/admin/master-data/fields/FieldsList";
+import ArchivedManagers from "./pages/admin/master-data/managers/ArchivedManagers";
+import ManagersList from "./pages/admin/master-data/managers/ManagersList";
+import ArchivedCampaigns from "./pages/admin/master-data/campaigns/ArchivedCampaigns";
+import CampaignsList from "./pages/admin/master-data/campaigns/CampaignsList";
+import DataIntegrity from "./pages/admin/master-data/data-integrity/Integrity";
+import DatabaseLaborsCatalog from "./pages/admin/master-data/labors/LaborsCatalog";
 import Lots from "./pages/admin/lots/Lots";
-import SuppliesCatalog from "./pages/admin/database/supplies/SuppliesCatalog";
-import DollarForm from "./pages/admin/database/dollar/DollarForm";
-import CommerceForm from "./pages/admin/database/commerce/CommerceForm";
-import ListSupplies from "./pages/admin/database/supplies/List";
-import ListTasks from "./pages/admin/database/labors/List";
-import ArchivedLabors from "./pages/admin/database/labors/ArchivedLabors";
+import SuppliesCatalog from "./pages/admin/master-data/supplies/SuppliesCatalog";
+import DollarForm from "./pages/admin/master-data/dollar/DollarForm";
+import CommerceForm from "./pages/admin/master-data/commerce/CommerceForm";
+import ListSupplies from "./pages/admin/master-data/supplies/List";
+import ListTasks from "./pages/admin/master-data/labors/List";
+import ArchivedLabors from "./pages/admin/master-data/labors/ArchivedLabors";
 import ByFieldOrCropReport from "./pages/admin/reports/ByFieldOrCropReport.tsx";
 import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
 import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionReportV2.tsx";
 import AIAssistant from "./pages/admin/ai-assistant/AIAssistant";
 import Notifications from "./pages/admin/notifications/Notifications";
 import ArchivedSupplyMovements from "./pages/admin/supply-movements/ArchivedSupplyMovements";
-import ActorsList from "./pages/admin/database/actors/ActorsList";
-import ArchivedActors from "./pages/admin/database/actors/ArchivedActors";
-import DuplicateActors from "./pages/admin/database/actors/DuplicateActors";
+import ActorsList from "./pages/admin/master-data/actors/ActorsList";
+import ArchivedActors from "./pages/admin/master-data/actors/ArchivedActors";
+import DuplicateActors from "./pages/admin/master-data/actors/DuplicateActors";
 
 export default [
   {
@@ -112,91 +112,91 @@ export default [
         element: <WorkOrders />,
       },
       {
-        path: "database/customers",
-        element: <Navigate to="/admin/database/customers/editor" replace />,
+        path: "master-data/customers",
+        element: <Navigate to="/admin/master-data/customers/editor" replace />,
       },
       {
-        path: "database/actors",
+        path: "master-data/actors",
         element: <ActorsList />,
       },
       {
-        path: "database/actors/clientes",
+        path: "master-data/actors/clientes",
         element: <ActorsList rolePreset="cliente" />,
       },
       {
-        path: "database/actors/inversores",
+        path: "master-data/actors/inversores",
         element: <ActorsList rolePreset="inversor" />,
       },
       {
-        path: "database/actors/responsables",
+        path: "master-data/actors/responsables",
         element: <ActorsList rolePreset="responsable" />,
       },
       {
-        path: "database/actors/proveedores",
+        path: "master-data/actors/proveedores",
         element: <ActorsList rolePreset="proveedor" />,
       },
       {
-        path: "database/actors/contratistas",
+        path: "master-data/actors/contratistas",
         element: <ActorsList rolePreset="contratista" />,
       },
       {
-        path: "database/actors/duplicates",
+        path: "master-data/actors/duplicates",
         element: <DuplicateActors />,
       },
       {
-        path: "database/actors/archived",
+        path: "master-data/actors/archived",
         element: <ArchivedActors />,
       },
       {
-        path: "database/customers/list",
-        element: <Navigate to="/admin/database/projects/list" replace />,
+        path: "master-data/customers/list",
+        element: <Navigate to="/admin/master-data/projects/list" replace />,
       },
       {
-        path: "database/projects/list",
+        path: "master-data/projects/list",
         element: <CustomersList projectsOnly />,
       },
       {
-        path: "database/customers/archived",
+        path: "master-data/customers/archived",
         element: <ArchivedCustomers />,
       },
       {
-        path: "database/customers/editor",
+        path: "master-data/customers/editor",
         element: <CustomerEditor />,
       },
       {
-        path: "database/customers/:id/editor",
+        path: "master-data/customers/:id/editor",
         element: <CustomerEditor />,
       },
       {
-        path: "database/customers/:id",
+        path: "master-data/customers/:id",
         element: <Navigate to="editor" replace />,
       },
       {
-        path: "database/projects/archived",
+        path: "master-data/projects/archived",
         element: <ArchivedProjects />,
       },
       {
-        path: "database/investors",
+        path: "master-data/investors",
         element: <InvestorsList editorOnly />,
       },
       {
-        path: "database/investors/create",
+        path: "master-data/investors/create",
         element: <InvestorsList />,
       },
       {
-        path: "database/investors/archived",
+        path: "master-data/investors/archived",
         element: <ArchivedInvestors />,
       },
       {
-        path: "database/lots/archived",
+        path: "master-data/lots/archived",
         element: <ArchivedLots />,
       },
       {
-        path: "database/supplies/archived",
+        path: "master-data/supplies/archived",
         element: <ArchivedSupplies />,
       },
       {
-        path: "database/work-orders/archived",
+        path: "master-data/work-orders/archived",
         element: <ArchivedWorkOrders />,
       },
       {
@@ -204,67 +204,67 @@ export default [
         element: <ArchivedSupplyMovements />,
       },
       {
-        path: "database/fields",
+        path: "master-data/fields",
         element: <FieldsList />,
       },
       {
-        path: "database/fields/archived",
+        path: "master-data/fields/archived",
         element: <ArchivedFields />,
       },
       {
-        path: "database/managers",
+        path: "master-data/managers",
         element: <ManagersList editorOnly />,
       },
       {
-        path: "database/managers/create",
+        path: "master-data/managers/create",
         element: <ManagersList />,
       },
       {
-        path: "database/managers/archived",
+        path: "master-data/managers/archived",
         element: <ArchivedManagers />,
       },
       {
-        path: "database/campaigns",
+        path: "master-data/campaigns",
         element: <CampaignsList editorOnly />,
       },
       {
-        path: "database/campaigns/create",
+        path: "master-data/campaigns/create",
         element: <CampaignsList />,
       },
       {
-        path: "database/campaigns/archived",
+        path: "master-data/campaigns/archived",
         element: <ArchivedCampaigns />,
       },
       {
-        path: "database/data-integrity",
+        path: "master-data/data-integrity",
         element: <DataIntegrity />,
       },
       {
-        path: "database/labors",
+        path: "master-data/labors",
         element: <DatabaseLaborsCatalog />,
       },
       {
-        path: "database/supplies",
+        path: "master-data/supplies",
         element: <SuppliesCatalog />,
       },
       {
-        path: "database/supplies/list",
+        path: "master-data/supplies/list",
         element: <ListSupplies editorOnly />,
       },
       {
-        path: "database/labors/list",
+        path: "master-data/labors/list",
         element: <ListTasks editorOnly />,
       },
       {
-        path: "database/labors/archived",
+        path: "master-data/labors/archived",
         element: <ArchivedLabors />,
       },
       {
-        path: "database/dollar",
+        path: "master-data/dollar",
         element: <DollarForm />,
       },
       {
-        path: "database/commerce",
+        path: "master-data/commerce",
         element: <CommerceForm />,
       },
       {

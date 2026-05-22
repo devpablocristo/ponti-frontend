@@ -5,6 +5,7 @@ import { Plus, Save, Trash2 } from "lucide-react";
 import { apiClient } from "@/api/client";
 import { formatError } from "@/lib/format";
 import { leaseTypeHasFixedValue, leaseTypeHasPercent } from "@/lib/leaseTypes";
+import { filterActive } from "@/lib/lifecycle/filterActive";
 import Button from "../../../../components/Button/Button";
 import { IconActionButton } from "../../../../components/Button/IconActionButton";
 import InputField from "../../../../components/Input/InputField";
@@ -88,6 +89,8 @@ type ActorPayload = {
     id: number;
     display_name: string;
     roles?: string[];
+    archived_at?: string | null;
+    deleted_at?: string | null;
   }>;
   total: number;
 };
@@ -283,7 +286,10 @@ export default function CustomerEditor({
             await apiClient.get<ApiResponse<ActorPayload>>("/actors?page=1&per_page=1000");
           if (!cancelled) {
             setActorOptions(
-              (actorsResponse.data?.data ?? []).map((actor) => ({
+              // filterActive defensivo: el BFF debería devolver solo activos,
+              // pero hasta que migremos el endpoint (Fase 8) garantizamos
+              // aquí que el selector nunca muestre un actor archivado.
+              filterActive(actorsResponse.data?.data ?? []).map((actor) => ({
                 id: actor.id,
                 name: actor.display_name,
                 roles: actor.roles ?? [],
@@ -1347,7 +1353,7 @@ export default function CustomerEditor({
       onClose?.();
       return;
     }
-    navigate("/admin/database/customers/list");
+    navigate("/admin/master-data/customers/list");
   };
 
   return (

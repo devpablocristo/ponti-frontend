@@ -48,7 +48,7 @@ export function useLotColumns({
         filterOptions: getFilterOptionsForColumn("project_name"),
         render: (value, data) => (
           <strong className="text-blue-700">
-            <a href={`/admin/database/customers/${data.project_id}`}>
+            <a href={`/admin/master-data/customers/${data.project_id}`}>
               {formatProperName(value)}
             </a>
           </strong>

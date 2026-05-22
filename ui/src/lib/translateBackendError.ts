@@ -37,15 +37,29 @@ export function translateBackendError(raw: string): string {
 
   // ─── Patterns ESPECÍFICOS (van primero) ─────────────────────────────────────
 
-  // "cannot restore X while project is archived"
-  const cannotRestoreWhileProject = msg.match(
-    /cannot restore (\w+(?: \w+)?) while project is archived/i,
+  // "cannot restore X while Y is archived[; restore the Y first]"
+  // Cubre: project, field, lot como parent del child a restaurar. Mensaje
+  // accionable que le dice al usuario exactamente qué entidad restaurar primero.
+  const cannotRestoreWhileParent = msg.match(
+    /cannot restore (\w+(?: \w+)?) while (\w+(?: \w+)?) is archived(?:;.*)?$/i,
   );
-  if (cannotRestoreWhileProject) {
-    const e = lookupBackendEntity(cannotRestoreWhileProject[1]);
-    if (e) {
-      return `No se puede restaurar ${withArticle(e)} porque su proyecto está archivado. Restaurá primero el proyecto.`;
+  if (cannotRestoreWhileParent) {
+    const child = lookupBackendEntity(cannotRestoreWhileParent[1]);
+    const parent = lookupBackendEntity(cannotRestoreWhileParent[2]);
+    if (child && parent) {
+      return `No se puede restaurar ${withArticle(child)} hasta que se restaure ${withArticle(parent)} al que pertenece.`;
     }
+  }
+
+  // "actor has N active references; archive or reassign them first"
+  // G6: archive de actor bloqueado por referencias activas (customers,
+  // managers, investors, etc. apuntan al actor).
+  const actorHasRefs = msg.match(
+    /^actor has (\d+) active references?; archive or reassign them first$/i,
+  );
+  if (actorHasRefs) {
+    const n = actorHasRefs[1];
+    return `El actor tiene ${n} referencia${n === "1" ? "" : "s"} activa${n === "1" ? "" : "s"} (clientes, responsables, inversores). Archivá o reasigná esas referencias antes de archivar el actor.`;
   }
 
   // "work order already exists for number X and project Y"

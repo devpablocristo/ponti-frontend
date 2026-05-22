@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Plus, Upload } from "lucide-react";
+import { Archive, Download, Plus, Upload } from "lucide-react";
 
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
@@ -18,6 +18,7 @@ import useCategories from "../../../../hooks/useCategories";
 import { CATEGORY_TYPE_ID, categoryTypeQuery } from "@/lib/categoryTypes";
 import { apiClient } from "../../../../api/client";
 import { notify } from "@/lib/notify";
+import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
@@ -27,6 +28,7 @@ import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { buildTimestampedFilename, downloadBlob, CSV_ACCEPT } from "../../fileTransfer";
 
 import { LABOR_ENTITY as ENTITY } from "../../entities";
+import ArchivedLabors from "./ArchivedLabors";
 import LaborsCatalog, { type Labor as LaborRow } from "./LaborsCatalog";
 import {
   getValueByAliases,
@@ -90,6 +92,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
   const [importedRows, setImportedRows] = useState<LaborRow[] | undefined>(undefined);
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const pagination = usePagination({ perPage: 10 });
   const { buildPagination, resetPage } = pagination;
   const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
@@ -336,6 +339,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
       />
       <AppFilterBar
         filters={filters}
+        // Orden canónico Datos Maestros: extras → Importar → Exportar → Archivados → Nuevo.
         actions={[
           {
             label: "Importar",
@@ -354,7 +358,14 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
             onClick: () => handleExport(),
           },
           {
-            label: "Nueva Labor",
+            label: "Archivados",
+            icon: <Archive className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            onClick: () => setArchivedDrawerOpen(true),
+          },
+          {
+            label: "Nueva",
             icon: <Plus className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
@@ -366,6 +377,13 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
           },
         ]}
       />
+      <ArchivedDrawer
+        open={archivedDrawerOpen}
+        title="Labores archivadas"
+        onClose={() => setArchivedDrawerOpen(false)}
+      >
+        <ArchivedLabors onAfterRestore={refresh} />
+      </ArchivedDrawer>
       <DrawerShell
         open={importDrawerOpen}
         onClose={() => {
@@ -393,7 +411,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
               variant="primary"
               size="sm"
               className="text-sm font-medium flex items-center gap-1"
-              href="/admin/database/labors"
+              href="/admin/master-data/labors"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

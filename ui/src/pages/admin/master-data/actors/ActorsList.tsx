@@ -310,7 +310,19 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
             allLabel: "Todos los tipos",
           },
         ]}
+        // Orden canónico Datos Maestros: extras → Importar → Exportar → Archivados → Nuevo.
         actions={[
+          ...(!rolePreset
+            ? [
+                {
+                  label: "Duplicados",
+                  icon: <GitCompare className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: () => setDuplicatesDrawerOpen(true),
+                },
+              ]
+            : []),
           {
             label: "Importar",
             icon: <Download className="h-4 w-4" />,
@@ -326,17 +338,6 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
             isPrimary: true,
             onClick: handleExport,
           },
-          ...(!rolePreset
-            ? [
-                {
-                  label: "Duplicados",
-                  icon: <GitCompare className="h-4 w-4" />,
-                  variant: "primary" as const,
-                  isPrimary: true,
-                  onClick: () => setDuplicatesDrawerOpen(true),
-                },
-              ]
-            : []),
           {
             label: "Archivados",
             icon: <Archive className="h-4 w-4" />,

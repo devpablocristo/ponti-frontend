@@ -127,6 +127,7 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
     <div>
       <AppFilterBar
         filters={filters}
+        // Orden canónico Datos Maestros: extras → Importar → Exportar → Archivados → Nuevo.
         actions={[
           {
             label: "Exportar",
@@ -136,18 +137,18 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
             onClick: handleExport,
           },
           {
-            label: "Nueva Campaña",
-            icon: <Plus className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: drawer.openCreate,
-          },
-          {
             label: "Archivados",
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             onClick: () => setArchivedDrawerOpen(true),
+          },
+          {
+            label: "Nueva",
+            icon: <Plus className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            onClick: drawer.openCreate,
           },
         ]}
       />

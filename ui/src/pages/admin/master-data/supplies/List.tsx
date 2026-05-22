@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Plus, Upload } from "lucide-react";
+import { Archive, Download, Plus, Upload } from "lucide-react";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
@@ -19,6 +19,7 @@ import { apiClient } from "@/api/client";
 import { notify } from "@/lib/notify";
 import { Notification } from "../../../../components/feedback/Notification";
 import { Checkbox } from "../../../../components/Input/Checkbox";
+import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
@@ -26,6 +27,7 @@ import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { SUPPLY_ENTITY as ENTITY } from "../../entities";
 import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
+import ArchivedSupplies from "./ArchivedSupplies";
 import SuppliesCatalog from "./SuppliesCatalog";
 
 const renderPriceCell = (value: unknown, row: Supply) => (
@@ -85,6 +87,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
   const [modalOpen, setModalOpen] = useState(false);
   const [item, setItem] = useState<Supply | null>(null);
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const pagination = usePagination({ perPage: 10 });
   const [suppliesMode, setSuppliesMode] = useState<SuppliesMode>("all");
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
@@ -346,6 +349,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
 
   return (
     <div className="w-full mx-auto">
+      {/* Orden canónico Datos Maestros: extras → Importar → Exportar → Archivados → Nuevo. */}
       <AppFilterBar filters={filters} actions={[
         {
           label: "Importar",
@@ -364,7 +368,14 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
           onClick: () => handleExport(),
         },
         {
-          label: "Nuevo Insumo",
+          label: "Archivados",
+          icon: <Archive className="h-4 w-4" />,
+          variant: "primary",
+          isPrimary: true,
+          onClick: () => setArchivedDrawerOpen(true),
+        },
+        {
+          label: "Nuevo",
           icon: <Plus className="h-4 w-4" />,
           variant: "primary",
           isPrimary: true,
@@ -375,6 +386,13 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
           },
         },
       ]} />
+      <ArchivedDrawer
+        open={archivedDrawerOpen}
+        title="Insumos archivados"
+        onClose={() => setArchivedDrawerOpen(false)}
+      >
+        <ArchivedSupplies onAfterRestore={refresh} />
+      </ArchivedDrawer>
       <DrawerShell
         open={importDrawerOpen}
         onClose={() => setImportDrawerOpen(false)}
@@ -401,7 +419,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
               variant="primary"
               size="sm"
               className="text-sm font-medium flex items-center gap-1"
-              href="/admin/database/supplies"
+              href="/admin/master-data/supplies"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"

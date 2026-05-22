@@ -28,10 +28,10 @@ import { WORKORDER_ENTITY } from "../entities";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import ArchivedWorkOrders from "../database/work-orders/ArchivedWorkOrders";
+import ArchivedWorkOrders from "../master-data/work-orders/ArchivedWorkOrders";
 import CreateOrder from "../workorders/CreateOrder";
 // El "Importar" de /admin/tasks NO importa el catálogo de labores
-// (eso está en /admin/database/labors). Acá las filas son las labores
+// (eso está en /admin/master-data/labors). Acá las filas son las labores
 // aplicadas a Órdenes de Trabajo — mismo importer que /admin/work-orders,
 // solo cambia que el CSV viene sin columnas de insumos (items vacío).
 import {

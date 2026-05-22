@@ -793,7 +793,7 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
                 variant="primary"
                 size="sm"
                 className="text-sm font-medium flex items-center gap-1"
-                href="/admin/database/supplies/list"
+                href="/admin/master-data/supplies/list"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

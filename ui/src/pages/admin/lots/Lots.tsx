@@ -12,7 +12,7 @@ import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "
 
 import { apiClient } from "@/api/client";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
-import CustomerEditor from "../database/customers/CustomerEditor";
+import CustomerEditor from "../master-data/customers/CustomerEditor";
 import useLots from "../../../hooks/useLots";
 import { LotsData } from "../../../hooks/useLots/types";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -30,7 +30,7 @@ import { useLotColumns } from "./useLotColumns";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import ArchivedLots from "../database/lots/ArchivedLots";
+import ArchivedLots from "../master-data/lots/ArchivedLots";
 import {
   parseAndResolveLotsCsv,
   LotPreviewRow,

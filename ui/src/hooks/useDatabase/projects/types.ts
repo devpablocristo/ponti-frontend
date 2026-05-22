@@ -15,12 +15,14 @@ export type Project = {
     actor_id?: number | null;
     name: string;
     percentage: number;
+    archived_at?: string | null;
   }[];
   admin_cost_investors: {
     id: number | null;
     actor_id?: number | null;
     name: string;
     percentage: number;
+    archived_at?: string | null;
   }[];
   admin_cost: number;
   planned_cost: number;
@@ -32,6 +34,7 @@ type Data = {
   id: number | null;
   actor_id?: number | null;
   name: string;
+  archived_at?: string | null;
 };
 
 type Field = {
@@ -46,8 +49,10 @@ type Field = {
     actor_id?: number | null;
     name: string;
     percentage: number;
+    archived_at?: string | null;
   }[];
   lots: Plot[];
+  archived_at?: string | null;
 };
 
 export type Plot = {
@@ -59,6 +64,7 @@ export type Plot = {
   current_crop_name?: string;
   previous_crop_name?: string;
   season: string;
+  archived_at?: string | null;
 };
 
 export type ProjectPayload = {

@@ -1,6 +1,6 @@
 const primaryTitles = new Map<string, string>([
   ["/admin/dashboard", "Dashboard"],
-  ["/admin/database/customers/list", "Clientes y Proyectos"],
+  ["/admin/master-data/customers/list", "Clientes y Proyectos"],
   ["/admin/lots", "Lotes"],
   ["/admin/work-orders", "Órdenes de Trabajo"],
   ["/admin/tasks", "Labores"],
@@ -12,42 +12,42 @@ const primaryTitles = new Map<string, string>([
 ]);
 
 const secondaryTitles = new Map<string, string>([
-  ["/admin/database/data-integrity", "Integridad de Datos"],
+  ["/admin/master-data/data-integrity", "Integridad de Datos"],
   ["/admin/informes/aportes", "Aportes por Inversor"],
   ["/admin/informes/campo", "Por Campo o Cultivo"],
   ["/admin/informes/resumen", "Resumen de Resultados"],
-  ["/admin/database/actors", "Todos"],
-  ["/admin/database/actors/clientes", "Clientes"],
-  ["/admin/database/actors/inversores", "Inversores"],
-  ["/admin/database/actors/responsables", "Responsables"],
-  ["/admin/database/actors/proveedores", "Proveedores"],
-  ["/admin/database/actors/contratistas", "Contratistas"],
-  ["/admin/database/actors/duplicates", "Duplicados"],
-  ["/admin/database/actors/archived", "Archivados"],
-  ["/admin/database/customers/editor", "Editar"],
-  ["/admin/database/customers/archived", "Archivados"],
-  ["/admin/database/projects/archived", "Archivados"],
-  ["/admin/database/labors", "Crear"],
-  ["/admin/database/labors/list", "Editar"],
-  ["/admin/database/labors/archived", "Archivados"],
-  ["/admin/database/supplies", "Crear"],
-  ["/admin/database/supplies/list", "Editar"],
-  ["/admin/database/supplies/archived", "Archivados"],
+  ["/admin/master-data/actors", "Todos"],
+  ["/admin/master-data/actors/clientes", "Clientes"],
+  ["/admin/master-data/actors/inversores", "Inversores"],
+  ["/admin/master-data/actors/responsables", "Responsables"],
+  ["/admin/master-data/actors/proveedores", "Proveedores"],
+  ["/admin/master-data/actors/contratistas", "Contratistas"],
+  ["/admin/master-data/actors/duplicates", "Duplicados"],
+  ["/admin/master-data/actors/archived", "Archivados"],
+  ["/admin/master-data/customers/editor", "Editar"],
+  ["/admin/master-data/customers/archived", "Archivados"],
+  ["/admin/master-data/projects/archived", "Archivados"],
+  ["/admin/master-data/labors", "Crear"],
+  ["/admin/master-data/labors/list", "Editar"],
+  ["/admin/master-data/labors/archived", "Archivados"],
+  ["/admin/master-data/supplies", "Crear"],
+  ["/admin/master-data/supplies/list", "Editar"],
+  ["/admin/master-data/supplies/archived", "Archivados"],
   ["/admin/supply-movements/archived", "Movimientos Archivados"],
-  ["/admin/database/investors/create", "Crear"],
-  ["/admin/database/investors", "Editar"],
-  ["/admin/database/investors/archived", "Archivados"],
-  ["/admin/database/managers/create", "Crear"],
-  ["/admin/database/managers", "Editar"],
-  ["/admin/database/managers/archived", "Archivados"],
-  ["/admin/database/campaigns/create", "Crear"],
-  ["/admin/database/campaigns", "Editar"],
-  ["/admin/database/campaigns/archived", "Archivados"],
-  ["/admin/database/lots/archived", "Lotes Archivados"],
-  ["/admin/database/fields/archived", "Campos Archivados"],
-  ["/admin/database/work-orders/archived", "Archivados"],
-  ["/admin/database/dollar", "Cargar Dólar Promedio"],
-  ["/admin/database/commerce", "Cargar Comercialización"],
+  ["/admin/master-data/investors/create", "Crear"],
+  ["/admin/master-data/investors", "Editar"],
+  ["/admin/master-data/investors/archived", "Archivados"],
+  ["/admin/master-data/managers/create", "Crear"],
+  ["/admin/master-data/managers", "Editar"],
+  ["/admin/master-data/managers/archived", "Archivados"],
+  ["/admin/master-data/campaigns/create", "Crear"],
+  ["/admin/master-data/campaigns", "Editar"],
+  ["/admin/master-data/campaigns/archived", "Archivados"],
+  ["/admin/master-data/lots/archived", "Lotes Archivados"],
+  ["/admin/master-data/fields/archived", "Campos Archivados"],
+  ["/admin/master-data/work-orders/archived", "Archivados"],
+  ["/admin/master-data/dollar", "Cargar Dólar Promedio"],
+  ["/admin/master-data/commerce", "Cargar Comercialización"],
 ]);
 
 export function getSidebarTitle(pathname: string) {
@@ -59,7 +59,7 @@ export function getSidebarTitle(pathname: string) {
     return secondaryTitles.get(pathname) ?? "Dashboard";
   }
 
-  if (pathname.startsWith("/admin/database/customers/")) {
+  if (pathname.startsWith("/admin/master-data/customers/")) {
     return "Editar";
   }
 

@@ -21,6 +21,7 @@ import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
 import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
 import { notify } from "@/lib/notify";
+import { filterActive } from "@/lib/lifecycle/filterActive";
 import { Campaign, Customer, Project } from "../../../hooks/useWorkspaceFilters";
 import useCampaigns from "../../../hooks/useCampaigns";
 import { getUnitName } from "../../../constants/units";
@@ -636,7 +637,7 @@ export default function CreateSupplyMovement({
                   label="Proveedor existente"
                   placeholder="Seleccionar proveedor"
                   name="provider"
-                  options={providers || []}
+                  options={filterActive(providers)}
                   value={provider?.id?.toString() || ""}
                   onChange={(e) => {
                     const selectedProvider = providers?.find(
@@ -713,7 +714,7 @@ export default function CreateSupplyMovement({
               <SelectField
                 label="Campaña"
                 name="campaign"
-                options={campaigns}
+                options={filterActive(campaigns)}
                 value={campaign?.id?.toString() || ""}
                 onChange={(e) => {
                   const selectedCampaign = campaigns.find(

@@ -13,6 +13,7 @@ import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { notify } from "@/lib/notify";
+import { filterActive } from "@/lib/lifecycle/filterActive";
 import {
   getValueByAliases,
   LABOR_HEADER_ALIASES,
@@ -342,8 +343,12 @@ export default function LaborsCatalog({
         return;
       }
 
+      // filterActive defensivo: la búsqueda por nombre del CSV solo debe
+      // matchear categorías activas. Si una categoría archivada compartía
+      // nombre con una activa, el lookup ahora prefiere consistentemente la
+      // activa.
       const categoryByName = new Map(
-        categories.map((c) => [normalizeText(c.name), c])
+        filterActive(categories).map((c) => [normalizeText(c.name), c])
       );
 
       const importedRows: Labor[] = [];
@@ -486,7 +491,7 @@ export default function LaborsCatalog({
               variant="primary"
               size="sm"
               className="text-sm font-medium flex items-center gap-1"
-              href="/admin/database/labors/list"
+              href="/admin/master-data/labors/list"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -552,7 +557,7 @@ export default function LaborsCatalog({
                         name={`category-${index}`}
                         value={row.category.toString()}
                         onChange={(e) => handleChange(row.id, "category", e.target.value)}
-                        options={categories}
+                        options={filterActive(categories)}
                         className={errorClass("category")}
                       />
                       {errors.category && (

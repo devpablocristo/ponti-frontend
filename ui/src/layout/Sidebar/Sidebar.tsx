@@ -45,7 +45,7 @@ const menuReports: SubmenuGroup = {
     </svg>
   ),
   children: [
-    { name: "Integridad de Datos", route: "/admin/database/data-integrity" },
+    { name: "Integridad de Datos", route: "/admin/master-data/data-integrity" },
     { name: "Aportes por Inversor", route: "/admin/informes/aportes" },
     { name: "Por Campo o Cultivo", route: "/admin/informes/campo" },
     { name: "Resumen de Resultados", route: "/admin/informes/resumen" },
@@ -53,7 +53,7 @@ const menuReports: SubmenuGroup = {
 };
 
 const menuDatabase: SubmenuGroup = {
-  name: "Base de Datos",
+  name: "Datos Maestros",
   icon: (
     <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
@@ -71,13 +71,13 @@ const menuDatabase: SubmenuGroup = {
     </svg>
   ),
   children: [
-    { name: "Administrar Actores", route: "/admin/database/actors" },
-    { name: "Campañas", route: "/admin/database/campaigns" },
-    { name: "Campos", route: "/admin/database/fields" },
-    { name: "Labores", route: "/admin/database/labors/list" },
-    { name: "Insumos", route: "/admin/database/supplies/list" },
-    { name: "Cargar Dólar Promedio", route: "/admin/database/dollar" },
-    { name: "Cargar Comercialización", route: "/admin/database/commerce" },
+    { name: "Administrar Actores", route: "/admin/master-data/actors" },
+    { name: "Administrar Campañas", route: "/admin/master-data/campaigns" },
+    { name: "Administrar Campos", route: "/admin/master-data/fields" },
+    { name: "Administrar Labores", route: "/admin/master-data/labors/list" },
+    { name: "Administrar Insumos", route: "/admin/master-data/supplies/list" },
+    { name: "Cargar Dólar Promedio", route: "/admin/master-data/dollar" },
+    { name: "Cargar Comercialización", route: "/admin/master-data/commerce" },
   ],
 };
 
@@ -207,7 +207,7 @@ const menuItems: MenuItem[] = [
         />
       </svg>
     ),
-    route: "/admin/database/projects/list",
+    route: "/admin/master-data/projects/list",
   },
   {
     name: "Lotes",
