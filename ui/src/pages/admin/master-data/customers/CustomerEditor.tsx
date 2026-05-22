@@ -1,23 +1,24 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Save, Trash2 } from "lucide-react";
+import { Save } from "lucide-react";
 
 import { apiClient } from "@/api/client";
 import { formatError } from "@/lib/format";
 import { leaseTypeHasFixedValue, leaseTypeHasPercent } from "@/lib/leaseTypes";
 import { filterActive } from "@/lib/lifecycle/filterActive";
 import Button from "../../../../components/Button/Button";
-import { IconActionButton } from "../../../../components/Button/IconActionButton";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import SmartEntityInput from "../../../../components/SmartEntityInput/SmartEntityInput";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { FormSkeleton } from "../../../../components/feedback/Skeleton";
 import { notify } from "../../../../lib/notify";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import { normalizeEntityName } from "../../../../lib/entityNameMatcher";
 import { collapseInternalSpaces } from "../../../../lib/properName";
 import { useSelection } from "../../../login/context/useSelection";
+import { AddButton, EditableList, RemoveButton } from "./_components/EditableList";
 import {
   buildProjectPayloadForSave,
   formatValidationErrors,
@@ -28,193 +29,36 @@ import {
   validateProjectForSave,
 } from "./customerEditorValidation";
 
-type ApiResponse<T> = {
-  success: boolean;
-  data: T;
-};
+import type {
+  ActorOption,
+  ActorPayload,
+  ApiResponse,
+  CampaignPayload,
+  CropPayload,
+  EntityOption,
+  FieldPayload,
+  FormOptionsPayload,
+  LotListPayload,
+  ProjectDetailResponse,
+  ProjectListResponse,
+  SelectionValue,
+} from "./types";
 
-type ProjectListItem = {
-  id: number;
-  name: string;
-  customer?: string;
-  campaign?: string;
-};
-type EntityOption = {
-  id: number;
-  name: string;
-};
-type CampaignPayload = {
-  data: EntityOption[];
-  total: number;
-};
-type FieldPayload = {
-  data: Array<EntityOption & { project_id?: number }>;
-  total: number;
-};
-type CropPayload = EntityOption[];
-type EntityOptionsPayload = EntityOption[] | { data?: EntityOption[]; items?: EntityOption[] };
-type FormOptionsPayload = {
-  rentTypes?: EntityOptionsPayload;
-};
-type LotListPayload = {
-  data?: Array<{
-    id: number;
-    lot_name?: string;
-    name?: string;
-    field_id?: number;
-  }>;
-  items?: Array<{
-    id: number;
-    lot_name?: string;
-    name?: string;
-    field_id?: number;
-  }>;
-};
-
-type ProjectListResponse = {
-  data?: ProjectListItem[];
-  items?: ProjectListItem[];
-};
-
-type ProjectDetailResponse = ApiResponse<Project>;
-type SelectionValue = number | "" | "new";
-type ActorOption = {
-  id: number | string;
-  name: string;
-  roles?: string[];
-  customer_id?: number | null;
-};
-type ActorPayload = {
-  data: Array<{
-    id: number;
-    display_name: string;
-    roles?: string[];
-    archived_at?: string | null;
-    deleted_at?: string | null;
-  }>;
-  total: number;
-};
-
-const NEW_VALUE = "new";
-const COST_INPUT_REGEX = /^\d*(?:[.,]\d{0,2})?$/;
-const HECTARES_INPUT_REGEX = /^\d*(?:[.,]\d{0,3})?$/;
-const SEASON_OPTIONS: EntityOption[] = [
-  { id: 1, name: "Otoño" },
-  { id: 2, name: "Invierno" },
-  { id: 3, name: "Primavera" },
-  { id: 4, name: "Verano" },
-];
-
-// Natural agricultural cycle (Argentine southern-hemisphere convention) used
-// for auto-rotating crops when the user advances the lot's season by one
-// step. Cycle: Verano(4) → Otoño(1) → Invierno(2) → Primavera(3) → Verano(4).
-const SEASON_ID_CYCLE = [4, 1, 2, 3];
-
-function isSeasonOneStepForward(oldValue: string, newValue: string): boolean {
-  if (!oldValue || !newValue || oldValue === newValue) return false;
-  const oldId = Number(oldValue);
-  const newId = Number(newValue);
-  if (!oldId || !newId) return false;
-  const oldIdx = SEASON_ID_CYCLE.indexOf(oldId);
-  const newIdx = SEASON_ID_CYCLE.indexOf(newId);
-  if (oldIdx === -1 || newIdx === -1) return false;
-  return newIdx === (oldIdx + 1) % SEASON_ID_CYCLE.length;
-}
-
-const extractEntityOptions = (payload: EntityOptionsPayload | undefined): EntityOption[] => {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
-};
-
-const emptyFieldInvestor = () => ({ id: 0, actor_id: null, name: "", percentage: 0 });
-
-function normalizeDecimalInputValue(value: string): number | null {
-  const normalized = value.replace(",", ".");
-  const parsed = normalized === "" ? 0 : Number(normalized);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-function parseBoundedPercentage(value: string): number | null {
-  const parsed = normalizeDecimalInputValue(value);
-  if (parsed === null || parsed < 0 || parsed > 100) return null;
-  return parsed;
-}
-
-function isExistingId(value: SelectionValue): value is number {
-  return typeof value === "number" && value > 0;
-}
-
-function numericActorId(actor: ActorOption): number | null {
-  return typeof actor.id === "number" ? actor.id : null;
-}
-
-function createEmptyProject(customer?: CustomerData | null): Project {
-  return {
-    name: "",
-    customer: {
-      id: customer?.id ?? null,
-      actor_id: customer?.actor_id ?? null,
-      name: customer?.name ?? "",
-    },
-    campaign: {
-      id: null,
-      name: "",
-    },
-    managers: [{ id: 0, name: "" }],
-    investors: [{ id: 0, name: "", percentage: 0 }],
-    admin_cost_investors: [{ id: 0, name: "", percentage: 0 }],
-    admin_cost: 0,
-    planned_cost: 0,
-    fields: [
-      {
-        id: -Date.now(),
-        name: "",
-        lease_type_id: 0,
-        lease_type_percent: "",
-        lease_type_value: "",
-        investors: [emptyFieldInvestor()],
-        lots: [
-          {
-            id: 0,
-            name: "",
-            hectares: 0,
-            previous_crop_id: 0,
-            previous_crop_name: "",
-            current_crop_id: 0,
-            current_crop_name: "",
-            season: "",
-          },
-        ],
-      },
-    ],
-    updated_at: undefined,
-  };
-}
-
-function normalizeProject(project: Project): Project {
-  return {
-    ...project,
-    customer: project.customer ?? { id: null, name: "" },
-    campaign: project.campaign ?? { id: null, name: "" },
-    managers: Array.isArray(project.managers) ? project.managers : [],
-    investors: Array.isArray(project.investors) ? project.investors : [],
-    admin_cost_investors: Array.isArray(project.admin_cost_investors)
-      ? project.admin_cost_investors
-      : [],
-    fields: Array.isArray(project.fields)
-      ? project.fields.map((field) => ({
-          ...field,
-          investors:
-            Array.isArray(field.investors) && field.investors.length > 0
-              ? field.investors
-              : [emptyFieldInvestor()],
-          lots: Array.isArray(field.lots) ? field.lots : [],
-        }))
-      : [],
-  };
-}
+import {
+  COST_INPUT_REGEX,
+  HECTARES_INPUT_REGEX,
+  NEW_VALUE,
+  SEASON_OPTIONS,
+  createEmptyProject,
+  emptyFieldInvestor,
+  extractEntityOptions,
+  isExistingId,
+  isSeasonOneStepForward,
+  normalizeDecimalInputValue,
+  normalizeProject,
+  numericActorId,
+  parseBoundedPercentage,
+} from "./helpers";
 
 type CustomerEditorProps = {
   embedded?: boolean;
@@ -1358,7 +1202,11 @@ export default function CustomerEditor({
 
   return (
     <div className={embedded ? "space-y-2 pr-1" : "space-y-2"}>
-      <LoadingOverlay show={loading || saving} />
+      <LoadingOverlay show={(loading || saving) && Boolean(projectDraft)} />
+
+      {loading && !projectDraft ? (
+        <FormSkeleton fields={6} />
+      ) : null}
 
       {projectDraft && (
         <div className="space-y-2">
@@ -1792,52 +1640,3 @@ export default function CustomerEditor({
   );
 }
 
-type EditableListProps<T> = {
-  title: string;
-  emptyLabel: string;
-  items: T[];
-  onAdd: () => void;
-  renderItem: (item: T, index: number) => ReactNode;
-};
-
-function EditableList<T>({ title, emptyLabel, items, onAdd, renderItem }: EditableListProps<T>) {
-  return (
-    <div className="drawer-section">
-      <div className="drawer-section-header">
-        <h3 className="drawer-section-title">{title}</h3>
-        <AddButton label={`Agregar ${title}`} onClick={onAdd} />
-      </div>
-      <div className="space-y-2">
-        {items.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-2.5 text-sm text-slate-500 dark:text-slate-400">
-            {emptyLabel}
-          </p>
-        ) : (
-          items.map((item, index) => <div key={index}>{renderItem(item, index)}</div>)
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <Button variant="light" size="xs" iconLeft={<Plus className="h-3.5 w-3.5" />} onClick={onClick}>
-      Agregar
-      <span className="sr-only">{label}</span>
-    </Button>
-  );
-}
-
-function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <IconActionButton
-      label={label}
-      icon={<Trash2 className="h-4 w-4" />}
-      tone="danger"
-      className="mt-[22px]"
-      onClick={onClick}
-      title={label}
-    />
-  );
-}

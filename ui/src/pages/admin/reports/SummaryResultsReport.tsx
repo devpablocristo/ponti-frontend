@@ -5,7 +5,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from "react";
 import {
@@ -24,91 +23,34 @@ import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { notify } from "@/lib/notify";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useReporting from "../../../hooks/useReporting";
-import type {
-  FieldCropReportData,
-  SummaryResultsReportData,
-} from "../../../hooks/useReporting/types.ts";
+import type { FieldCropReportData } from "../../../hooks/useReporting/types.ts";
 import { formatNumberAr } from "../utils";
 import { CropBadgeV2 } from "./reportV2/CropBadgeV2";
 import { IndicatorDot } from "./reportV2/IndicatorDot";
-
-type ReportTab = "executive" | "economic" | "integral";
-type SummaryTotals = SummaryResultsReportData["totals"];
-type SummaryCrop = SummaryResultsReportData["crops"][number];
-
-const REPORT_FONT = "Inter, ui-sans-serif, system-ui, sans-serif";
-const SORA = "Sora, ui-sans-serif, system-ui, sans-serif";
-const KPI_TYPOGRAPHY_DEFAULTS = {
-  "--summary-kpi-label-size": "7.5px",
-  "--summary-kpi-value-size": "16.64px",
-  "--summary-kpi-meta-size": "10.24px",
-} as CSSProperties;
+import {
+  KPI_TYPOGRAPHY_DEFAULTS,
+  REPORT_FONT,
+  SORA,
+  cropIdFromUnknown,
+  getFieldCropValue,
+  integralMetricCellClass,
+  integralRows,
+  integralValueCellClass,
+  money,
+  n,
+  percent,
+} from "./summaryHelpers";
+import type {
+  ReportTab,
+  SummaryCrop,
+  SummaryTotals,
+} from "./summaryHelpers";
 
 const tabs: { id: ReportTab; label: string; icon: ReactNode }[] = [
   { id: "executive", label: "Ejecutivo", icon: <Home className="h-4 w-4" /> },
   { id: "economic", label: "Económico", icon: <Wallet className="h-4 w-4" /> },
   { id: "integral", label: "Integral", icon: <Layers className="h-4 w-4" /> },
 ];
-
-const integralRows = [
-  { key: "surface", label: "Superficie", unit: "Ha" },
-  { key: "production", label: "Producción", unit: "Tn" },
-  { key: "yield", label: "Rendimiento", unit: "Tn/Ha", strong: true },
-  { key: "net_income", label: "Ingreso neto", unit: "u$s" },
-  { key: "total_direct_costs", label: "Costos directos", unit: "u$s/Ha" },
-  { key: "lease", label: "Arriendo", unit: "u$s/Ha" },
-  { key: "admin", label: "Estructura", unit: "u$s/Ha" },
-  { key: "total_invested", label: "Total activo", unit: "u$s/Ha", strong: true },
-  {
-    key: "operating_result",
-    label: "Resultado operativo",
-    unit: "u$s/Ha",
-    strong: true,
-    indicator: true,
-  },
-  { key: "return_pct", label: "Renta", unit: "%", strong: true, indicator: true },
-];
-
-type IntegralRow = (typeof integralRows)[number];
-
-function n(value: string | number | null | undefined): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function money(value: string | number | null | undefined): string {
-  return `u$s ${formatNumberAr(n(value))}`;
-}
-
-function percent(value: string | number | null | undefined): string {
-  return `${formatNumberAr(n(value))}%`;
-}
-
-function getFieldCropValue(data: FieldCropReportData, rowKey: string, columnId: string): number {
-  const row = data.rows.find((entry) => entry.key === rowKey);
-  return n(row?.values[columnId]?.number);
-}
-
-function cropIdFromUnknown(value: unknown): string {
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  if (typeof value === "string") return value.trim() || "0";
-
-  if (value && typeof value === "object") {
-    const maybeOption = value as {
-      id?: unknown;
-      value?: unknown;
-      target?: { value?: unknown };
-    };
-
-    if (maybeOption.id !== undefined) return cropIdFromUnknown(maybeOption.id);
-    if (maybeOption.value !== undefined) return cropIdFromUnknown(maybeOption.value);
-    if (maybeOption.target?.value !== undefined) {
-      return cropIdFromUnknown(maybeOption.target.value);
-    }
-  }
-
-  return "0";
-}
 
 function useSharedKpiTypography(signature: string) {
   const ref = useRef<HTMLElement>(null);
@@ -922,33 +864,6 @@ function CropEconomicsTable({ crops }: { crops: SummaryCrop[] }) {
   );
 }
 
-function integralMetricCellClass(row: IntegralRow, index: number) {
-  const base = "sticky left-0 px-4 py-3 text-left text-[0.78rem]";
-
-  if (row.key === "operating_result") {
-    return `${base} bg-slate-950 font-semibold text-white`;
-  }
-
-  if (row.key === "total_invested") {
-    return `${base} bg-[#FBD5D5] font-semibold text-slate-950`;
-  }
-
-  if (row.key === "return_pct") {
-    return `${base} bg-[#FDE4EA] font-semibold text-slate-950`;
-  }
-
-  return `${base} ${index % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50 dark:bg-slate-900"} font-medium text-slate-600`;
-}
-
-function integralValueCellClass(row: IntegralRow, index: number) {
-  const base = "px-4 py-3 text-center";
-
-  if (row.key === "operating_result") return `${base} bg-slate-950 text-white`;
-  if (row.key === "total_invested") return `${base} bg-[#FBD5D5] text-slate-950`;
-  if (row.key === "return_pct") return `${base} bg-[#FDE4EA] text-slate-950`;
-
-  return `${base} ${index % 2 === 0 ? "bg-white dark:bg-slate-800" : "bg-slate-50/50"}`;
-}
 
 function IntegralView({ data, error }: { data: FieldCropReportData | null; error: string | null }) {
   if (error) {

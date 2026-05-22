@@ -17,7 +17,7 @@ type ProjectState = {
   result: string;
 };
 
-type ProjectAction =
+export type ProjectAction =
   | { type: typeof actions.SET_PROJECTS; payload: ProjectData[] }
   | { type: typeof actions.SET_PROJECTS_DROPDOWN; payload: ProjectDropdown[] }
   | { type: typeof actions.SET_PROJECTS_DROPDOWN_PAGINATION; payload: PageInfo }

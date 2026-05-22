@@ -37,28 +37,7 @@ import {
   parseCsv,
 } from "./importUtils";
 
-function renderPriceCell(value: unknown, row: LaborInfo) {
-  return (
-    <div className="flex items-center gap-2">
-      <strong>{String(value ?? "")}</strong>
-      {row.is_partial_price ? (
-        <span className="inline-flex items-center rounded-md bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 border border-yellow-300">
-          Parcial
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
-const newLabor = (): LaborInfo => ({
-  id: 0,
-  name: "",
-  category_id: 0,
-  price: "",
-  contractor_name: "",
-  category_name: "",
-  is_partial_price: false,
-});
+import { newLabor, renderPriceCell } from "./listHelpers";
 
 type ListTasksProps = {
   editorOnly?: boolean;

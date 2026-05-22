@@ -1,22 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pencil, Check, AlertCircle, Briefcase, Plus, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, AlertCircle, Briefcase, Plus, Upload } from "lucide-react";
 
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../components/feedback/Skeleton";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
-import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
 import { Summary } from "@/api/types";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import { Column } from "../types";
-import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeNumber } from "../utils";
@@ -26,215 +24,15 @@ import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 
-const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
-const MISSING_ENTRY_LABEL = "REV ING.";
+import { CloseStockDate } from "./_components/CloseStockDate";
+import { EditableCell } from "./_components/EditableCell";
+import { StockIndicators } from "./_components/StockIndicators";
+import {
+  MISSING_ENTRY_LABEL,
+  MULTIPLE_INVESTORS_LABEL,
+  getStockFilterValue,
+} from "./stockHelpers";
 
-function getStockFilterValue(item: GetStockItems, key: keyof GetStockItems) {
-  const value = item[key];
-
-  if (key === "investor_name" && String(value ?? "").trim() === "") {
-    return item.has_multiple_investors
-      ? MULTIPLE_INVESTORS_LABEL
-      : MISSING_ENTRY_LABEL;
-  }
-
-  return String(value ?? "");
-}
-
-const EditableCell = ({
-  item,
-  value,
-  projectId,
-  onSaved,
-  onValidationError,
-}: {
-  item: GetStockItems;
-  value: string | number;
-  projectId: number | null;
-  onSaved?: () => void;
-  onValidationError: (message: string) => void;
-}) => {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [editValue, setEditValue] = useState(value ?? "");
-  const savingRef = useRef(false);
-  const { updateStock, processingStock, errorStock, resultStock } = useStock();
-
-  useEffect(() => {
-    setEditValue(value ?? "");
-  }, [value, item.id]);
-
-  const save = async () => {
-    if (savingRef.current || processingStock) {
-      return;
-    }
-
-    if (editValue === "") {
-      return;
-    }
-
-    if (projectId === null) {
-      onValidationError("Seleccioná un proyecto antes de guardar stock de campo.");
-      return;
-    }
-
-    if (item.has_multiple_investors) {
-      onValidationError(
-        "Existe más de un inversor asociado a este insumo. Corrobore los ingresos y asignaciones antes de cerrar stock."
-      );
-      return;
-    }
-
-    if (!item.id || item.id <= 0) {
-      onValidationError(
-        "Para cargar stock de campo, primero cargá un ingreso del insumo."
-      );
-      return;
-    }
-
-    savingRef.current = true;
-    try {
-      await updateStock(projectId, item.id, Number(editValue), item.updated_at);
-    } finally {
-      savingRef.current = false;
-    }
-  };
-
-  useEffect(() => {
-    if (errorStock) {
-      onValidationError(errorStock);
-      return;
-    }
-    if (resultStock) {
-      setDrawerOpen(false);
-      onSaved?.();
-      return;
-    }
-  }, [errorStock, resultStock, onSaved, onValidationError]);
-
-  return (
-    <>
-      <div className="flex items-center justify-between w-full min-w-[80px]">
-        <input
-          type="number"
-          min="0"
-          className="block w-full p-2 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-slate-800 text-sm"
-          value={value}
-          onChange={() => { }}
-          disabled={true}
-        />
-        <button
-          className="app-action-button-icon"
-          style={{ minWidth: 24, minHeight: 24 }}
-          onClick={() => setDrawerOpen(true)}
-          aria-label="Editar"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
-      </div>
-      <EntityFormDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title="Editar stock de campo"
-        subtitle={item.supply_name}
-        submitLabel="Guardar"
-        processing={processingStock}
-        onSubmit={save}
-      >
-        <InputField
-          label="Stock de campo"
-          name={`real-stock-${item.id}`}
-          type="number"
-          placeholder="Stock de campo"
-          value={editValue}
-          disabled={processingStock}
-          onChange={(e) => setEditValue(e.target.value)}
-        />
-      </EntityFormDrawer>
-    </>
-  );
-};
-
-function CloseStockDate({
-  date,
-  onDateChange,
-  enabledCloseStock,
-  setEnabledCloseStock,
-  disabledCloseStock,
-}: {
-  date: string;
-  onDateChange: (date: string) => void;
-  enabledCloseStock: boolean;
-  setEnabledCloseStock: (enabled: boolean) => void;
-  disabledCloseStock: boolean;
-}) {
-  const [internalDate, setInternalDate] = useState(date);
-
-  useEffect(() => {
-    setInternalDate(date);
-  }, [date]);
-
-  return (
-    <div>
-      <label className="block mb-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
-        Cerrar stock a fecha
-      </label>
-      <div className="flex items-center gap-3">
-        <input
-          type="date"
-          disabled={disabledCloseStock}
-          value={internalDate}
-          onChange={(e) => setInternalDate(e.target.value)}
-          className="input-base appearance-none focus:ring-0 block text-sm py-2 px-3.5 disabled:bg-gray-100 dark:bg-slate-800 disabled:text-gray-400"
-        />
-        <label
-          className={`inline-flex items-center gap-2 cursor-pointer ${
-            disabledCloseStock ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-        >
-          <input
-            type="checkbox"
-            checked={enabledCloseStock}
-            onChange={() => {
-              if (!enabledCloseStock && internalDate) {
-                setEnabledCloseStock(true);
-                onDateChange(internalDate);
-              } else {
-                setEnabledCloseStock(false);
-              }
-            }}
-            className="w-4 h-4 text-custom-btn border-gray-300 dark:border-gray-600 rounded focus:ring-custom-btn/30"
-            disabled={disabledCloseStock}
-          />
-          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">Cerrar stock</span>
-        </label>
-      </div>
-    </div>
-  );
-}
-
-function StockIndicators({ summary }: { summary: Summary }) {
-  return (
-    <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <IndicatorCard
-          title="Total invertido Kg"
-          value={formatNumberAr(summary.total_kg) + " Kg"}
-          color="gray"
-        />
-        <IndicatorCard
-          title="Total invertido Lt"
-          value={formatNumberAr(summary.total_lt) + " Lt"}
-          color="gray"
-        />
-        <IndicatorCard
-          title="Total u$ / Neto"
-          value={"u$ " + formatNumberAr(summary.total_usd)}
-          color="red"
-        />
-      </div>
-    </div>
-  );
-}
 
 export function Stock() {
   const navigate = useNavigate();
@@ -831,7 +629,7 @@ export function Stock() {
         </div>
       )}
       <div className="mt-3 relative">
-        <LoadingOverlay show={hasWorkspaceSelection && processing} />
+        <LoadingOverlay show={hasWorkspaceSelection && processing && filteredStock.length > 0} />
 
         {stockPeriods && stockPeriods.length > 0 && (
           <div className="mb-4 flex flex-wrap items-end gap-6">
@@ -867,6 +665,8 @@ export function Stock() {
             title="Seleccioná filtros para ver stock"
             description="El listado no carga datos globales automáticamente."
           />
+        ) : processing && filteredStock.length === 0 ? (
+          <TableSkeleton rows={10} columns={columns.length} />
         ) : (
           <DataTable
             data={filteredStock}

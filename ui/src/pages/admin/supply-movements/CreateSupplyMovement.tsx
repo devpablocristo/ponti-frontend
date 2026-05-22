@@ -26,34 +26,14 @@ import { Campaign, Customer, Project } from "../../../hooks/useWorkspaceFilters"
 import useCampaigns from "../../../hooks/useCampaigns";
 import { getUnitName } from "../../../constants/units";
 
-const emptyItems = Array.from({ length: DEFAULT_ITEM_ROW_COUNT }, () => ({
-  item: "",
-  quantity: "",
-}));
-
-const typeOptions = [
-  { id: 1, name: "Stock inicial" },
-  { id: 2, name: "Movimiento interno" },
-  { id: 3, name: "Remito oficial" },
-  { id: 4, name: "Devolución" },
-];
-
-const getMovementTypeValue = (typeId?: number | null) => {
-  if (typeId === 1) return "Stock";
-  return typeOptions.find((option) => option.id === typeId)?.name || "";
-};
-
-const getTypeOptionFromEntryType = (entryType?: string | null) => {
-  if (entryType === "Stock") {
-    return typeOptions.find((option) => option.id === 1) || null;
-  }
-
-  return typeOptions.find((option) => option.name === entryType) || null;
-};
-
-const formatAvailableQty = (value: number) => value.toFixed(2).replace(/\.?0+$/, "");
-
-const DEVOLUTION_TYPE_ID = 4;
+import {
+  DEVOLUTION_TYPE_ID,
+  emptyItems,
+  formatAvailableQty,
+  getMovementTypeValue,
+  getTypeOptionFromEntryType,
+  typeOptions,
+} from "./createSupplyMovementHelpers";
 
 export default function CreateSupplyMovement({
   drawerOpen,

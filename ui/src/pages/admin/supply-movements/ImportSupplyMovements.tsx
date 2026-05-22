@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { DrawerFormActions } from "../../../components/Drawer/DrawerFormActions";
 import { DrawerShell } from "../../../components/Drawer/DrawerShell";
 import { Checkbox } from "../../../components/Input/Checkbox";
@@ -18,140 +17,22 @@ import {
   getValueByAliases,
   MAX_IMPORT_FILE_SIZE_MB,
 } from "./importUtils";
-import { SuccessResponse } from "@/api/types";
 
-const HEADER_ALIASES = {
-  movementType: ["ingreso", "tipo_ingreso", "movement_type"],
-  date: ["fecha", "date"],
-  referenceNumber: [
-    "remito",
-    "numero",
-    "nro",
-    "n_remito",
-    "nro_remito",
-    "numero_remito",
-    "numero_nombre",
-    "numero_o_nombre",
-    "nombre",
-  ],
-  provider: ["proveedor", "provider"],
-  investor: ["inversor", "investor"],
-  supply: ["insumo", "producto", "item"],
-  quantity: ["cantidad", "qty", "cantidad_unidades"],
-
-  // Movimiento interno (destino)
-  destinationCustomer: [
-    "cliente_destino",
-    "cliente destino",
-    "customer_destino",
-    "customer_destination",
-    "destino_cliente",
-  ],
-  destinationProject: [
-    "proyecto_destino",
-    "proyecto destino",
-    "project_destino",
-    "project_destination",
-    "destino_proyecto",
-  ],
-  destinationCampaign: [
-    "campana_destino",
-    "campaña_destino",
-    "campana destino",
-    "campaña destino",
-    "campaign_destino",
-    "campaign_destination",
-    "destino_campana",
-    "destino_campaña",
-  ],
-
-  // Opcional: solo para validar contra el proyecto activo
-  originProject: ["proyecto_origen", "proyecto origen", "project_origin", "origen_proyecto"],
-} as const;
-
-const ALLOWED_MOVEMENT_TYPES = new Set(["Stock", "Movimiento interno", "Remito oficial"]);
-
-type PreviewRow = {
-  rowIndex: number;
-  movementType: string;
-  movementDate: string;
-  referenceNumber: string;
-  providerName: string;
-  investorName: string;
-  supplyName: string;
-  quantity: string;
-
-  originProjectName?: string;
-  destinationCustomerName?: string;
-  destinationProjectName?: string;
-  destinationCampaignName?: string;
-
-  providerId?: number;
-  investorId?: number;
-  supplyId?: number;
-  destinationCustomerId?: number;
-  destinationProjectId?: number;
-  destinationCampaignId?: number;
-
-  // `existing: true` cuando el remito + insumo (+ proyecto destino si es
-  // movimiento interno) ya existe en el proyecto. El importador de archivos
-  // nunca actualiza datos repetidos — la fila se marca amarilla, el checkbox
-  // queda deshabilitado y no se envía en el submit.
-  existing: boolean;
-  errors: string[];
-};
-
-type Filter = "all" | "ok" | "errors" | "existing";
-
-function statusOf(row: PreviewRow): "ok" | "error" | "existing" {
-  if (row.existing) return "existing";
-  if (row.errors.length > 0) return "error";
-  return "ok";
-}
-
-// Entry shape mínima del BFF `/supply_movements/:projectId` para detectar
-// duplicados. No tipamos todos los campos — solo los que importan para el
-// match key.
-type ExistingMovementEntry = {
-  reference_number?: string;
-  supply_name?: string;
-  entry_type?: string;
-  destination_project_id?: number | null;
-};
-
-type CustomerOption = {
-  id: number;
-  name: string;
-};
-
-type ProjectOption = {
-  id: number;
-  name: string;
-};
-
-type CampaignOption = {
-  id: number;
-  name: string;
-  project_id?: number;
-};
-
-type ApiCollectionResponse<T> =
-  | T[]
-  | SuccessResponse<T[]>
-  | {
-      data?: T[] | SuccessResponse<T[]>;
-    };
-
-function extractCollection<T>(payload: ApiCollectionResponse<T> | undefined): T[] {
-  if (!payload) return [];
-  if (Array.isArray(payload)) return payload;
-
-  const firstLevel = payload.data;
-  if (Array.isArray(firstLevel)) return firstLevel;
-  if (firstLevel && Array.isArray(firstLevel.data)) return firstLevel.data;
-
-  return [];
-}
+import { FilterChip } from "./_components/FilterChip";
+import { StatusBadge } from "./_components/StatusBadge";
+import {
+  ALLOWED_MOVEMENT_TYPES,
+  type ApiCollectionResponse,
+  type CampaignOption,
+  type CustomerOption,
+  type ExistingMovementEntry,
+  type Filter,
+  HEADER_ALIASES,
+  type PreviewRow,
+  type ProjectOption,
+  extractCollection,
+  statusOf,
+} from "./importPreviewTypes";
 
 export default function ImportSupplyMovements({
   open,
@@ -914,61 +795,3 @@ export default function ImportSupplyMovements({
   );
 }
 
-type FilterChipProps = {
-  label: string;
-  active: boolean;
-  tone?: "green" | "red" | "yellow";
-  onClick: () => void;
-};
-
-function FilterChip({ label, active, tone, onClick }: FilterChipProps) {
-  const base =
-    "px-3 py-1 text-xs font-medium rounded-full border transition-colors cursor-pointer";
-  const idle = "bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:bg-slate-900";
-  const activeCls =
-    tone === "green"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-300"
-      : tone === "red"
-        ? "bg-red-50 text-red-700 border-red-300"
-        : tone === "yellow"
-          ? "bg-amber-50 text-amber-700 border-amber-300"
-          : "bg-blue-50 text-blue-700 border-blue-300";
-  return (
-    <button type="button" onClick={onClick} className={`${base} ${active ? activeCls : idle}`}>
-      {label}
-    </button>
-  );
-}
-
-type StatusBadgeProps = {
-  status: "ok" | "error" | "existing";
-  reasons: string[];
-};
-
-function StatusBadge({ status, reasons }: StatusBadgeProps) {
-  if (status === "error") {
-    return (
-      <span
-        title={reasons.join("; ")}
-        className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-red-700"
-      >
-        <XCircle className="h-3 w-3" /> Error
-      </span>
-    );
-  }
-  if (status === "existing") {
-    return (
-      <span
-        title="Ya existe un movimiento con este remito + insumo en el proyecto"
-        className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-amber-700"
-      >
-        <AlertTriangle className="h-3 w-3" /> Ya existe
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">
-      <CheckCircle2 className="h-3 w-3" /> Ok
-    </span>
-  );
-}

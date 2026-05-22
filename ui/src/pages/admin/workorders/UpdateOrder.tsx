@@ -21,16 +21,13 @@ import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
 import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
 
+import type { InvestorSplit } from "./orderTypes";
+
 const emptyItems = Array.from({ length: 7 }, () => ({
   item: "",
   totalUsed: "",
   dose: "",
 }));
-
-type InvestorSplit = {
-  investorId: number | null;
-  percentage: string;
-};
 
 export default function UpdateOrder({
   orderId,

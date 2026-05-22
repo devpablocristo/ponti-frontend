@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 
 import { apiClient } from "@/api/client";
-import { DataTable } from "@/lib/dataDisplay";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { Checkbox } from "../../../../components/Input/Checkbox";
@@ -10,6 +10,7 @@ import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
@@ -27,166 +28,19 @@ import ArchivedCustomers from "./ArchivedCustomers";
 import ArchivedProjects from "../projects/ArchivedProjects";
 import CustomerEditor from "./CustomerEditor";
 
-type CustomerProjectMode = "customer" | "project";
-
-type CustomerProjectRow = {
-  id: number;
-  mode: CustomerProjectMode;
-  projectId?: number;
-  projectIds: number[];
-  customerId: number;
-  customerName: string;
-  projectName: string;
-  campaignLabel?: string;
-  groupSize?: number;
-  campaignCount: number;
-  fieldCount: number;
-};
-
-type ProjectSummaryResponse = {
-  success: boolean;
-  data?: {
-    data?: RawProject[];
-  };
-};
-
-type ProjectDetailResponse = {
-  success: boolean;
-  data?: RawProject;
-};
-
-type RawProject = {
-  id?: number;
-  name?: string;
-  campaign?: { id?: number | null; name?: string | null } | string | null;
-  campaign_id?: number | null;
-  campaign_name?: string | null;
-  fields?:
-    | Array<
-        | {
-            id?: number;
-            name?: string;
-            lots?: Array<{ hectares?: number | string | null }> | null;
-          }
-        | string
-      >
-    | null;
-};
-
-function campaignKey(project: RawProject) {
-  if (typeof project.campaign === "string") return project.campaign;
-  return (
-    project.campaign?.name ||
-    project.campaign?.id ||
-    project.campaign_name ||
-    project.campaign_id ||
-    ""
-  );
-}
-
-function normalizeFilter(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim();
-}
-
-function campaignName(project: RawProject) {
-  const key = campaignKey(project);
-  return String(key || "");
-}
-
-function countUniqueCampaigns(projects: RawProject[]) {
-  return new Set(projects.map(campaignName).filter(Boolean)).size;
-}
-
-function countUniqueFields(projects: RawProject[]) {
-  const fields = new Set<string>();
-
-  projects.forEach((project) => {
-    (Array.isArray(project.fields) ? project.fields : []).forEach((field) => {
-      if (typeof field === "string") {
-        fields.add(normalizeFilter(field));
-        return;
-      }
-
-      fields.add(String(field.id ?? normalizeFilter(field.name ?? "")));
-    });
-  });
-
-  return fields.size;
-}
-
-function projectMatchesFilters(
-  project: RawProject,
-  selectedProject: { name?: string } | undefined,
-  selectedCampaign: { name?: string } | undefined,
-  selectedField: { id?: number; name?: string } | undefined,
-) {
-  const projectNeedle = normalizeFilter(selectedProject?.name ?? "");
-  const campaignNeedle = normalizeFilter(selectedCampaign?.name ?? "");
-  const fieldNeedle = normalizeFilter(selectedField?.name ?? "");
-
-  const matchesProject =
-    !selectedProject ||
-    normalizeFilter(project.name ?? "").includes(projectNeedle);
-  const matchesCampaign =
-    !selectedCampaign ||
-    normalizeFilter(campaignName(project)).includes(campaignNeedle);
-  const matchesField =
-    !selectedField ||
-    (Array.isArray(project.fields) ? project.fields : []).some((field) => {
-      if (typeof field === "string") return normalizeFilter(field).includes(fieldNeedle);
-      return (
-        field.id === selectedField.id ||
-        normalizeFilter(field.name ?? "").includes(fieldNeedle)
-      );
-    });
-
-  return matchesProject && matchesCampaign && matchesField;
-}
-
-function sumProjectHectares(
-  project: RawProject,
-  selectedField: { id?: number; name?: string } | undefined,
-) {
-  return (Array.isArray(project.fields) ? project.fields : []).reduce((total, field) => {
-    if (typeof field === "string") return total;
-    if (
-      selectedField &&
-      field.id !== selectedField.id &&
-      !normalizeFilter(field.name ?? "").includes(normalizeFilter(selectedField.name ?? ""))
-    ) {
-      return total;
-    }
-
-    const lots = Array.isArray(field.lots) ? field.lots : [];
-    return (
-      total +
-      lots.reduce((subtotal, lot) => {
-        const hectares = Number(String(lot.hectares ?? 0).replace(",", "."));
-        return subtotal + (Number.isFinite(hectares) ? hectares : 0);
-      }, 0)
-    );
-  }, 0);
-}
-
-async function loadProjectDetails(projects: RawProject[]) {
-  return Promise.all(
-    projects.map(async (project) => {
-      if (!project.id) return project;
-      try {
-        const response = await apiClient.get<ProjectDetailResponse>(
-          `/projects/${project.id}`,
-        );
-        return response.data ?? project;
-      } catch {
-        return project;
-      }
-    }),
-  );
-}
+import {
+  type CustomerProjectMode,
+  type CustomerProjectRow,
+  type ProjectSummaryResponse,
+  type RawProject,
+  campaignName,
+  countUniqueCampaigns,
+  countUniqueFields,
+  loadProjectDetails,
+  normalizeFilter,
+  projectMatchesFilters,
+  sumProjectHectares,
+} from "./customersListHelpers";
 
 type CustomersListProps = {
   /**
@@ -206,6 +60,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
+  const pagination = usePagination({ perPage: 25 });
   const {
     customers,
     processing,
@@ -671,14 +526,16 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       </ArchivedDrawer>
 
       <div className="relative">
-        <LoadingOverlay show={hasWorkspaceSelection && (processing || projectsLoading)} />
+        <LoadingOverlay show={hasWorkspaceSelection && (processing || projectsLoading) && visibleProjectRows.length > 0} />
         {!hasWorkspaceSelection ? (
           <EmptyState
             icon={Briefcase}
             title="Seleccioná filtros para ver clientes y proyectos"
             description="El listado no carga datos globales automáticamente."
           />
-        ) : !processing && visibleCustomers.length === 0 ? (
+        ) : (processing || projectsLoading) && visibleProjectRows.length === 0 ? (
+          <TableSkeleton rows={10} columns={tableColumns.length} />
+        ) : visibleCustomers.length === 0 ? (
           <EmptyState
             icon={Briefcase}
             title="Aún no hay clientes"
@@ -711,7 +568,11 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
               actions={bulk.actions}
               entity={bulkEntity}
             />
-            <DataTable data={visibleProjectRows} columns={tableColumns} />
+            <DataTable
+              data={visibleProjectRows}
+              columns={tableColumns}
+              pagination={pagination.buildPagination(visibleProjectRows.length)}
+            />
           </>
         )}
       </div>

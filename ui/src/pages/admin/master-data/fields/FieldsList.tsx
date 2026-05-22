@@ -3,11 +3,12 @@ import { Archive, MapPin, Upload } from "lucide-react";
 
 import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTransfer";
 
-import { DataTable } from "@/lib/dataDisplay";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
@@ -37,6 +38,7 @@ type FieldsListProps = {
 
 export default function FieldsList({ editorOnly = false }: FieldsListProps) {
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const pagination = usePagination({ perPage: 25 });
   const [editorContext, setEditorContext] = useState<{
     initialProjectId: number | null;
   } | null>(null);
@@ -140,8 +142,10 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
       />
 
       <div className="relative mt-4">
-        <LoadingOverlay show={processing} />
-        {!processing && visibleFields.length === 0 ? (
+        <LoadingOverlay show={processing && visibleFields.length > 0} />
+        {processing && visibleFields.length === 0 ? (
+          <TableSkeleton rows={10} columns={tableColumns.length} />
+        ) : visibleFields.length === 0 ? (
           <EmptyState
             icon={MapPin}
             title="Aún no hay campos"
@@ -162,7 +166,11 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable data={visibleFields} columns={tableColumns} />
+            <DataTable
+              data={visibleFields}
+              columns={tableColumns}
+              pagination={pagination.buildPagination(visibleFields.length)}
+            />
           </>
         )}
       </div>

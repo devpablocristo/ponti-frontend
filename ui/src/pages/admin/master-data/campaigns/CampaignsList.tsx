@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, CalendarRange, Plus, Upload } from "lucide-react";
 
-import { DataTable } from "@/lib/dataDisplay";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
@@ -33,6 +34,7 @@ type CampaignsListProps = {
 
 export default function CampaignsList({ editorOnly = false }: CampaignsListProps) {
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const pagination = usePagination({ perPage: 25 });
   const {
     campaigns,
     processing,
@@ -154,8 +156,10 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
       />
 
       <div className="relative mt-4">
-        <LoadingOverlay show={processing} />
-        {!processing && visibleCampaigns.length === 0 ? (
+        <LoadingOverlay show={processing && visibleCampaigns.length > 0} />
+        {processing && visibleCampaigns.length === 0 ? (
+          <TableSkeleton rows={10} columns={tableColumns.length} />
+        ) : visibleCampaigns.length === 0 ? (
           <EmptyState
             icon={CalendarRange}
             title="Aún no hay campañas"
@@ -185,7 +189,11 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable data={visibleCampaigns} columns={tableColumns} />
+            <DataTable
+              data={visibleCampaigns}
+              columns={tableColumns}
+              pagination={pagination.buildPagination(visibleCampaigns.length)}
+            />
           </>
         )}
       </div>

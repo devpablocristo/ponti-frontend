@@ -40,7 +40,7 @@ const initialState: SupplyMovementsState = {
   pageInfo: null,
 };
 
-type Action =
+export type Action =
   | { type: typeof actions.SET_SUPPLY_MOVEMENTS; payload: SupplyMovement[] }
   | {
       type: typeof actions.SET_RESULT_CREATION;

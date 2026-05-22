@@ -5,7 +5,7 @@ import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import useCommercializations from "../../../../hooks/useCommercializations";
-import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { notify } from "@/lib/notify";
 
 interface Commerce {
@@ -201,7 +201,7 @@ useEffect(() => {
           Datos de comercialización por cultivo
         </h1>
         {processingProjects || processing ? (
-          <LoadingOverlay show />
+          <TableSkeleton rows={6} columns={5} />
         ) : (
           <div className="mt-1">
             <div className="w-full px-4 py-6">

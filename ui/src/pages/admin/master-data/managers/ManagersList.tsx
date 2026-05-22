@@ -3,13 +3,14 @@ import { Archive, Download, Plus, Upload, UserCog } from "lucide-react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
-import { DataTable } from "@/lib/dataDisplay";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
@@ -20,7 +21,7 @@ import useManagers, {
   ManagerPayloadInput,
 } from "../../../../hooks/useManagers";
 import useProjects from "../../../../hooks/useDatabase/projects";
-import { Project, ProjectData } from "../../../../hooks/useDatabase/projects/types";
+import { Project } from "../../../../hooks/useDatabase/projects/types";
 import { Column } from "../../types";
 import { MANAGER_ENTITY as ENTITY } from "../../entities";
 import ManagerFormDrawer from "./ManagerFormDrawer";
@@ -30,20 +31,12 @@ import { downloadCsvRows } from "../../fileTransfer";
 const toFilterOptions = (values: string[]) =>
   values.map((value, index) => ({ id: `${value}-${index}`, name: value }));
 
-type ManagerProjectRelation = {
-  customer: string;
-  project: string;
-  campaign: string;
-  fields: string[];
-};
-
-type ManagerRow = Manager & {
-  project_count: number;
-  related_customers: string;
-  related_projects: string;
-  related_campaigns: string;
-  related_fields: string;
-};
+import {
+  type ManagerRow,
+  buildManagerRows,
+  getProjectFieldNames,
+  uniqueOptions,
+} from "./managersListHelpers";
 
 const relationColumns: Column<ManagerRow>[] = [
   { key: "name", header: "Nombre", render: (value) => formatProperName(value) },
@@ -78,104 +71,13 @@ const relationColumns: Column<ManagerRow>[] = [
   },
 ];
 
-function normalizeName(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-function uniqueJoined(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean))).join(", ");
-}
-
-function uniqueOptions(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
-    a.localeCompare(b),
-  );
-}
-
-function getProjectFieldNames(project: ProjectData, detail?: Project) {
-  const fields = detail?.fields ?? project.fields ?? [];
-  return fields.map((field) => field.name).filter(Boolean);
-}
-
-function managerBelongsToProject(
-  manager: Manager,
-  project: ProjectData,
-  detail?: Project,
-) {
-  const normalizedManagerName = normalizeName(manager.name);
-  const detailManagers = detail?.managers ?? [];
-
-  if (
-    detailManagers.some(
-      (entry) =>
-        (entry.id !== null && entry.id !== 0 && entry.id === manager.id) ||
-        normalizeName(entry.name) === normalizedManagerName,
-    )
-  ) {
-    return true;
-  }
-
-  return (project.managers || "")
-    .split(/[,;]+/)
-    .map((entry) => normalizeName(entry))
-    .filter(Boolean)
-    .some(
-      (entry) =>
-        entry === normalizedManagerName ||
-        entry.includes(normalizedManagerName) ||
-        normalizedManagerName.includes(entry),
-    );
-}
-
-function findManagerRelations(
-  manager: Manager,
-  projects: ProjectData[],
-  details: Record<number, Project>,
-) {
-  return projects.reduce<ManagerProjectRelation[]>((relations, project) => {
-    const detail = details[project.id];
-    if (!managerBelongsToProject(manager, project, detail)) return relations;
-
-    relations.push({
-      customer: detail?.customer.name || project.customer,
-      project: project.name,
-      campaign: detail?.campaign.name || project.campaign,
-      fields: getProjectFieldNames(project, detail),
-    });
-    return relations;
-  }, []);
-}
-
-function buildManagerRows(
-  managers: Manager[],
-  projects: ProjectData[],
-  details: Record<number, Project>,
-): ManagerRow[] {
-  return managers.map((manager) => {
-    const relations = findManagerRelations(manager, projects, details);
-
-    return {
-      ...manager,
-      project_count: relations.length,
-      related_customers: uniqueJoined(relations.map((relation) => relation.customer)),
-      related_projects: uniqueJoined(relations.map((relation) => relation.project)),
-      related_campaigns: uniqueJoined(relations.map((relation) => relation.campaign)),
-      related_fields: uniqueJoined(relations.flatMap((relation) => relation.fields)),
-    };
-  });
-}
-
 type ManagersListProps = {
   editorOnly?: boolean;
 };
 
 export default function ManagersList({ editorOnly = false }: ManagersListProps) {
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const pagination = usePagination({ perPage: 25 });
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState("");
@@ -396,7 +298,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
   return (
     <div>
       <div className="relative">
-        <LoadingOverlay show={processing || projectsProcessing || loadingDetails} />
+        <LoadingOverlay show={(processing || projectsProcessing || loadingDetails) && rows.length > 0} />
         <AppFilterBar
           filters={[
             {
@@ -494,7 +396,9 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
             },
           ]}
         />
-        {!processing && rows.length === 0 ? (
+        {(processing || projectsProcessing || loadingDetails) && rows.length === 0 ? (
+          <TableSkeleton rows={10} columns={tableColumns.length} />
+        ) : rows.length === 0 ? (
           <EmptyState
             icon={UserCog}
             title="Aún no hay responsables"
@@ -524,7 +428,11 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable data={rows} columns={tableColumns} />
+            <DataTable
+              data={rows}
+              columns={tableColumns}
+              pagination={pagination.buildPagination(rows.length)}
+            />
           </>
         )}
       </div>

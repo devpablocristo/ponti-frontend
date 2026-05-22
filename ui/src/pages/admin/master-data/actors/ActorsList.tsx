@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Download, GitCompare, Plus, Upload, Users } from "lucide-react";
 
-import { DataTable } from "@/lib/dataDisplay";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import {
@@ -14,6 +14,7 @@ import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { notify } from "@/lib/notify";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
 import useActors, {
@@ -170,6 +171,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
   const [selectedRole, setSelectedRole] = useState<ActorRole | "">(rolePreset ?? "");
   const [selectedKind, setSelectedKind] = useState<ActorKind | "">("");
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const pagination = usePagination({ perPage: 25 });
   const [duplicatesDrawerOpen, setDuplicatesDrawerOpen] = useState(false);
   const { actors, processing, error, getActors, createActor, updateActor, archiveActor } =
     useActors();
@@ -275,7 +277,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
 
   return (
     <div className="relative">
-      <LoadingOverlay show={processing} />
+      <LoadingOverlay show={processing && rows.length > 0} />
 
       <AppFilterBar
         filters={[
@@ -355,7 +357,9 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         ]}
       />
 
-      {!processing && rows.length === 0 ? (
+      {processing && rows.length === 0 ? (
+        <TableSkeleton rows={10} columns={tableColumns.length} />
+      ) : rows.length === 0 ? (
         <EmptyState
           icon={Users}
           title="Aún no hay actores"
@@ -381,7 +385,11 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
             actions={bulk.actions}
             entity={ENTITY}
           />
-          <DataTable data={rows} columns={tableColumns} />
+          <DataTable
+            data={rows}
+            columns={tableColumns}
+            pagination={pagination.buildPagination(rows.length)}
+          />
         </>
       )}
 

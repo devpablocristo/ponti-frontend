@@ -3,13 +3,14 @@ import { Archive, Download, Plus, Upload, Users } from "lucide-react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
-import { DataTable } from "@/lib/dataDisplay";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
@@ -20,7 +21,7 @@ import useInvestors, {
   InvestorPayloadInput,
 } from "../../../../hooks/useInvestors";
 import useProjects from "../../../../hooks/useDatabase/projects";
-import { Project, ProjectData } from "../../../../hooks/useDatabase/projects/types";
+import { Project } from "../../../../hooks/useDatabase/projects/types";
 import { Column } from "../../types";
 import { INVESTOR_ENTITY as ENTITY } from "../../entities";
 import InvestorFormDrawer from "./InvestorFormDrawer";
@@ -30,21 +31,12 @@ import { downloadCsvRows } from "../../fileTransfer";
 const toFilterOptions = (values: string[]) =>
   values.map((value, index) => ({ id: `${value}-${index}`, name: value }));
 
-type InvestorProjectRelation = {
-  customer: string;
-  project: string;
-  campaign: string;
-  fields: string[];
-  percentage: string;
-};
-
-type InvestorRow = Investor & {
-  project_count: number;
-  related_customers: string;
-  related_projects: string;
-  related_campaigns: string;
-  related_percentages: string;
-};
+import {
+  type InvestorRow,
+  buildInvestorRows,
+  getProjectFieldNames,
+  uniqueOptions,
+} from "./investorsListHelpers";
 
 const relationColumns: Column<InvestorRow>[] = [
   { key: "name", header: "Nombre", render: (value) => formatProperName(value) },
@@ -79,153 +71,13 @@ const relationColumns: Column<InvestorRow>[] = [
   },
 ];
 
-function normalizeName(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .toLowerCase();
-}
-
-function parseProjectInvestors(raw: string) {
-  return raw
-    .split(/[,;]+/)
-    .map((entry) => entry.trim())
-    .filter(Boolean)
-    .map((entry) => {
-      const percentageMatch = entry.match(/(\d+(?:[.,]\d+)?)\s*%/);
-      const name = entry
-        .replace(/\s*[-–—]\s*\d+(?:[.,]\d+)?\s*%.*$/u, "")
-        .replace(/\s+\d+(?:[.,]\d+)?\s*%.*$/u, "")
-        .trim();
-      return {
-        name,
-        normalizedName: normalizeName(name),
-        percentage: percentageMatch ? `${percentageMatch[1].replace(",", ".")}%` : "",
-      };
-    });
-}
-
-function uniqueJoined(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean))).join(", ");
-}
-
-function uniqueOptions(values: string[]) {
-  return Array.from(new Set(values.filter(Boolean))).sort((a, b) =>
-    a.localeCompare(b),
-  );
-}
-
-function getProjectFieldNames(project: ProjectData, detail?: Project) {
-  const fields = detail?.fields ?? project.fields ?? [];
-  return fields
-    .map((field) => field.name)
-    .filter(Boolean);
-}
-
-function getProjectInvestorMatches(investor: Investor, project: ProjectData, detail?: Project) {
-  const normalizedInvestorName = normalizeName(investor.name);
-  const matches: string[] = [];
-
-  if (detail) {
-    const detailInvestors = [
-      ...(detail.investors ?? []),
-      ...(detail.admin_cost_investors ?? []),
-      ...(detail.fields ?? []).flatMap((field) => field.investors ?? []),
-    ];
-
-    detailInvestors.forEach((entry) => {
-      const isSameInvestor =
-        (entry.id !== null && entry.id !== 0 && entry.id === investor.id) ||
-        normalizeName(entry.name) === normalizedInvestorName;
-
-      if (isSameInvestor && Number(entry.percentage) > 0) {
-        matches.push(`${entry.percentage}%`);
-      }
-    });
-  }
-
-  parseProjectInvestors(project.investors || "").forEach((entry) => {
-    const isSameInvestor =
-      entry.normalizedName === normalizedInvestorName ||
-      entry.normalizedName.includes(normalizedInvestorName) ||
-      normalizedInvestorName.includes(entry.normalizedName);
-
-    if (isSameInvestor && entry.percentage) {
-      matches.push(entry.percentage);
-    }
-  });
-
-  return Array.from(new Set(matches));
-}
-
-function findInvestorRelations(
-  investor: Investor,
-  projects: ProjectData[],
-  details: Record<number, Project>,
-) {
-  const normalizedInvestorName = normalizeName(investor.name);
-
-  return projects.reduce<InvestorProjectRelation[]>((relations, project) => {
-    const detail = details[project.id];
-    const matches = getProjectInvestorMatches(investor, project, detail);
-
-    if (matches.length === 0) {
-      const projectInvestors = parseProjectInvestors(project.investors || "");
-      const match = projectInvestors.find((entry) => {
-        if (!entry.normalizedName) return false;
-        return (
-          entry.normalizedName === normalizedInvestorName ||
-          entry.normalizedName.includes(normalizedInvestorName) ||
-          normalizedInvestorName.includes(entry.normalizedName)
-        );
-      });
-
-      if (!match) return relations;
-      matches.push(match.percentage);
-    }
-
-    relations.push({
-      customer: detail?.customer.name || project.customer,
-      project: project.name,
-      campaign: detail?.campaign.name || project.campaign,
-      fields: getProjectFieldNames(project, detail),
-      percentage: matches.filter(Boolean).join(", "),
-    });
-    return relations;
-  }, []);
-}
-
-function buildInvestorRows(
-  investors: Investor[],
-  projects: ProjectData[],
-  details: Record<number, Project>,
-): InvestorRow[] {
-  return investors.map((investor) => {
-    const relations = findInvestorRelations(investor, projects, details);
-
-    return {
-      ...investor,
-      project_count: relations.length,
-      related_customers: uniqueJoined(relations.map((relation) => relation.customer)),
-      related_projects: uniqueJoined(relations.map((relation) => relation.project)),
-      related_campaigns: uniqueJoined(relations.map((relation) => relation.campaign)),
-      related_percentages: uniqueJoined(
-        relations.map((relation) =>
-          relation.percentage ? `${relation.project}: ${relation.percentage}` : ""
-        ),
-      ),
-    };
-  });
-}
-
 type InvestorsListProps = {
   editorOnly?: boolean;
 };
 
 export default function InvestorsList({ editorOnly = false }: InvestorsListProps) {
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const pagination = usePagination({ perPage: 25 });
   const [selectedCustomer, setSelectedCustomer] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedCampaign, setSelectedCampaign] = useState("");
@@ -465,7 +317,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
   return (
     <div>
       <div className="relative">
-        <LoadingOverlay show={processing || projectsProcessing || loadingDetails} />
+        <LoadingOverlay show={(processing || projectsProcessing || loadingDetails) && rows.length > 0} />
         <AppFilterBar
           filters={[
             {
@@ -563,7 +415,9 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
             },
           ]}
         />
-        {!processing && rows.length === 0 ? (
+        {(processing || projectsProcessing || loadingDetails) && rows.length === 0 ? (
+          <TableSkeleton rows={10} columns={tableColumns.length} />
+        ) : rows.length === 0 ? (
           <EmptyState
             icon={Users}
             title="Aún no hay inversores"
@@ -593,7 +447,11 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable data={rows} columns={tableColumns} />
+            <DataTable
+              data={rows}
+              columns={tableColumns}
+              pagination={pagination.buildPagination(rows.length)}
+            />
           </>
         )}
       </div>

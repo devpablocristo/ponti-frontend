@@ -2,6 +2,7 @@ import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../components/feedback/Skeleton";
 import { EmptyState } from "../../../components/feedback/EmptyState";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
@@ -419,7 +420,7 @@ function Lots() {
       ) : null}
 
       <div className="relative mt-3">
-        <LoadingOverlay show={processing} />
+        <LoadingOverlay show={processing && filteredLots.length > 0} />
 
         <DrawerShell
           open={editorContext !== null}
@@ -465,6 +466,8 @@ function Lots() {
             title="Seleccioná filtros para ver lotes."
             description="El listado no carga datos sin un workspace (cliente / proyecto / campaña / campo) seleccionado."
           />
+        ) : processing && filteredLots.length === 0 ? (
+          <TableSkeleton rows={10} columns={columnsToShow.length} />
         ) : !message && !error ? (
           <BulkSelectionPanel
             selectedCount={bulk.selectedCount}
@@ -476,7 +479,7 @@ function Lots() {
             entity={ENTITY}
           />
         ) : null}
-        {hasWorkspaceSelection && !message && !error ? (
+        {hasWorkspaceSelection && !(processing && filteredLots.length === 0) && !message && !error ? (
           <DataTable
             data={filteredLots}
             columns={columnsToShow}

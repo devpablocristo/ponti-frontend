@@ -23,16 +23,7 @@ import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
 import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
 import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
 
-type WorkOrderItem = {
-  itemId: number | null;
-  totalUsed: string;
-  dose: string;
-};
-
-type InvestorSplit = {
-  investorId: number | null;
-  percentage: string;
-};
+import type { InvestorSplit, WorkOrderItem } from "./orderTypes";
 
 const emptyItems: WorkOrderItem[] = Array.from({ length: 7 }, () => ({
   itemId: null,

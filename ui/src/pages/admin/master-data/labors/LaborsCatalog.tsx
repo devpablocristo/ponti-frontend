@@ -11,7 +11,7 @@ import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
-import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { notify } from "@/lib/notify";
 import { filterActive } from "@/lib/lifecycle/filterActive";
 import {
@@ -23,29 +23,13 @@ import {
 } from "./importUtils";
 import { CSV_ACCEPT } from "../../fileTransfer";
 
-export interface Labor {
-  id: number;
-  name: string;
-  category: string;
-  price: string;
-  contractor: string;
-  is_partial_price: boolean;
-}
+import {
+  type Labor,
+  type PendingLaborImport,
+  emptyRow,
+} from "./laborsCatalogHelpers";
 
-interface PendingLaborImport {
-  newRows: Labor[];
-  duplicates: { existing: LaborInfo; updated: LaborInfo }[];
-  warnings: string[];
-}
-
-const emptyRow = (id: number): Labor => ({
-  id,
-  name: "",
-  category: "",
-  price: "",
-  contractor: "",
-  is_partial_price: false,
-});
+export type { Labor };
 
 type LaborsCatalogProps = {
   hideWorkspaceFilters?: boolean;
@@ -513,7 +497,7 @@ export default function LaborsCatalog({
           </div>
         </div>
         {processing ? (
-          <LoadingOverlay show />
+          <TableSkeleton rows={8} columns={6} />
         ) : (
           <div className="mt-4">
             <div className="hidden sm:grid grid-cols-[1fr_1fr_0.5fr_0.45fr_1fr_auto] gap-4 mb-2">

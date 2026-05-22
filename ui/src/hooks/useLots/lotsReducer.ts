@@ -32,12 +32,13 @@ const initialState: LotsState = {
   result: "",
 };
 
-type Action =
+export type Action =
   | { type: typeof actions.SET_LOTS; payload: LotsData[] }
   | { type: typeof actions.SET_PAGE_INFO; payload: PageInfo }
   | { type: typeof actions.SET_CROPS; payload: Crop[] }
   | { type: typeof actions.SET_RESULT; payload: string }
-  | { type: typeof actions.SET_KPIS; payload: LotKPIs };
+  | { type: typeof actions.SET_KPIS; payload: LotKPIs }
+  | { type: typeof actions.SET_LOT_TONS; payload: { id: number; tons: string | null } };
 
 const lotsReducer = (state: typeof initialState, action: Action) => {
   switch (action.type) {
@@ -65,6 +66,13 @@ const lotsReducer = (state: typeof initialState, action: Action) => {
       return {
         ...state,
         kpis: action.payload,
+      };
+    case actions.SET_LOT_TONS:
+      return {
+        ...state,
+        lots: state.lots.map((lot) =>
+          lot.id === action.payload.id ? { ...lot, tons: action.payload.tons } : lot,
+        ),
       };
     default:
       return state;

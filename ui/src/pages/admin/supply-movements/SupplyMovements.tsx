@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../components/feedback/Skeleton";
 import { EmptyState } from "../../../components/feedback/EmptyState";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { notify } from "@/lib/notify";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
-import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { useBulkActions } from "../../../hooks/useBulkActions";
@@ -15,7 +15,6 @@ import CreateSupplyMovement from "./CreateSupplyMovement";
 import ImportSupplyMovements from "./ImportSupplyMovements";
 import useSupplyMovements from "../../../hooks/useSupplyMovements";
 import { SupplyMovement } from "../../../hooks/useSupplyMovements/types";
-import { Summary } from "@/api/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
@@ -24,34 +23,7 @@ import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedSupplyMovements from "./ArchivedSupplyMovements";
 
-function SupplyMovementsIndicators({ summary }: { summary?: Summary }) {
-  const safeSummary = summary ?? {
-    total_kg: 0,
-    total_lt: 0,
-    total_usd: 0,
-  };
-  return (
-    <div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <IndicatorCard
-          title="Total invertido Kg"
-          value={formatNumberAr(safeSummary.total_kg) + " Kg"}
-          color="gray"
-        />
-        <IndicatorCard
-          title="Total invertido Lt"
-          value={formatNumberAr(safeSummary.total_lt) + " Lt"}
-          color="gray"
-        />
-        <IndicatorCard
-          title="Total u$ / Neto"
-          value={"u$ " + formatNumberAr(safeSummary.total_usd)}
-          color="red"
-        />
-      </div>
-    </div>
-  );
-}
+import { SupplyMovementsIndicators } from "./_components/SupplyMovementsIndicators";
 
 export function SupplyMovements() {
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
@@ -683,7 +655,7 @@ export function SupplyMovements() {
         </div>
       )}
       <div className="mt-3 relative">
-        <LoadingOverlay show={hasWorkspaceSelection && processing} />
+        <LoadingOverlay show={hasWorkspaceSelection && processing && filteredMovements.length > 0} />
 
         {projectId && (
           <>
@@ -730,6 +702,8 @@ export function SupplyMovements() {
             title="Seleccioná filtros para ver insumos"
             description="El listado no carga datos globales automáticamente."
           />
+        ) : processing && filteredMovements.length === 0 ? (
+          <TableSkeleton rows={10} columns={columnsWithSelection.length} />
         ) : (
           <>
             <BulkSelectionPanel

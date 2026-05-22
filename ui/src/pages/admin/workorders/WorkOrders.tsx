@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, Briefcase, Download, Plus, SlidersHorizontal, Upload } from "lucide-react";
+import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../components/feedback/Skeleton";
 import { EmptyState } from "../../../components/feedback/EmptyState";
 import { Notification } from "../../../components/feedback/Notification";
-import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
@@ -13,7 +13,6 @@ import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders
 import useOrders from "../../../hooks/useWorkOrders";
 import { useBulkActions } from "../../../hooks/useBulkActions";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
-import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import CreateOrder from "./CreateOrder";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { BaseModal } from "../../../components/Modal/BaseModal";
@@ -36,219 +35,20 @@ import {
   WorkOrderPreviewRow,
 } from "./importWorkOrders";
 import ImportWorkOrdersPreview from "./ImportWorkOrdersPreview";
-
-const FILTER_HIERARCHY: Record<string, string[]> = {
-  project_name: ["field_name", "lot_name"],
-  field_name: ["lot_name"],
-};
-
-type WorkOrdersListResponse = {
-  success: true;
-  data: {
-    rows?: OrdersData[];
-  };
-};
-
-/** Clasifica la unidad de consumo de una orden (litros, kilos, o null si no se puede determinar). */
-function classifyConsumptionUnit(order: OrdersData): "liter" | "kilo" | null {
-  const consumption = String(order.consumption || "").trim().toUpperCase();
-  const typeName = String(order.type_name || "").toUpperCase();
-  const categoryName = String(order.category_name || "").toUpperCase();
-  const supplyName = String(order.supply_name || "").toUpperCase();
-
-  if (consumption.includes("L") || consumption.includes("LT")) return "liter";
-  if (consumption.includes("KG") || consumption.includes("K")) return "kilo";
-
-  if (typeName.includes("AGROQUÍMICO") || typeName.includes("AGROQUIMICO")) return "liter";
-  if (typeName.includes("SEMILLA")) return "kilo";
-
-  const LITER_CATEGORIES = ["HERBICIDA", "COADYUVANTE", "CURASEMILLA", "INSECTICIDA", "FUNGICIDA"];
-  const KILO_CATEGORIES = ["SEMILLA", "FERTILIZANTE"];
-  if (LITER_CATEGORIES.some((k) => categoryName.includes(k))) return "liter";
-  if (KILO_CATEGORIES.some((k) => categoryName.includes(k))) return "kilo";
-
-  const LITER_SUPPLIES = ["HERBICIDA", "ACEITE", "INSECTICIDA", "FUNGICIDA", "LITRO"];
-  const KILO_SUPPLIES = ["SEMILLA", "FERTILIZANTE", "KILO"];
-  if (LITER_SUPPLIES.some((k) => supplyName.includes(k))) return "liter";
-  if (KILO_SUPPLIES.some((k) => supplyName.includes(k))) return "kilo";
-
-  return null;
-}
-
-function getStatusLabel(status: string) {
-  return status === "draft" ? "Abierta" : "Cerrada";
-}
-
-function isPendingSupplyPublishError(message: string) {
-  const normalized = message.toLowerCase();
-  return (
-    (normalized.includes("insumo") ||
-      normalized.includes("supply") ||
-      normalized.includes("supplies")) &&
-    (normalized.includes("pendiente") ||
-      normalized.includes("pending") ||
-      normalized.includes("incompleto") ||
-      normalized.includes("complete"))
-  );
-}
-
-function translatePendingSupplyPublishError(message: string) {
-  const normalized = message.toLowerCase();
-  const englishPrefix = "cannot publish work order draft with pending supplies:";
-
-  if (normalized.startsWith(englishPrefix)) {
-    const pendingSupplies = message.slice(englishPrefix.length).trim();
-
-    return pendingSupplies
-      ? `No se puede publicar la orden porque tiene insumos pendientes de completar: ${pendingSupplies}`
-      : "No se puede publicar la orden porque tiene insumos pendientes de completar.";
-  }
-
-  return message;
-}
-
-function mapStatusFilterLabelToApi(value: string) {
-  if (value === "Abierta") return "draft";
-  if (value === "Cerrada") return "published";
-  return value;
-}
-
-function getStatusBadgeClass(status: string) {
-  return status === "draft"
-    ? "bg-amber-100 text-amber-800 border border-amber-200"
-    : "bg-emerald-100 text-emerald-800 border border-emerald-200";
-}
-
-function isDigitalOrder(order: OrdersData) {
-  return order.is_digital === true;
-}
-
-function getOrderBaseNumber(orderNumber: string | number) {
-  return String(orderNumber).trim().split(".")[0];
-}
-
-function countUniqueOrderBaseNumbers(orders: OrdersData[]) {
-  return new Set(
-    orders
-      .map((order) => getOrderBaseNumber(order.number))
-      .filter(Boolean)
-  ).size;
-}
-
-function OrdersHeader({
-  selectedColumns,
-  setSelectedColumns,
-  setVisibleColumns,
-  allColumns,
-}: {
-  selectedColumns: Array<keyof OrdersData>;
-  setSelectedColumns: (columns: Array<keyof OrdersData>) => void;
-  setVisibleColumns: (columns: Array<keyof OrdersData>) => void;
-  allColumns: Column<OrdersData>[];
-}) {
-  const [showColumnsModal, setShowColumnsModal] = useState(false);
-
-  return (
-    <div className="flex justify-end items-center p-4 bg-white dark:bg-slate-800 rounded-t-xl border-b border-gray-100">
-      <Button
-        variant="primary"
-        size="sm"
-        iconLeft={<SlidersHorizontal className="mr-2 h-4 w-4" />}
-        onClick={() => setShowColumnsModal(true)}
-      >
-        Configurar Columnas
-      </Button>
-      <BaseModal
-        isOpen={showColumnsModal}
-        onClose={() => setShowColumnsModal(false)}
-        title=""
-        primaryButtonText="Aplicar"
-        primaryButtonColor="bg-blue-600 hover:bg-blue-800 focus:ring-blue-300 dark:focus:ring-blue-800"
-        onPrimaryAction={() => {
-          setVisibleColumns(selectedColumns);
-          setShowColumnsModal(false);
-        }}
-        secondaryButtonText="Cancelar"
-        onSecondaryAction={() => setShowColumnsModal(false)}
-      >
-        <h3 className="text-lg font-semibold mb-4">Columnas</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-72 overflow-y-auto px-2 mt-4">
-          {allColumns.map((col) => (
-            <label
-              key={col.key}
-              className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-200 gap-2"
-            >
-              <input
-                type="checkbox"
-                checked={selectedColumns.includes(col.key)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedColumns([...selectedColumns, col.key]);
-                  } else {
-                    setSelectedColumns(
-                      selectedColumns.filter((k) => k !== col.key)
-                    );
-                  }
-                }}
-                className="w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
-              />
-              {col.header}
-            </label>
-          ))}
-        </div>
-      </BaseModal>
-    </div>
-  );
-}
-
-function OrdersIndicators({
-  metrics,
-  processing,
-  ordersAmount,
-}: {
-  metrics: Metrics;
-  processing: boolean;
-  ordersAmount: number;
-}) {
-  return (
-    <div>
-      {processing ? (
-        <InlineSpinner
-          label="Cargando indicadores..."
-          spinnerClassName="text-custom-btn"
-        />
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <IndicatorCard
-            title="Sup. ejecutada"
-            value={formatNumberAr(metrics.surface_ha) + " Has"}
-            color="amber"
-          />
-          <IndicatorCard
-            title="Consumo en litros"
-            value={formatNumberAr(metrics.liters) + " Lt"}
-            color="gray"
-          />
-          <IndicatorCard
-            title="Consumo en kilos"
-            value={formatNumberAr(metrics.kilograms) + " Kg"}
-            color="gray"
-          />
-          <IndicatorCard
-            title="Costos directos"
-            value={"u$ " + formatNumberAr(metrics.direct_cost)}
-            color="red"
-          />
-          <IndicatorCard
-            title="Cantidad Total de Órdenes"
-            value={formatNumberAr(ordersAmount)}
-            color="blue"
-          />
-        </div>
-      )}
-    </div>
-  );
-}
+import { OrdersHeader } from "./_components/OrdersHeader";
+import { OrdersIndicators } from "./_components/OrdersIndicators";
+import {
+  FILTER_HIERARCHY,
+  classifyConsumptionUnit,
+  countUniqueOrderBaseNumbers,
+  getStatusBadgeClass,
+  getStatusLabel,
+  isDigitalOrder,
+  isPendingSupplyPublishError,
+  mapStatusFilterLabelToApi,
+  translatePendingSupplyPublishError,
+  type WorkOrdersListResponse,
+} from "./helpers";
 
 export function WorkOrders() {
   const navigate = useNavigate();
@@ -1181,7 +981,7 @@ export function WorkOrders() {
         </div>
       )}
       <div className="mt-3 relative">
-        <LoadingOverlay show={isProcessing} />
+        <LoadingOverlay show={isProcessing && displayedOrders.length > 0} />
         {selectedProject && (
           <CreateOrder
             drawerOpen={drawerOpen}
@@ -1248,6 +1048,8 @@ export function WorkOrders() {
             title="Seleccioná filtros para ver órdenes de trabajo."
             description="El listado no carga datos sin un workspace (cliente / proyecto / campaña / campo) seleccionado."
           />
+        ) : isProcessing && displayedOrders.length === 0 ? (
+          <TableSkeleton rows={10} columns={visibleColumnsWithSelection.length} />
         ) : (
           <>
             <BulkSelectionPanel

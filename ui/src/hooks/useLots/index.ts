@@ -1,14 +1,19 @@
-import React, { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import * as actions from "./actions";
 import lotsReducer from "./lotsReducer";
-import { apiClient } from "@/api/client";
-import { Crop, Payload, LotKPIs } from "./types";
-import { SuccessResponse } from "@/api/types";
-import { formatError } from "@/lib/format";
+import { createLotMutations } from "./mutations";
+import { createLotQueries } from "./queries";
+import type { LotsData } from "./types";
 
-type LotMutationResponse = SuccessResponse<unknown>;
-
+/**
+ * Hook compositor para lots. 2 factory services:
+ *   - queries.ts: getLots, getArchivedLots, getCrops, getLotsKpis (incluye
+ *     KPIs porque comparten reducer state).
+ *   - mutations.ts: archive/restore/hardDelete (lifecycle) + updateTons (con
+ *     par processingTons/errorTons/resultTons propio).
+ *
+ * API público intacto post-refactor.
+ */
 const useLots = () => {
   const [{ lots, pageInfo, crops, result, kpis }, dispatch] = lotsReducer();
   const [processing, setProcessing] = useState(false);
@@ -20,230 +25,62 @@ const useLots = () => {
   const [errorTons, setErrorTons] = useState<string | null>(null);
   const [resultTons, setResultTons] = useState<string | null>(null);
 
-  const getLots = React.useCallback(
-    async (queryString: string) => {
-      setProcessing(true);
-      setError(null);
-      let queryParams = "";
-      if (queryString !== "") {
-        queryParams = `?${queryString}`;
-      }
+  // Ref con la lista de lots actual. Permite que updateTons (closure estable
+  // en la factory memoizada) lea el tons previo del lote para rollback en caso
+  // de fallo del server, sin re-crear la factory en cada render.
+  const lotsRef = useRef<LotsData[]>(lots);
+  useEffect(() => {
+    lotsRef.current = lots;
+  }, [lots]);
 
-      try {
-        const response = await apiClient.get<SuccessResponse<Payload>>(
-          "/lots" + queryParams
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_LOTS,
-            payload: response.data.data,
-          });
-
-          dispatch({
-            type: actions.SET_PAGE_INFO,
-            payload: response.data.page_info,
-          });
-          return;
-        }
-
-        setError("No se pudieron cargar los lotes.");
-      } catch (error) {
-        setError(formatError(error, { fallback: "No se pudieron cargar los lotes." }));
-      } finally {
-        setProcessing(false);
-      }
-    },
-    [dispatch]
+  const queries = useMemo(
+    () =>
+      createLotQueries({
+        dispatch,
+        setProcessing,
+        setError,
+        setProcessingKpis,
+        setErrorKpis,
+      }),
+    [dispatch],
   );
 
-  const getLotsKpis = React.useCallback(
-    async (queryString: string) => {
-      setProcessingKpis(true);
-      setErrorKpis(null);
-      let queryParams = "";
-      if (queryString !== "") {
-        queryParams = `?${queryString}`;
-      }
-
-      try {
-        const response = await apiClient.get<SuccessResponse<LotKPIs>>(
-          "/lots/metrics" + queryParams
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_KPIS,
-            payload: response.data,
-          });
-          return;
-        }
-
-        setErrorKpis("No se pudieron cargar los indicadores de lotes.");
-      } catch (error) {
-        setErrorKpis(formatError(error, { fallback: "No se pudieron cargar los indicadores de lotes." }));
-      } finally {
-        setProcessingKpis(false);
-      }
-    },
-    [dispatch]
-  );
-
-  const getCrops = React.useCallback(async () => {
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const response = await apiClient.get<SuccessResponse<Crop[]>>("/crops");
-
-      if (response.success) {
-        dispatch({
-          type: actions.SET_CROPS,
-          payload: response.data,
-        });
-        return;
-      }
-
-      setError("No se pudieron cargar los cultivos.");
-    } catch (error) {
-      setError(formatError(error, { fallback: "No se pudieron cargar los cultivos." }));
-    } finally {
-      setProcessing(false);
-    }
-  }, [dispatch]);
-
-  const getArchivedLots = React.useCallback(
-    async (queryString: string) => {
-      setProcessing(true);
-      setError(null);
-      let queryParams = "";
-      if (queryString !== "") queryParams = `?${queryString}`;
-
-      try {
-        const response = await apiClient.get<SuccessResponse<Payload>>(
-          "/lots/archived" + queryParams
-        );
-        if (response.success) {
-          dispatch({ type: actions.SET_LOTS, payload: response.data.data });
-          dispatch({ type: actions.SET_PAGE_INFO, payload: response.data.page_info });
-          return;
-        }
-        setError("No se pudieron cargar los lotes archivados.");
-      } catch (err) {
-        setError(formatError(err, { fallback: "No se pudieron cargar los lotes archivados." }));
-      } finally {
-        setProcessing(false);
-      }
-    },
-    [dispatch]
-  );
-
-  const archiveLot = React.useCallback(async (id: number) => {
-    setProcessing(true);
-    setError(null);
-    try {
-      const response = await apiClient.post<LotMutationResponse>(`/lots/${id}/archive`, {});
-      if (!response.success) {
-        const message = "No se pudo archivar el lote.";
-        setError(message);
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = formatError(err, { fallback: "No se pudo archivar el lote." });
-      setError(message);
-      throw new Error(message);
-    } finally {
-      setProcessing(false);
-    }
-  }, []);
-
-  const restoreLot = React.useCallback(async (id: number) => {
-    setProcessing(true);
-    setError(null);
-    try {
-      const response = await apiClient.post<LotMutationResponse>(`/lots/${id}/restore`, {});
-      if (!response.success) {
-        const message = "No se pudo restaurar el lote.";
-        setError(message);
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = formatError(err, { fallback: "No se pudo restaurar el lote." });
-      setError(message);
-      throw new Error(message);
-    } finally {
-      setProcessing(false);
-    }
-  }, []);
-
-  const hardDeleteLot = React.useCallback(async (id: number) => {
-    setProcessing(true);
-    setError(null);
-    try {
-      const response = await apiClient.delete<LotMutationResponse>(`/lots/${id}/hard`);
-      if (!response.success) {
-        const message = "No se pudo eliminar el lote.";
-        setError(message);
-        throw new Error(message);
-      }
-    } catch (err) {
-      const message = formatError(err, { fallback: "No se pudo eliminar el lote." });
-      setError(message);
-      throw new Error(message);
-    } finally {
-      setProcessing(false);
-    }
-  }, []);
-
-  const updateTons = React.useCallback(
-    async (id: number, tons: number) => {
-      setProcessingTons(true);
-      setErrorTons(null);
-      setResultTons(null);
-
-      try {
-        const response = await apiClient.put<LotMutationResponse>(
-          `/lots/${id}/tons`,
-          { tons }
-        );
-
-        if (response.success) {
-          setResultTons("Se actualizaron las toneladas del lote.");
-          return;
-        }
-
-        setErrorTons("No se pudieron actualizar las toneladas del lote.");
-      } catch (error) {
-        setErrorTons(formatError(error, { fallback: "No se pudieron actualizar las toneladas del lote." }));
-      } finally {
-        setProcessingTons(false);
-      }
-    },
-    []
+  const mutations = useMemo(
+    () =>
+      createLotMutations({
+        dispatch,
+        lotsRef,
+        setProcessing,
+        setError,
+        setProcessingTons,
+        setErrorTons,
+        setResultTons,
+      }),
+    [dispatch],
   );
 
   return {
     lots,
     pageInfo,
-    updateTons,
-    getLots,
-    getArchivedLots,
-    archiveLot,
-    restoreLot,
-    hardDeleteLot,
-    getLotsKpis,
     crops,
-    getCrops,
-    processing,
-    error,
+    kpis,
     result,
+    processing,
+    processingKpis,
     processingTons,
+    error,
+    errorKpis,
     errorTons,
     resultTons,
     setResultTons,
-    kpis,
-    processingKpis,
-    errorKpis,
+    getLots: queries.getLots,
+    getArchivedLots: queries.getArchivedLots,
+    getCrops: queries.getCrops,
+    getLotsKpis: queries.getLotsKpis,
+    archiveLot: mutations.archiveLot,
+    restoreLot: mutations.restoreLot,
+    hardDeleteLot: mutations.hardDeleteLot,
+    updateTons: mutations.updateTons,
   };
 };
 

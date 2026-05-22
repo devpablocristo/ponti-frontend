@@ -1,8 +1,8 @@
-import { JSX, useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { Archive, Briefcase, ClockIcon, CheckIcon, Download, FileTextIcon, FileXIcon, Plus, SlidersHorizontal, Upload } from "lucide-react";
+import { useCallback, useEffect, useState, useMemo, useRef } from "react";
+import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../components/feedback/Skeleton";
 import { EmptyState } from "../../../components/feedback/EmptyState";
-import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
@@ -12,12 +12,9 @@ import { useBulkActions } from "../../../hooks/useBulkActions";
 import useLabors from "../../../hooks/useLabors";
 import useWorkOrders from "../../../hooks/useWorkOrders";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
-import { InvoiceData, Metrics, LaborGroupData } from "../../../hooks/useLabors/types";
+import { InvoiceData, LaborGroupData, Metrics } from "../../../hooks/useLabors/types";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
-import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
-import { BaseModal } from "../../../components/Modal/BaseModal";
-import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
 import SelectField from "../../../components/Input/SelectField";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
@@ -42,141 +39,13 @@ import ImportWorkOrdersPreview from "../workorders/ImportWorkOrdersPreview";
 import { formatError } from "@/lib/format";
 import { notify } from "@/lib/notify";
 
-
-const statusConfig: Record<string, { classes: string; icon: JSX.Element }> = {
-  Pendiente: {
-    classes: "bg-amber-50 text-amber-700 border border-amber-200",
-    icon: <ClockIcon className="w-3.5 h-3.5" />,
-  },
-  Pagada: {
-    classes: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-    icon: <CheckIcon className="w-3.5 h-3.5" />,
-  },
-  Facturada: {
-    classes: "bg-blue-50 text-blue-700 border border-blue-200",
-    icon: <FileTextIcon className="w-3.5 h-3.5" />,
-  },
-  NoFacturada: {
-    classes: "bg-gray-50 dark:bg-slate-900 text-gray-500 border border-gray-200 dark:border-gray-700",
-    icon: <FileXIcon className="w-3.5 h-3.5" />,
-  },
-};
-
-const invoiceEmptyStatus = "NoFacturada";
-
-const invoiceStatusOptions = [
-  { id: 1, name: "Pendiente" },
-  { id: 2, name: "Pagada" },
-  { id: 3, name: "Facturada" },
-];
-
-function LaborsHeader({
-  selectedColumns,
-  setSelectedColumns,
-  setVisibleColumns,
-  allColumns,
-}: {
-  selectedColumns: Array<keyof LaborGroupData>;
-  setSelectedColumns: (columns: Array<keyof LaborGroupData>) => void;
-  setVisibleColumns: (columns: Array<keyof LaborGroupData>) => void;
-  allColumns: Column<LaborGroupData>[];
-}) {
-  const [showColumnsModal, setShowColumnsModal] = useState(false);
-
-  return (
-    <div className="flex justify-end items-center p-4 bg-white dark:bg-slate-800 rounded-t-xl border-b border-gray-100">
-      <Button
-        variant="primary"
-        size="sm"
-        iconLeft={<SlidersHorizontal className="mr-2 h-4 w-4" />}
-        onClick={() => setShowColumnsModal(true)}
-      >
-        Configurar Columnas
-      </Button>
-      <BaseModal
-        isOpen={showColumnsModal}
-        onClose={() => setShowColumnsModal(false)}
-        title=""
-        primaryButtonText="Aplicar"
-        primaryButtonColor="bg-blue-600 hover:bg-blue-800 focus:ring-blue-300 dark:focus:ring-blue-800"
-        onPrimaryAction={() => {
-          setVisibleColumns(selectedColumns);
-          setShowColumnsModal(false);
-        }}
-        secondaryButtonText="Cancelar"
-        onSecondaryAction={() => setShowColumnsModal(false)}
-      >
-        <h3 className="text-lg font-semibold mb-4">Columnas</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-72 overflow-y-auto px-2 mt-4">
-          {allColumns.map((col) => (
-            <label
-              key={col.key}
-              className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-200 gap-2"
-            >
-              <input
-                type="checkbox"
-                checked={selectedColumns.includes(col.key)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedColumns([...selectedColumns, col.key]);
-                  } else {
-                    setSelectedColumns(selectedColumns.filter((k) => k !== col.key));
-                  }
-                }}
-                className="w-4 h-4 text-blue-600 border-gray-300 dark:border-gray-600 rounded focus:ring-blue-500"
-              />
-              {col.header}
-            </label>
-          ))}
-        </div>
-      </BaseModal>
-    </div>
-  );
-}
-
-function TasksIndicators({
-  metrics,
-  processing,
-  laborsAmount,
-}: {
-  metrics: Metrics;
-  processing: boolean;
-  laborsAmount: number;
-}) {
-  return (
-    <div>
-      {processing ? (
-        <InlineSpinner
-          label="Cargando indicadores..."
-          spinnerClassName="text-custom-btn"
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <IndicatorCard
-            title="Superficie total"
-            value={formatNumberAr(metrics.surface_ha) + " Has"}
-            color="amber"
-          />
-          <IndicatorCard
-            title="Costo promedio / Ha"
-            value={"u$ " + formatNumberAr(metrics.avg_cost_per_ha)}
-            color="red"
-          />
-          <IndicatorCard
-            title="Total u$ / Neto"
-            value={"u$ " + formatNumberAr(metrics.net_total_cost)}
-            color="red"
-          />
-          <IndicatorCard
-            title="Cantidad Total de Labores"
-            value={formatNumberAr(laborsAmount)}
-            color="blue"
-          />
-        </div>
-      )}
-    </div>
-  );
-}
+import { LaborsHeader } from "./_components/LaborsHeader";
+import { TasksIndicators } from "./_components/TasksIndicators";
+import {
+  invoiceEmptyStatus,
+  invoiceStatusOptions,
+  statusConfig,
+} from "./helpers";
 
 export function Labors() {
   const {
@@ -932,13 +801,15 @@ export function Labors() {
       )}
 
       <div className="mt-3 relative">
-        <LoadingOverlay show={hasWorkspaceSelection && processing} />
+        <LoadingOverlay show={hasWorkspaceSelection && processing && selectableTasks.length > 0} />
         {!hasWorkspaceSelection ? (
           <EmptyState
             icon={Briefcase}
             title="Seleccioná filtros para ver labores"
             description="El listado no carga datos globales automáticamente."
           />
+        ) : processing && selectableTasks.length === 0 ? (
+          <TableSkeleton rows={10} columns={columnsWithSelection.length} />
         ) : (
           <>
             <BulkSelectionPanel

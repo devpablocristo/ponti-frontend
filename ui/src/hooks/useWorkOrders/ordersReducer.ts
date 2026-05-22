@@ -30,7 +30,7 @@ const initialState: OrdersState = {
   pageInfo: null,
 };
 
-type Action =
+export type Action =
   | { type: typeof actions.SET_ORDERS; payload: OrdersData[] }
   | { type: typeof actions.SET_RESULT_CREATION; payload: string }
   | { type: typeof actions.SET_PAGE_INFO; payload: PageInfo }
