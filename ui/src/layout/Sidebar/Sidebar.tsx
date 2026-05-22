@@ -147,35 +147,6 @@ const menuAIItems: MenuItem[] = [
   },
 ];
 
-const menuAdminItems: MenuItem[] = [
-  {
-    name: "Accesos",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M8 1.33325L13 3.99992V7.33325C13 10.3999 10.8667 12.9999 8 14.6666C5.13333 12.9999 3 10.3999 3 7.33325V3.99992L8 1.33325Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M6.33337 8.00008L7.33337 9.00008L9.66671 6.66675"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-    route: "/admin/access",
-  },
-];
-
 const menuItems: MenuItem[] = [
   {
     name: "Dashboard",
@@ -572,16 +543,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebar
         <SidebarSection name="Copiloto" routes={menuAIItems.map((item) => item.route)}>
           <ul className="flex flex-col gap-0.5 font-medium">
             {menuAIItems.map((item) => (
-              <li key={item.name}>
-                <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
-              </li>
-            ))}
-          </ul>
-        </SidebarSection>
-
-        <SidebarSection name="Admin" routes={menuAdminItems.map((item) => item.route)}>
-          <ul className="flex flex-col gap-0.5 font-medium">
-            {menuAdminItems.map((item) => (
               <li key={item.name}>
                 <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
               </li>
