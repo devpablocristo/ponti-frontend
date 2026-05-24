@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import Navbar from "./Navbar/Navbar";
 import Sidebar from "./Sidebar/Sidebar";
@@ -8,6 +8,7 @@ import { AuthProvider } from "../pages/login/context/AuthProvider";
 import { useAuth } from "../pages/login/context/useAuth";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
+import { InlineSpinner } from "../components/feedback/InlineSpinner";
 import { SelectionProvider } from "../pages/login/context/SelectionContext";
 import { TenantProvider } from "../pages/login/context/TenantContext";
 import { useIsMobile } from "@/hooks/useBreakpoint";
@@ -90,7 +91,19 @@ const MainLayout: React.FC = () => {
           className="flex-1 overflow-y-auto p-5 bg-custom-bg dark:bg-slate-950"
         >
           <div className="animate-fade-in">
-            <Outlet />
+            {/* Suspense para code-splitting de rutas lazy en router.tsx
+                (CustomerEditor, WorkOrders, SummaryResultsReport, Lots,
+                AIAssistant). Fallback discreto — un spinner full-width. */}
+            <Suspense
+              fallback={
+                <InlineSpinner
+                  size="lg"
+                  containerClassName="flex items-center justify-center py-20"
+                />
+              }
+            >
+              <Outlet />
+            </Suspense>
           </div>
           <BaseModal
             isOpen={isLogoutModalOpen}

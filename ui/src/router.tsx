@@ -1,3 +1,5 @@
+import { lazy } from "react";
+
 import { ProtectedLayout } from "./layout/ProtectedLayout";
 import ErrorPage from "./pages/ErrorPage";
 import { Navigate } from "react-router-dom";
@@ -6,8 +8,6 @@ import SignInPage from "./pages/login/Login";
 import { Dashboard } from "./pages/admin/dashboard/Dashboard";
 import { SupplyMovements } from "./pages/admin/supply-movements/SupplyMovements";
 import { Profile } from "./pages/admin/profile/Profile";
-import { Labors } from "./pages/admin/tasks/Labors";
-import { WorkOrders } from "./pages/admin/workorders/WorkOrders";
 import { Stock } from "./pages/admin/stock/Stock";
 import Access from "./pages/admin/access/Access";
 import CustomersList from "./pages/admin/master-data/customers/CustomersList";
@@ -27,7 +27,6 @@ import ArchivedCampaigns from "./pages/admin/master-data/campaigns/ArchivedCampa
 import CampaignsList from "./pages/admin/master-data/campaigns/CampaignsList";
 import DataIntegrity from "./pages/admin/master-data/data-integrity/Integrity";
 import DatabaseLaborsCatalog from "./pages/admin/master-data/labors/LaborsCatalog";
-import Lots from "./pages/admin/lots/Lots";
 import SuppliesCatalog from "./pages/admin/master-data/supplies/SuppliesCatalog";
 import DollarForm from "./pages/admin/master-data/dollar/DollarForm";
 import CommerceForm from "./pages/admin/master-data/commerce/CommerceForm";
@@ -35,9 +34,24 @@ import ListSupplies from "./pages/admin/master-data/supplies/List";
 import ListTasks from "./pages/admin/master-data/labors/List";
 import ArchivedLabors from "./pages/admin/master-data/labors/ArchivedLabors";
 import ByFieldOrCropReport from "./pages/admin/reports/ByFieldOrCropReport.tsx";
-import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
 import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionReportV2.tsx";
-import AIAssistant from "./pages/admin/ai-assistant/AIAssistant";
+
+// Code-split de las 5 pantallas más pesadas que NO son consumidas también
+// de forma estática por otras pages. CustomerEditor queda eager porque
+// está embebido como drawer en Lots/CustomersList/FieldsList — un lazy
+// allí no rinde chunk separado y solo agrega Suspense flicker.
+// El fallback Suspense lo provee `ProtectedLayout` envolviendo el `<Outlet />`.
+const WorkOrders = lazy(() =>
+  import("./pages/admin/workorders/WorkOrders").then((m) => ({ default: m.WorkOrders }))
+);
+const Lots = lazy(() => import("./pages/admin/lots/Lots"));
+const SummaryResultsReport = lazy(
+  () => import("./pages/admin/reports/SummaryResultsReport.tsx")
+);
+const AIAssistant = lazy(() => import("./pages/admin/ai-assistant/AIAssistant"));
+const Labors = lazy(() =>
+  import("./pages/admin/tasks/Labors").then((m) => ({ default: m.Labors }))
+);
 import Notifications from "./pages/admin/notifications/Notifications";
 import ArchivedSupplyMovements from "./pages/admin/supply-movements/ArchivedSupplyMovements";
 import ActorsList from "./pages/admin/master-data/actors/ActorsList";

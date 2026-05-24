@@ -373,10 +373,18 @@ function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
         setTitle(getSidebarTitle(item.route));
         if (isMobile) setIsSidebarOpen();
       }}
+      // mouse + keyboard focus paridad: el handler de teclado replica el
+      // hover para usuarios que navegan con Tab.
       onMouseEnter={(e) => {
         if (!active) e.currentTarget.style.color = "#E2E8F0";
       }}
       onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.color = "#94A3B8";
+      }}
+      onFocus={(e) => {
+        if (!active) e.currentTarget.style.color = "#E2E8F0";
+      }}
+      onBlur={(e) => {
         if (!active) e.currentTarget.style.color = "#94A3B8";
       }}
     >
