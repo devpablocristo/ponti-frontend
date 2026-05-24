@@ -105,7 +105,7 @@ async function mockCustomerEditorApis(page: Page, options: { failActors?: boolea
 }
 
 async function openNewCustomerDrawer(page: Page) {
-  await page.goto("/admin/database/projects/list");
+  await page.goto("/admin/master-data/projects/list");
   await page.getByRole("button", { name: "Nuevo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Nuevo Proyecto" })).toBeVisible();
 }

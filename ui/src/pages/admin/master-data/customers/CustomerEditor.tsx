@@ -1214,7 +1214,7 @@ export default function CustomerEditor({
             <div className="drawer-section-header">
               <h2 className="drawer-section-title">{customerOnly ? "Cliente" : "Proyecto"}</h2>
             </div>
-            <div className={`grid grid-cols-1 gap-2.5 ${customerOnly ? "max-w-xl" : "md:grid-cols-5"}`}>
+            <div className={`grid grid-cols-1 gap-2.5 ${customerOnly ? "max-w-xl" : "sm:grid-cols-2 lg:grid-cols-5"}`}>
               <SmartEntityInput<ActorOption>
                 label="Cliente / Sociedad"
                 name="project_customer"
@@ -1274,7 +1274,7 @@ export default function CustomerEditor({
 
           {!customerOnly && (
             <>
-          <section className="grid grid-cols-1 gap-2 xl:grid-cols-3">
+          <section className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3">
             <EditableList
               title="Responsables"
               emptyLabel="Sin responsables"

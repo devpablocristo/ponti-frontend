@@ -108,7 +108,7 @@ const scenarios: DrawerScenario[] = [
   },
   {
     id: "customers-new",
-    route: "/admin/database/projects/list",
+    route: "/admin/master-data/projects/list",
     title: "Nuevo Proyecto",
     open: async (page) => {
       await page.getByRole("button", { name: "Nuevo", exact: true }).click();
@@ -116,7 +116,7 @@ const scenarios: DrawerScenario[] = [
   },
   {
     id: "customers-archived",
-    route: "/admin/database/projects/list",
+    route: "/admin/master-data/projects/list",
     title: "Proyectos archivados",
     open: async (page) => {
       await page.getByRole("button", { name: "Archivados" }).click();
