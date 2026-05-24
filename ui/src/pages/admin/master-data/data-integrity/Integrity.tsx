@@ -6,6 +6,7 @@ import Button from "../../../../components/Button/Button";
 import { notify } from "@/lib/notify";
 import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { apiClient } from "@/api/client";
+import { SuccessResponse } from "@/api/types";
 import { formatError } from "@/lib/format";
 import { Column } from "../../types";
 import {
@@ -43,11 +44,11 @@ export default function Integrity() {
 
     try {
       const params = { project_id: projectId };
-      const response = await apiClient.get<IntegrityReportResponse>(
+      const response = await apiClient.get<SuccessResponse<IntegrityReportResponse>>(
         "data-integrity/costs-check",
         params
       );
-      setChecks(sortIntegrityChecks(response.checks ?? []));
+      setChecks(sortIntegrityChecks(response.data?.checks ?? []));
     } catch (error) {
       setError(
         formatError(error, {
