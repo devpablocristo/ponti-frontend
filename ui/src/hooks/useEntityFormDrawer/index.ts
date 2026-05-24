@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 
+import { formatError } from "../../lib/format/formatError";
 import { notify } from "../../lib/notify";
 import {
   getCreateSuccessCopy,
@@ -70,9 +71,10 @@ export function useEntityFormDrawer<T extends { id: number }, Input>({
         close();
         onAfter?.();
       } catch (err) {
-        setSubmitError(
-          err instanceof Error ? err.message : fallbackErrorMessage,
-        );
+        // Pasa por formatError → respeta userMessage del interceptor / pattern
+        // de translateBackendError / fallback en español. Nunca expone .message
+        // crudo del backend al usuario.
+        setSubmitError(formatError(err, { fallback: fallbackErrorMessage }));
       }
     },
     [buildSuccessLabel, close, create, editing, fallbackErrorMessage, onAfter, update],

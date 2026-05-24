@@ -5,9 +5,7 @@ import * as actions from "./actions";
 import { DashboardData } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
-import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 import { formatError } from "@/lib/format";
-import { clearLocalStorage } from "@/lib/authStorage";
 
 const useDashboard = () => {
   const [{ dashboard }, dispatch] = dashboardReducer();
@@ -41,27 +39,10 @@ const useDashboard = () => {
         type: actions.SET_DASHBOARD,
         payload: null,
       });
-
-      // Si el error es por sesión inválida o token vencido, forzamos re-login
-      // en vez de dejar el dashboard en estado roto. El raw del BE acá nos
-      // sirve como heurística para detectar tokens; los demás casos van por
-      // formatError que ya prioriza el userMessage del interceptor.
-      const status = extractErrorStatus(error);
-      const rawMessage = extractErrorMessage(error, "");
-      const msgLower = rawMessage.toLowerCase();
-      if (
-        (status === 401 || status === 403) &&
-        (msgLower.includes("invalid token") ||
-          msgLower.includes("sesión inválida") ||
-          msgLower.includes("sesion invalida") ||
-          msgLower.includes("jwt") ||
-          msgLower.includes("expired"))
-      ) {
-        clearLocalStorage();
-        window.dispatchEvent(new CustomEvent("auth:force-logout"));
-        return;
-      }
-
+      // Detección de token inválido + dispatch de `auth:force-logout` ahora
+      // vive centralizado en `api/client.ts` interceptor — el AuthProvider
+      // recibe el evento y limpia storage + redirige. Acá nos quedamos solo
+      // con la copia humana del error para el toast / banner.
       setError(formatError(error, { fallback: "No se pudo cargar el dashboard." }));
     } finally {
       setProcessing(false);

@@ -61,6 +61,9 @@ export function classifyHttpError(error: unknown): HttpErrorKind | null {
   if (status === 403) return "forbidden";
   if (status === 404) return "notFound";
   if (status === 409) return "conflict";
+  // 422 se discrimina explícito antes del 4xx genérico — su copy es la
+  // misma que validation hoy, pero queda explícito para futura customización.
+  if (status === 422) return "validation";
   if (status >= 400 && status < 500) return "validation";
   if (status >= 500) return "serverError";
 

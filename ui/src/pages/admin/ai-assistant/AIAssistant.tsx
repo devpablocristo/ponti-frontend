@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
+import { Notification } from "../../../components/feedback/Notification";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {
@@ -9,6 +10,8 @@ import {
   listPontiChatConversations,
   pontiAssistantChatStream,
 } from "@/api/aiClient";
+import { formatError } from "@/lib/format/formatError";
+import { notify } from "@/lib/notify";
 import { NOTIFICATION_CHAT_HANDOFF_KEY } from "@/lib/notificationChatHandoff";
 import type { NotificationChatHandoff } from "@/lib/notificationChatHandoff";
 import type {
@@ -73,6 +76,14 @@ const AIAssistant = () => {
   const [routeHint, setRouteHint] = useState<PontiRouteHint | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Cualquier error transitorio del asistente se canaliza al toaster unificado
+  // (notify.error). Se resetea inmediatamente para no re-disparar al re-render.
+  useEffect(() => {
+    if (error) {
+      notify.error(error);
+      setError("");
+    }
+  }, [error]);
   /** Respuesta en curso (SSE); al llegar `done` se vuelca a `messages`. */
   const [streamDraft, setStreamDraft] = useState<{ text: string; activity: string[] } | null>(
     null
@@ -151,7 +162,13 @@ const AIAssistant = () => {
           return;
         }
         if (ev.event === "error") {
-          setError(typeof ev.data.message === "string" ? ev.data.message : "Error en handoff");
+          // Eventos SSE de error: el `ev.data.message` puede traer texto
+          // técnico del backend. Siempre mostramos copy en español; el detalle
+          // técnico queda en console para debug.
+          if (typeof ev.data.message === "string" && import.meta.env.DEV) {
+            console.warn("[AIAssistant handoff] backend error event:", ev.data.message);
+          }
+          setError("No se pudo procesar el contexto del asistente. Intentá nuevamente.");
           setStreamDraft(null);
           setLoading(false);
         }
@@ -189,8 +206,7 @@ const AIAssistant = () => {
       setActiveId(d.id);
       setMessages(d.messages);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "No se pudo cargar la conversación";
-      setError(message);
+      setError(formatError(err, { fallback: "No se pudo cargar la conversación. Intentá nuevamente." }));
     } finally {
       setLoading(false);
     }
@@ -284,11 +300,11 @@ const AIAssistant = () => {
             return;
           }
           if (ev.event === "error") {
-            const msg =
-              typeof ev.data.message === "string"
-                ? ev.data.message
-                : "Error en el stream del asistente";
-            setError(msg);
+            // Mismo trato que el handoff: NUNCA exponer texto crudo del BE.
+            if (typeof ev.data.message === "string" && import.meta.env.DEV) {
+              console.warn("[AIAssistant stream] backend error event:", ev.data.message);
+            }
+            setError("Ocurrió un problema procesando la respuesta del asistente. Intentá nuevamente.");
             setStreamDraft(null);
           }
         },
@@ -306,8 +322,7 @@ const AIAssistant = () => {
         setStreamDraft(null);
         return;
       }
-      const message = err instanceof Error ? err.message : "Error al enviar el mensaje";
-      setError(message);
+      setError(formatError(err, { fallback: "No se pudo enviar el mensaje al asistente. Intentá nuevamente." }));
       setInput(prevInput);
       setMessages((prev) => prev.slice(0, -1));
       setStreamDraft(null);
@@ -321,10 +336,12 @@ const AIAssistant = () => {
       <AppFilterBar filters={filters} />
 
       {!headers && (
-        <p className="text-sm text-amber-700">Seleccioná un proyecto para usar el asistente.</p>
+        <Notification
+          variant="info"
+          message="Seleccioná un proyecto para usar el asistente."
+          size="sm"
+        />
       )}
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         <aside className="w-full shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 lg:w-64">

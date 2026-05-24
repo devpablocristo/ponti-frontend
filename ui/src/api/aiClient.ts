@@ -1,5 +1,9 @@
-import { request } from "@devpablocristo/platform-http/fetch";
 import { getAccessToken } from "@/lib/authStorage";
+import {
+  fetchOrThrow,
+  wrapFetchNetworkError,
+  wrapFetchResponse,
+} from "@/api/fetchErrorAdapter";
 import type {
   PontiChatRequest,
   PontiChatStreamSseEvent,
@@ -95,19 +99,32 @@ export async function pontiAssistantChatStream(
     h.Authorization = `Bearer ${token}`;
   }
   const base = getBaseUrl().replace(/\/$/, "");
-  const res = await fetch(`${base}/chat/stream`, {
-    method: "POST",
-    headers: h,
-    body: JSON.stringify(payload),
-    signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}/chat/stream`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (err) {
+    // Re-lanzamos como FetchApiError (con userMessage en español) para que el
+    // caller pase por `formatError` y muestre toast unificado. Excepción:
+    // si el caller abortó (AbortSignal), `err.name === "AbortError"` y dejamos
+    // pasar tal cual — no es un error real, es cancelación.
+    if (err instanceof Error && err.name === "AbortError") throw err;
+    throw wrapFetchNetworkError(err);
+  }
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(text || `chat stream failed: ${res.status}`);
+    throw await wrapFetchResponse(res);
   }
   const reader = res.body?.getReader();
   if (!reader) {
-    throw new Error("chat stream: no body");
+    // Response sin body — caso muy raro, lo normalizamos también para que
+    // el caller reciba un FetchApiError con `userMessage` en español.
+    throw await wrapFetchResponse(
+      new Response("", { status: 502, headers: { "Content-Type": "text/plain" } }),
+    );
   }
   const decoder = new TextDecoder();
   let buf = "";
@@ -133,23 +150,26 @@ export async function listPontiChatConversations(
   headers: AskHeaders,
   limit = 50
 ): Promise<{ items: PontiConversationSummary[] }> {
-  return request<{ items: PontiConversationSummary[] }>(
-    `/chat/conversations?limit=${limit}`,
+  const res = await fetchOrThrow(
+    `${getBaseUrl().replace(/\/$/, "")}/chat/conversations?limit=${limit}`,
     {
       method: "GET",
       headers: buildHeaders(headers.projectId),
-      baseURLs: [getBaseUrl()],
-    }
+    },
   );
+  return (await res.json()) as { items: PontiConversationSummary[] };
 }
 
 export async function getPontiChatConversation(
   conversationId: string,
   headers: AskHeaders
 ): Promise<PontiConversationDetail> {
-  return request<PontiConversationDetail>(`/chat/conversations/${conversationId}`, {
-    method: "GET",
-    headers: buildHeaders(headers.projectId),
-    baseURLs: [getBaseUrl()],
-  });
+  const res = await fetchOrThrow(
+    `${getBaseUrl().replace(/\/$/, "")}/chat/conversations/${encodeURIComponent(conversationId)}`,
+    {
+      method: "GET",
+      headers: buildHeaders(headers.projectId),
+    },
+  );
+  return (await res.json()) as PontiConversationDetail;
 }

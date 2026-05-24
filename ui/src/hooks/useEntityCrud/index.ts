@@ -1,5 +1,7 @@
 import { useCallback, useReducer, type Reducer } from "react";
 
+import { formatError } from "../../lib/format/formatError";
+
 /**
  * Hook factory genérico para entidades CRUDAR. Centraliza el patrón
  * duplicado en los 15 hooks existentes (useCustomers, useSupplies, etc):
@@ -74,12 +76,6 @@ const INITIAL_STATE: State<unknown> = {
   error: null,
 };
 
-function extractMessage(err: unknown): string {
-  if (err instanceof Error) return err.message;
-  if (typeof err === "string") return err;
-  return "Ocurrió un error inesperado.";
-}
-
 export function useEntityCrud<T, CreateInput = never, UpdateInput = never>(
   service: CrudService<T, CreateInput, UpdateInput>,
 ) {
@@ -96,7 +92,10 @@ export function useEntityCrud<T, CreateInput = never, UpdateInput = never>(
         dispatch({ type: "SET_ERROR", error: null });
         return result;
       } catch (err) {
-        const msg = extractMessage(err);
+        // Reemplaza el extractMessage local que devolvía .message crudo. Ahora
+        // pasa por el pipeline unificado: userMessage del interceptor /
+        // translateBackendError / fallback español.
+        const msg = formatError(err, { fallback: "Ocurrió un error inesperado. Intentá nuevamente." });
         dispatch({ type: "SET_ERROR", error: msg });
         throw err;
       } finally {

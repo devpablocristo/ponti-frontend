@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatError } from "./formatError";
+import { FetchApiError, wrapFetchResponse } from "@/api/fetchErrorAdapter";
+import { HTTP_COPY } from "@/copy/http";
 
 const FALLBACK = "No se pudo completar la operación.";
 
@@ -69,5 +71,70 @@ describe("formatError", () => {
     expect(formatError(err, { fallback: FALLBACK })).toBe(
       "La fecha de la orden de trabajo no puede ser futura.",
     );
+  });
+
+  // Casos del nuevo adaptador Fetch (aiClient / insightsClient ahora pasan por acá).
+  describe("FetchApiError (clientes Fetch no-axios)", () => {
+    it("400 con body técnico de companion → no expone JSON crudo", async () => {
+      const res = new Response('{"code":"VALIDATION_ERROR","message":"companion: bad request..."}', {
+        status: 400,
+      });
+      const err = await wrapFetchResponse(res);
+      const formatted = formatError(err, { fallback: FALLBACK });
+      expect(formatted).toBe(HTTP_COPY.validation);
+      expect(formatted).not.toContain("companion");
+      expect(formatted).not.toContain("VALIDATION_ERROR");
+      expect(formatted).not.toContain("bad request");
+    });
+
+    it("401 wrapped → mensaje de sesión expirada", async () => {
+      const err = await wrapFetchResponse(new Response("", { status: 401 }));
+      expect(formatError(err, { fallback: FALLBACK })).toBe(HTTP_COPY.unauthorized);
+    });
+
+    it("403 wrapped → mensaje de sin permisos", async () => {
+      const err = await wrapFetchResponse(new Response("", { status: 403 }));
+      expect(formatError(err, { fallback: FALLBACK })).toBe(HTTP_COPY.forbidden);
+    });
+
+    it("404 wrapped → mensaje recurso inexistente", async () => {
+      const err = await wrapFetchResponse(new Response("", { status: 404 }));
+      expect(formatError(err, { fallback: FALLBACK })).toBe(HTTP_COPY.notFound);
+    });
+
+    it("422 wrapped → mensaje de datos inválidos (mapping explícito)", async () => {
+      const err = await wrapFetchResponse(new Response("", { status: 422 }));
+      expect(formatError(err, { fallback: FALLBACK })).toBe(HTTP_COPY.validation);
+    });
+
+    it("500 wrapped → mensaje server error", async () => {
+      const err = await wrapFetchResponse(new Response("", { status: 500 }));
+      expect(formatError(err, { fallback: FALLBACK })).toBe(HTTP_COPY.serverError);
+    });
+
+    it("FetchApiError con backendMessage pattern conocido → traduce con translateBackendError", async () => {
+      const res = new Response('{"message":"lot is archived"}', { status: 409 });
+      const err = await wrapFetchResponse(res);
+      // translateBackendError gana por encima de userMessage cuando hay match.
+      expect(formatError(err, { fallback: FALLBACK })).toBe(
+        "El lote está archivado. Restaurálo o elegí uno activo.",
+      );
+    });
+
+    it("FetchApiError manual con userMessage en español → ese gana", () => {
+      const err = new FetchApiError({
+        technicalMessage: "fetch 500 ...",
+        userMessage: "El asistente no pudo procesar tu mensaje.",
+        status: 500,
+      });
+      expect(formatError(err, { fallback: FALLBACK })).toBe(
+        "El asistente no pudo procesar tu mensaje.",
+      );
+    });
+  });
+
+  it("undefined / null → fallback", () => {
+    expect(formatError(undefined, { fallback: FALLBACK })).toBe(FALLBACK);
+    expect(formatError(null, { fallback: FALLBACK })).toBe(FALLBACK);
   });
 });

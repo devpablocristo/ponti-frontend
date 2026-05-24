@@ -11,6 +11,7 @@ import {
   resolveInsight,
   type InsightItem,
 } from "@/api/insightsClient";
+import { notify } from "@/lib/notify";
 import { NOTIFICATION_CHAT_HANDOFF_KEY } from "@/lib/notificationChatHandoff";
 import type { NotificationChatHandoff } from "@/lib/notificationChatHandoff";
 
@@ -103,6 +104,14 @@ const Notifications = () => {
   const [insights, setInsights] = useState<InsightItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // Canaliza cualquier mensaje de error transitorio al toaster unificado.
+  // Después se limpia para no re-disparar en re-renders.
+  useEffect(() => {
+    if (error) {
+      notify.error(error);
+      setError("");
+    }
+  }, [error]);
   const [includeResolved, setIncludeResolved] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -253,8 +262,6 @@ const Notifications = () => {
           </Button>
         </div>
       </div>
-
-      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {!loading && insights.length === 0 && !error && (
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 p-8 text-center">

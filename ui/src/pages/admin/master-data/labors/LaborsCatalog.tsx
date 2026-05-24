@@ -11,6 +11,7 @@ import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
+import { FieldError } from "../../../../components/feedback/FieldError";
 import { TableSkeleton } from "../../../../components/feedback/Skeleton";
 import { notify } from "@/lib/notify";
 import { filterActive } from "@/lib/lifecycle/filterActive";
@@ -529,9 +530,7 @@ export default function LaborsCatalog({
                         placeholder="nombre"
                         inputClassName={errorClass("name")}
                       />
-                      {errors.name && (
-                        <p className="text-xs text-red-600 mt-1">{errors.name}</p>
-                      )}
+                      <FieldError message={errors.name} />
                     </div>
                     <div className="sm:col-span-1">
                       <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">Rubro</label>
@@ -544,9 +543,7 @@ export default function LaborsCatalog({
                         options={filterActive(categories)}
                         className={errorClass("category")}
                       />
-                      {errors.category && (
-                        <p className="text-xs text-red-600 mt-1">{errors.category}</p>
-                      )}
+                      <FieldError message={errors.category} />
                     </div>
                     <div className="sm:col-span-1">
                       <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">Precio</label>
@@ -563,9 +560,7 @@ export default function LaborsCatalog({
                         placeholder="u$s"
                         inputClassName={errorClass("price")}
                       />
-                      {errors.price && (
-                        <p className="text-xs text-red-600 mt-1">{errors.price}</p>
-                      )}
+                      <FieldError message={errors.price} />
                     </div>
                     <div className="sm:col-span-1">
                       <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
@@ -600,9 +595,7 @@ export default function LaborsCatalog({
                         placeholder="nombre"
                         inputClassName={errorClass("contractor")}
                       />
-                      {errors.contractor && (
-                        <p className="text-xs text-red-600 mt-1">{errors.contractor}</p>
-                      )}
+                      <FieldError message={errors.contractor} />
                     </div>
                     <div className="sm:col-span-1 flex items-start justify-center pt-2">
                       <button

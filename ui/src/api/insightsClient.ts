@@ -1,5 +1,5 @@
-import { request } from "@devpablocristo/platform-http/fetch";
 import { getAccessToken } from "@/lib/authStorage";
+import { fetchOrThrow } from "@/api/fetchErrorAdapter";
 
 export type InsightItem = {
   id: string;
@@ -59,11 +59,11 @@ export const listInsights = async (
   const qs = new URLSearchParams();
   qs.set("limit", String(opts.limit ?? 100));
   if (opts.includeResolved) qs.set("include_resolved", "true");
-  return request<InsightsListResponse>(`/insights?${qs.toString()}`, {
+  const res = await fetchOrThrow(`${getBaseUrl()}/insights?${qs.toString()}`, {
     method: "GET",
     headers: buildHeaders(projectId),
-    baseURLs: [getBaseUrl()],
   });
+  return (await res.json()) as InsightsListResponse;
 };
 
 const callAction = async (
@@ -72,11 +72,13 @@ const callAction = async (
   method: "POST" | "DELETE",
   projectId?: string,
 ): Promise<void> => {
-  await request<void>(`/insights/${encodeURIComponent(insightId)}/${action}`, {
-    method,
-    headers: buildHeaders(projectId),
-    baseURLs: [getBaseUrl()],
-  });
+  await fetchOrThrow(
+    `${getBaseUrl()}/insights/${encodeURIComponent(insightId)}/${action}`,
+    {
+      method,
+      headers: buildHeaders(projectId),
+    },
+  );
 };
 
 export const markInsightRead = (id: string, projectId?: string) =>

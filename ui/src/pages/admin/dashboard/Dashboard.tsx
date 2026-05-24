@@ -15,7 +15,6 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useDashboard from "../../../hooks/useDashboard";
 import { DashboardData } from "../../../hooks/useDashboard/types";
 import { formatNumberAr } from "../utils";
-import { clearLocalStorage } from "../../../lib/authStorage";
 
 interface DashboardIndicatorsProps {
   dashboard: DashboardData | null;
@@ -189,22 +188,9 @@ export function Dashboard() {
     },
   ];
 
-  // Ultra-robust fallback: if the dashboard endpoint returns "invalid token"
-  // (env switch / expired session), force a clean re-login.
-  useEffect(() => {
-    if (!error) return;
-    const msg = String(error).toLowerCase();
-    if (
-      msg.includes("invalid token") ||
-      msg.includes("sesión inválida") ||
-      msg.includes("sesion invalida") ||
-      msg.includes("jwt") ||
-      msg.includes("expired")
-    ) {
-      clearLocalStorage();
-      window.location.href = "/login";
-    }
-  }, [error]);
+  // El force-logout por sesión inválida vive ahora en el interceptor global
+  // de `api/client.ts` + el listener de `auth:force-logout` en AuthProvider.
+  // Acá no necesitamos heurística sobre el mensaje formateado.
 
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
@@ -269,9 +255,14 @@ export function Dashboard() {
       )}
 
       {hasActiveFilters && error && (
+        // `error` ya viene formateado por useDashboard (formatError →
+        // userMessage español). Lo mostramos en el banner inline porque acá
+        // queremos la acción "Reintentar" pegada al mensaje — eso es feature
+        // accionable que el toast no provee. NO concatenamos prefijos: el
+        // texto del módulo ya describe la situación.
         <Notification variant="error" className="mt-4">
           <div className="flex items-center justify-between gap-3">
-            <div>Error al cargar datos del dashboard: {error}</div>
+            <span>{error}</span>
             <Button
               variant="primary"
               size="sm"

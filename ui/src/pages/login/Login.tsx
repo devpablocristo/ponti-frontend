@@ -38,11 +38,18 @@ function Login() {
       await login(loginUserData);
     } catch (error) {
       setIsLogin(false);
+      // El `RequestError` del SDK de auth trae `.message` con copy ya curada
+      // (ej. "Email o contraseña incorrectos") en español, así que es uno de los
+      // pocos lugares donde mostrar `.message` directo no expone jerga técnica.
+      // De todos modos lo pasamos por una guarda: si arranca con código HTTP
+      // crudo (ej. "Request failed with status 400"), caemos al fallback.
       if (error instanceof RequestError) {
-        setError(error.message);
+        const msg = error.message ?? "";
+        const looksTechnical = /^request failed|status\s+\d{3}|^\{/i.test(msg);
+        setError(looksTechnical ? "Email o contraseña incorrectos. Verificá los datos e intentá nuevamente." : msg);
         return;
       }
-      setError("Error en el inicio de sesión. Intenta nuevamente.");
+      setError("No pudimos iniciar tu sesión. Intentá nuevamente en unos segundos.");
     }
   };
 
