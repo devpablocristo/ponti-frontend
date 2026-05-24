@@ -1,5 +1,6 @@
 import { CropItem, DashboardData } from "../../../hooks/useDashboard/types";
 import { cropColors } from "../colors.ts";
+import { ScrollableTable } from "../../../components/crud/ScrollableTable";
 
 interface CostByCropTableProps {
   dashboard: DashboardData | null;
@@ -53,7 +54,7 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
 
       {/* Scroll horizontal en mobile: la grid de 4 cols con números se aplasta
           a <320px de viewport. min-w mantiene legibilidad; el wrapper scrollea. */}
-      <div className="overflow-x-auto">
+      <ScrollableTable>
         <div className="min-w-[480px]">
           <div className="grid grid-cols-4 text-sm font-semibold mb-2">
             <div></div>
@@ -89,7 +90,7 @@ export function CostByCropTable({ dashboard }: CostByCropTableProps) {
             <div className="bg-[#E5E7EB] h-[45px] text-center content-center rounded-r-[5px]">{Math.round(totalHectares > 0 ? totalCost / totalHectares : 0)} u$/Ha</div>
           </div>
         </div>
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

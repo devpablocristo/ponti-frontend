@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { FieldCropReportData, RowToRender } from "../../../hooks/useReporting/types.ts";
 import { cropColors } from "../colors";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { ScrollableTable } from "../../../components/crud/ScrollableTable";
 
 const CropBadge = ({ cropName }: { cropName: string }) => (
   <span
@@ -99,7 +100,7 @@ export const ByFieldOrCropTable = ({
   };
 
   return (
-    <div className="overflow-x-auto">
+    <ScrollableTable>
       <div
         style={{
           width: `${data.columns.length * 360}px`,
@@ -145,7 +146,7 @@ export const ByFieldOrCropTable = ({
         </tbody>
         </table>
       </div>
-    </div>
+    </ScrollableTable>
   );
 
   function renderRow(

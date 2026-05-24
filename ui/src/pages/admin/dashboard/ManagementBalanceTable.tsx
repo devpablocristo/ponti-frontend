@@ -1,5 +1,6 @@
 import { DashboardData } from "../../../hooks/useDashboard/types";
 import { formatNumberAr } from "../utils";
+import { ScrollableTable } from "../../../components/crud/ScrollableTable";
 
 interface ManagementBalanceTableProps {
   dashboard: DashboardData | null;
@@ -50,7 +51,7 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
 
       {/* Scroll horizontal en mobile: 4 cols + chips de tamaño fijo no entran
           en viewport <580px. El min-w mantiene legibilidad. */}
-      <div className="overflow-x-auto">
+      <ScrollableTable>
         <div className="min-w-[560px]">
 
       <div
@@ -153,7 +154,7 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
       {/*  </div>*/}
       {/*</div>*/}
         </div>
-      </div>
+      </ScrollableTable>
     </div>
   );
 }

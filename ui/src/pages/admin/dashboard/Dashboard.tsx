@@ -8,6 +8,8 @@ import { usePDF } from "react-to-pdf";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import Button from "../../../components/Button/Button";
+import { useIsMobile } from "../../../hooks/useBreakpoint";
+import { notify } from "../../../lib/notify";
 import ManagementBalanceTable from "./ManagementBalanceTable";
 import { CostByCropTable } from "./CostByCropTable";
 import OperationalIndicators from "./OperationalIndicators";
@@ -163,6 +165,7 @@ export function Dashboard() {
     hasWorkspaceSelection,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
+  const isMobile = useIsMobile();
   const { dashboard, processing, error, getDashboardInfo } = useDashboard();
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
   const { toPDF, targetRef } = usePDF({
@@ -239,7 +242,16 @@ export function Dashboard() {
             variant: "primary",
             isPrimary: true,
             disabled: processing || !dashboard || !hasActiveFilters,
-            onClick: toPDF,
+            // El PDF tiene un layout fijo de 1280px (target landscape desktop).
+            // En mobile genera un archivo cortado/ilegible — bloqueamos con un
+            // toast en vez de exportar mal. Decisión cerrada del plan responsive.
+            onClick: () => {
+              if (isMobile) {
+                notify.info("La exportación a PDF está disponible solo desde escritorio. El layout requiere al menos 1280px de ancho.");
+                return;
+              }
+              toPDF();
+            },
           },
         ]}
       />

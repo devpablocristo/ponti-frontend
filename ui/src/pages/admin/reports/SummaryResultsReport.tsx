@@ -17,6 +17,7 @@ import {
   Wheat,
 } from "lucide-react";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
+import { ScrollableTable } from "../../../components/crud/ScrollableTable";
 import { usePDF } from "react-to-pdf";
 
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
@@ -813,7 +814,7 @@ function CropEconomicsTable({ crops }: { crops: SummaryCrop[] }) {
           Resultados Económicos por Cultivo
         </h3>
       </div>
-      <div className="overflow-x-auto">
+      <ScrollableTable>
         <table className="w-full min-w-[760px] text-[0.78rem]">
           <thead className="bg-slate-50 dark:bg-slate-900 text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
             <tr>
@@ -859,7 +860,7 @@ function CropEconomicsTable({ crops }: { crops: SummaryCrop[] }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollableTable>
     </section>
   );
 }
@@ -893,7 +894,7 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
       <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-3">
         <h3 className="text-[1.05rem] font-semibold text-slate-950">Vista Integral</h3>
       </div>
-      <div className="overflow-x-auto">
+      <ScrollableTable>
         <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.78rem]">
           <thead className="bg-slate-50 dark:bg-slate-900">
             <tr>
@@ -953,7 +954,7 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
             ))}
           </tbody>
         </table>
-      </div>
+      </ScrollableTable>
     </section>
   );
 }
