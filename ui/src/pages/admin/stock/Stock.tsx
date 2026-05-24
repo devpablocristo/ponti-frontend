@@ -4,7 +4,8 @@ import { Check, AlertCircle, Briefcase, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { TableSkeleton } from "../../../components/feedback/Skeleton";
 
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../components/crud/ResponsiveTable";
 import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
@@ -668,7 +669,7 @@ export function Stock() {
         ) : processing && filteredStock.length === 0 ? (
           <TableSkeleton rows={10} columns={columns.length} />
         ) : (
-          <DataTable
+          <ResponsiveTable<GetStockItems>
             data={filteredStock}
             columns={columns}
             message="Todavía no hay stock con los filtros actuales."
@@ -676,6 +677,9 @@ export function Stock() {
             onFilterChange={handleFilterChange}
             enableFilters={true}
             pagination={pagination.buildPagination(filteredStock.length)}
+            primaryKey="supply_name"
+            rowKey={(s: GetStockItems, i: number) => `${s.supply_name}-${i}`}
+            emptyMessage="Todavía no hay stock con los filtros actuales."
           />
         )}
         <BaseModal

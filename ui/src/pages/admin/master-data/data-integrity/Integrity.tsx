@@ -4,7 +4,7 @@ import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import Button from "../../../../components/Button/Button";
 import { notify } from "@/lib/notify";
-import { DataTable } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { apiClient } from "@/api/client";
 import { formatError } from "@/lib/format";
 import { Column } from "../../types";
@@ -98,10 +98,13 @@ export default function Integrity() {
           Requiere cliente, proyecto y campaña seleccionados.
         </span>
       </div>
-      <DataTable
+      <ResponsiveTable<IntegrityCheck>
         data={checks}
         columns={columns}
         message="Todavía no hay controles de integridad para mostrar."
+        primaryKey="data_to_verify"
+        rowKey={(c) => c.control_number}
+        emptyMessage="Todavía no hay controles de integridad para mostrar."
         expandableRowRender={(item: IntegrityCheck) => (
           <div className="text-sm text-gray-700 dark:text-gray-200 space-y-3 min-w-0">
             <div className="flex flex-wrap items-center gap-2">

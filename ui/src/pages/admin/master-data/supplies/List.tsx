@@ -3,7 +3,8 @@ import { Archive, Download, Plus, Upload } from "lucide-react";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import {
   Supply,
   SupplyCreatePayload,
@@ -565,7 +566,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
             actions={bulk.actions}
             entity={ENTITY}
           />
-          <DataTable
+          <ResponsiveTable<Supply>
             data={filteredSupplies}
             columns={columns}
             filters={columnsFilters}
@@ -573,6 +574,9 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
             enableFilters={true}
             message="Todavía no hay insumos en este proyecto."
             pagination={pagination.buildPagination(filteredSupplies.length)}
+            primaryKey="name"
+            rowKey={(s) => s.id}
+            emptyMessage="Todavía no hay insumos en este proyecto."
           />
         </div>
       </div>

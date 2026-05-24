@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Download, GitCompare, Plus, Upload, Users } from "lucide-react";
 
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import {
@@ -385,10 +386,13 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
             actions={bulk.actions}
             entity={ENTITY}
           />
-          <DataTable
+          <ResponsiveTable<Actor>
             data={rows}
             columns={tableColumns}
             pagination={pagination.buildPagination(rows.length)}
+            primaryKey="display_name"
+            rowKey={(a) => a.id}
+            emptyMessage="No hay actores para mostrar"
           />
         </>
       )}

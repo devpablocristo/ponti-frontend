@@ -11,7 +11,8 @@ import { useBulkActions } from "../../../hooks/useBulkActions";
 
 import useLabors from "../../../hooks/useLabors";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../components/crud/ResponsiveTable";
 import { InvoiceData, LaborGroupData, Metrics } from "../../../hooks/useLabors/types";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -821,7 +822,7 @@ export function Labors() {
               actions={bulk.actions}
               entity={WORKORDER_ENTITY}
             />
-            <DataTable
+            <ResponsiveTable<SelectableLaborGroup>
               key={laborGroups.length}
               data={selectableTasks}
               rowStyle="softZebra"
@@ -844,6 +845,8 @@ export function Labors() {
                   ? pagination.buildPagination(filteredTasks.length)
                   : undefined
               }
+              rowKey={(t, i) => `${t.id ?? i}`}
+              emptyMessage="Todavía no hay labores con los filtros actuales."
             />
           </>
         )}

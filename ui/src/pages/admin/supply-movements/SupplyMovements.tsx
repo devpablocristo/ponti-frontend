@@ -7,7 +7,8 @@ import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel"
 import { notify } from "@/lib/notify";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../components/crud/ResponsiveTable";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { useBulkActions } from "../../../hooks/useBulkActions";
@@ -715,7 +716,7 @@ export function SupplyMovements() {
               actions={bulk.actions}
               entity={movementEntity}
             />
-            <DataTable
+            <ResponsiveTable<SupplyMovement>
               data={filteredMovements}
               rowStyle="softZebra"
               columns={columnsWithSelection}
@@ -724,6 +725,8 @@ export function SupplyMovements() {
               enableFilters={true}
               message="Todavía no hay movimientos de insumos con los filtros actuales."
               pagination={pagination.buildPagination(filteredMovements.length)}
+              rowKey={(m, i) => `${m.id ?? i}`}
+              emptyMessage="Todavía no hay movimientos de insumos con los filtros actuales."
             />
           </>
         )}

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 
 import { apiClient } from "@/api/client";
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { Checkbox } from "../../../../components/Input/Checkbox";
@@ -568,10 +569,13 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
               actions={bulk.actions}
               entity={bulkEntity}
             />
-            <DataTable
+            <ResponsiveTable<CustomerProjectRow>
               data={visibleProjectRows}
               columns={tableColumns}
               pagination={pagination.buildPagination(visibleProjectRows.length)}
+              primaryKey="customerName"
+              rowKey={(r) => `${r.customerId}-${r.id}`}
+              emptyMessage="No hay clientes para mostrar"
             />
           </>
         )}

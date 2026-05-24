@@ -3,7 +3,8 @@ import { Archive, MapPin, Upload } from "lucide-react";
 
 import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTransfer";
 
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { notify } from "@/lib/notify";
 import { EmptyState } from "../../../../components/feedback/EmptyState";
@@ -166,10 +167,13 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable
+            <ResponsiveTable<Field>
               data={visibleFields}
               columns={tableColumns}
               pagination={pagination.buildPagination(visibleFields.length)}
+              primaryKey="name"
+              rowKey={(f) => f.id}
+              emptyMessage="No hay campos para mostrar"
             />
           </>
         )}

@@ -5,7 +5,8 @@ import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
 import { TableSkeleton } from "../../../components/feedback/Skeleton";
 import { EmptyState } from "../../../components/feedback/EmptyState";
 import { Notification } from "../../../components/feedback/Notification";
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../components/crud/ResponsiveTable";
 import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
@@ -1061,7 +1062,7 @@ export function WorkOrders() {
               actions={bulk.actions}
               entity={WORKORDER_ENTITY}
             />
-            <DataTable
+            <ResponsiveTable<OrdersData>
               key={`${projectId}-${selectedField?.id || 0}-${selectedSupplyFilter.id || 0}`}
               data={displayedOrders}
               rowStyle="softZebra"
@@ -1069,7 +1070,9 @@ export function WorkOrders() {
               onFilterChange={handleFilterChange}
               columns={visibleColumnsWithSelection}
               actionsHeader="Acciones"
-              renderActions={(item) => {
+              rowKey={(o, i) => `${o.id ?? i}`}
+              emptyMessage="Todavía no hay órdenes de trabajo con los filtros actuales."
+              renderActions={(item: OrdersData) => {
                 const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
 
                 if (isDigitalOrder(item) && !isDraftDigital) {

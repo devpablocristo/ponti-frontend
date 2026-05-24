@@ -3,7 +3,8 @@ import { Archive, Download, Plus, Upload, Users } from "lucide-react";
 
 import { apiClient } from "@/api/client";
 import { SuccessResponse } from "@/api/types";
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
@@ -447,10 +448,13 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable
+            <ResponsiveTable<InvestorRow>
               data={rows}
               columns={tableColumns}
               pagination={pagination.buildPagination(rows.length)}
+              primaryKey="name"
+              rowKey={(i) => i.id}
+              emptyMessage="No hay inversores para mostrar"
             />
           </>
         )}

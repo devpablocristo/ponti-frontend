@@ -4,10 +4,10 @@ import { Archive, Download, Plus, Upload } from "lucide-react";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import {
-  DataTable,
   useClientTableFilters,
   usePagination,
 } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
@@ -494,7 +494,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
             actions={bulk.actions}
             entity={ENTITY}
           />
-          <DataTable
+          <ResponsiveTable<LaborInfo>
             data={filteredLabors}
             columns={columns}
             filters={columnsFilters}
@@ -502,6 +502,9 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
             enableFilters={true}
             message="Todavía no hay labores en este proyecto."
             pagination={buildPagination(filteredLabors.length)}
+            primaryKey="name"
+            rowKey={(l) => l.id}
+            emptyMessage="Todavía no hay labores en este proyecto."
           />
         </div>
       </div>

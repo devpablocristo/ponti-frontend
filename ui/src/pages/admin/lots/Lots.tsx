@@ -1,4 +1,5 @@
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../components/crud/ResponsiveTable";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
 import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
@@ -480,7 +481,7 @@ function Lots() {
           />
         ) : null}
         {hasWorkspaceSelection && !(processing && filteredLots.length === 0) && !message && !error ? (
-          <DataTable
+          <ResponsiveTable<LotsData>
             data={filteredLots}
             columns={columnsToShow}
             filters={columnsFilters}
@@ -499,6 +500,8 @@ function Lots() {
             }
             message="Todavía no hay lotes con los filtros actuales."
             pagination={pagination.buildPagination(filteredLots.length)}
+            rowKey={(l, i) => `${l.id ?? i}`}
+            emptyMessage="Todavía no hay lotes con los filtros actuales."
           />
         ) : null}
       </div>
