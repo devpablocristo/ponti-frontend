@@ -457,12 +457,21 @@ function SidebarSection({ name, routes, children }: SidebarSectionProps) {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebarOpen }) => {
+  // Doble modo:
+  //   mobile (<md): position:fixed, overlay sobre el contenido, slide-in/out via translate-x.
+  //   desktop (≥md): inline flex-child, ancho expand/collapse via width.
+  // El `md:` resetea las clases mobile (static, translate-x-0, w-64/w-0) para
+  // que ambos comportamientos convivan sin JS condicional.
+  const baseClasses = "bg-sidebar transition-all duration-300 ease-in-out fixed inset-y-0 left-0 z-drawer w-64 md:static md:translate-x-0 md:flex-shrink-0";
+  const mobileTransform = isSidebarOpen ? "translate-x-0" : "-translate-x-full";
+  const desktopWidth = isSidebarOpen ? "md:w-64 md:opacity-100" : "md:w-0 md:opacity-0 md:overflow-hidden";
+
   return (
     <aside
       id="logo-sidebar"
-      className={`bg-sidebar transition-all duration-300 ease-in-out flex-shrink-0
-    ${isSidebarOpen ? "w-64 opacity-100 translate-x-0" : "w-0 opacity-0 -translate-x-full"}`}
+      className={`${baseClasses} ${mobileTransform} ${desktopWidth}`}
       aria-label="Sidebar"
+      aria-hidden={!isSidebarOpen}
     >
       <div className="flex flex-col h-full pt-5 px-3 pb-4 gap-3 overflow-y-auto">
         {/* Logo */}

@@ -38,6 +38,17 @@ const MainLayout: React.FC = () => {
     setIsSidebarOpen(!isMobile);
   }, [isMobile]);
 
+  // Escape cierra el sidebar overlay en mobile. En desktop la tecla no hace
+  // nada porque el sidebar es inline (no hay nada que cerrar visualmente).
+  useEffect(() => {
+    if (!isMobile || !isSidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isMobile, isSidebarOpen]);
+
   if (auth?.loading || auth.user === null)
     return <LoadingScreen title={["Cargando..."]} description={[""]} />;
 
@@ -53,6 +64,14 @@ const MainLayout: React.FC = () => {
     // donde la URL bar de Safari se come 100px del 100vh y produce scroll fantasma.
     // Cae a h-screen en navegadores sin soporte (Tailwind genera el fallback).
     <div className="flex h-screen h-[100dvh] overflow-hidden bg-custom-bg dark:bg-slate-950">
+      {/* Backdrop mobile-only. En desktop el sidebar es inline → no hace falta. */}
+      {isMobile && isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-drawer bg-slate-900/50 backdrop-blur-sm md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <Sidebar
         setTitle={setTitle}
         setIsSidebarOpen={() => setIsSidebarOpen(false)}
