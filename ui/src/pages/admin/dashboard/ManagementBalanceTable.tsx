@@ -48,6 +48,11 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
         Balance de Gestión
       </h3>
 
+      {/* Scroll horizontal en mobile: 4 cols + chips de tamaño fijo no entran
+          en viewport <580px. El min-w mantiene legibilidad. */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[560px]">
+
       <div
         className="grid gap-x-3 text-sm font-semibold mb-1 items-center"
         style={{ gridTemplateColumns: tableGridColumns }}
@@ -147,6 +152,8 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
       {/*    {formatCurrency(totals.stock_usd)}*/}
       {/*  </div>*/}
       {/*</div>*/}
+        </div>
+      </div>
     </div>
   );
 }

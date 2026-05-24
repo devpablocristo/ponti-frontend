@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, CalendarRange, Plus, Upload } from "lucide-react";
 
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import Button from "../../../../components/Button/Button";
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { notify } from "@/lib/notify";
@@ -189,10 +190,13 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
               actions={bulk.actions}
               entity={ENTITY}
             />
-            <DataTable
+            <ResponsiveTable<Campaign>
               data={visibleCampaigns}
               columns={tableColumns}
               pagination={pagination.buildPagination(visibleCampaigns.length)}
+              primaryKey="name"
+              rowKey={(c) => c.id}
+              emptyMessage="No hay campañas para mostrar"
             />
           </>
         )}
