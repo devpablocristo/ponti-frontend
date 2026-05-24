@@ -468,7 +468,7 @@ export default function CreateOrder({
       >
         <>
           <section className="drawer-section">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <InputField
                 label="Nro. Orden"
                 placeholder="000-001"
@@ -503,7 +503,7 @@ export default function CreateOrder({
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               <SelectField
                 label="Campo"
                 name="field"
@@ -560,7 +560,7 @@ export default function CreateOrder({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
               <div>
                 <SelectField
                   label="Labor"
@@ -648,7 +648,7 @@ export default function CreateOrder({
             ) : (
               <div className="space-y-3">
                 {investorSplits.map((split, idx) => (
-                  <div key={idx} className="grid grid-cols-[1fr_120px_auto] gap-3 items-center">
+                  <div key={idx} className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_120px_auto] sm:items-center">
                     <SelectField
                       label=""
                       name={`split-investor-${idx}`}

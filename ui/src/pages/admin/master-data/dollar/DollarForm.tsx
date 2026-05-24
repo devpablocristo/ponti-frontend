@@ -141,7 +141,7 @@ export default function DollarForm() {
   return (
     <div className="w-full mx-auto">
       <AppFilterBar filters={filters} />
-      <div className="mt-4 p-6 w-full mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md">
+      <div className="mt-4 p-3 sm:p-6 w-full mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md">
         {processing && (
           <div className="flex items-center justify-center w-full h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
@@ -159,7 +159,7 @@ export default function DollarForm() {
           </a>
         </h1>
         <div className="mt-1">
-          <div className="w-full px-8 sm:px-16 md:px-32 py-4">
+          <div className="w-full px-2 sm:px-8 md:px-16 lg:px-32 py-4">
             <div>
               <div className="hidden sm:grid grid-cols-[1.2fr_1fr_1fr_1fr] gap-4 mb-2">
                 <span className="font-medium text-right w-full block">Mes</span>

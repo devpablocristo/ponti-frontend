@@ -196,7 +196,7 @@ useEffect(() => {
   return (
     <div className="w-full mx-auto">
       <AppFilterBar filters={filters} />
-      <div className="mt-4 p-6 w-full mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md">
+      <div className="mt-4 p-3 sm:p-6 w-full mx-auto bg-white dark:bg-slate-800 rounded-lg shadow-md">
         <h1 className="text-custom-text font-semibold text-xl leading-none">
           Datos de comercialización por cultivo
         </h1>
@@ -204,9 +204,9 @@ useEffect(() => {
           <TableSkeleton rows={6} columns={5} />
         ) : (
           <div className="mt-1">
-            <div className="w-full px-4 py-6">
+            <div className="w-full px-1 py-4 sm:px-4 sm:py-6">
               <div>
-                <div className="hidden sm:grid grid-cols-[0.5fr_0.5fr_0.5fr_0.5fr_0.5fr] gap-4 mb-2">
+                <div className="hidden md:grid grid-cols-5 gap-4 mb-2">
                   <span className="font-medium">Cultivo</span>
                   <span className="font-medium">Precio pizarra</span>
                   <span className="font-medium">Costo flete</span>
@@ -214,14 +214,14 @@ useEffect(() => {
                   <span className="font-medium">Precio neto</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-[0.5fr_0.5fr_0.5fr_0.5fr_0.5fr] gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {rows.map((crop, index) => (
                     <div
                       key={crop.cropId}
-                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                      className="md:contents border md:border-0 p-4 md:p-0 rounded-md md:rounded-none mb-4 md:mb-0 shadow-sm md:shadow-none"
                     >
-                      <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
+                      <div className="md:col-span-1">
+                        <label className="md:hidden text-sm text-gray-600 dark:text-gray-300">
                           Cultivo
                         </label>
                         <InputField
@@ -232,8 +232,8 @@ useEffect(() => {
                           disabled
                         />
                       </div>
-                      <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
+                      <div className="md:col-span-1">
+                        <label className="md:hidden text-sm text-gray-600 dark:text-gray-300">
                           Precio pizarra
                         </label>
                         <InputField
@@ -249,8 +249,8 @@ useEffect(() => {
                           placeholder="u$s"
                         />
                       </div>
-                      <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
+                      <div className="md:col-span-1">
+                        <label className="md:hidden text-sm text-gray-600 dark:text-gray-300">
                           Costo flete
                         </label>
                         <InputField
@@ -266,8 +266,8 @@ useEffect(() => {
                           placeholder="u$s"
                         />
                       </div>
-                      <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
+                      <div className="md:col-span-1">
+                        <label className="md:hidden text-sm text-gray-600 dark:text-gray-300">
                           Gastos comerciales %
                         </label>
                         <InputField
@@ -283,8 +283,8 @@ useEffect(() => {
                           placeholder="%"
                         />
                       </div>
-                      <div className="sm:col-span-1">
-                        <label className="sm:hidden text-sm text-gray-600 dark:text-gray-300">
+                      <div className="md:col-span-1">
+                        <label className="md:hidden text-sm text-gray-600 dark:text-gray-300">
                           Precio neto
                         </label>
                         <InputField
