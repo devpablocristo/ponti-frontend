@@ -16,8 +16,6 @@ interface IndicatorCardProps {
   icon?: React.ReactNode;
   color?: ColorOption;
   subtextColor?: ColorOption;
-  height?: string;
-  width?: string;
   className?: string;
 }
 
@@ -28,15 +26,15 @@ export function IndicatorCard({
   icon,
   color = "default",
   subtextColor,
-  height = "auto",
-  width = "auto",
   className = "",
 }: IndicatorCardProps) {
   const resolvedSubtextColor = subtextColor ?? color;
+  // `w-full` para que herede el ancho del contenedor (grid/flex parent).
+  // `min-w-0` evita overflow horizontal cuando el container no tiene espacio.
   return (
     <div
-      className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700/60 overflow-hidden flex-1 min-w-0 transition-all duration-200 hover:shadow-md ${className}`}
-      style={{ minHeight: height, minWidth: width, boxShadow: "var(--shadow-sm)" }}
+      className={`w-full min-w-0 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700/60 overflow-hidden transition-all duration-200 hover:shadow-md ${className}`}
+      style={{ boxShadow: "var(--shadow-sm)" }}
     >
       <div
         className="h-1 w-full"

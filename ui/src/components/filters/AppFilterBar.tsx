@@ -133,7 +133,7 @@ function ResponsiveActionContainer({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-dropdown">
       {open ? (
         <div className="mb-3 flex flex-col items-end gap-2">
           {actions.map((action) => (
@@ -145,7 +145,7 @@ function ResponsiveActionContainer({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="flex h-12 w-12 items-center justify-center rounded-full bg-custom-btn text-2xl text-white shadow-lg transition-all duration-200 hover:bg-custom-btn/85 active:scale-95"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-custom-btn text-2xl text-white shadow-lg transition-all duration-200 hover:bg-custom-btn/85 active:scale-95"
         aria-label="Acciones"
       >
         +
