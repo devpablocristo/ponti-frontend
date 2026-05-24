@@ -129,7 +129,7 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
 
       <div
         ref={dropdownRef}
-        className={`absolute right-0 top-full mt-2 z-[910] ${
+        className={`absolute right-0 top-full mt-2 z-nav-menu ${
           isDropdownOpen ? "animate-fade-in-down" : "hidden"
         } w-52 bg-white rounded-xl border border-slate-200 overflow-hidden`}
         style={{ boxShadow: "var(--shadow-lg)" }}

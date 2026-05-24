@@ -4,6 +4,8 @@ import { X } from "lucide-react";
 import AppButton, { type AppButtonVariant } from "../Button/Button";
 import { IconActionButton } from "../Button/IconActionButton";
 
+export type BaseModalSize = "sm" | "md" | "lg" | "xl";
+
 interface BaseModalProps {
   isOpen: boolean;
   isSaving?: boolean;
@@ -17,7 +19,17 @@ interface BaseModalProps {
   onSecondaryAction?: () => void;
   children?: React.ReactNode;
   primaryButtonColor?: string;
+  /** Mobile siempre es full-width con margen; size controla el desktop. Default `md`. */
+  size?: BaseModalSize;
 }
+
+// Mobile: full-width con margen lateral. Desktop crece según size.
+const SIZE_CLASS: Record<BaseModalSize, string> = {
+  sm: "max-w-full sm:max-w-sm",
+  md: "max-w-full sm:max-w-md md:max-w-lg",
+  lg: "max-w-full sm:max-w-lg md:max-w-2xl",
+  xl: "max-w-full sm:max-w-xl md:max-w-3xl lg:max-w-4xl",
+};
 
 export function BaseModal({
   isOpen,
@@ -32,6 +44,7 @@ export function BaseModal({
   onSecondaryAction,
   children,
   primaryButtonColor = "bg-red-600 hover:bg-red-800 focus:ring-red-300",
+  size = "md",
 }: BaseModalProps) {
   const primaryVariant: AppButtonVariant = primaryButtonColor.includes("amber")
     ? "warning"
@@ -61,11 +74,11 @@ export function BaseModal({
     <div
       id="popup-modal"
       tabIndex={-1}
-      className={`animate-modal-backdrop fixed top-0 right-0 left-0 z-[1000] flex justify-center items-center w-full h-screen backdrop-blur-sm bg-slate-900/50 dark:bg-black/60 ${
+      className={`animate-modal-backdrop fixed inset-0 z-modal flex justify-center items-center w-full h-[100dvh] backdrop-blur-sm bg-slate-900/50 dark:bg-black/60 ${
         isOpen ? "flex" : "hidden"
       }`}
     >
-      <div className="relative p-4 w-full max-w-md max-h-full">
+      <div className={`relative p-4 w-full ${SIZE_CLASS[size]} max-h-full`}>
         <div
           className="animate-modal-content relative bg-white dark:bg-slate-800 rounded-2xl"
           style={{ boxShadow: "var(--shadow-xl)" }}

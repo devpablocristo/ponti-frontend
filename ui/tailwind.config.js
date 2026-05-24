@@ -13,6 +13,39 @@ export default {
   ],
   theme: {
     extend: {
+      // Breakpoints: extendemos los defaults (sm 640, md 768, lg 1024, xl 1280,
+      // 2xl 1536) con xs (iPhone SE / mini) y 3xl (full HD large). NO redefinir
+      // sin agregar todos los defaults, porque `extend.screens` los preserva
+      // pero el shorthand `screens` los reemplaza.
+      // Single source of truth: este archivo + src/hooks/useBreakpoint.ts.
+      screens: {
+        xs: "375px",
+        "3xl": "1920px",
+      },
+      // Escala explícita para z-index. Reemplaza usos arbitrarios `z-[NNN]`.
+      // Capas (de menor a mayor):
+      //   sticky    → sticky table cells/headers en el flujo
+      //   dropdown  → dropdowns/popovers en el flujo (sobre sticky)
+      //   navbar    → chrome top
+      //   nav-menu  → dropdowns dentro del navbar (sobre el navbar)
+      //   drawer    → drawer lateral (sobre navbar pero debajo de modales)
+      //   modal     → modales + overlays full-screen
+      //   popover   → popovers sobre modales
+      //   tooltip   → tooltips
+      //   notification → toasts (siempre arriba)
+      // Si necesitás un z nuevo, agregalo acá — no uses `z-[NNN]` arbitrario.
+      zIndex: {
+        base: "0",
+        sticky: "1",
+        dropdown: "50",
+        navbar: "900",
+        "nav-menu": "910",
+        drawer: "920",
+        modal: "1000",
+        popover: "1010",
+        tooltip: "1020",
+        notification: "1030",
+      },
       colors: {
         "custom-green": "#0E9F6E",
         "custom-btn": "#547792",

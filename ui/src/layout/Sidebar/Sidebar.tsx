@@ -19,6 +19,7 @@ import React, { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getSidebarTitle } from "./sidebarTitle";
 import { useTheme, type Theme } from "@/lib/theme";
+import { useIsMobile } from "@/hooks/useBreakpoint";
 
 type MenuItem = {
   name: string;
@@ -350,6 +351,7 @@ function ThemeToggle() {
 
 function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
   const location = useLocation();
+  const isMobile = useIsMobile();
   const isActive = (route: string) => location.pathname === route;
   const active = isActive(item.route);
   const iconColor = active ? "#34D399" : "#94A3B8";
@@ -369,7 +371,7 @@ function SidebarItem({ item, setIsSidebarOpen, setTitle }: SidebarItemProps) {
       style={{ color: active ? "#34D399" : "#94A3B8" }}
       onClick={() => {
         setTitle(getSidebarTitle(item.route));
-        if (window.innerWidth < 768) setIsSidebarOpen();
+        if (isMobile) setIsSidebarOpen();
       }}
       onMouseEnter={(e) => {
         if (!active) e.currentTarget.style.color = "#E2E8F0";

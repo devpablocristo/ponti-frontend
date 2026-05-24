@@ -10,15 +10,16 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 import { SelectionProvider } from "../pages/login/context/SelectionContext";
 import { TenantProvider } from "../pages/login/context/TenantContext";
+import { useIsMobile } from "@/hooks/useBreakpoint";
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const auth = useAuth();
+  const isMobile = useIsMobile();
 
-  const isSmallScreen = window.innerWidth < 768;
   const [title, setTitle] = useState("Dashboard");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(!isSmallScreen);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   useEffect(() => {
@@ -31,18 +32,11 @@ const MainLayout: React.FC = () => {
     setTitle(getSidebarTitle(location.pathname));
   }, [location.pathname]);
 
+  // Sincronizá sidebar al breakpoint: cierra al entrar en mobile, abre al volver.
+  // `useIsMobile` ya escucha matchMedia → no necesitamos resize listener manual.
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   if (auth?.loading || auth.user === null)
     return <LoadingScreen title={["Cargando..."]} description={[""]} />;
@@ -55,7 +49,10 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-custom-bg dark:bg-slate-950">
+    // h-[100dvh] (dynamic viewport) en lugar de h-screen para evitar el bug iOS
+    // donde la URL bar de Safari se come 100px del 100vh y produce scroll fantasma.
+    // Cae a h-screen en navegadores sin soporte (Tailwind genera el fallback).
+    <div className="flex h-screen h-[100dvh] overflow-hidden bg-custom-bg dark:bg-slate-950">
       <Sidebar
         setTitle={setTitle}
         setIsSidebarOpen={() => setIsSidebarOpen(false)}

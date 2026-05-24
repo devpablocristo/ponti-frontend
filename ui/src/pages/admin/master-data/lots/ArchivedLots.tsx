@@ -136,7 +136,7 @@ export default function ArchivedLots({ onAfterRestore }: ArchivedLotsProps = {})
 
       {blockedLot && (
         <div
-          className="fixed inset-0 z-[990] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-modal flex items-center justify-center bg-black/50 p-4"
           onClick={() => setBlockedLot(null)}
         >
           <div

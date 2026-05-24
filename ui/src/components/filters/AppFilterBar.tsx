@@ -174,7 +174,7 @@ function FilterSuggestions({
   const hasOptions = options.length > 0;
 
   return (
-    <ul className="absolute top-full z-[70] mt-1 max-h-[240px] w-full overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-1 shadow-lg">
+    <ul className="absolute top-full z-dropdown mt-1 max-h-[240px] w-full overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-1 shadow-lg">
       {allowAll ? (
         <li
           className="cursor-pointer px-3.5 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 transition-colors duration-150 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-700"
@@ -316,7 +316,7 @@ export function AppFilterBar({
   );
 
   return (
-    <div className={`relative z-[60] w-full ${className}`.trim()}>
+    <div className={`relative z-dropdown w-full ${className}`.trim()}>
       <div className="flex flex-col items-start justify-between gap-3 px-1 py-2 sm:flex-row sm:items-end sm:gap-4">
         <div className="flex w-full flex-col gap-4 sm:flex-1 sm:flex-row">
           {filters.map((filter) => {

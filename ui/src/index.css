@@ -315,10 +315,9 @@
     box-shadow: var(--shadow-lg);
   }
 
-  /* Drawers */
+  /* Drawers — alineado con `tailwind.config.js` zIndex.drawer (920) */
   .drawer-root {
-    @apply fixed inset-0 flex;
-    z-index: 950;
+    @apply fixed inset-0 flex z-drawer;
   }
 
   .drawer-backdrop {

@@ -28,7 +28,7 @@ interface DashboardFilterSummaryItem {
 function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
   if (!dashboard) {
     return (
-      <div className="flex gap-4">
+      <div>
         <div className="p-4 text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-slate-900">
           No hay datos de dashboard disponibles
         </div>
@@ -39,8 +39,10 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
   const { metrics } = dashboard;
   const investorItems = metrics.investor_contributions.items ?? [];
 
+  // Grid responsive: 1 col mobile, 2 cols sm, 3 cols lg, 5 cols xl.
+  // El `flex gap-4` original overflowea horizontalmente con 5 KPIs en mobile.
   return (
-    <div className="flex gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <IndicatorCard
         title="Avance de siembra"
         value={`${metrics.sowing.progress_pct}%`}

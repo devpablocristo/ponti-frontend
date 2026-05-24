@@ -897,7 +897,7 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
         <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.78rem]">
           <thead className="bg-slate-50 dark:bg-slate-900">
             <tr>
-              <th className="sticky left-0 z-[1] w-[220px] bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="sticky left-0 z-sticky w-[220px] bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Métrica
               </th>
               {data.columns.map((column) => (
