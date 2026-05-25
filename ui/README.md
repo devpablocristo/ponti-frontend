@@ -10,22 +10,25 @@ Aplicación React + TypeScript + Vite para la consola de Ponti.
 
 ## Módulos compartidos
 
-La UI consume paquetes publicados desde `core` y `modules`:
+La UI consume paquetes publicados desde `platform`:
 
-- `@devpablocristo/core-authn`
-- `@devpablocristo/core-browser`
-- `@devpablocristo/core-http`
-- `@devpablocristo/modules-ui-data-display`
+- `@devpablocristo/platform-authn`
+- `@devpablocristo/platform-browser`
+- `@devpablocristo/platform-http`
+- `@devpablocristo/platform-ui-data-display`
 
 No usa ya una copia local de `src/modules/ai-console`.
 
-## Tipos OpenAPI de Ponti AI
+## Tipos OpenAPI del asistente
 
 Archivos relevantes:
 
 - `src/generated/ponti-ai.openapi.json`
 - `src/generated/ponti-ai.openapi.ts`
 - `src/types/ai.ts`
+
+El nombre de archivo conserva `ponti-ai` por compatibilidad con el contrato del
+BFF. El backend Go ya adapta esas rutas hacia Axis Companion.
 
 Regeneración:
 
