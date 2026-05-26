@@ -58,7 +58,7 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
       <div className={`${fullWidth ? "w-full" : ""} ${className}`}>
         {label !== "" && (
           <label
-            className="block mb-1.5 text-xs font-medium text-slate-600"
+            className="block mb-1.5 text-xs font-medium text-slate-600 dark:text-slate-300"
           >
             {label}
           </label>
@@ -80,7 +80,7 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
           max={max}
           className={`input-base block ${
             disabled
-              ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200"
+              ? "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 dark:text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-700"
               : ""
           } ${sizeClasses} ${inputClassName}`}
           required={required}

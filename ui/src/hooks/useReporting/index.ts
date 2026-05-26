@@ -1,18 +1,18 @@
 import React, { useState } from "react";
 
-import useReportingReducer from "./useReportingReducer";
+import reportingReducer from "./reportingReducer";
 import * as actions from "./actions";
 import { FieldCropReportData, InvestorContributionReportData, SummaryResultsReportData } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
-import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 
 const useReporting = () => {
   const [{
     fieldCropReportingData,
     investorContributionReportingData,
     summaryResultsReportingData
-  }, dispatch] = useReportingReducer();
+  }, dispatch] = reportingReducer();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,13 +47,13 @@ const useReporting = () => {
         return;
       }
 
-      setError("Ocurrió un error en la búsqueda del reporte");
+      setError("No se pudo cargar el reporte.");
     } catch (error) {
       dispatch({
         type: actions.SET_FIELD_CROP_REPORTING,
         payload: null,
       });
-      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+      setError(formatError(error, { fallback: "No se pudo cargar el reporte." }));
     } finally {
       setProcessing(false);
     }
@@ -90,13 +90,13 @@ const useReporting = () => {
         return;
       }
 
-      setError("Ocurrió un error en la búsqueda del reporte");
+      setError("No se pudo cargar el reporte.");
     } catch (error) {
       dispatch({
         type: actions.SET_INVESTOR_CONTRIBUTION_REPORTING,
         payload: null,
       });
-      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+      setError(formatError(error, { fallback: "No se pudo cargar el reporte." }));
     } finally {
       setProcessing(false);
     }
@@ -133,13 +133,13 @@ const useReporting = () => {
         return;
       }
 
-      setError("Ocurrió un error en la búsqueda del reporte");
+      setError("No se pudo cargar el reporte.");
     } catch (error) {
       dispatch({
         type: actions.SET_SUMMARY_RESULTS_REPORTING,
         payload: null,
       });
-      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
+      setError(formatError(error, { fallback: "No se pudo cargar el reporte." }));
     } finally {
       setProcessing(false);
     }

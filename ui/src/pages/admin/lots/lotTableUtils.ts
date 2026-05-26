@@ -20,7 +20,7 @@ const emptyIndicators: LotIndicatorValues = {
   superficie_total: 0,
 };
 
-export function toFiniteNumber(value: unknown): number {
+function toFiniteNumber(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -61,7 +61,7 @@ function matchesFilterValue(cellValues: string[], filterValue: unknown): boolean
   return cellValues.some((value) => matchesTextFilter(value, filterValue));
 }
 
-export function lotMatchesFilters(
+function lotMatchesFilters(
   lot: LotsData,
   filters: Record<string, unknown>,
   ignoredKey?: keyof LotsData

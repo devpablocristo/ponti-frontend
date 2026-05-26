@@ -10,7 +10,8 @@ import {
 } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
-import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
+import { extractErrorStatus } from "@/api/hooks/useApiCall";
+import { formatError } from "@/lib/format";
 
 type SupplyMutationResponse = SuccessResponse<unknown>;
 type SupplyWorkOrdersCountResponse = SuccessResponse<{ count: number }>;
@@ -39,16 +40,9 @@ const useSupplies = () => {
           return;
         }
 
-        setError("Ocurrio un error en la busqueda de insumos");
+        setError("No se pudieron cargar los insumos.");
       } catch (err) {
-        if (extractErrorStatus(err) === 409) {
-          setError("Ya existe un insumo con el mismo nombre.");
-          return;
-        }
-
-        setError(
-          extractErrorMessage(err, "Error en el servicio, inténtalo más tarde.")
-        );
+        setError(formatError(err, { fallback: "No se pudieron cargar los insumos." }));
       } finally {
         setProcessing(false);
       }
@@ -74,24 +68,16 @@ const useSupplies = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Se han creado los insumos con éxito!",
+            payload: "Se guardaron los insumos.",
           });
-          return;
+          return true;
         }
 
-        setError("Ocurrio un error en la creación de los insumos");
+        setError("No se pudieron guardar los insumos.");
+        return false;
       } catch (error) {
-        if (extractErrorStatus(error) === 409) {
-          setError("Ya existe un insumo con el mismo nombre.");
-          return;
-        }
-
-        setError(
-          extractErrorMessage(
-            error,
-            "Error desconocido en la creación de los insumos."
-          )
-        );
+        setError(formatError(error, { fallback: "No se pudieron guardar los insumos." }));
+        return false;
       } finally {
         setProcessing(false);
       }
@@ -110,29 +96,26 @@ const useSupplies = () => {
 
       try {
         const response = await apiClient.delete<SupplyMutationResponse>(
-          `/supplies/${id}`
+          `/supplies/${id}/hard`
         );
 
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Se ha eliminado el insumo con éxito!",
+            payload: "Se eliminó el insumo.",
           });
           return "deleted";
         }
 
-        setError("Ocurrio un error en la eliminación del insumo");
+        setError("No se pudo eliminar el insumo.");
       } catch (error) {
+        // El caller distingue "conflict" para mostrar un drawer con las OT
+        // bloqueando; el resto cae a toast de error con copy traducida.
         if (extractErrorStatus(error) === 409) {
           return "conflict";
         }
 
-        setError(
-          extractErrorMessage(
-            error,
-            "Error desconocido en la eliminación del insumo."
-          )
-        );
+        setError(formatError(error, { fallback: "No se pudo eliminar el insumo." }));
       } finally {
         setProcessing(false);
       }
@@ -152,7 +135,7 @@ const useSupplies = () => {
       });
 
       try {
-        const response = await apiClient.put<SupplyMutationResponse>(
+        const response = await apiClient.post<SupplyMutationResponse>(
           `/supplies/${id}/archive`,
           {}
         );
@@ -160,26 +143,96 @@ const useSupplies = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Se ha archivado el insumo con éxito!",
+            payload: "Se archivó el insumo.",
           });
           return true;
         }
 
-        setError("Ocurrio un error en el archivado del insumo");
+        const message = "No se pudo archivar el insumo.";
+        setError(message);
+        throw new Error(message);
       } catch (error) {
-        setError(
-          extractErrorMessage(
-            error,
-            "Error desconocido en el archivado del insumo."
-          )
-        );
+        const message = formatError(error, { fallback: "No se pudo archivar el insumo." });
+        setError(message);
+        throw new Error(message);
       } finally {
         setProcessing(false);
       }
-
-      return false;
     },
-    [dispatch]
+    [dispatch],
+  );
+
+  const restoreSupply = React.useCallback(
+    async (id: number): Promise<void> => {
+      setProcessing(true);
+      setError(null);
+      try {
+        const response = await apiClient.post<SupplyMutationResponse>(
+          `/supplies/${id}/restore`,
+          {}
+        );
+        if (!response.success) {
+          const message = "No se pudo restaurar el insumo.";
+          setError(message);
+          throw new Error(message);
+        }
+      } catch (error) {
+        const message = formatError(error, { fallback: "No se pudo restaurar el insumo." });
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [],
+  );
+
+  const hardDeleteSupply = React.useCallback(
+    async (id: number): Promise<void> => {
+      setProcessing(true);
+      setError(null);
+      try {
+        const response = await apiClient.delete<SupplyMutationResponse>(
+          `/supplies/${id}/hard`
+        );
+        if (!response.success) {
+          const message = "No se pudo eliminar el insumo.";
+          setError(message);
+          throw new Error(message);
+        }
+      } catch (error) {
+        const message = formatError(error, { fallback: "No se pudo eliminar el insumo." });
+        setError(message);
+        throw new Error(message);
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [],
+  );
+
+  const getArchivedSupplies = React.useCallback(
+    async (queryString: string): Promise<void> => {
+      setProcessing(true);
+      setError(null);
+      let queryParams = "";
+      if (queryString !== "") queryParams = `?${queryString}`;
+      try {
+        const response = await apiClient.get<SuccessResponse<SupplyResponse>>(
+          "/supplies/archived" + queryParams,
+        );
+        if (response.success) {
+          dispatch({ type: actions.SET_SUPPLIES, payload: response.data.data });
+          return;
+        }
+        setError("No se pudieron cargar los insumos archivados.");
+      } catch (error) {
+        setError(formatError(error, { fallback: "No se pudieron cargar los insumos archivados." }));
+      } finally {
+        setProcessing(false);
+      }
+    },
+    [dispatch],
   );
 
   const getWorkOrdersCount = React.useCallback(
@@ -212,20 +265,13 @@ const useSupplies = () => {
         );
 
         if (response.success) {
-          setResultUpdate("Se editado el insumo con éxito!");
+          setResultUpdate("Se actualizó el insumo.");
           return;
         }
 
-        setErrorUpdate("Ocurrio un error en la edicion del insumo");
+        setErrorUpdate("No se pudo actualizar el insumo.");
       } catch (error) {
-        if (extractErrorStatus(error) === 404) {
-          setErrorUpdate("El insumo no existe.");
-          return;
-        }
-
-        setErrorUpdate(
-          extractErrorMessage(error, "Error desconocido en la edicion del insumo.")
-        );
+        setErrorUpdate(formatError(error, { fallback: "No se pudo actualizar el insumo." }));
       } finally {
         setProcessing(false);
       }
@@ -254,23 +300,13 @@ const useSupplies = () => {
         );
 
         if (response.success) {
-          setResultUpdate("Se completó el insumo pendiente con éxito!");
+          setResultUpdate("Se completó el insumo pendiente.");
           return;
         }
 
-        setErrorUpdate("Ocurrio un error al completar el insumo pendiente");
+        setErrorUpdate("No se pudo completar el insumo pendiente.");
       } catch (error) {
-        if (extractErrorStatus(error) === 404) {
-          setErrorUpdate("El insumo pendiente no existe.");
-          return;
-        }
-
-        setErrorUpdate(
-          extractErrorMessage(
-            error,
-            "Error desconocido al completar el insumo pendiente."
-          )
-        );
+        setErrorUpdate(formatError(error, { fallback: "No se pudo completar el insumo pendiente." }));
       } finally {
         setProcessing(false);
       }
@@ -281,10 +317,13 @@ const useSupplies = () => {
   return {
     supplies,
     getSupplies,
+    getArchivedSupplies,
     saveSupplies,
     updateSupply,
     deleteSupply,
     archiveSupply,
+    restoreSupply,
+    hardDeleteSupply,
     completePendingSupply,
     getWorkOrdersCount,
     processing,

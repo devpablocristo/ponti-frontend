@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { SquareArrowOutUpRight } from "lucide-react";
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
+import { notify } from "@/lib/notify";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import SelectField from "../../../components/Input/SelectField";
 import { ByFieldOrCropTable } from "./ByFieldOrCropTable.tsx";
@@ -216,11 +219,15 @@ const rowsToRender: RowToRender[] = [
   },
 ];
 
-export function ByFieldOrCropReport() {
+function ByFieldOrCropReport() {
   const [selectedField, setSelectedField] = useState<string>("0");
   const [selectedCrop, setSelectedCrop] = useState<string>("0");
   
   const { fieldCropReportingData: reportingData, processing, error, getFieldCropReportingData } = useReporting();
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
 
   const {
     filters,
@@ -278,13 +285,9 @@ export function ByFieldOrCropReport() {
 
   return (
     <div className="relative">
-      { (loading.projects || loading.campaigns || processing) && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin"/>
-        </div>
-      ) }
+      <LoadingOverlay show={loading.projects || loading.campaigns || processing} />
 
-      <FilterBar
+      <AppFilterBar
         filters={ filters }
         actions={ [
           {
@@ -303,21 +306,12 @@ export function ByFieldOrCropReport() {
         ] }
       />
 
-      { error && (
-        <div
-          className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50"
-          role="alert"
-        >
-          <span className="font-medium">{ error }</span>
-        </div>
-      ) }
-
       { !error && (
         <>
           <div className="rounded-xl border py-6 px-2" ref={ targetRef }>
             <div className="border-b mb-4" style={ { borderColor: "#D1D5DB" } }/>
             <div className="flex items-center gap-8 mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
                 Informe por Campo/Cultivo
               </h2>
               <div className="flex gap-4">
@@ -345,13 +339,18 @@ export function ByFieldOrCropReport() {
                     name="crop"
                     value={ selectedCrop }
                     onChange={ (e) => setSelectedCrop(e.target.value) }
-                    options={ reportingData && reportingData.columns ? [
-                      { id: 0, name: "Todos" },
-                      ...reportingData.columns.map((crop) => ({
-                        id: crop.crop_id,
-                        name: crop.crop_name,
-                      })),
-                    ] : [] }
+                    // Deduplicar por crop_id: un mismo cultivo aparece varias
+                    // veces en `columns` (una por cada campo donde se sembró).
+                    // Sin dedup, React loggea "duplicate key" porque cada
+                    // <option> termina con el mismo crop_id.
+                    options={ reportingData && reportingData.columns
+                      ? reportingData.columns.reduce((acc, crop) => {
+                          if (acc.findIndex(c => c.id === crop.crop_id) === -1) {
+                            acc.push({ id: crop.crop_id, name: crop.crop_name });
+                          }
+                          return acc;
+                        }, [{ id: 0, name: "Todos" }])
+                      : [] }
                     size="sm"
                     fullWidth
                   />
@@ -364,9 +363,11 @@ export function ByFieldOrCropReport() {
             />
 
             { processing ? (
-              <div className="flex items-center justify-center h-48">
-                <LoaderCircle className="w-8 h-8 text-blue-500 animate-spin"/>
-              </div>
+              <InlineSpinner
+                size="md"
+                spinnerClassName="text-blue-500"
+                containerClassName="flex items-center justify-center h-48"
+              />
             ) : (
               <ByFieldOrCropTable
                 data={ filteredData() }

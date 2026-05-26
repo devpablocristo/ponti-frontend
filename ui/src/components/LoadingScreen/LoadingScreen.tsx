@@ -19,7 +19,7 @@ export default function LoadingScreen({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
       <div className="w-full max-w-lg mx-auto px-4 animate-fade-in">
         <div className="flex flex-col items-center text-center space-y-6">
           <div className="w-16 h-16 flex items-center justify-center">
@@ -41,10 +41,10 @@ export default function LoadingScreen({
             </svg>
           </div>
           <div className="space-y-4">
-            <h1 className="text-2xl font-bold text-slate-800 font-display tracking-tight">
+            <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200 font-display tracking-tight">
               {renderText(title)}
             </h1>
-            <p className="text-base text-slate-500">{renderText(description)}</p>
+            <p className="text-base text-slate-500 dark:text-slate-400">{renderText(description)}</p>
           </div>
         </div>
       </div>

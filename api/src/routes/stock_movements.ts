@@ -9,6 +9,26 @@ const router: Router = Router();
 
 const CACHE_PREFIX = "stock_movements";
 
+const buildHeaders = (userId: string) => ({
+  "X-API-KEY": configService.apiKey,
+  "X-User-Id": userId,
+});
+
+const requireUser = (req: Request, res: Response): string | null => {
+  const userId = req.user?.userID;
+  if (!userId) {
+    res.status(401).json({ message: "Usuario no autenticado" });
+    return null;
+  }
+  return userId;
+};
+
+const parseRequiredInt = (value: string | undefined, message: string): number => {
+  const id = parseInt(value as string, 10) || 0;
+  if (id === 0) throw new Error(message);
+  return id;
+};
+
 router.get("/export/:id", async (req, res) => {
   try {
     const userId = req.user?.userID;
@@ -124,6 +144,128 @@ router.get("/:project_id", async (req: Request, res: Response) => {
       success: false,
       message: "Error inesperado",
       error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.get("/:project_id/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = requireUser(req, res);
+    if (!userId) return;
+    const project_id = parseRequiredInt(req.params.project_id, "Proyecto obligatorio");
+
+    const { data: movements } = await apiClient.get<any>(
+      `/projects/${project_id}/stock-movements/archived`,
+      buildHeaders(userId)
+    );
+
+    const entries = Array.isArray(movements?.entries) ? movements.entries : [];
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: movements?.summary,
+        entries,
+        page_info: {
+          total: entries.length,
+          page: 1,
+          per_page: 100,
+          max_page: 1,
+        },
+      },
+    });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo obtener movimientos archivados" },
+    });
+  }
+});
+
+router.post("/:id/project/:project_id/archive", async (req: Request, res: Response) => {
+  try {
+    const userId = requireUser(req, res);
+    if (!userId) return;
+    const id = parseRequiredInt(req.params.id, "Id obligatorio");
+    const project_id = parseRequiredInt(req.params.project_id, "Proyecto obligatorio");
+
+    await apiClient.post<any>(
+      `/projects/${project_id}/stock-movements/${id}/archive`,
+      {},
+      buildHeaders(userId)
+    );
+    cache.flushAll();
+    res.status(200).json({ success: true });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo archivar movimiento de stock" },
+    });
+  }
+});
+
+router.post("/:id/project/:project_id/restore", async (req: Request, res: Response) => {
+  try {
+    const userId = requireUser(req, res);
+    if (!userId) return;
+    const id = parseRequiredInt(req.params.id, "Id obligatorio");
+    const project_id = parseRequiredInt(req.params.project_id, "Proyecto obligatorio");
+
+    await apiClient.post<any>(
+      `/projects/${project_id}/stock-movements/${id}/restore`,
+      {},
+      buildHeaders(userId)
+    );
+    cache.flushAll();
+    res.status(200).json({ success: true });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo restaurar movimiento de stock" },
+    });
+  }
+});
+
+router.delete("/:id/project/:project_id/hard", async (req: Request, res: Response) => {
+  try {
+    const userId = requireUser(req, res);
+    if (!userId) return;
+    const id = parseRequiredInt(req.params.id, "Id obligatorio");
+    const project_id = parseRequiredInt(req.params.project_id, "Proyecto obligatorio");
+
+    await apiClient.delete<any>(
+      `/projects/${project_id}/stock-movements/${id}/hard`,
+      buildHeaders(userId)
+    );
+    cache.flushAll();
+    res.status(200).json({ success: true });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo eliminar definitivamente movimiento de stock" },
     });
   }
 });

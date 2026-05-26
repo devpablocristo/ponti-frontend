@@ -1,13 +1,21 @@
-import React from "react";
+import { useMemo } from "react";
 
-import * as actions from "./actions";
-import { apiClient } from "@/api/client";
-import { Project, ProjectPayload, ProjectDropdownPayload } from "./types";
-import { SuccessResponse } from "@/api/types";
-import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
-
+import { createProjectMutations } from "./mutations";
 import useProjectReducer from "./projectReducer";
+import { createProjectQueries } from "./queries";
 
+/**
+ * Hook compositor para projects. A diferencia de useWorkOrders/etc., el state
+ * de processing/error vive **completamente en el reducer** (acciones
+ * START_PROCESSING, STOP_PROCESSING, SET_ERROR, etc.), no en useState. Eso
+ * hace los services más simples: solo dispatch, sin setters.
+ *
+ * 2 factory services:
+ *   - queries.ts: getProjects, getArchivedProjects, getProjectsDropdown, getProject
+ *   - mutations.ts: save, update, delete (archive), restore, hardDelete
+ *
+ * API público intacto post-refactor.
+ */
 const useProjects = () => {
   const [
     {
@@ -25,395 +33,8 @@ const useProjects = () => {
     dispatch,
   ] = useProjectReducer();
 
-  const saveProject = React.useCallback(
-    async (userData: Project): Promise<void> => {
-      dispatch({ type: actions.SET_RESULT, payload: "" });
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      try {
-        const response = await apiClient.post<SuccessResponse<Project>>(
-          "/projects",
-          userData
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT,
-            payload: "Se ha creado un nuevo proyecto con éxito!",
-          });
-          return;
-        }
-
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: "Ocurrio un error al intentar guardar el proyecto",
-        });
-      } catch (error) {
-        const status = extractErrorStatus(error);
-        if (status === 409) {
-          dispatch({
-            type: actions.SET_ERROR,
-            payload: "Ya existe un proyecto con el mismo nombre y campaña.",
-          });
-          return;
-        }
-
-        const message = extractErrorMessage(
-          error,
-          "Error desconocido en la creación del proyecto."
-        );
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: message,
-        });
-        return;
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
-
-  const getProjects = React.useCallback(
-    async (queryString: string): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      let queryParams = "";
-      if (queryString !== "") {
-        queryParams = `?${queryString}`;
-      }
-
-      try {
-        const response = await apiClient.get<SuccessResponse<ProjectPayload>>(
-          "/projects" + queryParams
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_PROJECTS,
-            payload: response.data.data,
-          });
-
-          dispatch({
-            type: actions.SET_PAGINATION,
-            payload: response.data.page_info,
-          });
-
-          dispatch({
-            type: actions.SET_TOTAL_HECTARES,
-            payload: response.data.total_hectares,
-          });
-          return;
-        }
-
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: "Ocurrio un error en la busqueda de proyectos",
-        });
-      } catch (error) {
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
-        });
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
-
-  const getProjectsDropdown = React.useCallback(
-    async (id: number, queryString: string = ""): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING_DROPDOWN });
-
-      try {
-        const response = await apiClient.get<
-          SuccessResponse<ProjectDropdownPayload>
-        >(`/projects/customers/${id}` + (queryString ? `?${queryString}` : ""));
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_PROJECTS_DROPDOWN,
-            payload: response.data.data,
-          });
-
-          dispatch({
-            type: actions.SET_PROJECTS_DROPDOWN_PAGINATION,
-            payload: response.data.page_info,
-          });
-          return;
-        }
-
-        dispatch({
-          type: actions.SET_ERROR_DROPDOWN,
-          payload: "Ocurrio un error en la busqueda de proyectos",
-        });
-      } catch (error) {
-        dispatch({
-          type: actions.SET_ERROR_DROPDOWN,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
-        });
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING_DROPDOWN });
-      }
-    },
-    [dispatch]
-  );
-
-  const getProject = React.useCallback(
-    async (id: number): Promise<void> => {
-      dispatch({ type: actions.SET_RESULT, payload: "" });
-      dispatch({ type: actions.CLEAR_SELECTED_PROJECT });
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      try {
-        const response = await apiClient.get<SuccessResponse<Project>>(
-          "/projects/" + id
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_SELECTED_PROJECT,
-            payload: response.data,
-          });
-          return;
-        }
-
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: "Ocurrio un error en la busqueda del proyecto",
-        });
-      } catch (error) {
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
-        });
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
-
-  const updateProject = React.useCallback(
-    async (id: number, project: Project): Promise<void> => {
-      dispatch({ type: actions.SET_RESULT, payload: "" });
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      try {
-        const response = await apiClient.put<SuccessResponse<Project>>(
-          "/projects/" + id,
-          project
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT,
-            payload: "Proyecto editado con exito",
-          });
-          return;
-        }
-
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: "Ocurrio un error al intentar editar un proyecto.",
-        });
-      } catch (error) {
-        const status = extractErrorStatus(error);
-        if (status === 404) {
-          dispatch({
-            type: actions.SET_ERROR,
-            payload:
-              "No se encontró el proyecto o no tiene la última versión disponible.",
-          });
-          return;
-        }
-
-        const message = extractErrorMessage(
-          error,
-          "Error desconocido al intentar editar un proyecto."
-        );
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: message,
-        });
-        return;
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
-
-  const deleteProject = React.useCallback(
-    async (id: number): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      try {
-        const response = await apiClient.put<SuccessResponse<string>>(
-          "/projects/" + id + "/archive",
-          {}
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT,
-            payload: "Proyecto archivado con éxito",
-          });
-          return;
-        }
-
-        const message = "Ocurrió un error al intentar archivar un proyecto.";
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: message,
-        });
-        throw new Error(message);
-      } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: message,
-        });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
-
-  const getArchivedProjects = React.useCallback(
-    async (queryString: string): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      let queryParams = "";
-      if (queryString !== "") {
-        queryParams = `?${queryString}`;
-      }
-
-      try {
-        const response = await apiClient.get<SuccessResponse<ProjectPayload>>(
-          "/projects/archived" + queryParams
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_PROJECTS,
-            payload: response.data.data,
-          });
-
-          dispatch({
-            type: actions.SET_PAGINATION,
-            payload: response.data.page_info,
-          });
-
-          dispatch({
-            type: actions.SET_TOTAL_HECTARES,
-            payload: response.data.total_hectares,
-          });
-          return;
-        }
-
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: "Ocurrió un error en la búsqueda de proyectos archivados",
-        });
-      } catch (error) {
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
-        });
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
-
-  const restoreProject = React.useCallback(
-    async (id: number): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      try {
-        const response = await apiClient.put<SuccessResponse<string>>(
-          "/projects/" + id + "/restore",
-          {}
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT,
-            payload: "Proyecto restaurado con éxito",
-          });
-          return;
-        }
-
-        const message = "Ocurrió un error al intentar restaurar un proyecto.";
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: message,
-        });
-        throw new Error(message);
-      } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: message,
-        });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
-
-  const hardDeleteProject = React.useCallback(
-    async (id: number): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      try {
-        const response = await apiClient.delete<SuccessResponse<string>>(
-          "/projects/" + id + "/hard"
-        );
-
-        if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT,
-            payload: "Proyecto eliminado con éxito",
-          });
-          return;
-        }
-
-        const message = "Ocurrió un error al intentar eliminar un proyecto.";
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: message,
-        });
-        throw new Error(message);
-      } catch (error) {
-        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
-        dispatch({
-          type: actions.SET_ERROR,
-          payload: message,
-        });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch]
-  );
+  const queries = useMemo(() => createProjectQueries({ dispatch }), [dispatch]);
+  const mutations = useMemo(() => createProjectMutations({ dispatch }), [dispatch]);
 
   return {
     projects,
@@ -426,15 +47,15 @@ const useProjects = () => {
     processing,
     processingDropdown,
     result,
-    getProjects,
-    getArchivedProjects,
-    getProjectsDropdown,
-    getProject,
-    saveProject,
-    updateProject,
-    deleteProject,
-    restoreProject,
-    hardDeleteProject,
+    getProjects: queries.getProjects,
+    getArchivedProjects: queries.getArchivedProjects,
+    getProjectsDropdown: queries.getProjectsDropdown,
+    getProject: queries.getProject,
+    saveProject: mutations.saveProject,
+    updateProject: mutations.updateProject,
+    deleteProject: mutations.deleteProject,
+    restoreProject: mutations.restoreProject,
+    hardDeleteProject: mutations.hardDeleteProject,
   };
 };
 

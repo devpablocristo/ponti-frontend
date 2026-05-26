@@ -1,11 +1,16 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, AlertCircle, Briefcase, Plus, Upload } from "lucide-react";
 
-import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { TableSkeleton } from "../../../components/feedback/Skeleton";
+
+import { usePagination } from "@/lib/dataDisplay";
+import { ResponsiveTable } from "../../../components/crud/ResponsiveTable";
 import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
-import { IndicatorCard } from "../../../components/Card/IndicatorCard";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
+import { notify } from "@/lib/notify";
+import { EmptyState } from "../../../components/feedback/EmptyState";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { GetStockItems } from "../../../hooks/useStock/types";
 import { Summary } from "@/api/types";
@@ -16,268 +21,28 @@ import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
-import { matchesSelectFilter, matchesTextFilter } from "../../../lib/tableFilters";
+import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
+import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
+import {
+  matchesSelectFilter,
+  matchesTextFilter,
+} from "@/lib/tableFilters";
 
-const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
-const MISSING_ENTRY_LABEL = "REV ING.";
+import { CloseStockDate } from "./_components/CloseStockDate";
+import { EditableCell } from "./_components/EditableCell";
+import { StockIndicators } from "./_components/StockIndicators";
+import {
+  MISSING_ENTRY_LABEL,
+  MULTIPLE_INVESTORS_LABEL,
+  getStockFilterValue,
+} from "./stockHelpers";
 
-function getStockFilterValue(item: GetStockItems, key: keyof GetStockItems) {
-  const value = item[key];
-
-  if (key === "investor_name" && String(value ?? "").trim() === "") {
-    return item.has_multiple_investors
-      ? MULTIPLE_INVESTORS_LABEL
-      : MISSING_ENTRY_LABEL;
-  }
-
-  return String(value ?? "");
-}
-
-const EditableCell = ({
-  item,
-  value,
-  projectId,
-  onSaved,
-  onValidationError,
-}: {
-  item: GetStockItems;
-  value: string | number;
-  projectId: number | null;
-  onSaved?: () => void;
-  onValidationError: (message: string) => void;
-}) => {
-  const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState(value ?? "");
-  const savingRef = useRef(false);
-  const { updateStock, processingStock, errorStock, resultStock } = useStock();
-
-  useEffect(() => {
-    setEditValue(value ?? "");
-  }, [value, item.id]);
-
-  const save = async () => {
-    if (savingRef.current || processingStock) {
-      return;
-    }
-
-    if (editValue === "") {
-      return;
-    }
-
-    if (projectId === null) {
-      alert("Error al guardar");
-      return;
-    }
-
-    if (item.has_multiple_investors) {
-      onValidationError(
-        "Existe más de un inversor asociado a este insumo. Corrobore los ingresos y asignaciones antes de cerrar stock."
-      );
-      return;
-    }
-
-    if (!item.id || item.id <= 0) {
-      onValidationError(
-        "Para cargar stock de campo, primero cargá un ingreso del insumo."
-      );
-      return;
-    }
-
-    savingRef.current = true;
-    try {
-      await updateStock(projectId, item.id, Number(editValue), item.updated_at);
-    } finally {
-      savingRef.current = false;
-    }
-  };
-
-  useEffect(() => {
-    if (errorStock) {
-      alert(errorStock);
-      return;
-    }
-    if (resultStock) {
-      setEditing(false);
-      onSaved?.();
-      return;
-    }
-  }, [errorStock, resultStock, onSaved]);
-
-  if (editing) {
-    return (
-      <div className="flex items-center gap-2">
-        <input
-          type="number"
-          min="0"
-          step="any"
-          className="block w-full min-w-[80px] p-2 text-gray-900 border border-gray-300 rounded-lg bg-gray-50 text-sm focus:ring-blue-500 focus:border-blue-500"
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          disabled={processingStock}
-          onBlur={save}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              save();
-            }
-            if (e.key === "Escape") {
-              setEditing(false);
-            }
-          }}
-        />
-        {processingStock ? (
-          <LoaderCircle className="animate-spin w-4 h-4 text-blue-500" />
-        ) : (
-          <button
-            className="text-green-600 hover:text-green-800"
-            onClick={save}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center justify-between w-full min-w-[80px]">
-      <input
-        type="number"
-        min="0"
-        className="block w-full p-2 text-gray-800 border border-gray-300 rounded-lg bg-gray-100 text-sm"
-        value={value}
-        onChange={() => { }}
-        disabled={true}
-      />
-      <button
-        className="text-blue-600 hover:text-blue-800 flex items-center p-1"
-        style={{ minWidth: 24, minHeight: 24 }}
-        onClick={() => setEditing(true)}
-        aria-label="Editar"
-      >
-        <Pencil className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-};
-
-function CloseStockDate({
-  date,
-  onDateChange,
-  enabledCloseStock,
-  setEnabledCloseStock,
-  disabledCloseStock,
-}: {
-  date: string;
-  onDateChange: (date: string) => void;
-  enabledCloseStock: boolean;
-  setEnabledCloseStock: (enabled: boolean) => void;
-  disabledCloseStock: boolean;
-}) {
-  const [internalDate, setInternalDate] = useState(date);
-
-  useEffect(() => {
-    setInternalDate(date);
-  }, [date]);
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="h-1.5 w-full bg-gray-900" />
-      <div className="px-4 py-3">
-        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
-          Cerrar stock a fecha
-        </label>
-        <div className="flex items-center gap-3">
-          <input
-            type="date"
-            disabled={disabledCloseStock}
-            value={internalDate}
-            onChange={(e) => setInternalDate(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-custom-btn/30 focus:border-custom-btn disabled:bg-gray-100 disabled:text-gray-400"
-          />
-          <label className={`inline-flex items-center gap-2 cursor-pointer ${disabledCloseStock ? "opacity-50 cursor-not-allowed" : ""}`}>
-            <input
-              type="checkbox"
-              checked={enabledCloseStock}
-              onChange={() => {
-                if (!enabledCloseStock && internalDate) {
-                  setEnabledCloseStock(true);
-                  onDateChange(internalDate);
-                } else {
-                  setEnabledCloseStock(false);
-                }
-              }}
-              className="w-4 h-4 text-custom-btn border-gray-300 rounded focus:ring-custom-btn/30"
-              disabled={disabledCloseStock}
-            />
-            <span className="text-xs font-semibold text-gray-600">Cerrar stock</span>
-          </label>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ItemsIndicators({
-  summary,
-  selectedDate,
-  onDateChange,
-  enabledCloseStock,
-  setEnabledCloseStock,
-  disabledCloseStock,
-}: {
-  summary: Summary;
-  selectedDate: string;
-  onDateChange: (date: string) => void;
-  enabledCloseStock: boolean;
-  setEnabledCloseStock: (enabled: boolean) => void;
-  disabledCloseStock: boolean;
-}) {
-  return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <IndicatorCard
-          title="Total invertido Kg"
-          value={formatNumberAr(summary.total_kg) + " Kg"}
-          color="gray"
-        />
-        <IndicatorCard
-          title="Total invertido Lt"
-          value={formatNumberAr(summary.total_lt) + " Lt"}
-          color="gray"
-        />
-        <IndicatorCard
-          title="Total u$ / Neto"
-          value={"u$ " + formatNumberAr(summary.total_usd)}
-          color="red"
-        />
-        <CloseStockDate
-          date={selectedDate}
-          onDateChange={onDateChange}
-          enabledCloseStock={enabledCloseStock}
-          setEnabledCloseStock={setEnabledCloseStock}
-          disabledCloseStock={disabledCloseStock}
-        />
-      </div>
-    </div>
-  );
-}
 
 export function Stock() {
   const navigate = useNavigate();
   const pagination = usePagination({ perPage: 10 });
+  const resetPage = pagination.resetPage;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -285,6 +50,23 @@ export function Stock() {
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
     null
   );
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Estado → toast (patrón en CreateOrder.tsx).
+  useEffect(() => {
+    if (warningMessage) notify.warning(warningMessage);
+  }, [warningMessage]);
+  useEffect(() => {
+    if (successMessage) notify.success(successMessage);
+  }, [successMessage]);
+  useEffect(() => {
+    if (actionErrorMessage) notify.error(actionErrorMessage);
+  }, [actionErrorMessage]);
+  useEffect(() => {
+    if (exportErrorMessage) notify.error(exportErrorMessage);
+  }, [exportErrorMessage]);
   const [stockValidationModal, setStockValidationModal] = useState<{
     title: string;
     message: string;
@@ -302,7 +84,7 @@ export function Stock() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { projectId, filters, selectedCustomer, selectedCampaignId, customers } =
+  const { projectId, filters, selectedCustomer, selectedCampaignId, selectedField, customers, hasWorkspaceSelection } =
     useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const {
@@ -319,36 +101,65 @@ export function Stock() {
     periods,
   } = useStock();
 
+  // Errores del hook se publican al toaster.
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
+  useEffect(() => {
+    if (errorCloseStock) notify.error(errorCloseStock);
+  }, [errorCloseStock]);
+  useEffect(() => {
+    if (errorPeriods) notify.warning(errorPeriods);
+  }, [errorPeriods]);
+  useEffect(() => {
+    if (resultCloseStock) notify.success(resultCloseStock);
+  }, [resultCloseStock]);
+
+  const stockQuery = useMemo(
+    () =>
+      buildWorkspaceQuery({
+        customerId: selectedCustomer?.id,
+        projectId,
+        campaignId: selectedCampaignId,
+        fieldId: selectedField?.id,
+      }),
+    [projectId, selectedCampaignId, selectedCustomer?.id, selectedField?.id]
+  );
+
   const refreshStock = useCallback(() => {
-    if (!projectId) return;
+    if (!hasWorkspaceSelection) return;
+
     getStock(
-      projectId,
+      stockQuery,
       period === "0" ? "" : stockPeriods[Number(period)]?.name || ""
     );
-  }, [getStock, period, projectId, stockPeriods]);
+  }, [getStock, hasWorkspaceSelection, period, stockPeriods, stockQuery]);
 
   const handleStockCreated = () => {
     if (!projectId) return;
-    pagination.resetPage();
+    resetPage();
     refreshStock();
   };
 
   const handleViewConsumingOrders = useCallback(
     (item: GetStockItems) => {
-      if (!projectId || !item.supply_id) return;
+      if (!item.supply_id) return;
 
-      const params = new URLSearchParams({
-        project_id: String(projectId),
-        supply_id: String(item.supply_id),
-        supply_name: item.supply_name,
-      });
+      const params = new URLSearchParams(stockQuery);
+      params.set("supply_id", String(item.supply_id));
+      params.set("supply_name", item.supply_name);
       navigate(`/admin/work-orders?${params.toString()}`);
     },
-    [navigate, projectId]
+    [navigate, stockQuery]
+  );
+
+  const stockRows = useMemo(
+    () => (hasWorkspaceSelection && Array.isArray(stock) ? stock : []),
+    [hasWorkspaceSelection, stock]
   );
 
   const filteredStock = useMemo(() => {
-    return (Array.isArray(stock) ? stock : []).filter((item) => {
+    return stockRows.filter((item) => {
       return Object.entries(columnsFilters).every(([key, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) {
           return true;
@@ -363,7 +174,7 @@ export function Stock() {
         return matchesTextFilter(itemValue, value);
       });
     });
-  }, [stock, columnsFilters]);
+  }, [stockRows, columnsFilters]);
 
   const derivedSummary: Summary = useMemo(() => {
     let totalKg = 0;
@@ -395,10 +206,11 @@ export function Stock() {
     stock: GetStockItems[],
     filters: Record<string, unknown>
   ) {
+    const source = Array.isArray(stock) ? stock : [];
     const otherFilters = { ...filters };
     delete otherFilters[key];
 
-    const filtered = stock.filter((item) =>
+    const filtered = source.filter((item) =>
       Object.entries(otherFilters).every(([k, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
@@ -430,7 +242,7 @@ export function Stock() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "supply_name",
-          stock,
+          stockRows,
           columnsFilters
         ),
         render: (value, item) => (
@@ -453,7 +265,7 @@ export function Stock() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "class_type",
-          stock,
+          stockRows,
           columnsFilters
         ),
       },
@@ -466,7 +278,7 @@ export function Stock() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "investor_name",
-          stock,
+          stockRows,
           columnsFilters
         ),
         render: (value, item) => {
@@ -493,13 +305,13 @@ export function Stock() {
         headerPadding: "xs",
         filterOptions: getFilterOptionsForColumn(
           "entry_stock",
-          stock,
+          stockRows,
           columnsFilters
         ),
         header: "Ingresados",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
         },
       },
       {
@@ -510,12 +322,12 @@ export function Stock() {
         headerPadding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "consumed",
-          stock,
+          stockRows,
           columnsFilters
         ),
       },
@@ -527,12 +339,12 @@ export function Stock() {
         padding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
           "stock_units",
-          stock,
+          stockRows,
           columnsFilters
         ),
       },
@@ -546,7 +358,11 @@ export function Stock() {
             item={item}
             value={typeof value === "string" || typeof value === "number" ? value : ""}
             projectId={projectId}
-            onSaved={refreshStock}
+            onSaved={() => {
+              setActionErrorMessage(null);
+              setSuccessMessage("Stock de campo actualizado con éxito.");
+              refreshStock();
+            }}
             onValidationError={(message) =>
               setStockValidationModal({
                 title: "No se pudo cargar stock de campo",
@@ -564,7 +380,7 @@ export function Stock() {
         headerPadding: "xs",
         filterOptions: getFilterOptionsForColumn(
           "stock_difference",
-          stock,
+          stockRows,
           columnsFilters
         ),
         header: "Diferencia",
@@ -576,7 +392,7 @@ export function Stock() {
 
           if (Number.isNaN(value)) {
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500">
                 -
               </span>
             );
@@ -584,7 +400,7 @@ export function Stock() {
 
           if (!isPositive && !isNegative) {
             return (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-500">
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500">
                 0
               </span>
             );
@@ -622,7 +438,7 @@ export function Stock() {
         headerPadding: "xs",
         filterOptions: getFilterOptionsForColumn(
           "close_date",
-          stock,
+          stockRows,
           columnsFilters
         ),
         header: "Fecha de cierre",
@@ -641,7 +457,7 @@ export function Stock() {
         padding: "xs",
         headerPadding: "xs",
         filterable: false,
-        render: (value) => <span className="font-bold text-gray-900">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
+        render: (value) => <span className="font-bold text-gray-900 dark:text-gray-100">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
       },
       {
         key: "total_usd",
@@ -652,30 +468,30 @@ export function Stock() {
         render: (value) => {
           const num = Number(value);
           return (
-            <span className="font-bold text-gray-900">
+            <span className="font-bold text-gray-900 dark:text-gray-100">
               {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
             </span>
           );
         },
       },
     ],
-    [projectId, stock, columnsFilters, refreshStock, handleViewConsumingOrders]
+    [projectId, stockRows, columnsFilters, refreshStock, handleViewConsumingOrders]
   );
 
   useEffect(() => {
-    if (!projectId || !selectedCustomer || !selectedCampaignId) {
-      return;
-    }
-
-    pagination.resetPage();
+    resetPage();
     setPeriod("0");
     setStockPeriods([{ id: 0, name: "Activo" }]);
-
-    getStock(projectId, "");
-    getPeriods(projectId);
-    setDisabledCloseStock(false);
+    setDisabledCloseStock(!projectId);
     setSelectedDate("");
-  }, [getStock, getPeriods, projectId, selectedCustomer, selectedCampaignId]);
+
+    if (!hasWorkspaceSelection) return;
+
+    getStock(stockQuery, "");
+    if (projectId) {
+      getPeriods(projectId);
+    }
+  }, [getStock, getPeriods, hasWorkspaceSelection, projectId, resetPage, stockQuery]);
 
   useEffect(() => {
     if (periods && periods.length > 0) {
@@ -692,39 +508,39 @@ export function Stock() {
   }, [periods]);
 
   useEffect(() => {
-    if (!projectId) return;
-
-    pagination.resetPage();
+    resetPage();
+    if (!hasWorkspaceSelection) return;
 
     const periodNumber = Number(period);
     if (periodNumber === 0) {
-      getStock(projectId, "");
-      setDisabledCloseStock(false);
+      getStock(stockQuery, "");
+      setDisabledCloseStock(!projectId);
       setSelectedDate("");
       return;
     }
 
-    getStock(projectId, stockPeriods[periodNumber]?.name || "");
+    getStock(stockQuery, stockPeriods[periodNumber]?.name || "");
     setSelectedDate(stockPeriods[periodNumber]?.name || "");
     setDisabledCloseStock(true);
-  }, [period, stockPeriods, getStock, projectId]);
+  }, [period, stockPeriods, getStock, hasWorkspaceSelection, projectId, resetPage, stockQuery]);
 
   useEffect(() => {
     if (errorCloseStock) {
-      alert(errorCloseStock);
+      setActionErrorMessage(errorCloseStock);
     }
   }, [errorCloseStock]);
 
   useEffect(() => {
     if (resultCloseStock && projectId) {
-      alert(resultCloseStock);
-      getStock(projectId, "");
+      setActionErrorMessage(null);
+      setSuccessMessage(resultCloseStock);
+      getStock(stockQuery, "");
       getPeriods(projectId);
       setEnabledCloseStock(false);
       setDisabledCloseStock(false);
       setSelectedDate("");
     }
-  }, [resultCloseStock, projectId, getStock, getPeriods]);
+  }, [resultCloseStock, projectId, getStock, getPeriods, stockQuery]);
 
   const handleDateChange = (date: string) => {
     setSelectedDate(date);
@@ -740,9 +556,13 @@ export function Stock() {
   };
 
   const handleExport = async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      setWarningMessage("Para exportar stock, seleccioná un proyecto.");
+      return;
+    }
 
     try {
+      setWarningMessage(null);
       setExportErrorMessage(null);
       const response = await apiClient.get<Blob>(
         `/stock/export/${projectId}`,
@@ -750,15 +570,7 @@ export function Stock() {
         { responseType: "blob" }
       );
 
-      const url = window.URL.createObjectURL(response);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `stock_${projectId}_${new Date().toISOString()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadBlob(response, buildTimestampedFilename("stock", "csv", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el stock.");
     }
@@ -766,61 +578,54 @@ export function Stock() {
 
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
-    pagination.resetPage();
+    resetPage();
   };
 
   return (
     <div>
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {
-            label: "Exportar Stock",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            ,
+            label: "Exportar",
+            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId,
             onClick: () => handleExport(),
           },
           {
-            label: "+ Ingreso de Stock de Campo",
+            label: "Nuevo",
+            icon: <Plus className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: !projectId || disabledCloseStock,
-            onClick: () => setDrawerOpen(true),
+            disabled: disabledCloseStock,
+            onClick: () => {
+              const warning = getGuardedWorkspaceActionWarning(
+                { projectId },
+                ["project"],
+                "crear",
+                "un ingreso de stock",
+              );
+              if (warning) {
+                setWarningMessage(warning);
+                return;
+              }
+              setWarningMessage(null);
+              setDrawerOpen(true);
+            },
           },
         ]}
       />
-      {!error && projectId && selectedCustomer && selectedCampaignId && (
-        <div className="my-4">
-          <ItemsIndicators
-            summary={derivedSummary}
-            selectedDate={selectedDate}
-            disabledCloseStock={disabledCloseStock}
-            onDateChange={handleDateChange}
-            enabledCloseStock={enabledCloseStock}
-            setEnabledCloseStock={setEnabledCloseStock}
-          />
+      {hasWorkspaceSelection && !error && (
+        <div className="my-3">
+          <StockIndicators summary={derivedSummary} />
         </div>
       )}
-      <div className="mt-4 relative">
-        {processing && (
-          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-          </div>
-        )}
+      <div className="mt-3 relative">
+        <LoadingOverlay show={hasWorkspaceSelection && processing && filteredStock.length > 0} />
 
-        {(error || exportErrorMessage) && (
-          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
-            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-            <div><span className="font-semibold">Error:</span> {exportErrorMessage || error}</div>
-          </div>
-        )}
         {stockPeriods && stockPeriods.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-end gap-6">
             <SelectField
               label="Periodo (fecha de cierre)"
               name="period"
@@ -830,12 +635,13 @@ export function Stock() {
               size="sm"
               onChange={(e) => setPeriod(e.target.value)}
             />
-          </div>
-        )}
-        {errorPeriods && (
-          <div className="flex items-center gap-2 p-3 mb-3 text-sm text-amber-800 rounded-xl bg-amber-50 border border-amber-200">
-            <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
-            <span>{errorPeriods}</span>
+            <CloseStockDate
+              date={selectedDate}
+              onDateChange={handleDateChange}
+              enabledCloseStock={enabledCloseStock}
+              setEnabledCloseStock={setEnabledCloseStock}
+              disabledCloseStock={disabledCloseStock || !projectId}
+            />
           </div>
         )}
         {projectId && customers && (
@@ -846,15 +652,26 @@ export function Stock() {
             onStockCreated={handleStockCreated}
           />
         )}
-        {projectId && selectedCustomer && selectedCampaignId && (
-          <DataTable
+        {!hasWorkspaceSelection ? (
+          <EmptyState
+            icon={Briefcase}
+            title="Seleccioná filtros para ver stock"
+            description="El listado no carga datos globales automáticamente."
+          />
+        ) : processing && filteredStock.length === 0 ? (
+          <TableSkeleton rows={10} columns={columns.length} />
+        ) : (
+          <ResponsiveTable<GetStockItems>
             data={filteredStock}
             columns={columns}
-            message="No hay stock disponible"
+            message="Todavía no hay stock con los filtros actuales."
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
             enableFilters={true}
             pagination={pagination.buildPagination(filteredStock.length)}
+            primaryKey="supply_name"
+            rowKey={(s: GetStockItems, i: number) => `${s.supply_name}-${i}`}
+            emptyMessage="Todavía no hay stock con los filtros actuales."
           />
         )}
         <BaseModal
@@ -879,7 +696,7 @@ export function Stock() {
             .split("-")
             .reverse()
             .join("/")}?`}
-          primaryButtonText={"Sí, cerrar"}
+          primaryButtonText={"Sí, Cerrar"}
           secondaryButtonText={"Cancelar"}
           onPrimaryAction={() => {
             handleCloseStock();

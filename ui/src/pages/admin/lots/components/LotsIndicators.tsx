@@ -1,36 +1,37 @@
-import { LoaderCircle } from "lucide-react";
-
+import { InlineSpinner } from "../../../../components/feedback/InlineSpinner";
 import { IndicatorCard } from "../../../../components/Card/IndicatorCard";
 import { formatNumberAr } from "../../utils";
 import { LotIndicatorValues } from "../lotTableUtils";
 
 type LotsIndicatorsProps = {
   kpis: LotIndicatorValues;
+  fieldsAmount: number;
+  lotsAmount: number;
   processing: boolean;
   error: string | null;
 };
 
 export function LotsIndicators({
   kpis,
+  fieldsAmount,
+  lotsAmount,
   processing,
   error,
 }: LotsIndicatorsProps) {
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+    <div>
       {processing ? (
-        <div className="flex items-center justify-center py-4">
-          <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-custom-btn" />
-          <span className="text-sm font-medium text-gray-500">
-            Cargando indicadores...
-          </span>
-        </div>
+        <InlineSpinner
+          label="Cargando indicadores..."
+          spinnerClassName="text-custom-btn"
+        />
       ) : error ? (
         <div className="flex items-center gap-2 text-sm font-medium text-red-600">
           <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
           {error}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
           <IndicatorCard
             title="Sup. sembrada"
             value={`${formatNumberAr(kpis.seeded_area)} Has`}
@@ -55,6 +56,16 @@ export function LotsIndicators({
             title="Superficie total"
             value={`${formatNumberAr(kpis.superficie_total)} Has`}
             color="amber"
+          />
+          <IndicatorCard
+            title="Cantidad Total de Campos"
+            value={formatNumberAr(fieldsAmount)}
+            color="blue"
+          />
+          <IndicatorCard
+            title="Cantidad de Lotes por Campo"
+            value={formatNumberAr(lotsAmount)}
+            color="blue"
           />
         </div>
       )}

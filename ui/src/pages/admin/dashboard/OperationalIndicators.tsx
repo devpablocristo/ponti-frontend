@@ -8,9 +8,9 @@ interface OperationalIndicatorsProps {
 export default function OperationalIndicators({dashboard}: OperationalIndicatorsProps) {
   if (!dashboard || !dashboard.operational_indicators || !dashboard.operational_indicators.items) {
     return (
-      <div className="p-4 border rounded-xl bg-white">
+      <div className="p-4 border rounded-xl bg-white dark:bg-slate-800">
         <h2 className="font-semibold text-lg mb-4">Indicadores Operativos</h2>
-        <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
+        <div className="p-4 text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-slate-900">
           No hay datos operativos disponibles
         </div>
       </div>
@@ -59,7 +59,7 @@ export default function OperationalIndicators({dashboard}: OperationalIndicators
       {operational_indicators.items.map((item, index) => (
         <div
           key={index}
-          className={`bg-white items-center gap-4 px-6 border rounded-lg min-h-28 ${item.type == "campaign_closing" ? "py-4" : "py-6"}`}
+          className={`bg-white dark:bg-slate-800 items-center gap-4 px-6 border rounded-lg min-h-28 ${item.type == "campaign_closing" ? "py-4" : "py-6"}`}
         >
           <p className="text-xs font-medium">{item.title}</p>
           <div className="my-4">{getIconForType(item.type)}</div>

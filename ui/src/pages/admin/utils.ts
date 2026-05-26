@@ -51,10 +51,6 @@ export const normalizeNumber = (val: unknown): number => {
   return Number.isNaN(parsed) ? NaN : parsed;
 };
 
-/** Remove trailing zeros from a fixed-point string (e.g. "1.200" → "1.2", "3.000" → "3"). */
-export const trimTrailingZeros = (value: string) =>
-  value.replace(/\.?0+$/, "");
-
 /** Default number of empty item rows shown in order / product forms. */
 export const DEFAULT_ITEM_ROW_COUNT = 7;
 
@@ -68,20 +64,4 @@ export const replaceSupplyIdsWithNames = (
     const supply = supplies.find((entry) => entry.id === Number(idText));
     return supply ? `insumo ${supply.name}` : `insumo ${idText}`;
   });
-};
-
-/**
- * Normalize a value for filter comparison:
- * - trim/lowercase for strings
- * - canonical numeric form for numbers (e.g. "017" → "17", "17,0" → "17")
- */
-export const normalizeFilterComparable = (value: unknown): string => {
-  const s = String(value ?? "").trim().toLowerCase();
-  if (s === "") return "";
-  const canonical = s.replace(",", ".");
-  if (/^[+-]?\d+(\.\d+)?$/.test(canonical)) {
-    const n = Number(canonical);
-    if (!Number.isNaN(n)) return String(n);
-  }
-  return s;
 };

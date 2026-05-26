@@ -44,6 +44,7 @@ export class RequestError extends Error {
 export interface Provider {
   id: number;
   name: string;
+  actor_id?: number;
 }
 
 export interface Summary {
@@ -52,9 +53,3 @@ export interface Summary {
   total_usd: number;
 }
 
-export interface WorkspaceFilter {
-  customer_id?: number;
-  project_id?: number;
-  campaign_id?: number;
-  field_id?: number;
-}

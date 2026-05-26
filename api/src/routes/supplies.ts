@@ -3,9 +3,17 @@ import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
 import { parsePartialPriceFlag } from "../utils/partialPrice";
+import { parseFieldProjectQueryParams } from "../utils/queryParams";
+import { buildForwardQuery } from "../utils/forwardQuery";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
+
+const appendPositiveInt = (params: URLSearchParams, key: string, value: number) => {
+  if (Number.isFinite(value) && value > 0) {
+    params.set(key, String(value));
+  }
+};
 
 router.get("", async (req: Request, res: Response) => {
   try {
@@ -15,14 +23,21 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const projectId = parseInt(req.query.project_id as string) || 0;
-    if (projectId === 0) {
-      res.status(400).json({ message: "Proyecto obligatorio" });
-      return;
-    }
-
     const mode = req.query.mode === "pending" ? "pending" : "all";
-    const cacheKey = `supplies:${projectId}:mode:${mode}`;
+    const ids = parseFieldProjectQueryParams(req.query);
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.per_page as string) || 1000;
+
+    const params = new URLSearchParams();
+    appendPositiveInt(params, "customer_id", ids.customerId);
+    appendPositiveInt(params, "project_id", ids.projectId);
+    appendPositiveInt(params, "campaign_id", ids.campaignId);
+    appendPositiveInt(params, "field_id", ids.fieldId);
+    params.set("page", String(page));
+    params.set("per_page", String(perPage));
+    params.set("mode", mode);
+
+    const cacheKey = `supplies:query:${params.toString()}`;
 
     const cachedSupplies = cache.get(cacheKey);
     if (cachedSupplies) {
@@ -34,16 +49,6 @@ router.get("", async (req: Request, res: Response) => {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": String(userId),
     };
-
-    const page = parseInt(req.query.page as string) || 1;
-    const perPage = parseInt(req.query.per_page as string) || 1000;
-
-    const params = new URLSearchParams({
-      project_id: String(projectId),
-      page: String(page),
-      per_page: String(perPage),
-      mode,
-    });
 
     const { data: backendResp } = await apiClient.get<any>(
       `/supplies?${params.toString()}`,
@@ -73,7 +78,7 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    setImmediate(() => cache.set(cacheKey, data));
+    cache.set(cacheKey, data);
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -131,7 +136,7 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     const data = {
       success: true,
@@ -183,7 +188,7 @@ router.put("/pending/:id/complete", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json({
       success: true,
@@ -241,7 +246,7 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     await apiClient.post<any>(`/supplies/bulk`, supplies, headers);
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     const data = {
       success: true,
@@ -357,7 +362,7 @@ router.get("/:id", async (req: Request, res: Response) => {
     };
 
     if (items.length > 0) {
-      setImmediate(() => cache.set(`supplies:${projectId}`, data));
+      cache.set(`supplies:${projectId}`, data);
     }
 
     res.status(200).json(data);
@@ -406,7 +411,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
       message: "Insumo eliminado exitosamente",
     };
 
-    setImmediate(() => cache.flushAll());
+    cache.flushAll();
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -425,47 +430,135 @@ router.delete("/:id", async (req: Request, res: Response) => {
   }
 });
 
-router.put("/:id/archive", async (req: Request, res: Response) => {
+router.get("/archived", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
       res.status(401).json({ message: "Usuario no autenticado" });
       return;
     }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": String(userId),
+    };
+    const { data: supplies } = await apiClient.get<any>(
+      `/supplies/archived${buildForwardQuery(req)}`,
+      headers
+    );
+    const items = Array.isArray(supplies?.data) ? supplies.data : [];
+    const total =
+      typeof supplies?.page_info?.total === "number"
+        ? supplies.page_info.total
+        : items.length;
+    res.status(200).json({
+      success: true,
+      data: { data: items, total },
+    });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
 
+router.post("/:id/archive", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
     const supplyId = parseInt(req.params.id) || 0;
     if (supplyId === 0) {
       res.status(400).json({ message: "Insumo obligatorio" });
       return;
     }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": String(userId),
     };
-
-    await apiClient.post<any>(
-      `/supplies/${supplyId}/archive`,
-      {},
-      headers
-    );
-
-    const data = {
-      success: true,
-      message: "Insumo archivado exitosamente",
-    };
-
-    setImmediate(() => cache.flushAll());
-
-    res.status(200).json(data);
+    await apiClient.post<any>(`/supplies/${supplyId}/archive`, {}, headers);
+    cache.flushAll();
+    res.status(200).json({ success: true, message: "Insumo archivado exitosamente" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
-
     if ("error" in err) {
       res.status(err.error?.status || 500).json(err);
       return;
     }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
 
+router.post("/:id/restore", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const supplyId = parseInt(req.params.id) || 0;
+    if (supplyId === 0) {
+      res.status(400).json({ message: "Insumo obligatorio" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": String(userId),
+    };
+    await apiClient.post<any>(`/supplies/${supplyId}/restore`, {}, headers);
+    cache.flushAll();
+    res.status(200).json({ success: true, message: "Insumo restaurado exitosamente" });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.delete("/:id/hard", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+    const supplyId = parseInt(req.params.id) || 0;
+    if (supplyId === 0) {
+      res.status(400).json({ message: "Insumo obligatorio" });
+      return;
+    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": String(userId),
+    };
+    await apiClient.delete<any>(`/supplies/${supplyId}/hard`, headers);
+    cache.flushAll();
+    res.status(200).json({ success: true, message: "Insumo eliminado definitivamente" });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
     res.status(500).json({
       success: false,
       message: "Error inesperado",

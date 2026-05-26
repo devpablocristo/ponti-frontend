@@ -1,14 +1,20 @@
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { Toaster } from "sonner";
-import "flowbite";
 
 import "./index.css";
 import routes from "./router";
+import { ConfirmDialogProvider } from "./hooks/useConfirmDialog";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ThemeProvider } from "./lib/theme";
+import { AppToaster } from "./components/AppToaster";
 
 createRoot(document.getElementById("root")!).render(
-  <>
-    <RouterProvider router={createBrowserRouter(routes)} />
-    <Toaster position="top-right" richColors closeButton duration={4000} />
-  </>
+  <ErrorBoundary>
+    <ThemeProvider>
+      <ConfirmDialogProvider>
+        <RouterProvider router={createBrowserRouter(routes)} />
+        <AppToaster />
+      </ConfirmDialogProvider>
+    </ThemeProvider>
+  </ErrorBoundary>
 );

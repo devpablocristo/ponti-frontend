@@ -54,6 +54,7 @@ export interface LaborInfo {
   contractor_name: string;
   category_name: string;
   is_partial_price?: boolean;
+  archived_at?: string | null;
 }
 
 export type Metrics = {
