@@ -37,6 +37,27 @@ describe("SmartEntityInput", () => {
     expect(screen.getByLabelText("Campaña")).toHaveValue("2025-2026");
   });
 
+  it("formats dropdown options without changing the selected option payload", () => {
+    const onSelectExisting = vi.fn();
+
+    render(
+      <SmartEntityInput
+        label="Cliente"
+        name="customer"
+        value=""
+        options={[{ id: 7, name: "soalen srl 2" }]}
+        entityLabel="Cliente"
+        onChange={vi.fn()}
+        onSelectExisting={onSelectExisting}
+      />
+    );
+
+    fireEvent.focus(screen.getByLabelText("Cliente"));
+    fireEvent.click(screen.getByText("Soalen SRL 2"));
+
+    expect(onSelectExisting).toHaveBeenCalledWith({ id: 7, name: "soalen srl 2" });
+  });
+
   it("still sends typed text to onChange", () => {
     const onChange = vi.fn();
 

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { canonicalizeName, collapseInternalSpaces, formatProperName } from "./properName";
+import {
+  canonicalizeName,
+  collapseInternalSpaces,
+  formatEntityDisplayName,
+  formatProperName,
+  formatTitleCase,
+} from "./properName";
 
 describe("collapseInternalSpaces", () => {
   it("collapses multiple spaces between words to a single space", () => {
@@ -112,5 +118,30 @@ describe("formatProperName", () => {
     expect(formatProperName("")).toBe("");
     expect(formatProperName(null)).toBe("");
     expect(formatProperName(undefined)).toBe("");
+  });
+});
+
+describe("formatEntityDisplayName", () => {
+  it("formats entity names while preserving contribution suffixes", () => {
+    expect(formatEntityDisplayName("soalen srl 2")).toBe("Soalen SRL 2");
+    expect(formatEntityDisplayName("conrado - 100%")).toBe("Conrado - 100%");
+    expect(formatEntityDisplayName("soalen srl - 70%; bian - 30%")).toBe(
+      "Soalen SRL - 70%; Bian - 30%",
+    );
+  });
+});
+
+describe("formatTitleCase", () => {
+  it("title-cases short UI labels while keeping connectors lowercase", () => {
+    expect(formatTitleCase("proyectos archivados")).toBe("Proyectos Archivados");
+    expect(formatTitleCase("cantidad de campañas")).toBe("Cantidad de Campañas");
+    expect(formatTitleCase("inversores y aportes")).toBe("Inversores y Aportes");
+    expect(formatTitleCase("proyecto origen")).toBe("Proyecto Origen");
+  });
+
+  it("preserves codes, punctuation and already-numeric labels", () => {
+    expect(formatTitleCase("2026-2027")).toBe("2026-2027");
+    expect(formatTitleCase("1 - 100%")).toBe("1 - 100%");
+    expect(formatTitleCase("Cliente/Sociedad")).toBe("Cliente/Sociedad");
   });
 });

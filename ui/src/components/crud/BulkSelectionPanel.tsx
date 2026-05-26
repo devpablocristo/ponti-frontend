@@ -1,6 +1,7 @@
 import { Checkbox } from "../Input/Checkbox";
 import type { EntityCopy } from "../Modal/copy";
 import { BulkActionBar, type BulkAction } from "./BulkActionBar";
+import { formatTitleCase } from "../../lib/properName";
 
 type BulkSelectionPanelProps = {
   selectedCount: number;
@@ -49,7 +50,7 @@ export function BulkSelectionPanel({
           onChange={onToggleAll}
           aria-label={`Seleccionar todos los ${plural}`}
         />
-        <span>Seleccionar todo</span>
+        <span>{formatTitleCase("Seleccionar todo")}</span>
         {selectedCount > 0 && (
           <span className="ml-auto">
             {selectedCount} de {totalCount}
@@ -59,4 +60,3 @@ export function BulkSelectionPanel({
     </>
   );
 }
-
