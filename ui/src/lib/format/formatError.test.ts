@@ -60,7 +60,76 @@ describe("formatError", () => {
       response: { data: { error: { details: "campaign already exists" } } },
     };
     expect(formatError(err, { fallback: FALLBACK })).toBe(
-      "La campaña ya existe.",
+      "Ya existe una campaña con ese nombre.",
+    );
+  });
+
+  it("prioriza el duplicado del BE por encima del copy HTTP genérico", () => {
+    const err = {
+      response: {
+        status: 409,
+        data: { error: { details: "customer already exists" } },
+      },
+      userMessage: HTTP_COPY.conflict,
+    };
+    expect(formatError(err, { fallback: FALLBACK })).toBe(
+      "Ya existe un cliente con ese nombre.",
+    );
+  });
+
+  it("lee error.message anidado y no cae al 500 genérico", () => {
+    const err = {
+      response: {
+        status: 500,
+        data: { error: { message: "failed to rename customer" } },
+      },
+      userMessage: HTTP_COPY.serverError,
+    };
+    expect(formatError(err, { fallback: FALLBACK })).toBe(
+      "No se pudo cambiar el nombre del cliente porque ya existe otro cliente con ese nombre.",
+    );
+  });
+
+  it("mapea violaciones unique de customers aunque lleguen como 500", () => {
+    const err = {
+      response: {
+        status: 500,
+        data: {
+          error: {
+            message:
+              'duplicate key value violates unique constraint "uq_customers_name"',
+          },
+        },
+      },
+      userMessage: HTTP_COPY.serverError,
+    };
+    expect(formatError(err, { fallback: FALLBACK })).toBe(
+      "Ya existe un cliente con ese nombre.",
+    );
+  });
+
+  it("mapea el fallo real de link customer-actor aunque llegue como 500", () => {
+    const err = {
+      response: {
+        status: 500,
+        data: { error: { message: "failed to link customer to actor" } },
+      },
+      userMessage: HTTP_COPY.serverError,
+    };
+    expect(formatError(err, { fallback: FALLBACK })).toBe(
+      "No se pudo guardar porque el cliente está vinculado a otro actor. Seleccioná el cliente correcto desde la lista.",
+    );
+  });
+
+  it("mapea el conflicto de link customer-actor devuelto como 409", () => {
+    const err = {
+      response: {
+        status: 409,
+        data: { error: { message: "customer actor link already exists" } },
+      },
+    };
+    expect(formatError(err, { fallback: FALLBACK })).toBe(
+      "No se pudo guardar porque el cliente está vinculado a otro actor. Seleccioná el cliente correcto desde la lista.",
     );
   });
 

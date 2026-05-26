@@ -4,10 +4,20 @@ interface ApiErrorPayload {
   error?: {
     status?: number;
     details?: string;
+    message?: string;
   };
   message?: string;
   error_message?: string;
   details?: string;
+  data?: {
+    error?: {
+      details?: string;
+      message?: string;
+    };
+    details?: string;
+    message?: string;
+    error_message?: string;
+  };
 }
 
 function extractErrorMessage(error: unknown, fallback: string): string {
@@ -18,7 +28,16 @@ function extractErrorMessage(error: unknown, fallback: string): string {
 
   const message =
     typeof data === "object" && data
-      ? data.error?.details || data.details || data.message || data.error_message
+      ? data.error?.details ||
+        data.error?.message ||
+        data.details ||
+        data.message ||
+        data.error_message ||
+        data.data?.error?.details ||
+        data.data?.error?.message ||
+        data.data?.details ||
+        data.data?.message ||
+        data.data?.error_message
       : undefined;
 
   if (typeof message === "string" && message.trim() !== "") return message;
