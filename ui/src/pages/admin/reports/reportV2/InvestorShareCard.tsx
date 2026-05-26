@@ -13,7 +13,7 @@ interface Props {
 function Metric({
   label,
   value,
-  valueClass = "text-slate-900",
+  valueClass = "text-slate-900 dark:text-slate-100",
 }: {
   label: string;
   value: string;
@@ -21,7 +21,7 @@ function Metric({
 }) {
   return (
     <div className="min-w-0">
-      <div className="text-[9px] font-medium text-slate-500">{label}</div>
+      <div className="text-[9px] font-medium text-slate-500 dark:text-slate-400">{label}</div>
       <div className={`mt-1 whitespace-nowrap text-[0.78rem] font-semibold leading-tight tabular-nums ${valueClass}`}>
         {value}
       </div>
@@ -37,7 +37,7 @@ export function InvestorShareCard({ name, color, contributed, actualPct, sharePc
 
   return (
     <div
-      className="relative min-w-0 overflow-hidden rounded-xl border bg-white"
+      className="relative min-w-0 overflow-hidden rounded-xl border bg-white dark:bg-slate-800"
       style={{ boxShadow: "var(--shadow-sm)" }}
     >
       <div className="absolute inset-y-0 left-0 w-0.5" style={{ background: color }} aria-hidden />
@@ -51,7 +51,7 @@ export function InvestorShareCard({ name, color, contributed, actualPct, sharePc
             >
               <Building2 className="h-3.5 w-3.5" strokeWidth={2.25} />
             </span>
-            <h3 className="truncate text-[0.82rem] font-semibold text-slate-900">
+            <h3 className="truncate text-[0.82rem] font-semibold text-slate-900 dark:text-slate-100">
               {name}
             </h3>
           </div>

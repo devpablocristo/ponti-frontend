@@ -12,10 +12,11 @@ import { DecodedToken, UserData } from "../types";
 import { AuthService } from "../authService";
 import {
   clearLocalStorage,
+  clearWorkspaceSelectionStorage,
   getAccessToken,
   getRefreshToken,
   setLocalStorage,
-} from "./useLocalStorage";
+} from "@/lib/authStorage";
 import { AuthContext } from "./AuthContext";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -98,11 +99,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (loginData: UserData) => {
       const { token, user } = await AuthService.login(loginData);
 
+      clearWorkspaceSelectionStorage();
       setLocalStorage(token);
       setUser(user);
       setIsAuthenticated(true);
 
-      navigate("/workspace");
+      navigate("/admin/dashboard");
     },
     [navigate]
   );

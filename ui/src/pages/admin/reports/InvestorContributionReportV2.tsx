@@ -3,14 +3,15 @@ import {
   FlaskConical,
   House,
   Leaf,
-  LoaderCircle,
   Settings,
   Sprout,
   SquareArrowOutUpRight,
   Tractor,
   Wallet,
 } from "lucide-react";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
+import { notify } from "@/lib/notify";
+import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { usePDF } from "react-to-pdf";
 
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -106,7 +107,7 @@ function aggregateInvestorAmounts(
   return result;
 }
 
-export function InvestorContributionReportV2() {
+function InvestorContributionReportV2() {
   const {
     filters,
     projectId,
@@ -122,6 +123,10 @@ export function InvestorContributionReportV2() {
     error,
     getInvestorContributionReportingData,
   } = useReporting();
+
+  useEffect(() => {
+    if (error) notify.error(error);
+  }, [error]);
 
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
@@ -274,13 +279,9 @@ export function InvestorContributionReportV2() {
 
   return (
     <div className="relative">
-      {(loading.projects || loading.campaigns || processing) && (
-        <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
-          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
-        </div>
-      )}
+      <LoadingOverlay show={loading.projects || loading.campaigns || processing} />
 
-      <FilterBar
+      <AppFilterBar
         filters={filters}
         actions={[
           {
@@ -298,15 +299,6 @@ export function InvestorContributionReportV2() {
           },
         ]}
       />
-
-      {error && (
-        <div
-          className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50"
-          role="alert"
-        >
-          <span className="font-medium">{error}</span>
-        </div>
-      )}
 
       {!error && dashboard && (
         <div ref={targetRef} className="space-y-4">
@@ -338,7 +330,7 @@ export function InvestorContributionReportV2() {
       )}
 
       {!error && !dashboard && !processing && (
-        <div className="p-4 text-sm text-slate-600 rounded-lg bg-slate-50">
+        <div className="p-4 text-sm text-slate-600 dark:text-slate-300 rounded-lg bg-slate-50 dark:bg-slate-900">
           No hay datos disponibles
         </div>
       )}

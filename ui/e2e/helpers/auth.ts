@@ -1,11 +1,11 @@
 import { Page } from "@playwright/test";
 import { Buffer } from "node:buffer";
 
-const workspace = {
-  customer: { id: 17, name: "AGRO LAJITAS 25-26" },
-  project: { id: 30, name: "JUJUY (MEALLA/ACHERAL)" },
-  projectId: 30,
-  campaign: { id: 2, name: "2025-2026", project_id: 30 },
+export const e2eWorkspace = {
+  customer: { id: 14, name: "SOALEN SRL 25-26" },
+  project: { id: 29, name: "CAMPO COTY" },
+  projectId: 29,
+  campaign: { id: 2, name: "2025-2026", project_id: 29 },
 };
 
 function base64Url(value: unknown): string {
@@ -28,21 +28,58 @@ function createE2EToken(): string {
   ].join(".");
 }
 
-export async function installAuthenticatedSession(page: Page) {
+export async function installAuthenticatedSession(
+  page: Page,
+  selectedWorkspace = e2eWorkspace
+) {
   const token = createE2EToken();
+  let tenantId = process.env.E2E_TENANT_ID ?? "";
+
+  if (!tenantId) {
+    const response = await page.request.get("/api/v1/me/context", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok()) {
+      const payload = (await response.json()) as {
+        current_tenant_id?: string;
+        tenants?: Array<{ id?: string }>;
+      };
+      tenantId =
+        payload.current_tenant_id || payload.tenants?.find((tenant) => tenant.id)?.id || "";
+    }
+  }
 
   await page.addInitScript(
-    ({ e2eToken, selectedWorkspace }) => {
+    ({ e2eToken, selectedWorkspace, selectedTenantId }) => {
       const prefix = `ponti:${window.location.host}:`;
+      const setSelectionJson = (key: string, value: unknown) => {
+        localStorage.setItem(`${prefix}${key}`, JSON.stringify(value));
+        localStorage.setItem(`ponti:${key}`, JSON.stringify(value));
+        localStorage.setItem(key, JSON.stringify(value));
+      };
+      const setSelectionNumber = (key: string, value: number) => {
+        localStorage.setItem(`${prefix}${key}`, JSON.stringify(value));
+        localStorage.setItem(`ponti:${key}`, String(value));
+        localStorage.setItem(key, String(value));
+      };
+      const removeSelection = (key: string) => {
+        localStorage.removeItem(`${prefix}${key}`);
+        localStorage.removeItem(`ponti:${key}`);
+        localStorage.removeItem(key);
+      };
 
       localStorage.setItem(`${prefix}access_token`, e2eToken);
       localStorage.setItem(`${prefix}refresh_token`, e2eToken);
-      localStorage.setItem(`${prefix}customer`, JSON.stringify(selectedWorkspace.customer));
-      localStorage.setItem(`${prefix}project`, JSON.stringify(selectedWorkspace.project));
-      localStorage.setItem(`${prefix}project_id`, JSON.stringify(selectedWorkspace.projectId));
-      localStorage.setItem(`${prefix}campaign`, JSON.stringify(selectedWorkspace.campaign));
-      localStorage.removeItem(`${prefix}field`);
+      if (selectedTenantId) {
+        localStorage.setItem("ponti:tenant_id", selectedTenantId);
+        localStorage.setItem("tenant_id", selectedTenantId);
+      }
+      setSelectionJson("customer", selectedWorkspace.customer);
+      setSelectionJson("project", selectedWorkspace.project);
+      setSelectionNumber("project_id", selectedWorkspace.projectId);
+      setSelectionJson("campaign", selectedWorkspace.campaign);
+      removeSelection("field");
     },
-    { e2eToken: token, selectedWorkspace: workspace }
+    { e2eToken: token, selectedWorkspace, selectedTenantId: tenantId }
   );
 }

@@ -7,12 +7,9 @@ import {
 } from "react";
 import {
   DataTable as BaseDataTable,
-  SubTable,
   type DataTableColumn,
   type DataTableProps,
-} from "@devpablocristo/modules-ui-data-display";
-
-export { SubTable };
+} from "@devpablocristo/platform-ui-data-display";
 
 type LocalDataTableProps<T> = DataTableProps<T> & {
   actionsHeader?: string;
@@ -25,8 +22,12 @@ export function DataTable<T>({
   renderActions,
   ...props
 }: LocalDataTableProps<T>) {
+  const safeData = Array.isArray(props.data) ? props.data : [];
+
   const columnsWithActions = useMemo(() => {
-    if (!renderActions) return columns;
+    const safeColumns = Array.isArray(columns) ? columns : [];
+
+    if (!renderActions) return safeColumns;
 
     const actionsColumn: DataTableColumn<T> = {
       key: "__actions" as keyof T,
@@ -38,10 +39,22 @@ export function DataTable<T>({
       render: (_value, item) => renderActions(item),
     };
 
-    return [...columns, actionsColumn];
+    return [...safeColumns, actionsColumn];
   }, [actionsHeader, columns, renderActions]);
 
-  return createElement(BaseDataTable<T>, { ...props, columns: columnsWithActions });
+  // Envoltorio con clase `data-table-host` para que `.dark .data-table-host *`
+  // overrides en index.css repinten las celdas/headers/dropdowns que la lib
+  // externa (@devpablocristo/platform-ui-data-display) tiene con bg-white y
+  // text-gray-700 hardcoded sin variants dark:.
+  return createElement(
+    "div",
+    { className: "data-table-host" },
+    createElement(BaseDataTable<T>, {
+      ...props,
+      data: safeData,
+      columns: columnsWithActions,
+    }),
+  );
 }
 
 type BuildPaginationOptions = {

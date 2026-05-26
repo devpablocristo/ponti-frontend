@@ -1,0 +1,3 @@
+TimeoutError: locator.waitFor: Timeout 8000ms exceeded.
+Call log:
+[2m  - waiting for locator('.drawer-panel, .drawer-shell').last() to be visible[22m

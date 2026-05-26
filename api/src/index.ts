@@ -47,6 +47,10 @@ app.use((req, _res, next) => {
         typeof req.headers.authorization === "string"
           ? req.headers.authorization
           : undefined,
+      tenantId:
+        typeof req.headers["x-tenant-id"] === "string"
+          ? req.headers["x-tenant-id"]
+          : undefined,
     },
     next
   );

@@ -30,7 +30,7 @@ const initialState: LaborState = {
   pageInfo: null,
 };
 
-type Action =
+export type Action =
   | { type: typeof actions.SET_LABOR_GROUPS; payload: LaborGroupData[] }
   | { type: typeof actions.SET_PAGE_INFO; payload: PageInfo }
   | { type: typeof actions.SET_RESULT; payload: string }

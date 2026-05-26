@@ -195,7 +195,7 @@ export default function SupplyDropdown({
         onKeyDown={handleTriggerKeyDown}
       >
         {selected ? (
-          <span className="truncate font-semibold text-gray-900">
+          <span className="truncate font-semibold text-gray-900 dark:text-gray-100">
             {selected.name}
             {selected.badge && <> {selected.badge}</>}
           </span>
@@ -206,7 +206,7 @@ export default function SupplyDropdown({
       </div>
 
       {isOpen && (
-        <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
+        <div className="absolute top-full left-0 w-full bg-white dark:bg-slate-800 border rounded-lg shadow-lg z-20 mt-1">
           <input
             type="text"
             placeholder="Buscar insumo..."
@@ -228,14 +228,14 @@ export default function SupplyDropdown({
               <li
                 role="option"
                 aria-selected={false}
-                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
+                className="px-3 py-2 cursor-pointer hover:bg-gray-100 dark:bg-slate-800 text-blue-600 font-semibold border-b"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   onCreateNew();
                   close();
                 }}
               >
-                + Crear nuevo insumo
+                + Crear Nuevo Insumo
               </li>
             )}
             {filtered.map((option, idx) => (
@@ -244,8 +244,8 @@ export default function SupplyDropdown({
                 role="option"
                 aria-selected={selected?.id === option.id}
                 data-option-index={idx}
-                className={`px-3 py-2 cursor-pointer font-semibold text-gray-900 ${
-                  highlightedIndex === idx ? "bg-gray-100" : "hover:bg-gray-100"
+                className={`px-3 py-2 cursor-pointer font-semibold text-gray-900 dark:text-gray-100 ${
+                  highlightedIndex === idx ? "bg-gray-100 dark:bg-slate-800" : "hover:bg-gray-100 dark:bg-slate-800"
                 }`}
                 onMouseEnter={() => setHighlightedIndex(idx)}
                 onMouseDown={(e) => {

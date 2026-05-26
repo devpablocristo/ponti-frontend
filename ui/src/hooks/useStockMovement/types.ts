@@ -1,10 +1,10 @@
-import { PageInfo, Provider, Summary } from "@/api/types";
+import { Provider } from "@/api/types";
 
 export interface StockMovementRequest {
   items: StockMovementItem[];
 }
 
-export interface StockMovementItem {
+interface StockMovementItem {
   quantity: number;
   movement_type: string;
   movement_date: Date;
@@ -28,20 +28,4 @@ export interface StockMovement {
   provider_name: string;
   price_usd: number;
   total_usd: number;
-}
-
-export interface StockMovementResponse {
-  summary: Summary;
-  entries: StockMovement[];
-  page_info: PageInfo;
-}
-
-export interface StockMovementResult {
-  supply_movement_id: number;
-  is_saved: boolean;
-  error_detail: string;
-}
-
-export interface StockMovementCreationResponse {
-  supply_movements: StockMovementResult[];
 }

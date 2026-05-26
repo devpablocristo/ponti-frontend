@@ -19,7 +19,7 @@ export const cropColors: Record<string, string> = {
 export const laborColors: Record<string, string> = {
   Siembra: "bg-[#FCE8F3] text-black border border-black", // Siembra
   Pulverización: "bg-yellow-100 text-black border border-black", // Pulverización
-  "Otras Labores": "bg-gray-100 text-black border border-black", // Otras Labores
+  "Otras Labores": "bg-gray-100 dark:bg-slate-800 text-black border border-black", // Otras Labores
   Riego: "bg-blue-100 text-black border border-black", // Riego
   Cosecha: "bg-green-100 text-black border border-black", // Cosecha
 };

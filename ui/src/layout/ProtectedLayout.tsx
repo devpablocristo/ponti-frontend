@@ -1,21 +1,26 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import Navbar from "./Navbar/Navbar";
 import Sidebar from "./Sidebar/Sidebar";
+import { getSidebarTitle } from "./Sidebar/sidebarTitle";
 import { BaseModal } from "../components/Modal/BaseModal";
 import { AuthProvider } from "../pages/login/context/AuthProvider";
 import { useAuth } from "../pages/login/context/useAuth";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
+import { InlineSpinner } from "../components/feedback/InlineSpinner";
 import { SelectionProvider } from "../pages/login/context/SelectionContext";
+import { TenantProvider } from "../pages/login/context/TenantContext";
+import { useIsMobile } from "@/hooks/useBreakpoint";
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const auth = useAuth();
+  const isMobile = useIsMobile();
 
-  const isSmallScreen = window.innerWidth < 768;
   const [title, setTitle] = useState("Dashboard");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(!isSmallScreen);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   useEffect(() => {
@@ -25,17 +30,25 @@ const MainLayout: React.FC = () => {
   }, [auth?.isAuthenticated, auth?.loading, navigate]);
 
   useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) {
-        setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
-      }
-    };
+    setTitle(getSidebarTitle(location.pathname));
+  }, [location.pathname]);
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  // Sincronizá sidebar al breakpoint: cierra al entrar en mobile, abre al volver.
+  // `useIsMobile` ya escucha matchMedia → no necesitamos resize listener manual.
+  useEffect(() => {
+    setIsSidebarOpen(!isMobile);
+  }, [isMobile]);
+
+  // Escape cierra el sidebar overlay en mobile. En desktop la tecla no hace
+  // nada porque el sidebar es inline (no hay nada que cerrar visualmente).
+  useEffect(() => {
+    if (!isMobile || !isSidebarOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsSidebarOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isMobile, isSidebarOpen]);
 
   if (auth?.loading || auth.user === null)
     return <LoadingScreen title={["Cargando..."]} description={[""]} />;
@@ -48,7 +61,18 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-custom-bg">
+    // h-[100dvh] (dynamic viewport) en lugar de h-screen para evitar el bug iOS
+    // donde la URL bar de Safari se come 100px del 100vh y produce scroll fantasma.
+    // Cae a h-screen en navegadores sin soporte (Tailwind genera el fallback).
+    <div className="flex h-screen h-[100dvh] overflow-hidden bg-custom-bg dark:bg-slate-950">
+      {/* Backdrop mobile-only. En desktop el sidebar es inline → no hace falta. */}
+      {isMobile && isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-drawer bg-slate-900/50 backdrop-blur-sm md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <Sidebar
         setTitle={setTitle}
         setIsSidebarOpen={() => setIsSidebarOpen(false)}
@@ -64,10 +88,22 @@ const MainLayout: React.FC = () => {
         />
         <main
           id="main-scroll"
-          className="flex-1 overflow-y-auto p-5 bg-custom-bg"
+          className="flex-1 overflow-y-auto p-5 bg-custom-bg dark:bg-slate-950"
         >
           <div className="animate-fade-in">
-            <Outlet />
+            {/* Suspense para code-splitting de rutas lazy en router.tsx
+                (CustomerEditor, WorkOrders, SummaryResultsReport, Lots,
+                AIAssistant). Fallback discreto — un spinner full-width. */}
+            <Suspense
+              fallback={
+                <InlineSpinner
+                  size="lg"
+                  containerClassName="flex items-center justify-center py-20"
+                />
+              }
+            >
+              <Outlet />
+            </Suspense>
           </div>
           <BaseModal
             isOpen={isLogoutModalOpen}
@@ -91,9 +127,11 @@ const MainLayout: React.FC = () => {
 export const ProtectedLayout = () => {
   return (
     <AuthProvider>
-      <SelectionProvider>
-        <MainLayout />
-      </SelectionProvider>
+      <TenantProvider>
+        <SelectionProvider>
+          <MainLayout />
+        </SelectionProvider>
+      </TenantProvider>
     </AuthProvider>
   );
 };

@@ -1,0 +1,76 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+/**
+ * Hook genérico para manejar selección múltiple en tablas.
+ *
+ * El estado es por id (number). El consumidor puede derivar `selectedItems`
+ * filtrando los items provistos.
+ */
+export function useBulkSelection<T extends { id: number }>(items: T[]) {
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    const visibleIds = new Set(items.map((item) => item.id));
+    setSelectedIds((prev) => {
+      const next = new Set<number>();
+      prev.forEach((id) => {
+        if (visibleIds.has(id)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [items]);
+
+  const isSelected = useCallback(
+    (id: number) => selectedIds.has(id),
+    [selectedIds],
+  );
+
+  const toggle = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const allSelected = useMemo(
+    () => items.length > 0 && items.every((it) => selectedIds.has(it.id)),
+    [items, selectedIds],
+  );
+  const someSelected = useMemo(
+    () => !allSelected && items.some((it) => selectedIds.has(it.id)),
+    [allSelected, items, selectedIds],
+  );
+
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (items.every((it) => prev.has(it.id))) {
+        items.forEach((it) => next.delete(it.id));
+      } else {
+        items.forEach((it) => next.add(it.id));
+      }
+      return next;
+    });
+  }, [items]);
+
+  const clear = useCallback(() => setSelectedIds(new Set()), []);
+
+  const selectedItems = useMemo(
+    () => items.filter((it) => selectedIds.has(it.id)),
+    [items, selectedIds],
+  );
+
+  return {
+    selectedItems,
+    isSelected,
+    toggle,
+    toggleAll,
+    clear,
+    allSelected,
+    someSelected,
+    selectedCount: selectedItems.length,
+  };
+}
+
