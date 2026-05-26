@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { apiClient } from "@/api/client";
 import { TenantContext, type Tenant, type TenantContextValue } from "./TenantContext.shared";
+import { resolveMeContextPayload } from "./meContextPayload";
 
 const TENANT_STORAGE_KEY = "ponti:tenant_id";
 const LEGACY_TENANT_STORAGE_KEY = "tenant_id";
@@ -58,12 +59,13 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const { data } = await apiClient.raw().get("/me/context", {
         headers: { "X-Skip-Tenant": "1" },
       });
-      const items = Array.isArray(data?.tenants) ? (data.tenants as Tenant[]) : [];
+      const payload = resolveMeContextPayload(data);
+      const items = Array.isArray(payload.tenants) ? payload.tenants : [];
       setTenants(items);
       const stored = readStoredTenantId();
       const currentFromServer =
-        typeof data?.current_tenant_id === "string" && data.current_tenant_id
-          ? data.current_tenant_id
+        typeof payload.current_tenant_id === "string" && payload.current_tenant_id
+          ? payload.current_tenant_id
           : "";
       const next =
         (stored && items.some((item) => item.id === stored) ? stored : "") ||
