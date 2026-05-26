@@ -219,6 +219,7 @@ export const useWorkspaceFilters = (
   const [queryProject, setQueryProject] = useState<string>("");
   const [queryCampaign, setQueryCampaign] = useState<string>("");
   const [queryField, setQueryField] = useState<string>("");
+  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const {
     customers,
@@ -253,6 +254,19 @@ export const useWorkspaceFilters = (
     processing: loadingFields,
     error: loadingFieldsError,
   } = useFields();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const handleWorkspaceDataUpdated = () => {
+      setRefreshVersion((current) => current + 1);
+    };
+
+    window.addEventListener("ponti:workspace-data-updated", handleWorkspaceDataUpdated);
+    return () => {
+      window.removeEventListener("ponti:workspace-data-updated", handleWorkspaceDataUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     if (allCustomersSelected) {
@@ -301,7 +315,7 @@ export const useWorkspaceFilters = (
     if (enabledFilterSet.has("customer")) {
       getCustomers("per_page=1000");
     }
-  }, [enabledFilterSet, getCustomers, tenantId, tenantReady]);
+  }, [enabledFilterSet, getCustomers, refreshVersion, tenantId, tenantReady]);
 
   const handleSetCustomer = useCallback(
     (customer: Customer | undefined) => {
@@ -410,6 +424,7 @@ export const useWorkspaceFilters = (
     enabledFilterSet,
     getProjects,
     getProjectsDropdown,
+    refreshVersion,
     selectedCustomer,
     tenantId,
     tenantReady,
@@ -527,6 +542,7 @@ export const useWorkspaceFilters = (
     getCampaigns,
     allCustomersSelected,
     allProjectsSelected,
+    refreshVersion,
     selectedCustomer,
     selectedProject,
     setSelectedCampaign,
@@ -600,7 +616,15 @@ export const useWorkspaceFilters = (
     if (fieldEnabled) {
       getFields("per_page=1000");
     }
-  }, [enabledFilterSet, fieldEnabled, getFields, normalizedProjectId, tenantId, tenantReady]);
+  }, [
+    enabledFilterSet,
+    fieldEnabled,
+    getFields,
+    normalizedProjectId,
+    refreshVersion,
+    tenantId,
+    tenantReady,
+  ]);
 
   useEffect(() => {
     if (!normalizedSelectedField || loadingFields) return;

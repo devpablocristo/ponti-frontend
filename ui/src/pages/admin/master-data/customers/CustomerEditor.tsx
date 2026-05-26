@@ -15,7 +15,6 @@ import { FormSkeleton } from "../../../../components/feedback/Skeleton";
 import { notify } from "../../../../lib/notify";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
-import { normalizeEntityName } from "../../../../lib/entityNameMatcher";
 import { collapseInternalSpaces } from "../../../../lib/properName";
 import { useSelection } from "../../../login/context/useSelection";
 import { AddButton, EditableList, RemoveButton } from "./_components/EditableList";
@@ -49,6 +48,7 @@ import {
   HECTARES_INPUT_REGEX,
   NEW_VALUE,
   SEASON_OPTIONS,
+  applyCustomerNameEdit,
   createEmptyProject,
   emptyFieldInvestor,
   extractEntityOptions,
@@ -66,7 +66,18 @@ type CustomerEditorProps = {
   customerId?: number | null;
   initialProjectId?: number | null;
   onClose?: () => void;
-  onSaved?: () => void;
+  onSaved?: () => Promise<void> | void;
+};
+
+const freshProjectDetailUrl = (projectId: number) => `/projects/${projectId}?fresh=1`;
+
+const notifyWorkspaceProjectSaved = (projectId: number) => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent("ponti:workspace-data-updated", {
+      detail: { entity: "project", id: projectId },
+    })
+  );
 };
 
 export default function CustomerEditor({
@@ -80,7 +91,11 @@ export default function CustomerEditor({
   const navigate = useNavigate();
   const { id } = useParams();
   const initialCustomerId = customerId ?? (Number(id) || NEW_VALUE);
-  const { projectId: contextProjectId } = useSelection();
+  const {
+    setProject: contextSetProject,
+    projectId: contextProjectId,
+    setProjectId: contextSetProjectId,
+  } = useSelection();
   const preferredInitialProjectId = initialProjectId ?? contextProjectId ?? null;
   const customerOnly = mode === "customerOnly";
 
@@ -99,10 +114,8 @@ export default function CustomerEditor({
   const [projectDraft, setProjectDraft] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  // Tracks the name of the project currently loaded into the draft. Used by
-  // updateProjectValue to detect when the user starts typing a brand-new
-  // project name (divergence from this baseline → clear the rest of the
-  // drawer except the customer).
+  // Tracks the name of the project currently loaded into the draft so the
+  // editor can refresh its baseline after save/select.
   const loadedProjectName = useRef<string>("");
   useEffect(() => {
     let cancelled = false;
@@ -256,7 +269,9 @@ export default function CustomerEditor({
 
         const detailsEntries = await Promise.all(
           projects.map(async (project) => {
-            const detail = await apiClient.get<ProjectDetailResponse>(`/projects/${project.id}`);
+            const detail = await apiClient.get<ProjectDetailResponse>(
+              freshProjectDetailUrl(project.id)
+            );
             return [project.id, normalizeProject(detail.data)] as const;
           })
         );
@@ -368,34 +383,6 @@ export default function CustomerEditor({
     if (key !== "name" && (numericValue === null || numericValue < 0)) return;
 
     if (key === "name") {
-      // "Starting over" detection: the user typed a name that diverged from
-      // the originally loaded project. The signal is structural — when the
-      // current value (normalized) is neither a substring of, nor contains,
-      // the loaded name, the user is no longer editing the same project.
-      // Treat it as a fresh project: clear managers / investors / fields /
-      // lots / etc. and keep only the customer. The empty string also
-      // triggers the reset (deleting everything is a clear "start over"
-      // signal even before typing the new name).
-      const baseline = loadedProjectName.current;
-      const normalizedBaseline = normalizeEntityName(baseline);
-      const normalizedValue = normalizeEntityName(value);
-      const stillEditingLoadedProject =
-        baseline !== "" &&
-        normalizedValue !== "" &&
-        (normalizedBaseline.includes(normalizedValue) ||
-          normalizedValue.includes(normalizedBaseline));
-      const shouldStartOver =
-        isExistingId(selectedProjectId) && baseline !== "" && !stillEditingLoadedProject;
-
-      if (shouldStartOver) {
-        setSelectedProjectId(NEW_VALUE);
-        loadedProjectName.current = "";
-        setProjectDraft((prev) =>
-          prev ? { ...createEmptyProject(null), customer: prev.customer, name: value } : prev
-        );
-        return;
-      }
-
       setProjectDraft((prev) => (prev ? { ...prev, name: value } : prev));
       return;
     }
@@ -407,20 +394,7 @@ export default function CustomerEditor({
   };
 
   const updateCustomerName = (rawValue: string) => {
-    const value = collapseInternalSpaces(rawValue);
-    // Free-text typing signals "this is a new association" — clear the id
-    // and actor_id so the BE looks up by name (or creates) at save time
-    // instead of renaming the currently-linked customer. The dropdown's
-    // onSelectExisting handler restores both fields when the user picks an
-    // existing row.
-    setProjectDraft((prev) =>
-      prev
-        ? {
-            ...prev,
-            customer: { ...prev.customer, id: null, actor_id: null, name: value },
-          }
-        : prev
-    );
+    setProjectDraft((prev) => applyCustomerNameEdit(prev, rawValue));
   };
 
   const loadProjectOptionsForCustomer = async (customerId: number) => {
@@ -467,7 +441,9 @@ export default function CustomerEditor({
     setSelectedProjectId(project.id);
     setLoading(true);
     try {
-      const detail = await apiClient.get<ProjectDetailResponse>(`/projects/${project.id}`);
+      const detail = await apiClient.get<ProjectDetailResponse>(
+        freshProjectDetailUrl(project.id)
+      );
       const loaded = normalizeProject(detail.data);
       loadedProjectName.current = loaded.name;
       setProjectDraft(loaded);
@@ -1162,22 +1138,29 @@ export default function CustomerEditor({
         }
       } else if (selectedProjectId === NEW_VALUE) {
         const created = await apiClient.post<{ id: number }>("/projects", projectPayload);
-        const detail = await apiClient.get<ProjectDetailResponse>(`/projects/${created.id}`);
+        const detail = await apiClient.get<ProjectDetailResponse>(
+          freshProjectDetailUrl(created.id)
+        );
         const refreshed = normalizeProject(detail.data);
         setSelectedProjectId(created.id);
         setProjectDraft(refreshed);
         loadedProjectName.current = refreshed.name;
+        notifyWorkspaceProjectSaved(created.id);
         notify.success("Proyecto creado.");
       } else {
-        await apiClient.put(`/projects/${selectedProjectId}`, projectPayload);
+        const savedProjectId = Number(selectedProjectId);
+        await apiClient.put(`/projects/${savedProjectId}`, projectPayload);
         const detail = await apiClient.get<ProjectDetailResponse>(
-          `/projects/${selectedProjectId}`
+          freshProjectDetailUrl(savedProjectId)
         );
         const refreshed = normalizeProject(detail.data);
         setProjectDraft(refreshed);
         loadedProjectName.current = refreshed.name;
+        contextSetProject({ id: savedProjectId, name: refreshed.name });
+        contextSetProjectId(savedProjectId);
+        notifyWorkspaceProjectSaved(savedProjectId);
         notify.success("Cambios guardados.");
-        onSaved?.();
+        await onSaved?.();
         onClose?.();
       }
     } catch (saveError) {
@@ -1639,4 +1622,3 @@ export default function CustomerEditor({
     </div>
   );
 }
-

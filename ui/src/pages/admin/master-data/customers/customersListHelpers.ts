@@ -99,16 +99,26 @@ export function countUniqueFields(projects: RawProject[]) {
 
 export function projectMatchesFilters(
   project: RawProject,
-  selectedProject: { name?: string } | undefined,
+  selectedProject: { id?: number; name?: string } | undefined,
   selectedCampaign: { name?: string } | undefined,
   selectedField: { id?: number; name?: string } | undefined,
 ) {
-  const projectNeedle = normalizeFilter(selectedProject?.name ?? "");
   const campaignNeedle = normalizeFilter(selectedCampaign?.name ?? "");
   const fieldNeedle = normalizeFilter(selectedField?.name ?? "");
+  const selectedProjectId =
+    typeof selectedProject?.id === "number" && selectedProject.id > 0
+      ? selectedProject.id
+      : undefined;
+  const projectId =
+    typeof project.id === "number" && project.id > 0 ? project.id : undefined;
 
-  const matchesProject =
-    !selectedProject || normalizeFilter(project.name ?? "").includes(projectNeedle);
+  const matchesProject = (() => {
+    if (!selectedProject) return true;
+    if (selectedProjectId && projectId) return projectId === selectedProjectId;
+    return normalizeFilter(project.name ?? "").includes(
+      normalizeFilter(selectedProject.name ?? "")
+    );
+  })();
   const matchesCampaign =
     !selectedCampaign || normalizeFilter(campaignName(project)).includes(campaignNeedle);
   const matchesField =
@@ -122,6 +132,16 @@ export function projectMatchesFilters(
     });
 
   return matchesProject && matchesCampaign && matchesField;
+}
+
+export function getProjectIdForEdit(
+  row: Pick<CustomerProjectRow, "mode" | "projectId" | "projectIds">,
+  selectedProject: { id?: number | null } | undefined,
+) {
+  if (row.projectId && row.projectId > 0) return row.projectId;
+  if (selectedProject?.id && selectedProject.id > 0) return selectedProject.id;
+  if (row.mode === "project" && row.projectIds.length === 1) return row.projectIds[0];
+  return null;
 }
 
 export function sumProjectHectares(
@@ -154,7 +174,9 @@ export async function loadProjectDetails(projects: RawProject[]) {
     projects.map(async (project) => {
       if (!project.id) return project;
       try {
-        const response = await apiClient.get<ProjectDetailResponse>(`/projects/${project.id}`);
+        const response = await apiClient.get<ProjectDetailResponse>(
+          `/projects/${project.id}?fresh=1`,
+        );
         return response.data ?? project;
       } catch {
         return project;

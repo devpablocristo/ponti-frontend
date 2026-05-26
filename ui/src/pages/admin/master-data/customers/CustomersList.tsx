@@ -37,6 +37,7 @@ import {
   campaignName,
   countUniqueCampaigns,
   countUniqueFields,
+  getProjectIdForEdit,
   loadProjectDetails,
   normalizeFilter,
   projectMatchesFilters,
@@ -384,10 +385,11 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     entity: bulkEntity,
     archive: rowArchive,
     onEdit: (row) => {
+      const projectIdForEdit = getProjectIdForEdit(row, selectedProject);
       setEditingCustomerId(row.customerId);
-      setEditingProjectId(row.mode === "project" ? row.projectId ?? null : null);
+      setEditingProjectId(projectIdForEdit);
     },
-    onAfter: refresh,
+    onAfter: refreshAfterArchivedRestore,
   });
 
   const selectColumn = useMemo<Column<CustomerProjectRow>>(
@@ -506,7 +508,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
           mode={editingProjectId ? "project" : "customerOnly"}
           customerId={editingCustomerId}
           initialProjectId={editingProjectId}
-          onSaved={() => setDataVersion((v) => v + 1)}
+          onSaved={refreshAfterArchivedRestore}
           onClose={() => {
             setEditingCustomerId(null);
             setEditingProjectId(null);

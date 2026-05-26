@@ -1,9 +1,10 @@
 // Canonical-storage and display formatting for entity names (customer,
 // project, manager, investor, field, lot, crop, season, actor display name).
 //
-// Storage form (canonicalizeName): lowercase ASCII, only [a-z0-9 ]. Diacritics
-// stripped, every non-alphanumeric character collapses to a single space, then
-// internal whitespace is collapsed. The DB stores this canonical form.
+// Storage form (canonicalizeName): lowercase Spanish text, only [a-z0-9ñ ].
+// Diacritics are stripped except ñ/Ñ; every other non-alphanumeric character
+// collapses to a single space, then internal whitespace is collapsed. The DB
+// stores this canonical form.
 //
 // Display form (formatProperName): canonicalizes first, then title-cases each
 // word except Spanish connectors (de, del, con, etc.) which stay lowercase
@@ -51,8 +52,8 @@ const UPPERCASE_TOKENS = new Set([
   "arba",
 ]);
 
-const DIACRITICS = /[̀-ͯ]/g;
-const NON_CANONICAL = /[^a-z0-9 ]+/g;
+const COMBINING_MARK = /[\u0300-\u036f]/;
+const NON_CANONICAL = /[^a-z0-9 \u00f1]+/g;
 const WHITESPACE = /\s+/g;
 
 // Used by every input onChange to collapse consecutive spaces while the user
@@ -65,13 +66,33 @@ export function collapseInternalSpaces(value: string): string {
 
 export function canonicalizeName(value: unknown): string {
   if (typeof value !== "string") return "";
-  return value
-    .normalize("NFD")
-    .replace(DIACRITICS, "")
+  return stripDiacriticsPreservingEnye(value)
     .toLowerCase()
     .replace(NON_CANONICAL, " ")
     .replace(WHITESPACE, " ")
     .trim();
+}
+
+function stripDiacriticsPreservingEnye(value: string): string {
+  const out: string[] = [];
+  for (const char of value.normalize("NFD")) {
+    if (COMBINING_MARK.test(char)) {
+      if (char === "\u0303" && out.length > 0) {
+        const last = out[out.length - 1];
+        if (last === "n") {
+          out[out.length - 1] = "\u00f1";
+          continue;
+        }
+        if (last === "N") {
+          out[out.length - 1] = "\u00d1";
+          continue;
+        }
+      }
+      continue;
+    }
+    out.push(char);
+  }
+  return out.join("");
 }
 
 export function formatProperName(value: unknown): string {
