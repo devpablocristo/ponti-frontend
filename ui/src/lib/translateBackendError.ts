@@ -31,11 +31,32 @@ function archivedRefMessage(e: Entity): string {
   return `${withArticleCap(e)} está archivad${adj}. Restaurá${pron} o elegí ${indef} activ${adj}.`;
 }
 
+function indefiniteNounArticle(e: Entity): string {
+  return e.article === "la" || e.article === "las" ? "una" : "un";
+}
+
 export function translateBackendError(raw: string): string {
   if (!raw) return raw;
   const msg = raw.trim();
 
   // ─── Patterns ESPECÍFICOS (van primero) ─────────────────────────────────────
+
+  if (
+    /customer already exists/i.test(msg) ||
+    /duplicate key value violates unique constraint .*customers/i.test(msg) ||
+    /unique constraint.*customers/i.test(msg) ||
+    /uq_customers/i.test(msg)
+  ) {
+    return "Ya existe un cliente con ese nombre.";
+  }
+
+  if (/failed to rename customer/i.test(msg)) {
+    return "No se pudo cambiar el nombre del cliente porque ya existe otro cliente con ese nombre.";
+  }
+
+  if (/customer actor link already exists/i.test(msg) || /failed to link customer to actor/i.test(msg)) {
+    return "No se pudo guardar porque el cliente está vinculado a otro actor. Seleccioná el cliente correcto desde la lista.";
+  }
 
   // "cannot restore X while Y is archived[; restore the Y first]"
   // Cubre: project, field, lot como parent del child a restaurar. Mensaje
@@ -246,7 +267,7 @@ export function translateBackendError(raw: string): string {
   const alreadyExists = msg.match(/^(\w+(?: \w+)?) already exists/i);
   if (alreadyExists) {
     const e = lookupBackendEntity(alreadyExists[1]);
-    if (e) return `${withArticleCap(e)} ya existe.`;
+    if (e) return `Ya existe ${indefiniteNounArticle(e)} ${e.singular} con ese nombre.`;
   }
 
   // ─── Patterns GENÉRICOS (al final) ──────────────────────────────────────────

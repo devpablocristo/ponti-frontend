@@ -68,7 +68,7 @@ describe("useProjects.saveProject", () => {
     });
 
     await waitFor(() =>
-      expect(result.current.error).toBe("El proyecto ya existe."),
+      expect(result.current.error).toBe("Ya existe un proyecto con ese nombre."),
     );
   });
 });
