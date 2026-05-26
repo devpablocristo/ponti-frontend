@@ -50,6 +50,10 @@ const UPPERCASE_TOKENS = new Set([
   "ypf",
   "afip",
   "arba",
+  "csv",
+  "pdf",
+  "ot",
+  "usd",
 ]);
 
 const COMBINING_MARK = /[\u0300-\u036f]/;
@@ -102,6 +106,46 @@ export function formatProperName(value: unknown): string {
     .split(" ")
     .map((word, index) => formatWord(word, index))
     .join(" ");
+}
+
+export function formatEntityDisplayName(value: unknown): string {
+  if (typeof value !== "string") return formatProperName(value);
+  const raw = value.trim();
+  if (!raw) return "";
+
+  return raw
+    .split(/([,;]+)/)
+    .map((part) => {
+      if (/^[,;]+$/.test(part)) return part;
+      const entry = part.trim();
+      if (!entry) return part;
+      const withPercent = entry.match(
+        /^(.+?)(\s*[-–—]\s*\d+(?:[.,]\d+)?\s*%.*)$/u,
+      );
+      if (withPercent) return `${formatProperName(withPercent[1])}${withPercent[2]}`;
+      return formatProperName(entry);
+    })
+    .join("")
+    .replace(/\s*([,;])\s*/g, "$1 ");
+}
+
+export function formatTitleCase(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const raw = value.replace(WHITESPACE, " ").trim();
+  if (!raw) return "";
+
+  let wordIndex = 0;
+  return raw.replace(/[\p{L}\p{N}]+/gu, (word) => {
+    const lower = word.toLocaleLowerCase("es-AR");
+    const formatted =
+      wordIndex > 0 && CONNECTORS.has(lower)
+        ? lower
+        : UPPERCASE_TOKENS.has(lower)
+          ? lower.toUpperCase()
+          : lower.charAt(0).toLocaleUpperCase("es-AR") + lower.slice(1);
+    wordIndex += 1;
+    return formatted;
+  });
 }
 
 function formatWord(word: string, index: number): string {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 
 import { apiClient } from "@/api/client";
@@ -16,6 +16,7 @@ import {
 import { useBulkSelection } from "../../hooks/useBulkSelection";
 import { useWorkspaceFilters } from "../../hooks/useWorkspaceFilters";
 import { notify } from "../../lib/notify";
+import { formatEntityDisplayName } from "../../lib/properName";
 import { translateBackendError } from "../../lib/translateBackendError";
 
 // Genérico para vistas de "X Archivados". Encapsula tabla + selección masiva
@@ -440,6 +441,10 @@ export function ArchivedListPage<T extends { id: number }>({
   const selection = useBulkSelection(filteredData);
   const { toggleAll, clear, allSelected, selectedItems, selectedCount } =
     selection;
+  const getDisplayItemLabel = useCallback(
+    (item: T) => formatEntityDisplayName(getItemLabel(item)),
+    [getItemLabel],
+  );
 
   useEffect(() => {
     onMount?.();
@@ -534,7 +539,7 @@ export function ArchivedListPage<T extends { id: number }>({
   };
 
   const selectColumn: Column<T> | null = bulkEnabled
-    ? makeSelectColumn<T>(selection, getItemLabel, entity)
+    ? makeSelectColumn<T>(selection, getDisplayItemLabel, entity)
     : null;
 
   const fullColumns: Column<T>[] = useMemo(

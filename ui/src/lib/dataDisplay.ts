@@ -11,10 +11,60 @@ import {
   type DataTableProps,
 } from "@devpablocristo/platform-ui-data-display";
 
+import { formatEntityDisplayName, formatTitleCase } from "./properName";
+
 type LocalDataTableProps<T> = DataTableProps<T> & {
   actionsHeader?: string;
   renderActions?: (item: T) => ReactNode;
 };
+
+type DisplayFormat = "properName" | "titleCase" | "none";
+
+const CAMPAIGN_KEYS = new Set([
+  "campaign",
+  "campaign_name",
+  "campaignName",
+  "campaignLabel",
+]);
+const NON_NAME_KEYS = new Set([
+  "id",
+  "project_id",
+  "field_id",
+  "lot_id",
+  "number",
+  "reference_number",
+  "date",
+  "entry_date",
+  "quantity",
+  "season",
+  "status",
+]);
+
+function inferDisplayFormat<T>(column: DataTableColumn<T>): DisplayFormat {
+  const key = String(column.key);
+  if (
+    CAMPAIGN_KEYS.has(key) ||
+    NON_NAME_KEYS.has(key) ||
+    /campaña|campaign/i.test(column.header)
+  ) {
+    return "none";
+  }
+  if (key === "name" || key.endsWith("_name") || key.endsWith("Name")) return "properName";
+  if (
+    /(cliente|sociedad|customer|proyecto|project|campo|field|lote|lot|cultivo|crop|labor|responsable|manager|inversor|investor|insumo|supply|rubro|category|contratista|contractor|actor)/i.test(
+      `${key} ${column.header}`,
+    )
+  ) {
+    return "properName";
+  }
+  return "none";
+}
+
+function formatCellValue(value: unknown, format: DisplayFormat): string {
+  if (format === "properName") return formatEntityDisplayName(value);
+  if (format === "titleCase") return formatTitleCase(value);
+  return String(value ?? "");
+}
 
 export function DataTable<T>({
   columns,
@@ -26,12 +76,27 @@ export function DataTable<T>({
 
   const columnsWithActions = useMemo(() => {
     const safeColumns = Array.isArray(columns) ? columns : [];
+    const displayColumns = safeColumns.map((column) => {
+      const format =
+        (column as DataTableColumn<T> & { format?: DisplayFormat }).format ??
+        inferDisplayFormat(column);
+      const formatted: DataTableColumn<T> = {
+        ...column,
+        header: column.header ? formatTitleCase(column.header) : column.header,
+      };
 
-    if (!renderActions) return safeColumns;
+      if (!column.render && format !== "none") {
+        formatted.render = (value) => formatCellValue(value, format);
+      }
+
+      return formatted;
+    });
+
+    if (!renderActions) return displayColumns;
 
     const actionsColumn: DataTableColumn<T> = {
       key: "__actions" as keyof T,
-      header: actionsHeader,
+      header: formatTitleCase(actionsHeader),
       filterable: false,
       sortable: false,
       align: "center",
@@ -39,7 +104,7 @@ export function DataTable<T>({
       render: (_value, item) => renderActions(item),
     };
 
-    return [...safeColumns, actionsColumn];
+    return [...displayColumns, actionsColumn];
   }, [actionsHeader, columns, renderActions]);
 
   // Envoltorio con clase `data-table-host` para que `.dark .data-table-host *`

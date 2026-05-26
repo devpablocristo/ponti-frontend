@@ -2,6 +2,7 @@ export type Column<T> = {
   key: keyof T;
   header: string;
   render?: (value: unknown, item: T) => React.ReactNode;
+  format?: "properName" | "titleCase" | "none";
   filterable?: boolean;
   filterType?: "text" | "number" | "select" | "date";
   filterOptions?: string[];
