@@ -9,6 +9,27 @@ const apiClient = new ApiClient(configService.baseManagerApi);
 
 const router: Router = Router();
 
+const isTruthyQueryValue = (value: unknown): boolean => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return typeof raw === "string" && ["1", "true", "yes"].includes(raw.toLowerCase());
+};
+
+const shouldBypassProjectCache = (req: Request): boolean => {
+  const cacheControl =
+    typeof req.headers["cache-control"] === "string"
+      ? req.headers["cache-control"].toLowerCase()
+      : "";
+  const pragma =
+    typeof req.headers.pragma === "string" ? req.headers.pragma.toLowerCase() : "";
+
+  return (
+    isTruthyQueryValue(req.query.fresh) ||
+    isTruthyQueryValue(req.query.no_cache) ||
+    cacheControl.includes("no-cache") ||
+    pragma.includes("no-cache")
+  );
+};
+
 // Small utility to simulate latency where needed
 //const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -291,16 +312,19 @@ router.get("/customer/:id", handleProjectsByCustomer);
 router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const bypassCache = shouldBypassProjectCache(req);
     const userId = req.user?.userID;
     if (!userId) {
       res.status(401).json({ message: "Usuario no autenticado" });
       return;
     }
 
-    const cachedProject = cache.get(`project:${id}`);
-    if (cachedProject) {
-      res.status(200).json(cachedProject);
-      return;
+    if (!bypassCache) {
+      const cachedProject = cache.get(`project:${id}`);
+      if (cachedProject) {
+        res.status(200).json(cachedProject);
+        return;
+      }
     }
 
     const headers = {
@@ -310,7 +334,9 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     const data = await apiClient.get<any>(`/projects/${id}`, headers);
 
-    cache.set(`project:${id}`, data);
+    if (!bypassCache) {
+      cache.set(`project:${id}`, data);
+    }
 
     res.status(200).json(data);
   } catch (error: any) {

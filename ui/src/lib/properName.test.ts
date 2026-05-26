@@ -35,6 +35,11 @@ describe("canonicalizeName", () => {
     expect(canonicalizeName("María Ángeles")).toBe("maria angeles");
   });
 
+  it("preserves ñ while stripping other diacritics", () => {
+    expect(canonicalizeName("EL SUEÑO")).toBe("el sueño");
+    expect(canonicalizeName("ÑANDÚ")).toBe("ñandu");
+  });
+
   it("collapses dots and other punctuation into single spaces", () => {
     expect(canonicalizeName("AGRO LAJITAS S.R.L.")).toBe("agro lajitas s r l");
   });
@@ -86,6 +91,11 @@ describe("formatProperName", () => {
 
   it("strips diacritics for display (matches storage)", () => {
     expect(formatProperName("María Ángeles")).toBe("Maria Angeles");
+  });
+
+  it("preserves ñ for display", () => {
+    expect(formatProperName("EL SUEÑO")).toBe("El Sueño");
+    expect(formatProperName("ÑANDÚ")).toBe("Ñandu");
   });
 
   it("handles initials by splitting on the dot", () => {

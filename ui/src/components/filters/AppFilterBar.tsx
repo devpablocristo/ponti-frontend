@@ -8,6 +8,7 @@ import { fuzzySearchOptions } from "../../lib/fuzzySearch";
 export interface FilterOption {
   id: number | string;
   name: string;
+  displayName?: string;
   code?: string | number | null;
 }
 
@@ -98,13 +99,19 @@ function SearchInput({
   return (
     <div className="w-full">
       {label ? (
-        <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">{label}</label>
+        <label
+          className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+          htmlFor={name}
+        >
+          {label}
+        </label>
       ) : null}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500 dark:text-slate-400" />
         <input
           type="text"
           autoComplete="off"
+          id={name}
           name={name}
           value={value}
           disabled={disabled}
@@ -211,7 +218,7 @@ function FilterSuggestions({
                   : "text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-700"
               }`}
             >
-              {option.name}
+              {option.displayName ?? option.name}
             </li>
           ))
         : null}
@@ -281,7 +288,7 @@ export function AppFilterBar({
   const handleSuggestionClick = useCallback(
     (filter: FilterItem, option: FilterOption) => {
       filter.setData(option);
-      filter.onChange(option.name);
+      filter.onChange(option.displayName ?? option.name);
       setSearchByFilter((prev) => ({ ...prev, [filter.name]: "" }));
       hideSuggestions(filter.name);
     },

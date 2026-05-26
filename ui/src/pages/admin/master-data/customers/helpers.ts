@@ -1,5 +1,6 @@
 import type { CustomerData } from "../../../../hooks/useCustomers/types";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
+import { collapseInternalSpaces } from "../../../../lib/properName";
 
 import type { ActorOption, EntityOption, EntityOptionsPayload, SelectionValue } from "./types";
 
@@ -112,6 +113,17 @@ export function createEmptyProject(customer?: CustomerData | null): Project {
       },
     ],
     updated_at: undefined,
+  };
+}
+
+export function applyCustomerNameEdit(project: Project | null, rawValue: string): Project | null {
+  if (!project) return project;
+  return {
+    ...project,
+    customer: {
+      ...project.customer,
+      name: collapseInternalSpaces(rawValue),
+    },
   };
 }
 
