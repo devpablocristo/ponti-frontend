@@ -12,6 +12,7 @@ import { Summary } from "@/api/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
+import { matchesSelectFilter, matchesTextFilter } from "../../../lib/tableFilters";
 
 function ItemsIndicators({ summary }: { summary?: Summary }) {
   const safeSummary = summary ?? {
@@ -104,17 +105,11 @@ export function Products() {
       Object.entries(otherFilters).every(([k, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        const itemValue = String(
-          item[k as keyof SupplyMovement] ?? ""
-        ).toLowerCase();
-
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(item[k as keyof SupplyMovement], value);
         }
 
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(item[k as keyof SupplyMovement], value);
       })
     );
 
@@ -135,16 +130,10 @@ export function Products() {
         const rawValue = item[k as keyof SupplyMovement];
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            String(rawValue ?? "")
-              .toLowerCase()
-              .includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(rawValue, value);
         }
 
-        return String(rawValue ?? "")
-          .toLowerCase()
-          .includes(String(value).toLowerCase());
+        return matchesTextFilter(rawValue, value);
       })
     );
 
@@ -419,15 +408,11 @@ export function Products() {
 
 
         // 🟢 STRING (multi + single)
-        const itemValue = String(rawValue ?? "").toLowerCase();
-
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(rawValue, value);
         }
 
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(rawValue, value);
       });
     });
   }, [supplyMovements, columnsFilters]);

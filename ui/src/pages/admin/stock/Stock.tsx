@@ -16,6 +16,7 @@ import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
+import { matchesSelectFilter, matchesTextFilter } from "../../../lib/tableFilters";
 
 const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
 const MISSING_ENTRY_LABEL = "REV ING.";
@@ -353,20 +354,13 @@ export function Stock() {
           return true;
         }
 
-        const itemValue = getStockFilterValue(
-  item,
-  key as keyof GetStockItems
-).toLowerCase();
+        const itemValue = getStockFilterValue(item, key as keyof GetStockItems);
 
-        // 🟢 MULTI SELECT
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(itemValue, value);
         }
 
-        // 🟢 SINGLE SELECT
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(itemValue, value);
       });
     });
   }, [stock, columnsFilters]);
@@ -408,24 +402,19 @@ export function Stock() {
       Object.entries(otherFilters).every(([k, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        const itemValue = getStockFilterValue(
-  item,
-  k as keyof GetStockItems
-).toLowerCase();
+        const itemValue = getStockFilterValue(item, k as keyof GetStockItems);
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(itemValue, value);
         }
 
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(itemValue, value);
       })
     );
 
     return [...new Set(filtered.map((i) => getStockFilterValue(i, key)))].filter(
-  Boolean
-);
+      Boolean
+    );
   }
 
   const columns: Column<GetStockItems>[] = useMemo(

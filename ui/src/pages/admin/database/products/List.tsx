@@ -12,6 +12,10 @@ import SelectField from "../../../../components/Input/SelectField";
 import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
+import {
+  matchesSelectFilter,
+  matchesTextFilter,
+} from "@/lib/tableFilters";
 
 const renderPriceCell = (value: unknown, row: Supply) => (
   <div className="flex items-center gap-2">
@@ -121,17 +125,17 @@ export default function ListItems() {
           const status = supply.is_partial_price ? "Parcial" : "Final";
           if (Array.isArray(value)) {
             if (value.length === 0) return true;
-            return value.includes(status);
+            return matchesSelectFilter(status, value);
           }
-          return status.toLowerCase().includes(String(value).toLowerCase());
+          return matchesTextFilter(status, value);
         }
 
-        const currentValue = String(supply[key as keyof Supply] ?? "");
+        const currentValue = supply[key as keyof Supply];
         if (Array.isArray(value)) {
           if (value.length === 0) return true;
-          return value.includes(currentValue);
+          return matchesSelectFilter(currentValue, value);
         }
-        return currentValue.toLowerCase().includes(String(value).toLowerCase());
+        return matchesTextFilter(currentValue, value);
       })
     );
   };

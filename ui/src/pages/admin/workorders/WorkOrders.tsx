@@ -16,6 +16,7 @@ import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
+import { matchesSelectFilter } from "@/lib/tableFilters";
 
 const FILTER_HIERARCHY: Record<string, string[]> = {
   project_name: ["field_name", "lot_name"],
@@ -316,13 +317,11 @@ export function WorkOrders() {
           }
 
           const orderValRaw = order[key as keyof OrdersData];
-          const orderVal = String(orderValRaw ?? "").toLowerCase();
-
           if (Array.isArray(value)) {
-            return value.some((v) => orderVal === String(v).toLowerCase());
+            return matchesSelectFilter(orderValRaw, value);
           }
 
-          return orderVal === String(value).toLowerCase();
+          return matchesSelectFilter(orderValRaw, [value]);
         });
       });
     },
@@ -724,7 +723,7 @@ export function WorkOrders() {
   function handlePrePublish(order: OrdersData) {
     setModalConfig({
       title: "Confirmar publicación",
-            message:
+      message:
         `¿Está seguro que desea publicar la orden ${order.number}?\n\n` +
         "Si la orden contiene insumos pendientes de completar, la publicación será bloqueada.",
       primaryButtonText: "Sí, publicar",
@@ -998,11 +997,12 @@ export function WorkOrders() {
         }
 
         const orderValRaw = order[key as keyof OrdersData];
-        const orderVal = String(orderValRaw ?? "").toLowerCase();
+
         if (Array.isArray(value)) {
-          return value.some((v) => orderVal === String(v).toLowerCase());
+          return matchesSelectFilter(orderValRaw, value);
         }
-        return orderVal === String(value).toLowerCase();
+
+        return matchesSelectFilter(orderValRaw, [value]);
       });
     });
   }, [globalFilterSourceOrders, columnsFilters]);
