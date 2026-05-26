@@ -41,6 +41,11 @@ export type RawProject = {
     | null;
 };
 
+export type CustomerFilterTarget = {
+  id?: number | null;
+  name?: string | null;
+};
+
 export type ProjectSummaryResponse = {
   success: boolean;
   data?: {
@@ -95,6 +100,25 @@ export function countUniqueFields(projects: RawProject[]) {
   });
 
   return fields.size;
+}
+
+export function customerMatchesFilter(
+  customer: { id: number; name: string },
+  selectedCustomer: CustomerFilterTarget | undefined,
+  allCustomersSelected = false,
+) {
+  if (allCustomersSelected || !selectedCustomer) return true;
+
+  const selectedCustomerId =
+    typeof selectedCustomer.id === "number" && selectedCustomer.id > 0
+      ? selectedCustomer.id
+      : undefined;
+
+  if (selectedCustomerId) return customer.id === selectedCustomerId;
+
+  return normalizeFilter(customer.name).includes(
+    normalizeFilter(selectedCustomer.name ?? "")
+  );
 }
 
 export function projectMatchesFilters(

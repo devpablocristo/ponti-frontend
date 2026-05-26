@@ -1,12 +1,31 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  customerMatchesFilter,
   getProjectIdForEdit,
   projectMatchesFilters,
   type RawProject,
 } from "./customersListHelpers";
 
 describe("customersListHelpers", () => {
+  it("mantiene un cliente filtrado por id aunque cambie su nombre", () => {
+    expect(
+      customerMatchesFilter(
+        { id: 17, name: "agrolajias" },
+        { id: 17, name: "agro lajitas 25 28" }
+      )
+    ).toBe(true);
+  });
+
+  it("no matchea otro cliente aunque conserve el nombre anterior", () => {
+    expect(
+      customerMatchesFilter(
+        { id: 18, name: "agro lajitas 25 28" },
+        { id: 17, name: "agro lajitas 25 28" }
+      )
+    ).toBe(false);
+  });
+
   it("mantiene un proyecto filtrado por id aunque cambie su nombre", () => {
     const renamedProject: RawProject = {
       id: 34,

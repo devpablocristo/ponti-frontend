@@ -29,8 +29,12 @@ import InvestorFormDrawer from "./InvestorFormDrawer";
 import ArchivedInvestors from "./ArchivedInvestors";
 import { downloadCsvRows } from "../../fileTransfer";
 
-const toFilterOptions = (values: string[]) =>
-  values.map((value, index) => ({ id: `${value}-${index}`, name: value }));
+const toFilterOptions = (values: string[], formatDisplay = true) =>
+  values.map((value, index) => ({
+    id: `${value}-${index}`,
+    name: value,
+    displayName: formatDisplay ? formatProperName(value) : value,
+  }));
 
 import {
   type InvestorRow,
@@ -326,7 +330,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               name: "cliente",
               label: "Cliente",
               placeholder: "Buscar",
-              value: selectedCustomer || "Todos los clientes",
+              value: selectedCustomer ? formatProperName(selectedCustomer) : "Todos los clientes",
               options: toFilterOptions(filterOptions.customers),
               onChange: setSelectedCustomer,
               setData: (data) => {
@@ -343,7 +347,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               name: "proyecto",
               label: "Proyecto",
               placeholder: "Buscar",
-              value: selectedProject || "Todos los proyectos",
+              value: selectedProject ? formatProperName(selectedProject) : "Todos los proyectos",
               options: toFilterOptions(filterOptions.projects),
               onChange: setSelectedProject,
               setData: (data) => {
@@ -360,7 +364,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               label: "Campaña",
               placeholder: "Buscar",
               value: selectedCampaign || "Todas las campañas",
-              options: toFilterOptions(filterOptions.campaigns),
+              options: toFilterOptions(filterOptions.campaigns, false),
               onChange: setSelectedCampaign,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
@@ -374,7 +378,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               name: "campo",
               label: "Campo",
               placeholder: "Buscar",
-              value: selectedField || "Todos los campos",
+              value: selectedField ? formatProperName(selectedField) : "Todos los campos",
               options: toFilterOptions(filterOptions.fields),
               onChange: setSelectedField,
               setData: (data) => {

@@ -37,6 +37,7 @@ import {
   campaignName,
   countUniqueCampaigns,
   countUniqueFields,
+  customerMatchesFilter,
   getProjectIdForEdit,
   loadProjectDetails,
   normalizeFilter,
@@ -105,7 +106,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   const archivedShowsProjects = hasProjectScope;
 
   const refresh = useCallback(
-    () => getCustomers("limit=1000"),
+    () => getCustomers("per_page=1000"),
     [getCustomers],
   );
   const refreshAfterArchivedRestore = useCallback(async () => {
@@ -116,12 +117,8 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   const visibleCustomers = useMemo(() => {
     if (!hasWorkspaceSelection) return [];
 
-    const customerNeedle = normalizeFilter(selectedCustomer?.name ?? "");
-
     return customers.filter((customer) => {
-      if (selectedCustomer) {
-        if (!normalizeFilter(customer.name).includes(customerNeedle)) return false;
-      }
+      if (!customerMatchesFilter(customer, selectedCustomer, allSelection.customer)) return false;
 
       const projects = projectsByCustomer[customer.id] ?? [];
       const hasRelationFilter =
@@ -142,6 +139,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     customers,
     hasWorkspaceSelection,
     projectsByCustomer,
+    allSelection.customer,
     selectedCampaign,
     selectedCustomer,
     selectedField,
@@ -491,6 +489,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
         <CustomerEditor
           embedded
           mode={projectsOnly ? "project" : undefined}
+          onSaved={refreshAfterArchivedRestore}
           onClose={() => setCreateDrawerOpen(false)}
         />
       </DrawerShell>

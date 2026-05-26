@@ -41,6 +41,7 @@ type SmartEntityInputProps<T extends EntityNameOption> = {
   placeholder?: string;
   size?: SmartEntityInputSize;
   className?: string;
+  formatDisplayValue?: boolean;
 };
 
 export function SmartEntityInput<T extends EntityNameOption>({
@@ -57,6 +58,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
   placeholder,
   size = "md",
   className = "",
+  formatDisplayValue = true,
 }: SmartEntityInputProps<T>) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -78,6 +80,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
     [options, searchText]
   );
   const showDropdown = open && !disabled && visibleOptions.length > 0;
+  const inputValue = formatDisplayValue ? formatProperName(value) : value;
   const dropdownStyle: CSSProperties | undefined = dropdownPosition
     ? {
         position: "fixed",
@@ -184,7 +187,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
         aria-expanded={showDropdown}
         type="text"
         name={name}
-        value={value}
+        value={inputValue}
         onChange={(event) => {
           if (lockName) return;
           setSearchText(event.target.value);

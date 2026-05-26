@@ -5,6 +5,7 @@ import useProjects from "./useDatabase/projects";
 import useCampaigns from "./useCampaigns";
 import useFields from "./useFields";
 import { useTenant } from "../pages/login/context/useTenant";
+import { formatProperName } from "../lib/properName";
 
 export interface Customer {
   id: number;
@@ -36,7 +37,7 @@ interface FilterBarFilter {
   placeholder: string;
   ref?: string;
   total?: number;
-  options: Array<{ id: number; name: string }>;
+  options: Array<{ id: number; name: string; displayName?: string }>;
   value: string | number | null;
   onChange: (value: string) => void;
   setData: (data: unknown) => void;
@@ -79,6 +80,19 @@ export interface UseWorkspaceFiltersReturn {
 }
 
 type FilterKey = "customer" | "project" | "campaign" | "field";
+
+export function formatWorkspaceFilterName(value: string | undefined): string {
+  return formatProperName(value ?? "");
+}
+
+export function withWorkspaceFilterDisplayName<T extends { name: string }>(
+  options: T[] | undefined
+): Array<T & { displayName: string }> {
+  return (options ?? []).map((option) => ({
+    ...option,
+    displayName: formatWorkspaceFilterName(option.name),
+  }));
+}
 
 export const useWorkspaceFilters = (
   enabledFilters: FilterKey[] = ["customer", "project", "campaign", "field"]
@@ -255,6 +269,17 @@ export const useWorkspaceFilters = (
     error: loadingFieldsError,
   } = useFields();
 
+  const projectOptionsForSelection = useMemo(
+    () =>
+      selectedCustomer
+        ? projectsDropdown || []
+        : (projects || []).map((project) => ({
+            id: project.id,
+            name: project.name,
+          })),
+    [projects, projectsDropdown, selectedCustomer]
+  );
+
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
@@ -272,7 +297,7 @@ export const useWorkspaceFilters = (
     if (allCustomersSelected) {
       setQueryCustomer("Todos los clientes");
     } else if (selectedCustomer) {
-      setQueryCustomer(selectedCustomer.name);
+      setQueryCustomer(formatWorkspaceFilterName(selectedCustomer.name));
     } else {
       setQueryCustomer("");
     }
@@ -282,7 +307,7 @@ export const useWorkspaceFilters = (
     if (allProjectsSelected) {
       setQueryProject("Todos los proyectos");
     } else if (selectedProject) {
-      setQueryProject(selectedProject.name);
+      setQueryProject(formatWorkspaceFilterName(selectedProject.name));
     } else {
       setQueryProject("");
     }
@@ -302,11 +327,45 @@ export const useWorkspaceFilters = (
     if (allFieldsSelected) {
       setQueryField("Todos los campos");
     } else if (normalizedSelectedField) {
-      setQueryField(normalizedSelectedField.name);
+      setQueryField(formatWorkspaceFilterName(normalizedSelectedField.name));
     } else {
       setQueryField("");
     }
   }, [allFieldsSelected, normalizedSelectedField]);
+
+  useEffect(() => {
+    if (allCustomersSelected || !selectedCustomer?.id || loadingCustomers) return;
+
+    const refreshed = customers.find((customer) => customer.id === selectedCustomer.id);
+    if (!refreshed || refreshed.name === selectedCustomer.name) return;
+
+    contextSetCustomer({ id: refreshed.id, name: refreshed.name });
+  }, [
+    allCustomersSelected,
+    contextSetCustomer,
+    customers,
+    loadingCustomers,
+    selectedCustomer,
+  ]);
+
+  useEffect(() => {
+    if (allProjectsSelected || !normalizedSelectedProject?.id || loadingProjects) return;
+
+    const refreshed = projectOptionsForSelection.find(
+      (project) => project.id === normalizedSelectedProject.id
+    );
+    if (!refreshed || refreshed.name === normalizedSelectedProject.name) return;
+
+    contextSetProject({ id: refreshed.id, name: refreshed.name });
+    contextSetProjectId(refreshed.id);
+  }, [
+    allProjectsSelected,
+    contextSetProject,
+    contextSetProjectId,
+    loadingProjects,
+    normalizedSelectedProject,
+    projectOptionsForSelection,
+  ]);
 
   const filters: FilterBarFilter[] = [];
 
@@ -396,7 +455,7 @@ export const useWorkspaceFilters = (
       ref: "client",
       label: "Cliente",
       placeholder: "Buscar",
-      options: customers || [],
+      options: withWorkspaceFilterDisplayName(customers),
       total: totalCustomers,
       value: queryCustomer,
       onChange: setQueryCustomer,
@@ -491,20 +550,13 @@ export const useWorkspaceFilters = (
   );
 
   if (enabledFilterSet.has("project")) {
-    const projectOptions = selectedCustomer
-      ? projectsDropdown || []
-      : (projects || []).map((project) => ({
-          id: project.id,
-          name: project.name,
-        }));
-
     filters.push({
       type: "search",
       name: "proyecto",
       ref: "project",
       label: "Proyecto",
       placeholder: "Buscar",
-      options: projectOptions,
+      options: withWorkspaceFilterDisplayName(projectOptionsForSelection),
       total: projectPageInfo?.total || 0,
       value: queryProject,
       onChange: setQueryProject,
@@ -659,7 +711,9 @@ export const useWorkspaceFilters = (
       name: "campo",
       label: "Campo",
       placeholder: "Buscar",
-      options: fieldEnabled && Array.isArray(fields) ? fields : [],
+      options: withWorkspaceFilterDisplayName(
+        fieldEnabled && Array.isArray(fields) ? fields : []
+      ),
       total: totalFields,
       value: queryField,
       onChange: setQueryField,

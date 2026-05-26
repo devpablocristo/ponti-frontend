@@ -71,13 +71,33 @@ type CustomerEditorProps = {
 
 const freshProjectDetailUrl = (projectId: number) => `/projects/${projectId}?fresh=1`;
 
-const notifyWorkspaceProjectSaved = (projectId: number) => {
+const notifyWorkspaceDataUpdated = (entity: "customer" | "project", id: number) => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent("ponti:workspace-data-updated", {
-      detail: { entity: "project", id: projectId },
+      detail: { entity, id },
     })
   );
+};
+
+const readSavedCustomer = (response: unknown): CustomerData | null => {
+  const root =
+    response && typeof response === "object" ? (response as Record<string, unknown>) : null;
+  const nested =
+    root?.data && typeof root.data === "object"
+      ? (root.data as Record<string, unknown>)
+      : null;
+  const source = nested ?? root;
+  const id = Number(source?.id);
+  const name = typeof source?.name === "string" ? source.name : "";
+  if (!Number.isFinite(id) || id <= 0 || !name.trim()) return null;
+
+  const actorId = Number(source?.actor_id);
+  return {
+    id,
+    name,
+    ...(Number.isFinite(actorId) && actorId > 0 ? { actor_id: actorId } : {}),
+  };
 };
 
 export default function CustomerEditor({
@@ -92,9 +112,11 @@ export default function CustomerEditor({
   const { id } = useParams();
   const initialCustomerId = customerId ?? (Number(id) || NEW_VALUE);
   const {
+    setCustomer: contextSetCustomer,
     setProject: contextSetProject,
     projectId: contextProjectId,
     setProjectId: contextSetProjectId,
+    allSelection,
   } = useSelection();
   const preferredInitialProjectId = initialProjectId ?? contextProjectId ?? null;
   const customerOnly = mode === "customerOnly";
@@ -1079,6 +1101,63 @@ export default function CustomerEditor({
     return null;
   };
 
+  const reloadCustomerOptions = async (preferredCustomerId?: number | null) => {
+    try {
+      const customersResponse =
+        await apiClient.get<ApiResponse<CustomerPayload>>("/customers?per_page=1000");
+      const nextCustomers = customersResponse.data?.data ?? [];
+      setCustomerOptions(nextCustomers);
+      if (!preferredCustomerId) return null;
+      return nextCustomers.find((customer) => customer.id === preferredCustomerId) ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  const syncSavedCustomer = (customer: CustomerData | null | undefined) => {
+    if (!customer?.id) return;
+
+    setSelectedCustomerId(customer.id);
+    setProjectDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            customer: {
+              ...prev.customer,
+              id: customer.id,
+              actor_id: customer.actor_id ?? prev.customer.actor_id ?? null,
+              name: customer.name,
+            },
+          }
+        : prev
+    );
+
+    if (!allSelection.customer) {
+      contextSetCustomer({ id: customer.id, name: customer.name });
+    }
+    notifyWorkspaceDataUpdated("customer", customer.id);
+  };
+
+  const syncSavedProject = (projectId: number, project: Project) => {
+    setSelectedProjectId(projectId);
+    setProjectDraft(project);
+    loadedProjectName.current = project.name;
+
+    if (project.customer?.id) {
+      syncSavedCustomer({
+        id: project.customer.id,
+        name: project.customer.name,
+        ...(project.customer.actor_id ? { actor_id: project.customer.actor_id } : {}),
+      });
+    }
+
+    if (!allSelection.project) {
+      contextSetProject({ id: projectId, name: project.name });
+      contextSetProjectId(projectId);
+    }
+    notifyWorkspaceDataUpdated("project", projectId);
+  };
+
   const handleSave = async () => {
     if (!projectDraft) return;
     const { project: projectPayload, errors: payloadErrors } = buildProjectPayloadForSave(
@@ -1129,24 +1208,35 @@ export default function CustomerEditor({
           name: projectPayload.customer.name,
           actor_id: customerActorId,
         };
+        let savedCustomer: CustomerData | null = null;
         if (customerId) {
           await apiClient.put(`/customers/${customerId}`, payload);
+          savedCustomer = {
+            id: customerId,
+            name: payload.name,
+            ...(customerActorId ? { actor_id: customerActorId } : {}),
+          };
           notify.success("Cliente guardado.");
         } else {
-          await apiClient.post("/customers", payload);
+          const created = await apiClient.post("/customers", payload);
+          savedCustomer = readSavedCustomer(created);
           notify.success("Cliente creado.");
         }
+        const refreshedCustomer =
+          (await reloadCustomerOptions(savedCustomer?.id ?? customerId ?? null)) ?? savedCustomer;
+        syncSavedCustomer(refreshedCustomer);
+        await onSaved?.();
+        onClose?.();
       } else if (selectedProjectId === NEW_VALUE) {
         const created = await apiClient.post<{ id: number }>("/projects", projectPayload);
         const detail = await apiClient.get<ProjectDetailResponse>(
           freshProjectDetailUrl(created.id)
         );
         const refreshed = normalizeProject(detail.data);
-        setSelectedProjectId(created.id);
-        setProjectDraft(refreshed);
-        loadedProjectName.current = refreshed.name;
-        notifyWorkspaceProjectSaved(created.id);
+        syncSavedProject(created.id, refreshed);
+        await onSaved?.();
         notify.success("Proyecto creado.");
+        onClose?.();
       } else {
         const savedProjectId = Number(selectedProjectId);
         await apiClient.put(`/projects/${savedProjectId}`, projectPayload);
@@ -1154,13 +1244,9 @@ export default function CustomerEditor({
           freshProjectDetailUrl(savedProjectId)
         );
         const refreshed = normalizeProject(detail.data);
-        setProjectDraft(refreshed);
-        loadedProjectName.current = refreshed.name;
-        contextSetProject({ id: savedProjectId, name: refreshed.name });
-        contextSetProjectId(savedProjectId);
-        notifyWorkspaceProjectSaved(savedProjectId);
-        notify.success("Cambios guardados.");
+        syncSavedProject(savedProjectId, refreshed);
         await onSaved?.();
+        notify.success("Cambios guardados.");
         onClose?.();
       }
     } catch (saveError) {
@@ -1228,6 +1314,7 @@ export default function CustomerEditor({
                     entityLabel="Campaña"
                     onChange={updateCampaignName}
                     onSelectExisting={selectCampaignOption}
+                    formatDisplayValue={false}
                     size="sm"
                   />
                   <InputField
