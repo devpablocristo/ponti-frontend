@@ -99,7 +99,7 @@ describe("useLabors.saveLabors", () => {
 
     expect(returned).toBe(false);
     await waitFor(() =>
-      expect(result.current.error).toBe("La labor ya existe."),
+      expect(result.current.error).toBe("Ya existe una labor con ese nombre."),
     );
   });
 });
