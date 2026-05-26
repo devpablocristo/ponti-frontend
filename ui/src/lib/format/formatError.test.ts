@@ -133,6 +133,22 @@ describe("formatError", () => {
     );
   });
 
+  it("traduce dependencias activas al eliminar definitivamente", () => {
+    const err = {
+      response: {
+        status: 409,
+        data: {
+          error: {
+            details: "project has 2 active field(s); archive or hard-delete them first",
+          },
+        },
+      },
+    };
+    expect(formatError(err, { fallback: FALLBACK })).toBe(
+      "El proyecto tiene 2 campos activos asociados. Archivá o eliminá primero esos registros.",
+    );
+  });
+
   it("traduce BE work-order date validation", () => {
     const err = {
       response: { data: { error: { details: "work order date cannot be in the future" } } },

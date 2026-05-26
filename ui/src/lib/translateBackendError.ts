@@ -35,6 +35,32 @@ function indefiniteNounArticle(e: Entity): string {
   return e.article === "la" || e.article === "las" ? "una" : "un";
 }
 
+function dependencyLabel(raw: string, count: string): string {
+  const plural = count !== "1";
+  const active = /^active\s+/i.test(raw);
+  const normalized = raw.replace(/^active\s+/i, "").trim().toLowerCase();
+  const labels: Record<string, { one: string; many: string; activeOne: string; activeMany: string }> = {
+    "field(s)": { one: "campo", many: "campos", activeOne: "campo activo", activeMany: "campos activos" },
+    "lot(s)": { one: "lote", many: "lotes", activeOne: "lote activo", activeMany: "lotes activos" },
+    "work order(s)": { one: "orden de trabajo", many: "órdenes de trabajo", activeOne: "orden de trabajo activa", activeMany: "órdenes de trabajo activas" },
+    "work order draft(s)": { one: "borrador de orden", many: "borradores de orden", activeOne: "borrador de orden activo", activeMany: "borradores de orden activos" },
+    "labor record(s)": { one: "labor", many: "labores", activeOne: "labor activa", activeMany: "labores activas" },
+    "supply record(s)": { one: "insumo", many: "insumos", activeOne: "insumo activo", activeMany: "insumos activos" },
+    "supply movement(s)": { one: "movimiento de insumo", many: "movimientos de insumo", activeOne: "movimiento de insumo activo", activeMany: "movimientos de insumo activos" },
+    "stock record(s)": { one: "registro de stock", many: "registros de stock", activeOne: "registro de stock activo", activeMany: "registros de stock activos" },
+    "commercialization record(s)": { one: "comercialización", many: "comercializaciones", activeOne: "comercialización activa", activeMany: "comercializaciones activas" },
+    "dollar value record(s)": { one: "valor dólar", many: "valores dólar", activeOne: "valor dólar activo", activeMany: "valores dólar activos" },
+    "manager assignment(s)": { one: "responsable asignado", many: "responsables asignados", activeOne: "responsable asignado activo", activeMany: "responsables asignados activos" },
+    "investor assignment(s)": { one: "inversor asignado", many: "inversores asignados", activeOne: "inversor asignado activo", activeMany: "inversores asignados activos" },
+    "admin cost investor record(s)": { one: "inversor de costo administrativo", many: "inversores de costo administrativo", activeOne: "inversor de costo administrativo activo", activeMany: "inversores de costo administrativo activos" },
+    "invoice(s)": { one: "factura", many: "facturas", activeOne: "factura activa", activeMany: "facturas activas" },
+  };
+  const label = labels[normalized];
+  if (!label) return raw;
+  if (active) return plural ? label.activeMany : label.activeOne;
+  return plural ? label.many : label.one;
+}
+
 export function translateBackendError(raw: string): string {
   if (!raw) return raw;
   const msg = raw.trim();
@@ -205,7 +231,7 @@ export function translateBackendError(raw: string): string {
     const e = lookupBackendEntity(hasDeps[1]);
     if (e) {
       const count = hasDeps[2];
-      const dep = hasDeps[3];
+      const dep = dependencyLabel(hasDeps[3], count);
       return `${withArticleCap(e)} tiene ${count} ${dep} asociado${count === "1" ? "" : "s"}. Archivá o eliminá primero esos registros.`;
     }
   }

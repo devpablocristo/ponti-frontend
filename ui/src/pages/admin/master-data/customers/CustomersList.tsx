@@ -101,9 +101,9 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       allSelection.campaign ||
       allSelection.field,
   );
-  const mode: CustomerProjectMode = hasProjectScope ? "project" : "customer";
+  const mode: CustomerProjectMode = projectsOnly || hasProjectScope ? "project" : "customer";
   const isProjectMode = mode === "project";
-  const archivedShowsProjects = hasProjectScope;
+  const archivedShowsProjects = projectsOnly || hasProjectScope;
 
   const refresh = useCallback(
     () => getCustomers("per_page=1000"),
