@@ -39,7 +39,8 @@ function clearWorkspaceSelection(): void {
 export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantIdState] = useState<string>(() => readStoredTenantId());
-  const [loading, setLoading] = useState(false);
+  const [initialized, setInitialized] = useState<boolean>(() => readStoredTenantId() !== "");
+  const [loading, setLoading] = useState(!initialized);
 
   const applyTenant = useCallback((nextTenantId: string, clearWorkspace: boolean) => {
     const normalized = nextTenantId.trim();
@@ -79,6 +80,7 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setTenants([]);
     } finally {
       setLoading(false);
+      setInitialized(true);
     }
   }, [applyTenant, tenantId]);
 
@@ -97,5 +99,9 @@ export const TenantProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [applyTenant, loading, refreshTenantContext, tenantId, tenants]
   );
 
-  return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
+  return (
+    <TenantContext.Provider value={value}>
+      {initialized || tenantId ? children : null}
+    </TenantContext.Provider>
+  );
 };

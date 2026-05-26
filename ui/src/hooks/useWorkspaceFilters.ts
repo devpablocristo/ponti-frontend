@@ -4,6 +4,7 @@ import useCustomers from "./useCustomers";
 import useProjects from "./useDatabase/projects";
 import useCampaigns from "./useCampaigns";
 import useFields from "./useFields";
+import { useTenant } from "../pages/login/context/useTenant";
 
 export interface Customer {
   id: number;
@@ -89,6 +90,8 @@ export const useWorkspaceFilters = (
     () => new Set(enabledFiltersKey ? (enabledFiltersKey.split("|") as FilterKey[]) : []),
     [enabledFiltersKey]
   );
+  const { tenantId, loading: tenantLoading } = useTenant();
+  const tenantReady = Boolean(tenantId) && !tenantLoading;
 
   const {
     customer: contextCustomer,
@@ -294,10 +297,11 @@ export const useWorkspaceFilters = (
   const filters: FilterBarFilter[] = [];
 
   useEffect(() => {
+    if (!tenantReady) return;
     if (enabledFilterSet.has("customer")) {
       getCustomers("per_page=1000");
     }
-  }, [enabledFilterSet, getCustomers]);
+  }, [enabledFilterSet, getCustomers, tenantId, tenantReady]);
 
   const handleSetCustomer = useCallback(
     (customer: Customer | undefined) => {
@@ -393,6 +397,7 @@ export const useWorkspaceFilters = (
   }
 
   useEffect(() => {
+    if (!tenantReady) return;
     if (enabledFilterSet.has("project")) {
       if (!allCustomersSelected && selectedCustomer && selectedCustomer.id !== 0) {
         getProjectsDropdown(selectedCustomer.id);
@@ -400,7 +405,15 @@ export const useWorkspaceFilters = (
         getProjects("per_page=1000");
       }
     }
-  }, [allCustomersSelected, enabledFilterSet, getProjects, getProjectsDropdown, selectedCustomer]);
+  }, [
+    allCustomersSelected,
+    enabledFilterSet,
+    getProjects,
+    getProjectsDropdown,
+    selectedCustomer,
+    tenantId,
+    tenantReady,
+  ]);
 
   const handleSetProject = useCallback(
     (project: Project | undefined) => {
@@ -491,6 +504,7 @@ export const useWorkspaceFilters = (
   }
 
   useEffect(() => {
+    if (!tenantReady) return;
     if (!enabledFilterSet.has("campaign")) return;
     if (!campaignEnabled) {
       setSelectedCampaign(undefined);
@@ -516,6 +530,8 @@ export const useWorkspaceFilters = (
     selectedCustomer,
     selectedProject,
     setSelectedCampaign,
+    tenantId,
+    tenantReady,
   ]);
 
   if (enabledFilterSet.has("campaign")) {
@@ -573,6 +589,7 @@ export const useWorkspaceFilters = (
   }
 
   useEffect(() => {
+    if (!tenantReady) return;
     if (!enabledFilterSet.has("field")) return;
 
     if (fieldEnabled && normalizedProjectId) {
@@ -583,7 +600,7 @@ export const useWorkspaceFilters = (
     if (fieldEnabled) {
       getFields("per_page=1000");
     }
-  }, [enabledFilterSet, fieldEnabled, getFields, normalizedProjectId]);
+  }, [enabledFilterSet, fieldEnabled, getFields, normalizedProjectId, tenantId, tenantReady]);
 
   useEffect(() => {
     if (!normalizedSelectedField || loadingFields) return;
