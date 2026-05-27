@@ -22,6 +22,10 @@ import { formatNumberAr, normalizeDate } from "../utils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
+import {
+  matchesSelectFilter,
+  matchesTextFilter,
+} from "@/lib/tableFilters";
 import ArchivedSupplyMovements from "./ArchivedSupplyMovements";
 
 import { SupplyMovementsIndicators } from "./_components/SupplyMovementsIndicators";
@@ -125,17 +129,11 @@ export function SupplyMovements() {
       Object.entries(otherFilters).every(([k, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        const itemValue = String(
-          item[k as keyof SupplyMovement] ?? ""
-        ).toLowerCase();
-
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(item[k as keyof SupplyMovement], value);
         }
 
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(item[k as keyof SupplyMovement], value);
       })
     );
 
@@ -156,16 +154,10 @@ export function SupplyMovements() {
         const rawValue = item[k as keyof SupplyMovement];
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            String(rawValue ?? "")
-              .toLowerCase()
-              .includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(rawValue, value);
         }
 
-        return String(rawValue ?? "")
-          .toLowerCase()
-          .includes(String(value).toLowerCase());
+        return matchesTextFilter(rawValue, value);
       })
     );
 
@@ -485,16 +477,11 @@ export function SupplyMovements() {
         }
 
 
-        // 🟢 STRING (multi + single)
-        const itemValue = String(rawValue ?? "").toLowerCase();
-
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(rawValue, value);
         }
 
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(rawValue, value);
       });
     });
   }, [supplyMovements, columnsFilters, hasWorkspaceSelection]);

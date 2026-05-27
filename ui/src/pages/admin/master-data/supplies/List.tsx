@@ -28,6 +28,10 @@ import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { SUPPLY_ENTITY as ENTITY } from "../../entities";
 import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
+import {
+  matchesSelectFilter,
+  matchesTextFilter,
+} from "@/lib/tableFilters";
 import ArchivedSupplies from "./ArchivedSupplies";
 import SuppliesCatalog from "./SuppliesCatalog";
 import { renderPriceCell, newSupply } from "./listHelpers";
@@ -162,17 +166,17 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
           const status = supply.is_partial_price ? "Parcial" : "Final";
           if (Array.isArray(value)) {
             if (value.length === 0) return true;
-            return value.includes(status);
+            return matchesSelectFilter(status, value);
           }
-          return status.toLowerCase().includes(String(value).toLowerCase());
+          return matchesTextFilter(status, value);
         }
 
-        const currentValue = String(supply[key as keyof Supply] ?? "");
+        const currentValue = supply[key as keyof Supply];
         if (Array.isArray(value)) {
           if (value.length === 0) return true;
-          return value.includes(currentValue);
+          return matchesSelectFilter(currentValue, value);
         }
-        return currentValue.toLowerCase().includes(String(value).toLowerCase());
+        return matchesTextFilter(currentValue, value);
       })
     );
   };

@@ -39,6 +39,10 @@ import {
 import ImportWorkOrdersPreview from "../workorders/ImportWorkOrdersPreview";
 import { formatError } from "@/lib/format";
 import { notify } from "@/lib/notify";
+import {
+  matchesSelectFilter,
+  matchesTextFilter,
+} from "@/lib/tableFilters";
 
 import { LaborsHeader } from "./_components/LaborsHeader";
 import { TasksIndicators } from "./_components/TasksIndicators";
@@ -178,13 +182,13 @@ export function Labors() {
             return normalize(String(value)) === normalize(String(task.date));
           }
 
-          const val = String(task[k as keyof LaborGroupData] ?? "").toLowerCase();
+          const taskValue = task[k as keyof LaborGroupData];
 
           if (Array.isArray(value)) {
-            return value.some((v) => val.includes(String(v).toLowerCase()));
+            return matchesSelectFilter(taskValue, value);
           }
 
-          return val.includes(String(value).toLowerCase());
+          return matchesTextFilter(taskValue, value);
         })
       );
 
@@ -505,14 +509,13 @@ export function Labors() {
           if (Array.isArray(value)) return value.includes(taskStatus);
           return taskStatus === value;
         }
-        const taskValRaw = task[key as keyof LaborGroupData];
-        const taskVal = String(taskValRaw ?? "").toLowerCase();
+        const taskValue = task[key as keyof LaborGroupData];
 
         if (Array.isArray(value)) {
-          return value.some((v) => taskVal === String(v).toLowerCase());
+          return matchesSelectFilter(taskValue, value);
         }
 
-        return taskVal === String(value).toLowerCase();
+        return matchesSelectFilter(taskValue, [value]);
       });
     });
   }, [hasWorkspaceSelection, laborGroups, taskFilters]);

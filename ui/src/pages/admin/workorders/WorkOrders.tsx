@@ -30,6 +30,7 @@ import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
+import { matchesSelectFilter } from "@/lib/tableFilters";
 import ArchivedWorkOrders from "../master-data/work-orders/ArchivedWorkOrders";
 import {
   parseAndResolveWorkOrdersCsv,
@@ -143,13 +144,12 @@ export function WorkOrders() {
           }
 
           const orderValRaw = order[key as keyof OrdersData];
-          const orderVal = String(orderValRaw ?? "").toLowerCase();
 
           if (Array.isArray(value)) {
-            return value.some((v) => orderVal === String(v).toLowerCase());
+            return matchesSelectFilter(orderValRaw, value);
           }
 
-          return orderVal === String(value).toLowerCase();
+          return matchesSelectFilter(orderValRaw, [value]);
         });
       });
     },
@@ -740,11 +740,10 @@ export function WorkOrders() {
         }
 
         const orderValRaw = order[key as keyof OrdersData];
-        const orderVal = String(orderValRaw ?? "").toLowerCase();
         if (Array.isArray(value)) {
-          return value.some((v) => orderVal === String(v).toLowerCase());
+          return matchesSelectFilter(orderValRaw, value);
         }
-        return orderVal === String(value).toLowerCase();
+        return matchesSelectFilter(orderValRaw, [value]);
       });
     });
   }, [effectiveHasWorkspaceSelection, globalFilterSourceOrders, columnsFilters]);

@@ -24,6 +24,10 @@ import { getUnitName } from "../../../constants/units";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
+import {
+  matchesSelectFilter,
+  matchesTextFilter,
+} from "@/lib/tableFilters";
 
 import { CloseStockDate } from "./_components/CloseStockDate";
 import { EditableCell } from "./_components/EditableCell";
@@ -161,20 +165,13 @@ export function Stock() {
           return true;
         }
 
-        const itemValue = getStockFilterValue(
-  item,
-  key as keyof GetStockItems
-).toLowerCase();
+        const itemValue = getStockFilterValue(item, key as keyof GetStockItems);
 
-        // 🟢 MULTI SELECT
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(itemValue, value);
         }
 
-        // 🟢 SINGLE SELECT
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(itemValue, value);
       });
     });
   }, [stockRows, columnsFilters]);
@@ -217,24 +214,19 @@ export function Stock() {
       Object.entries(otherFilters).every(([k, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        const itemValue = getStockFilterValue(
-  item,
-  k as keyof GetStockItems
-).toLowerCase();
+        const itemValue = getStockFilterValue(item, k as keyof GetStockItems);
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(itemValue, value);
         }
 
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(itemValue, value);
       })
     );
 
     return [...new Set(filtered.map((i) => getStockFilterValue(i, key)))].filter(
-  Boolean
-);
+      Boolean
+    );
   }
 
   const columns: Column<GetStockItems>[] = useMemo(
