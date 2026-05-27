@@ -4,6 +4,7 @@ import { Archive, Pencil, type LucideIcon } from "lucide-react";
 import { useBulkSelection } from "../useBulkSelection";
 import { useConfirmDialog } from "../useConfirmDialog";
 import { notify } from "../../lib/notify";
+import { formatError } from "../../lib/format";
 import {
   type EntityCopy,
   getBulkArchiveCopy,
@@ -62,7 +63,21 @@ export function useBulkActions<T extends Identifiable>({
       const okCount = results.filter((r) => r.status === "fulfilled").length;
       const failed = results.length - okCount;
       if (failed === 0) notify.success(successMsg(okCount));
-      else notify.error(partialMsg(okCount, failed, results.length));
+      else {
+        const firstFailure = results.find(
+          (result): result is PromiseRejectedResult => result.status === "rejected",
+        );
+        const detail = firstFailure
+          ? formatError(firstFailure.reason, {
+              fallback: "No se pudo completar la acción.",
+            })
+          : "";
+        notify.error(
+          detail
+            ? `${partialMsg(okCount, failed, results.length)} ${detail}`
+            : partialMsg(okCount, failed, results.length),
+        );
+      }
       clear();
       onAfter?.();
     },

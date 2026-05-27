@@ -7,7 +7,7 @@
     "dev": "vite --configLoader runner",
     "build": "tsc -b && vite build --configLoader runner",
     "generate:ai-types": "node ./scripts/generate-ai-types.mjs",
-    "codegen:openapi": "swagger2openapi ../../ponti-backend/docs/openapi/swagger.yaml -o ../../ponti-backend/docs/openapi/openapi.yaml --yaml && openapi-typescript ../../ponti-backend/docs/openapi/openapi.yaml -o src/api/generated/types.ts",
+    "codegen:openapi": "swagger2openapi ../../core/docs/openapi/swagger.yaml -o ../../core/docs/openapi/openapi.yaml --yaml && openapi-typescript ../../core/docs/openapi/openapi.yaml -o src/api/generated/types.ts",
     "lint": "eslint . && yarn lint:notify-leaks && yarn lint:responsive",
     "lint:fix": "eslint . --fix",
     "lint:notify-leaks": "bash scripts/lint-notify-leaks.sh",

@@ -43,6 +43,8 @@ const secondaryTitles = new Map<string, string>([
   ["/admin/master-data/campaigns/create", "Crear"],
   ["/admin/master-data/campaigns", "Editar"],
   ["/admin/master-data/campaigns/archived", "Archivados"],
+  ["/admin/master-data/crops", "Editar"],
+  ["/admin/master-data/crops/archived", "Archivados"],
   ["/admin/master-data/lots/archived", "Lotes Archivados"],
   ["/admin/master-data/fields/archived", "Campos Archivados"],
   ["/admin/master-data/work-orders/archived", "Archivados"],

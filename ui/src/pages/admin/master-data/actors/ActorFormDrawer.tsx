@@ -21,11 +21,13 @@ type ActorFormDrawerProps = {
   actor: Actor | null;
   processing?: boolean;
   errorMessage?: string | null;
+  defaultRoles?: ActorRole[];
   onClose: () => void;
   onSubmit: (input: ActorPayloadInput) => void | Promise<void>;
 };
 
 const textOrEmpty = (value: unknown) => String(value ?? "");
+const EMPTY_DEFAULT_ROLES: ActorRole[] = [];
 
 const emptyIdentifier = (): ActorIdentifier => ({
   country: "AR",
@@ -39,6 +41,7 @@ export default function ActorFormDrawer({
   actor,
   processing = false,
   errorMessage,
+  defaultRoles = EMPTY_DEFAULT_ROLES,
   onClose,
   onSubmit,
 }: ActorFormDrawerProps) {
@@ -69,7 +72,7 @@ export default function ActorFormDrawer({
     setPrimaryEmail(actor?.primary_email ?? "");
     setPrimaryPhone(actor?.primary_phone ?? "");
     setNotes(actor?.notes ?? "");
-    setRoles(actor?.roles ?? []);
+    setRoles(actor?.roles ?? defaultRoles);
     setAliases((actor?.aliases ?? []).map((item) => ({ ...item })));
     setIdentifiers((actor?.identifiers ?? []).map((item) => ({ ...item })));
     setFirstName(actor?.person_profile?.first_name ?? "");
@@ -82,7 +85,7 @@ export default function ActorFormDrawer({
     setTaxCondition(actor?.organization_profile?.tax_condition ?? "");
     setFiscalAddress(actor?.organization_profile?.fiscal_address ?? "");
     setValidation(null);
-  }, [actor, open]);
+  }, [actor, defaultRoles, open]);
 
   const toggleRole = (role: ActorRole) => {
     setRoles((current) =>

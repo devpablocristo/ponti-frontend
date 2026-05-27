@@ -1,5 +1,7 @@
 import {
   BarChart3,
+  Bell,
+  Bot,
   CalendarRange,
   ChevronDown,
   DollarSign,
@@ -77,6 +79,11 @@ const menuDatabase: MenuItem[] = [
     route: "/admin/master-data/fields",
   },
   {
+    name: "Administrar Cultivos",
+    icon: lucideIcon(Sprout),
+    route: "/admin/master-data/crops",
+  },
+  {
     name: "Administrar Labores",
     icon: lucideIcon(Wrench),
     route: "/admin/master-data/labors/list",
@@ -101,49 +108,12 @@ const menuDatabase: MenuItem[] = [
 const menuAIItems: MenuItem[] = [
   {
     name: "Asistente",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M8 2.66667C5.42267 2.66667 3.33333 4.756 3.33333 7.33333C3.33333 9.91067 5.42267 12 8 12C10.5773 12 12.6667 9.91067 12.6667 7.33333C12.6667 4.756 10.5773 2.66667 8 2.66667Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path d="M5.33333 13.3333H10.6667" stroke={color} strokeLinecap="round" />
-        <path d="M6.66667 10.6667H9.33333" stroke={color} strokeLinecap="round" />
-      </svg>
-    ),
+    icon: lucideIcon(Bot),
     route: "/admin/ai-assistant",
   },
   {
     name: "Notificaciones",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M8 1.33334C5.42267 1.33334 3.33333 3.42267 3.33333 6.00001V8.66667L2 10.6667H14L12.6667 8.66667V6.00001C12.6667 3.42267 10.5773 1.33334 8 1.33334Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M6 12C6 13.1046 6.89543 14 8 14C9.10457 14 10 13.1046 10 12"
-          stroke={color}
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    icon: lucideIcon(Bell),
     route: "/admin/notifications",
   },
 ];

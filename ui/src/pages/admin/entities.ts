@@ -11,6 +11,7 @@ export const PROJECT_ENTITY: EntityCopy = ENTITIES_BY_KEY.project;
 export const INVESTOR_ENTITY: EntityCopy = ENTITIES_BY_KEY.investor;
 export const MANAGER_ENTITY: EntityCopy = ENTITIES_BY_KEY.manager;
 export const CAMPAIGN_ENTITY: EntityCopy = ENTITIES_BY_KEY.campaign;
+export const CROP_ENTITY: EntityCopy = ENTITIES_BY_KEY.crop;
 export const FIELD_ENTITY: EntityCopy = ENTITIES_BY_KEY.field;
 export const LOT_ENTITY: EntityCopy = ENTITIES_BY_KEY.lot;
 export const SUPPLY_ENTITY: EntityCopy = ENTITIES_BY_KEY.supply;

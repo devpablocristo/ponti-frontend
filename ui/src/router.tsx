@@ -25,6 +25,8 @@ import ArchivedManagers from "./pages/admin/master-data/managers/ArchivedManager
 import ManagersList from "./pages/admin/master-data/managers/ManagersList";
 import ArchivedCampaigns from "./pages/admin/master-data/campaigns/ArchivedCampaigns";
 import CampaignsList from "./pages/admin/master-data/campaigns/CampaignsList";
+import ArchivedCrops from "./pages/admin/master-data/crops/ArchivedCrops";
+import CropsList from "./pages/admin/master-data/crops/CropsList";
 import DataIntegrity from "./pages/admin/master-data/data-integrity/Integrity";
 import DatabaseLaborsCatalog from "./pages/admin/master-data/labors/LaborsCatalog";
 import SuppliesCatalog from "./pages/admin/master-data/supplies/SuppliesCatalog";
@@ -248,6 +250,14 @@ export default [
       {
         path: "master-data/campaigns/archived",
         element: <ArchivedCampaigns />,
+      },
+      {
+        path: "master-data/crops",
+        element: <CropsList />,
+      },
+      {
+        path: "master-data/crops/archived",
+        element: <ArchivedCrops />,
       },
       {
         path: "master-data/data-integrity",

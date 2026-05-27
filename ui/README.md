@@ -6,7 +6,7 @@ Aplicación React + TypeScript + Vite para la consola de Ponti.
 
 - Node fijado en `20.19.0` vía `.nvmrc`.
 - Package manager: Yarn 1 (`yarn.lock` versionado).
-- El flujo habitual en contenedores usa `ponti-frontend/docker-compose.yml`.
+- El flujo habitual en contenedores usa `web/docker-compose.yml`.
 
 ## Módulos compartidos
 

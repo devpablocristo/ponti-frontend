@@ -86,7 +86,7 @@ function indexBy(items: Indexable[] | null | undefined, nameKeys: string[]): Map
 }
 
 // La cadena pasa por el BFF, no por el BE directo. Cada endpoint del BFF
-// (`ponti-frontend/api/src/routes/*.ts`) envuelve la respuesta a su manera:
+// (`web/api/src/routes/*.ts`) envuelve la respuesta a su manera:
 //
 // - `/crops` y `/projects/:id/labors` → `{success: true, data: [...array...]}`
 // - `/investors`, `/fields?project_id=X`, `/lots` →

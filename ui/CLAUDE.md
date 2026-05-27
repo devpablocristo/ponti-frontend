@@ -48,7 +48,7 @@ Estos dos puntos requieren cambios profundos que afectan modelo de datos o flujo
 
 ### Consumos de OT en `/admin/supply-movements` (#5 — resuelto)
 
-`ListEntrySupplyMovements` ahora también fetchea `work_order_items` (join con `workorders` + `projects`) y los devuelve como `SupplyMovement` virtuales con `MovementType = "Consumo OT"`. Implementado vía Go merge (no SQL view) en [supply/repository_movement.go:listWorkOrderConsumptions](ponti-backend/internal/supply/repository_movement.go). Las filas virtuales:
+`ListEntrySupplyMovements` ahora también fetchea `work_order_items` (join con `workorders` + `projects`) y los devuelve como `SupplyMovement` virtuales con `MovementType = "Consumo OT"`. Implementado vía Go merge (no SQL view) en [supply/repository_movement.go:listWorkOrderConsumptions](core/internal/supply/repository_movement.go). Las filas virtuales:
 
 - Tienen ID negativo (-`workorder_items.id`) para no chocar con IDs reales de `supply_movements`.
 - Llevan badge "OT" azul en el FE.

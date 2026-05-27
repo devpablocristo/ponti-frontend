@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import { Save } from "lucide-react";
 
@@ -7,17 +8,27 @@ import { formatError } from "@/lib/format";
 import { leaseTypeHasFixedValue, leaseTypeHasPercent } from "@/lib/leaseTypes";
 import { filterActive } from "@/lib/lifecycle/filterActive";
 import Button from "../../../../components/Button/Button";
+import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import SmartEntityInput from "../../../../components/SmartEntityInput/SmartEntityInput";
 import { LoadingOverlay } from "../../../../components/feedback/LoadingOverlay";
 import { FormSkeleton } from "../../../../components/feedback/Skeleton";
 import { notify } from "../../../../lib/notify";
+import type { Actor } from "../../../../hooks/useActors";
 import type { CustomerData, CustomerPayload } from "../../../../hooks/useCustomers/types";
+import { normalizeCropPayload } from "../../../../hooks/useCrops";
 import type { Project } from "../../../../hooks/useDatabase/projects/types";
+import type { Data as FieldCatalogOption } from "../../../../hooks/useFields/types";
+import type { LotsData } from "../../../../hooks/useLots/types";
 import { collapseInternalSpaces } from "../../../../lib/properName";
 import { useSelection } from "../../../login/context/useSelection";
-import { AddButton, EditableList, RemoveButton } from "./_components/EditableList";
+import ActorsList from "../actors/ActorsList";
+import type { ActorContextFilters } from "../actors/actorContextFilters";
+import CropsList from "../crops/CropsList";
+import FieldsList from "../fields/FieldsList";
+import EmbeddedLotsList from "../../lots/EmbeddedLotsList";
+import { EditableList, RemoveButton } from "./_components/EditableList";
 import {
   buildProjectPayloadForSave,
   formatValidationErrors,
@@ -33,7 +44,6 @@ import type {
   ActorPayload,
   ApiResponse,
   CampaignPayload,
-  CropPayload,
   EntityOption,
   FieldPayload,
   FormOptionsPayload,
@@ -69,6 +79,13 @@ type CustomerEditorProps = {
   onSaved?: () => Promise<void> | void;
 };
 
+type EmbeddedAdminDrawer =
+  | { type: "actors"; group: "managers" | "investors" | "admin_cost_investors" }
+  | { type: "fields" }
+  | { type: "lots"; fieldIndex: number }
+  | { type: "crops"; fieldIndex: number }
+  | null;
+
 const freshProjectDetailUrl = (projectId: number) => `/projects/${projectId}?fresh=1`;
 
 const notifyWorkspaceDataUpdated = (entity: "customer" | "project", id: number) => {
@@ -99,6 +116,65 @@ const readSavedCustomer = (response: unknown): CustomerData | null => {
     ...(Number.isFinite(actorId) && actorId > 0 ? { actor_id: actorId } : {}),
   };
 };
+
+const toActorOptions = (
+  actors: Array<{
+    id: number;
+    display_name: string;
+    roles?: string[];
+    archived_at?: string | null;
+    deleted_at?: string | null;
+  }>,
+): ActorOption[] =>
+  filterActive(actors).map((actor) => ({
+    id: actor.id,
+    name: actor.display_name,
+    roles: actor.roles ?? [],
+  }));
+
+const normalizeActorName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+
+type ProjectFieldDraft = Project["fields"][number];
+type ProjectLotDraft = ProjectFieldDraft["lots"][number];
+
+const cloneProjectLot = (lot: ProjectLotDraft): ProjectLotDraft => ({
+  ...lot,
+});
+
+const cloneProjectField = (field: ProjectFieldDraft): ProjectFieldDraft => ({
+  ...field,
+  investors: (field.investors ?? []).map((investor) => ({ ...investor })),
+  lots: (field.lots ?? []).map(cloneProjectLot),
+});
+
+const isEmptyProjectField = (field: ProjectFieldDraft) =>
+  !field.name.trim() &&
+  !field.id &&
+  (field.lots ?? []).every((lot) => !lot.name.trim() && !lot.id);
+
+const isEmptyProjectLot = (lot: ProjectLotDraft) => !lot.name.trim() && !lot.id;
+
+const toNumber = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const lotDataToDraft = (lot: LotsData): ProjectLotDraft => ({
+  id: lot.id,
+  name: lot.lot_name,
+  hectares: toNumber(lot.hectares),
+  previous_crop_id: toNumber(lot.previous_crop_id),
+  previous_crop_name: lot.previous_crop,
+  current_crop_id: toNumber(lot.current_crop_id),
+  current_crop_name: lot.current_crop,
+  season: lot.season,
+});
 
 export default function CustomerEditor({
   embedded = false,
@@ -134,6 +210,7 @@ export default function CustomerEditor({
     initialCustomerId === NEW_VALUE ? NEW_VALUE : ""
   );
   const [projectDraft, setProjectDraft] = useState<Project | null>(null);
+  const [embeddedAdminDrawer, setEmbeddedAdminDrawer] = useState<EmbeddedAdminDrawer>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   // Tracks the name of the project currently loaded into the draft so the
@@ -164,16 +241,10 @@ export default function CustomerEditor({
           const actorsResponse =
             await apiClient.get<ApiResponse<ActorPayload>>("/actors?page=1&per_page=1000");
           if (!cancelled) {
-            setActorOptions(
-              // filterActive defensivo: el BFF debería devolver solo activos,
-              // pero hasta que migremos el endpoint (Fase 8) garantizamos
-              // aquí que el selector nunca muestre un actor archivado.
-              filterActive(actorsResponse.data?.data ?? []).map((actor) => ({
-                id: actor.id,
-                name: actor.display_name,
-                roles: actor.roles ?? [],
-              }))
-            );
+            // filterActive defensivo: el BFF debería devolver solo activos,
+            // pero hasta que migremos el endpoint (Fase 8) garantizamos
+            // aquí que el selector nunca muestre un actor archivado.
+            setActorOptions(toActorOptions(actorsResponse.data?.data ?? []));
           }
         } catch {
           if (!cancelled) {
@@ -188,7 +259,7 @@ export default function CustomerEditor({
           await Promise.allSettled([
           apiClient.get<ApiResponse<CampaignPayload>>("/campaigns?limit=1000"),
           apiClient.get<ApiResponse<FieldPayload>>("/fields?limit=1000"),
-          apiClient.get<ApiResponse<CropPayload>>("/crops"),
+          apiClient.get<ApiResponse<unknown>>("/crops"),
           apiClient.get<ApiResponse<LotListPayload>>("/lots?limit=1000"),
           apiClient.get<ApiResponse<FormOptionsPayload>>("/form-options"),
         ]);
@@ -202,7 +273,7 @@ export default function CustomerEditor({
           setFieldOptions(fieldsResult.value.data?.data ?? []);
         }
         if (cropsResult.status === "fulfilled") {
-          setCropOptions(cropsResult.value.data ?? []);
+          setCropOptions(normalizeCropPayload(cropsResult.value.data).data);
         }
         if (lotsResult.status === "fulfilled") {
           const lots = lotsResult.value.data?.data ?? lotsResult.value.data?.items ?? [];
@@ -395,6 +466,51 @@ export default function CustomerEditor({
     },
     [actorOptions]
   );
+
+  const reloadActorOptions = useCallback(async () => {
+    try {
+      const actorsResponse =
+        await apiClient.get<ApiResponse<ActorPayload>>("/actors?page=1&per_page=1000");
+      setActorOptions(toActorOptions(actorsResponse.data?.data ?? []));
+    } catch {
+      notify.error("No se pudieron actualizar los actores.");
+    }
+  }, []);
+
+  const reloadCropOptions = useCallback(async () => {
+    try {
+      const cropsResponse = await apiClient.get<ApiResponse<unknown>>("/crops");
+      setCropOptions(normalizeCropPayload(cropsResponse.data).data);
+    } catch {
+      notify.error("No se pudieron actualizar los cultivos.");
+    }
+  }, []);
+
+  const reloadFieldOptions = useCallback(async () => {
+    try {
+      const fieldsResponse = await apiClient.get<ApiResponse<FieldPayload>>("/fields?limit=1000");
+      setFieldOptions(fieldsResponse.data?.data ?? []);
+    } catch {
+      notify.error("No se pudieron actualizar los campos.");
+    }
+  }, []);
+
+  const reloadLotOptions = useCallback(async () => {
+    try {
+      const lotsResponse = await apiClient.get<ApiResponse<LotListPayload>>("/lots?limit=1000");
+      const lots = lotsResponse.data?.data ?? lotsResponse.data?.items ?? [];
+      setLotOptions(
+        lots
+          .map((lot) => ({
+            id: lot.id,
+            name: lot.lot_name ?? lot.name ?? "",
+          }))
+          .filter((lot) => lot.name.trim()),
+      );
+    } catch {
+      notify.error("No se pudieron actualizar los lotes.");
+    }
+  }, []);
 
   const seasonOptions = SEASON_OPTIONS;
 
@@ -639,6 +755,198 @@ export default function CustomerEditor({
     );
   };
 
+  const projectDraftManagers = projectDraft?.managers;
+  const draftManagers = useMemo(
+    () => projectDraftManagers ?? [],
+    [projectDraftManagers],
+  );
+
+  const selectedManagerActorIds = useMemo(
+    () =>
+      draftManagers
+        .map((manager) => manager.actor_id)
+        .filter((actorId): actorId is number => typeof actorId === "number" && actorId > 0),
+    [draftManagers],
+  );
+
+  const projectAdminContext = useMemo<ActorContextFilters | undefined>(() => {
+    if (!projectDraft || customerOnly) return undefined;
+    const customerId =
+      projectDraft.customer.id ??
+      (isExistingId(selectedCustomerId) ? selectedCustomerId : null);
+    const projectId = isExistingId(selectedProjectId) ? selectedProjectId : null;
+
+    return {
+      customerId,
+      customerName: projectDraft.customer.name,
+      projectId,
+      projectName: projectDraft.name,
+      campaignId: projectDraft.campaign.id ?? null,
+      campaignName: projectDraft.campaign.name,
+    };
+  }, [customerOnly, projectDraft, selectedCustomerId, selectedProjectId]);
+
+  const buildFieldAdminContext = useCallback(
+    (fieldIndex?: number): ActorContextFilters | undefined => {
+      if (!projectAdminContext || !projectDraft || fieldIndex === undefined) {
+        return projectAdminContext;
+      }
+      const field = projectDraft.fields[fieldIndex];
+      return {
+        ...projectAdminContext,
+        fieldId: field?.id && field.id > 0 ? field.id : null,
+        fieldName: field?.name ?? "",
+      };
+    },
+    [projectAdminContext, projectDraft],
+  );
+
+  const selectedInvestorActorIds = useMemo(
+    () =>
+      (projectDraft?.investors ?? [])
+        .map((investor) => investor.actor_id)
+        .filter((actorId): actorId is number => typeof actorId === "number" && actorId > 0),
+    [projectDraft?.investors],
+  );
+
+  const selectedAdminCostInvestorActorIds = useMemo(
+    () =>
+      (projectDraft?.admin_cost_investors ?? [])
+        .map((investor) => investor.actor_id)
+        .filter((actorId): actorId is number => typeof actorId === "number" && actorId > 0),
+    [projectDraft?.admin_cost_investors],
+  );
+
+  const selectedFieldIds = useMemo(
+    () =>
+      (projectDraft?.fields ?? [])
+        .map((field) => field.id)
+        .filter((fieldId): fieldId is number => typeof fieldId === "number" && fieldId > 0),
+    [projectDraft?.fields],
+  );
+
+  const syncActorOptions = useCallback((actors: Actor[]) => {
+    setActorOptions((prev) => {
+      const next = [...prev];
+      actors.forEach((actor) => {
+        const option: ActorOption = {
+          id: actor.id,
+          name: actor.display_name,
+          roles: actor.roles ?? [],
+        };
+        const existingIndex = next.findIndex((item) => item.id === actor.id);
+        if (existingIndex === -1) {
+          next.push(option);
+        } else {
+          next[existingIndex] = option;
+        }
+      });
+      return next;
+    });
+  }, []);
+
+  const addManagersFromAdmin = useCallback(
+    (actors: Actor[]) => {
+      const existingKeys = new Set<string>();
+      draftManagers.forEach((manager) => {
+        if (manager.actor_id) existingKeys.add(`actor:${manager.actor_id}`);
+        if (manager.name) existingKeys.add(`name:${normalizeActorName(manager.name)}`);
+      });
+
+      const managersToAdd = actors.reduce<Array<{ id: number; actor_id: number; name: string }>>(
+        (acc, actor) => {
+          const nameKey = `name:${normalizeActorName(actor.display_name)}`;
+          const actorKey = `actor:${actor.id}`;
+          if (existingKeys.has(actorKey) || existingKeys.has(nameKey)) return acc;
+          existingKeys.add(actorKey);
+          existingKeys.add(nameKey);
+          acc.push({ id: 0, actor_id: actor.id, name: actor.display_name });
+          return acc;
+        },
+        [],
+      );
+
+      if (managersToAdd.length === 0) {
+        notify.info("Los responsables seleccionados ya están cargados en el proyecto.");
+        return;
+      }
+
+      syncActorOptions(actors);
+
+      setProjectDraft((prev) => {
+        if (!prev) return prev;
+        const nextManagers = [...prev.managers];
+        managersToAdd.forEach((nextManager) => {
+          const emptyIndex = nextManagers.findIndex(
+            (manager) => !manager.name.trim() && !manager.actor_id && !manager.id,
+          );
+          if (emptyIndex === -1) {
+            nextManagers.push(nextManager);
+          } else {
+            nextManagers[emptyIndex] = nextManager;
+          }
+        });
+        return {
+          ...prev,
+          managers: nextManagers,
+        };
+      });
+      setEmbeddedAdminDrawer(null);
+    },
+    [draftManagers, syncActorOptions],
+  );
+
+  const addInvestorsFromAdmin = useCallback(
+    (group: "investors" | "admin_cost_investors", actors: Actor[]) => {
+      const currentInvestors = projectDraft?.[group] ?? [];
+      const existingKeys = new Set<string>();
+      currentInvestors.forEach((investor) => {
+        if (investor.actor_id) existingKeys.add(`actor:${investor.actor_id}`);
+        if (investor.name) existingKeys.add(`name:${normalizeActorName(investor.name)}`);
+      });
+
+      const investorsToAdd = actors.reduce<
+        Array<{ id: number; actor_id: number; name: string; percentage: number }>
+      >((acc, actor) => {
+        const nameKey = `name:${normalizeActorName(actor.display_name)}`;
+        const actorKey = `actor:${actor.id}`;
+        if (existingKeys.has(actorKey) || existingKeys.has(nameKey)) return acc;
+        existingKeys.add(actorKey);
+        existingKeys.add(nameKey);
+        acc.push({ id: 0, actor_id: actor.id, name: actor.display_name, percentage: 0 });
+        return acc;
+      }, []);
+
+      if (investorsToAdd.length === 0) {
+        notify.info("Los inversores seleccionados ya están cargados en el proyecto.");
+        return;
+      }
+
+      syncActorOptions(actors);
+
+      setProjectDraft((prev) => {
+        if (!prev) return prev;
+        const nextInvestors = [...prev[group]];
+        investorsToAdd.forEach((nextInvestor) => {
+          const emptyIndex = nextInvestors.findIndex(
+            (investor) => !investor.name.trim() && !investor.actor_id && !investor.id,
+          );
+          if (emptyIndex === -1) {
+            nextInvestors.push(nextInvestor);
+          } else {
+            nextInvestors[emptyIndex] = nextInvestor;
+          }
+        });
+        return {
+          ...prev,
+          [group]: nextInvestors,
+        };
+      });
+      setEmbeddedAdminDrawer(null);
+    },
+    [projectDraft, syncActorOptions],
+  );
+
   const updateInvestor = (
     group: "investors" | "admin_cost_investors",
     index: number,
@@ -806,6 +1114,11 @@ export default function CustomerEditor({
     );
   };
 
+  const addEmptyFieldFromAdmin = () => {
+    addField();
+    setEmbeddedAdminDrawer(null);
+  };
+
   const removeField = (fieldIndex: number) => {
     setProjectDraft((prev) => {
       if (!prev) return prev;
@@ -816,6 +1129,85 @@ export default function CustomerEditor({
       };
     });
   };
+
+  const addFieldsFromAdmin = useCallback(
+    async (fields: FieldCatalogOption[]) => {
+      if (!projectDraft) return;
+
+      const existingKeys = new Set<string>();
+      projectDraft.fields.forEach((field) => {
+        if (field.id > 0) existingKeys.add(`id:${field.id}`);
+        if (field.name) existingKeys.add(`name:${normalizeActorName(field.name)}`);
+      });
+
+      const projectDetails = new Map<number, Project>();
+      const fieldsToAdd: ProjectFieldDraft[] = [];
+
+      for (const field of fields) {
+        const nameKey = `name:${normalizeActorName(field.name)}`;
+        const idKey = `id:${field.id}`;
+        if (existingKeys.has(idKey) || existingKeys.has(nameKey)) continue;
+
+        if (!field.project_id) {
+          notify.error(`No se pudo cargar el campo "${field.name}" porque no informa proyecto.`);
+          return;
+        }
+
+        let project = projectDetails.get(field.project_id);
+        if (!project) {
+          try {
+            const detail = await apiClient.get<ProjectDetailResponse>(
+              freshProjectDetailUrl(field.project_id),
+            );
+            project = normalizeProject(detail.data);
+            projectDetails.set(field.project_id, project);
+          } catch {
+            notify.error(`No se pudo cargar el proyecto del campo "${field.name}".`);
+            return;
+          }
+        }
+
+        const fullField = project.fields.find(
+          (candidate) =>
+            candidate.id === field.id ||
+            normalizeActorName(candidate.name) === normalizeActorName(field.name),
+        );
+        if (!fullField) {
+          notify.error(`No se pudo hidratar el campo "${field.name}" completo.`);
+          return;
+        }
+
+        existingKeys.add(idKey);
+        existingKeys.add(nameKey);
+        fieldsToAdd.push(cloneProjectField(fullField));
+      }
+
+      if (fieldsToAdd.length === 0) {
+        notify.info("Los campos seleccionados ya están cargados en el proyecto.");
+        return;
+      }
+
+      setProjectDraft((prev) => {
+        if (!prev) return prev;
+        const nextFields = [...prev.fields];
+        fieldsToAdd.forEach((field) => {
+          const emptyIndex = nextFields.findIndex(isEmptyProjectField);
+          if (emptyIndex === -1) {
+            nextFields.push(field);
+          } else {
+            nextFields[emptyIndex] = field;
+          }
+        });
+        return {
+          ...prev,
+          fields: nextFields,
+        };
+      });
+      await Promise.allSettled([reloadFieldOptions(), reloadLotOptions(), reloadCropOptions()]);
+      setEmbeddedAdminDrawer(null);
+    },
+    [projectDraft, reloadCropOptions, reloadFieldOptions, reloadLotOptions],
+  );
 
   const updateFieldInvestorAt = (
     fieldIndex: number,
@@ -1044,6 +1436,74 @@ export default function CustomerEditor({
     );
   };
 
+  const addEmptyLotFromAdmin = (fieldIndex: number) => {
+    addLotAt(fieldIndex);
+    setEmbeddedAdminDrawer(null);
+  };
+
+  const addLotsFromAdmin = useCallback(
+    (fieldIndex: number, lotsToCopy: LotsData[]) => {
+      const field = projectDraft?.fields[fieldIndex];
+      if (!field) return;
+
+      const existingKeys = new Set<string>();
+      field.lots.forEach((lot) => {
+        if (lot.id > 0) existingKeys.add(`id:${lot.id}`);
+        if (lot.name) existingKeys.add(`name:${normalizeActorName(lot.name)}`);
+      });
+
+      const nextLots = lotsToCopy.reduce<ProjectLotDraft[]>((acc, lot) => {
+        const nameKey = `name:${normalizeActorName(lot.lot_name)}`;
+        const idKey = `id:${lot.id}`;
+        if (existingKeys.has(idKey) || existingKeys.has(nameKey)) return acc;
+        existingKeys.add(idKey);
+        existingKeys.add(nameKey);
+        acc.push(lotDataToDraft(lot));
+        return acc;
+      }, []);
+
+      if (nextLots.length === 0) {
+        notify.info("Los lotes seleccionados ya están cargados en el campo.");
+        return;
+      }
+
+      setProjectDraft((prev) =>
+        prev
+          ? {
+              ...prev,
+              fields: prev.fields.map((currentField, currentIndex) => {
+                if (currentIndex !== fieldIndex) return currentField;
+                const updatedLots = [...currentField.lots];
+                nextLots.forEach((lot) => {
+                  const emptyIndex = updatedLots.findIndex(isEmptyProjectLot);
+                  if (emptyIndex === -1) {
+                    updatedLots.push(lot);
+                  } else {
+                    updatedLots[emptyIndex] = lot;
+                  }
+                });
+                return {
+                  ...currentField,
+                  lots: updatedLots,
+                };
+              }),
+            }
+          : prev,
+      );
+      setLotOptions((prev) => {
+        const next = [...prev];
+        nextLots.forEach((lot) => {
+          if (!next.some((option) => option.id === lot.id)) {
+            next.push({ id: lot.id, name: lot.name });
+          }
+        });
+        return next;
+      });
+      setEmbeddedAdminDrawer(null);
+    },
+    [projectDraft],
+  );
+
   const removeLotAt = (fieldIndex: number, lotIndex: number) => {
     setProjectDraft((prev) =>
       prev
@@ -1269,6 +1729,106 @@ export default function CustomerEditor({
     navigate("/admin/master-data/customers/list");
   };
 
+  const embeddedAdminTitle = (() => {
+    if (!embeddedAdminDrawer) return "";
+    if (embeddedAdminDrawer.type === "actors") {
+      switch (embeddedAdminDrawer.group) {
+        case "managers":
+          return "Administrar Responsables";
+        case "investors":
+          return "Administrar Inversores";
+        case "admin_cost_investors":
+          return "Administrar Costo Administrativo";
+      }
+    }
+    if (embeddedAdminDrawer.type === "fields") return "Administrar Campos";
+    if (embeddedAdminDrawer.type === "lots") return "Administrar Lotes";
+    return "Administrar Cultivos";
+  })();
+
+  const renderEmbeddedAdmin = () => {
+    if (!embeddedAdminDrawer) return null;
+
+    if (embeddedAdminDrawer.type === "actors") {
+      const isManagerGroup = embeddedAdminDrawer.group === "managers";
+      const investorGroup =
+        embeddedAdminDrawer.group === "admin_cost_investors"
+          ? "admin_cost_investors"
+          : "investors";
+      const selectedActorIds = isManagerGroup
+        ? selectedManagerActorIds
+        : embeddedAdminDrawer.group === "investors"
+          ? selectedInvestorActorIds
+          : selectedAdminCostInvestorActorIds;
+
+      return (
+        <ActorsList
+          embedded
+          rolePreset={isManagerGroup ? "responsable" : "inversor"}
+          contextFilters={projectAdminContext}
+          selectionMode={{
+            label: "Agregar",
+            entityLabel: isManagerGroup ? "responsable" : "inversor",
+            selectedActorIds,
+            duplicateMessage: isManagerGroup
+              ? "Los responsables seleccionados ya están cargados en el proyecto."
+              : "Los inversores seleccionados ya están cargados en el proyecto.",
+            onAdd: (actors) =>
+              isManagerGroup
+                ? addManagersFromAdmin(actors)
+                : addInvestorsFromAdmin(investorGroup, actors),
+          }}
+          onAfterChange={reloadActorOptions}
+        />
+      );
+    }
+
+    if (embeddedAdminDrawer.type === "fields") {
+      return (
+        <FieldsList
+          embedded
+          contextFilters={projectAdminContext}
+          selectionMode={{
+            label: "Agregar",
+            selectedIds: selectedFieldIds,
+            onAdd: addFieldsFromAdmin,
+            onCreateNew: addEmptyFieldFromAdmin,
+          }}
+          onAfterChange={reloadFieldOptions}
+        />
+      );
+    }
+
+    if (embeddedAdminDrawer.type === "lots") {
+      const field = projectDraft?.fields[embeddedAdminDrawer.fieldIndex];
+      const selectedIds =
+        field?.lots
+          .map((lot) => lot.id)
+          .filter((lotId): lotId is number => typeof lotId === "number" && lotId > 0) ?? [];
+
+      return (
+        <EmbeddedLotsList
+          contextFilters={buildFieldAdminContext(embeddedAdminDrawer.fieldIndex)}
+          selectionMode={{
+            label: "Agregar",
+            selectedIds,
+            onAdd: (lots) => addLotsFromAdmin(embeddedAdminDrawer.fieldIndex, lots),
+            onCreateNew: () => addEmptyLotFromAdmin(embeddedAdminDrawer.fieldIndex),
+          }}
+          onAfterChange={reloadLotOptions}
+        />
+      );
+    }
+
+    return (
+      <CropsList
+        embedded
+        contextFilters={buildFieldAdminContext(embeddedAdminDrawer.fieldIndex)}
+        onAfterChange={reloadCropOptions}
+      />
+    );
+  };
+
   return (
     <div className={embedded ? "space-y-2 pr-1" : "space-y-2"}>
       <LoadingOverlay show={(loading || saving) && Boolean(projectDraft)} />
@@ -1349,6 +1909,16 @@ export default function CustomerEditor({
               title="Responsables"
               emptyLabel="Sin responsables"
               onAdd={addManager}
+              hideAddAction
+              extraHeaderAction={
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => setEmbeddedAdminDrawer({ type: "actors", group: "managers" })}
+                >
+                  Administrar
+                </Button>
+              }
               items={projectDraft.managers}
               renderItem={(manager, index) => (
                 <div className="grid grid-cols-[1fr_auto] gap-2">
@@ -1370,6 +1940,16 @@ export default function CustomerEditor({
               title="Inversores"
               emptyLabel="Sin inversores"
               onAdd={() => addInvestor("investors")}
+              hideAddAction
+              extraHeaderAction={
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => setEmbeddedAdminDrawer({ type: "actors", group: "investors" })}
+                >
+                  Administrar
+                </Button>
+              }
               items={projectDraft.investors}
               renderItem={(investor, index) => (
                 <div className="grid grid-cols-[1fr_90px_auto] gap-2">
@@ -1407,6 +1987,18 @@ export default function CustomerEditor({
               title="Costo administrativo"
               emptyLabel="Sin inversores"
               onAdd={() => addInvestor("admin_cost_investors")}
+              hideAddAction
+              extraHeaderAction={
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() =>
+                    setEmbeddedAdminDrawer({ type: "actors", group: "admin_cost_investors" })
+                  }
+                >
+                  Administrar
+                </Button>
+              }
               items={projectDraft.admin_cost_investors}
               renderItem={(investor, index) => (
                 <div className="grid grid-cols-[1fr_90px_auto] gap-2">
@@ -1454,7 +2046,13 @@ export default function CustomerEditor({
           <section className="drawer-section">
             <div className="drawer-section-header">
               <h2 className="drawer-section-title">Campos</h2>
-              <AddButton label="Agregar campo" onClick={addField} />
+              <Button
+                variant="primary"
+                size="xs"
+                onClick={() => setEmbeddedAdminDrawer({ type: "fields" })}
+              >
+                Administrar
+              </Button>
             </div>
 
             <div className="space-y-2">
@@ -1593,7 +2191,26 @@ export default function CustomerEditor({
                     <div className="mt-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5">
                       <div className="mb-2 flex items-center justify-between gap-2">
                         <h3 className="text-sm font-semibold text-slate-950">Lotes</h3>
-                        <AddButton label="Agregar lote" onClick={() => addLotAt(fieldIndex)} />
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="primary"
+                            size="xs"
+                            onClick={() =>
+                              setEmbeddedAdminDrawer({ type: "lots", fieldIndex })
+                            }
+                          >
+                            Administrar Lotes
+                          </Button>
+                          <Button
+                            variant="primary"
+                            size="xs"
+                            onClick={() =>
+                              setEmbeddedAdminDrawer({ type: "crops", fieldIndex })
+                            }
+                          >
+                            Administrar Cultivos
+                          </Button>
+                        </div>
                       </div>
                       <div className="space-y-2">
                         {field.lots.map((lot, lotIndex) => (
@@ -1706,6 +2323,19 @@ export default function CustomerEditor({
           </section>
         </div>
       )}
+
+      {!customerOnly && typeof document !== "undefined"
+        ? createPortal(
+            <DrawerShell
+              open={embeddedAdminDrawer !== null}
+              onClose={() => setEmbeddedAdminDrawer(null)}
+              title={embeddedAdminTitle}
+            >
+              {renderEmbeddedAdmin()}
+            </DrawerShell>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

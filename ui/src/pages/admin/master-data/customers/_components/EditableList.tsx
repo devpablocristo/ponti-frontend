@@ -9,6 +9,8 @@ type EditableListProps<T> = {
   emptyLabel: string;
   items: T[];
   onAdd: () => void;
+  extraHeaderAction?: ReactNode;
+  hideAddAction?: boolean;
   renderItem: (item: T, index: number) => ReactNode;
 };
 
@@ -24,13 +26,18 @@ export function EditableList<T>({
   emptyLabel,
   items,
   onAdd,
+  extraHeaderAction,
+  hideAddAction = false,
   renderItem,
 }: EditableListProps<T>) {
   return (
     <div className="drawer-section">
       <div className="drawer-section-header">
         <h3 className="drawer-section-title">{title}</h3>
-        <AddButton label={`Agregar ${title}`} onClick={onAdd} />
+        <div className="flex items-center gap-2">
+          {!hideAddAction ? <AddButton label={`Agregar ${title}`} onClick={onAdd} /> : null}
+          {extraHeaderAction}
+        </div>
       </div>
       <div className="space-y-2">
         {items.length === 0 ? (

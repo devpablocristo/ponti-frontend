@@ -149,6 +149,23 @@ describe("formatError", () => {
     );
   });
 
+  it("traduce bloqueo de archivo de inversor por asignaciones activas", () => {
+    const err = {
+      response: {
+        status: 409,
+        data: {
+          error: {
+            details: "investor has 1 active assignment(s); remove them first",
+          },
+        },
+      },
+      userMessage: HTTP_COPY.conflict,
+    };
+    expect(formatError(err, { fallback: FALLBACK })).toBe(
+      "El inversor tiene 1 asignación activa en proyectos, campos, órdenes o costo administrativo. Quitá esas asignaciones antes de archivarlo.",
+    );
+  });
+
   it("traduce BE work-order date validation", () => {
     const err = {
       response: { data: { error: { details: "work order date cannot be in the future" } } },
