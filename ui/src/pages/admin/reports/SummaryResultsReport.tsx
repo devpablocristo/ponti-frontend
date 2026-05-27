@@ -892,7 +892,9 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
       <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-3">
-        <h3 className="text-[1.05rem] font-semibold text-slate-950">Vista Integral</h3>
+        <h3 className="text-[1.05rem] font-semibold text-slate-950 dark:text-slate-100">
+          Vista Integral
+        </h3>
       </div>
       <ScrollableTable>
         <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.86rem]">
@@ -936,8 +938,8 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
                       <span
                         className={
                           row.key === "operating_result"
-                            ? "ml-1 text-[0.7rem] text-white/60"
-                            : "ml-1 text-[0.7rem] text-slate-500"
+                            ? "ml-1 text-[0.7rem] text-white/60 dark:text-slate-600"
+                            : "ml-1 text-[0.7rem] text-slate-500 dark:text-slate-400"
                         }
                       >
                         {row.unit}
