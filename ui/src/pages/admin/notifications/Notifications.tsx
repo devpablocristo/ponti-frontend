@@ -232,7 +232,7 @@ const Notifications = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-4">
       <AppFilterBar filters={filters} />
 
       <div className="flex items-center justify-between">
