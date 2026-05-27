@@ -1,5 +1,5 @@
 /**
- * Proxy HTTP POST → SSE (una sola responsabilidad: BFF → ponti-backend).
+ * Proxy HTTP POST → SSE (una sola responsabilidad: BFF → core).
  *
  * Divide y vencerás (cada invariante explícita):
  * 1) Cuerpo JSON ya materializado (string) — no compartir Readable del request con el cliente saliente.

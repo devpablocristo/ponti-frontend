@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 
-import { DataTable } from "@devpablocristo/modules-ui-data-display";
+import { DataTable } from "@devpablocristo/platform-ui-data-display";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import { ProjectData } from "../../../../hooks/useDatabase/projects/types";

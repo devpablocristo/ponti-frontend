@@ -6,7 +6,7 @@ import useLabors from "../../../hooks/useLabors";
 import useCategories from "../../../hooks/useCategories";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { InvoiceData, Metrics, LaborGroupData, LaborToSave } from "../../../hooks/useLabors/types";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { FilterBar } from "@/components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { BaseModal } from "../../../components/Modal/BaseModal";
@@ -211,7 +211,7 @@ function TaskHeader({
 
 function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing: boolean }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <>
       {processing ? (
         <div className="flex items-center justify-center py-4">
           <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
@@ -236,7 +236,7 @@ function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing
           />
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -857,7 +857,7 @@ export function Tasks() {
         filters={filters}
         actions={[
           {
-            label: "Exportar Labores",
+            label: "Exportar",
             icon: (
               <svg
                 width="14"
@@ -882,7 +882,7 @@ export function Tasks() {
           },
         ]}
       />
-      <div className="my-4">
+      <div className="my-3">
         {errorMetrics ? (
           <div
             className="flex items-center gap-3 p-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
@@ -908,7 +908,7 @@ export function Tasks() {
         )}
       </div>
 
-      <div className="mt-4 relative">
+      <div className="mt-3 relative">
         {processing && (
           <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />

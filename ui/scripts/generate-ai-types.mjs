@@ -6,30 +6,37 @@ import { spawnSync } from "node:child_process";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uiRoot = resolve(__dirname, "..");
 const repoRoot = resolve(uiRoot, "..", "..");
-const exportScript = resolve(repoRoot, "ponti-ai", "scripts", "export_openapi.py");
+const axisRoot = process.env.AXIS_DIR
+  ? resolve(process.env.AXIS_DIR)
+  : resolve(repoRoot, "..", "axis");
+const localSchemaPath = resolve(axisRoot, "companion", "openapi.yaml");
 const outputDir = resolve(uiRoot, "src", "generated");
-const schemaPath = resolve(outputDir, "ponti-ai.openapi.json");
-const typesPath = resolve(outputDir, "ponti-ai.openapi.ts");
-const schemaUrl = process.env.PONTI_AI_OPENAPI_URL ?? "http://localhost:8090/openapi.json";
+const schemaPath = resolve(outputDir, "axis-companion.openapi.yaml");
+const typesPath = resolve(outputDir, "axis-companion.openapi.ts");
+const schemaUrl =
+  process.env.AXIS_COMPANION_OPENAPI_URL ??
+  process.env.COMPANION_OPENAPI_URL ??
+  (process.env.COMPANION_BASE_URL
+    ? `${process.env.COMPANION_BASE_URL.replace(/\/$/, "")}/openapi.json`
+    : "");
 
 async function exportSchema() {
   mkdirSync(outputDir, { recursive: true });
-  try {
-    const response = await fetch(schemaUrl);
-    if (!response.ok) throw new Error(`openapi_http_${response.status}`);
-    const payload = await response.text();
-    writeFileSync(schemaPath, payload.replace(/\r\n/g, "\n"), "utf-8");
-    return;
-  } catch (_error) {
-    const exportResult = spawnSync("python", [exportScript, schemaPath], {
-      cwd: resolve(repoRoot, "ponti-ai"),
-      stdio: "inherit",
-      env: process.env,
-    });
-    if (exportResult.status !== 0) {
-      process.exit(exportResult.status ?? 1);
+
+  if (schemaUrl) {
+    try {
+      const response = await fetch(schemaUrl);
+      if (!response.ok) throw new Error(`openapi_http_${response.status}`);
+      const payload = await response.text();
+      writeFileSync(schemaPath, payload.replace(/\r\n/g, "\n"), "utf-8");
+      return;
+    } catch (_error) {
+      // Axis puede no estar corriendo en local; abajo caemos al schema versionado.
     }
   }
+
+  const payload = readFileSync(localSchemaPath, "utf-8");
+  writeFileSync(schemaPath, payload.replace(/\r\n/g, "\n"), "utf-8");
 }
 
 (async () => {

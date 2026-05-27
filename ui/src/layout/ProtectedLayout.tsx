@@ -5,12 +5,14 @@ import Sidebar from "./Sidebar/Sidebar";
 import { BaseModal } from "../components/Modal/BaseModal";
 import { AuthProvider } from "../pages/login/context/AuthProvider";
 import { useAuth } from "../pages/login/context/useAuth";
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 import { SelectionProvider } from "../pages/login/context/SelectionContext";
+import { getSidebarTitle } from "./Sidebar/sidebarTitle";
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const auth = useAuth();
 
   const isSmallScreen = window.innerWidth < 768;
@@ -23,6 +25,10 @@ const MainLayout: React.FC = () => {
       navigate("/login");
     }
   }, [auth?.isAuthenticated, auth?.loading, navigate]);
+
+  useEffect(() => {
+    setTitle(getSidebarTitle(location.pathname));
+  }, [location.pathname, setTitle]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -48,7 +54,7 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-custom-bg">
+    <div className="flex h-screen h-[100dvh] overflow-hidden bg-custom-bg">
       <Sidebar
         setTitle={setTitle}
         setIsSidebarOpen={() => setIsSidebarOpen(false)}

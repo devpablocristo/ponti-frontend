@@ -1,6 +1,6 @@
 // contexts/SelectionContext.tsx
 import { useState, useEffect } from "react";
-import { createBrowserStorageNamespace } from "@devpablocristo/core-browser/storage";
+import { createBrowserStorageNamespace } from "@devpablocristo/platform-browser/storage";
 import type { Entity } from "../../../hooks/useDatabase/options/types";
 import type { Data } from "../../../hooks/useFields/types";
 import { SelectionContext } from "./SelectionContext.shared";

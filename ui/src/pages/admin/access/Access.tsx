@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { parseListItemsFromResponse } from "@devpablocristo/core-browser/crud";
+import { parseListItemsFromResponse } from "@devpablocristo/platform-browser/crud";
 import Header from "../../../components/Header/Header";
 import Button from "../../../components/Button/Button";
 import { apiClient } from "@/api/client";

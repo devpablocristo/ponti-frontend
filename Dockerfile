@@ -1,7 +1,7 @@
 # App
 FROM node:20.17.0 AS ui-builder
 
-WORKDIR /repo/ponti/ponti-frontend/ui
+WORKDIR /repo/ponti/web/ui
 
 COPY ui/package*.json ui/yarn.lock ./
 RUN yarn install --frozen-lockfile
@@ -27,7 +27,7 @@ WORKDIR /app
 COPY --from=api-builder /server/dist ./dist
 COPY --from=api-builder /server/node_modules ./node_modules
 
-COPY --from=ui-builder /repo/ponti/ponti-frontend/ui/dist ./dist/public
+COPY --from=ui-builder /repo/ponti/web/ui/dist ./dist/public
 
 # Imagen de ejecución: producción; verbose de errores va por BFF_VERBOSE_ERRORS en Cloud Run.
 ENV NODE_ENV=production

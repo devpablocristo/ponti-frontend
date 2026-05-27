@@ -1,5 +1,5 @@
 import { AxiosError } from "axios";
-import { createAuthenticatedAxiosClient } from "@devpablocristo/core-authn/http/axios";
+import { createAuthenticatedAxiosClient } from "@devpablocristo/platform-authn/http/axios";
 import { authTokenStorage } from "@/pages/login/context/useLocalStorage";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";

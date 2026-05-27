@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { FilterBar } from "@/components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import InputField from "../../../components/Input/InputField.tsx";
 import useReporting from "../../../hooks/useReporting";

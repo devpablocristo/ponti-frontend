@@ -2,7 +2,7 @@ import { useCallback, useEffect } from "react";
 import { LoaderCircle } from "lucide-react";
 import { usePDF } from "react-to-pdf";
 
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { FilterBar } from "@/components/filters/AppFilterBar";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useDashboard from "../../../hooks/useDashboard";

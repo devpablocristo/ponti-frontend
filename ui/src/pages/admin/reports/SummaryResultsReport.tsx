@@ -18,7 +18,7 @@ import {
   Wallet,
   Wheat,
 } from "lucide-react";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { FilterBar } from "@/components/filters/AppFilterBar";
 import { usePDF } from "react-to-pdf";
 
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";

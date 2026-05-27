@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { FilterBar } from "@/components/filters/AppFilterBar";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {
@@ -317,7 +317,7 @@ const AIAssistant = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4 px-6 py-4">
+    <div className="flex flex-col gap-4">
       <FilterBar filters={filters} />
 
       {!headers && (

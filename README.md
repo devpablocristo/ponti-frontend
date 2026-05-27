@@ -1,9 +1,9 @@
-# Ponti Frontend
+# Ponti Web
 
 Incluye dos piezas:
 
 - `ui/`: aplicación React + Vite
-- `api/`: BFF Express que valida JWT y proxyea requests al backend/AI
+- `api/`: BFF Express que valida JWT y proxyea requests a core/Axis
 
 ## Tooling
 
@@ -15,18 +15,15 @@ Incluye dos piezas:
 
 Dependencias compartidas relevantes:
 
-- `@devpablocristo/core-authn`
-- `@devpablocristo/core-browser`
-- `@devpablocristo/core-http`
-- `@devpablocristo/modules-ai-console`
-- `@devpablocristo/modules-ui-data-display`
-- `@devpablocristo/modules-ui-filters`
-- `@devpablocristo/modules-ui-forms`
+- `@devpablocristo/platform-authn`
+- `@devpablocristo/platform-browser`
+- `@devpablocristo/platform-http`
+- `@devpablocristo/platform-ui-data-display`
 
-La UI consume contratos AI tipados desde OpenAPI generado:
+La UI consume contratos de Axis Companion tipados desde OpenAPI generado:
 
-- schema: `ui/src/generated/ponti-ai.openapi.json`
-- tipos generados: `ui/src/generated/ponti-ai.openapi.ts`
+- schema: `ui/src/generated/axis-companion.openapi.yaml`
+- tipos generados: `ui/src/generated/axis-companion.openapi.ts`
 - alias tipados para la app: `ui/src/types/ai.ts`
 
 Regenerar tipos:

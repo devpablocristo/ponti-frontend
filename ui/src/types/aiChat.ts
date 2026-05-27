@@ -1,4 +1,4 @@
-/** Contratos del asistente conversacional Ponti (POST /v1/chat en ponti-ai vía BFF). */
+/** Contratos del asistente conversacional Ponti (POST /v1/chat en Axis Companion vía BFF). */
 
 export type PontiRouteHint =
   | "general"
@@ -71,7 +71,7 @@ export type PontiConversationDetail = {
   updated_at: string;
 };
 
-/** Evento SSE de POST .../chat/stream (misma forma que emite sse-starlette / ponti-ai). */
+/** Evento SSE de POST .../chat/stream (misma forma que emite Axis Companion). */
 export type PontiChatStreamSseEvent = {
   event: string;
   data: Record<string, unknown>;

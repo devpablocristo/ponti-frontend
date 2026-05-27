@@ -83,7 +83,7 @@ const handleError = (res: Response, error: unknown, opts?: HandleErrorOptions) =
   });
 };
 
-// --- Asistente conversacional (proxy a ponti-backend → ponti-ai) ---
+// --- Asistente conversacional (proxy a core → Axis Companion) ---
 
 router.post("/chat", async (req: Request, res: Response) => {
   const userId = requireUser(req, res);

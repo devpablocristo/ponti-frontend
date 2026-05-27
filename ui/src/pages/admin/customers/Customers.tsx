@@ -4,7 +4,7 @@ import { LoaderCircle } from "lucide-react";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ProjectData } from "../../../hooks/useDatabase/projects/types";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { FilterBar } from "@/components/filters/AppFilterBar";
 import { useNavigate } from "react-router-dom";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../hooks/useDatabase/projects";
@@ -250,13 +250,13 @@ export function Customers() {
         filters={filters}
         actions={[
           {
-            label: "+ Nuevo Cliente",
+            label: "Nuevo",
             variant: "primary",
             isPrimary: true,
             href: "/admin/database/customers",
           },
           {
-            label: "Archivar Cliente",
+            label: "Archivar",
             variant: "primary",
             onClick: handlePreArchiveCustomer,
             disabled:

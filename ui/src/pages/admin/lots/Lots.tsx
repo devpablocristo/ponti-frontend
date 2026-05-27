@@ -1,5 +1,5 @@
 import { DataTable, usePagination } from "@/lib/dataDisplay";
-import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { FilterBar } from "@/components/filters/AppFilterBar";
 import { AlertCircle, ExternalLink, LoaderCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -283,7 +283,7 @@ export function Lots() {
         filters={filters}
         actions={[
           {
-            label: "Exportar Lotes",
+            label: "Exportar",
             icon: <ExternalLink className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
@@ -291,7 +291,7 @@ export function Lots() {
             onClick: handleExport,
           },
           {
-            label: "+ Nuevo Lote",
+            label: "Nuevo",
             variant: "primary",
             isPrimary: true,
             disabled:
@@ -327,7 +327,7 @@ export function Lots() {
       ) : null}
 
       {!message && !error ? (
-        <div className="my-4">
+        <div className="my-3">
           <LotsIndicators
             kpis={indicators}
             processing={!hasColumnFilters && processingKpis}
@@ -336,7 +336,7 @@ export function Lots() {
         </div>
       ) : null}
 
-      <div className="relative mt-4">
+      <div className="relative mt-3">
         {processing ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white bg-opacity-70 backdrop-blur-sm">
             <LoaderCircle className="h-10 w-10 animate-spin text-blue-600" />

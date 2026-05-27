@@ -122,11 +122,11 @@ clean: ## Baja servicios, borra volúmenes y artefactos de build
 # --------------------------------------------------
 docker-build: ## Construye la imagen Docker de producción
 	@echo "Building production Docker image..."
-	docker build -t ponti-frontend:latest .
+	docker build -t ponti-web:latest .
 
 docker-run: ## Corre la imagen Docker de producción
 	@echo "Running production Docker image..."
-	docker run --rm -p 3000:3000 --env-file api/.env ponti-frontend:latest
+	docker run --rm -p 3000:3000 --env-file api/.env ponti-web:latest
 
 # --------------------------------------------------
 # Help
