@@ -27,7 +27,7 @@ import { Column } from "../../types";
 import { MANAGER_ENTITY as ENTITY } from "../../entities";
 import ManagerFormDrawer from "./ManagerFormDrawer";
 import ArchivedManagers from "./ArchivedManagers";
-import { downloadCsvRows } from "../../fileTransfer";
+import { downloadCsvRows, EXCEL_ACCEPT, readImportTableAsCsvText } from "../../fileTransfer";
 
 const toFilterOptions = (values: string[], formatDisplay = true) =>
   values.map((value, index) => ({
@@ -203,7 +203,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const names = Array.from(
         new Set(
           text
@@ -375,7 +375,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
               icon: <Download className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
-              accept: ".csv,text/csv",
+              accept: EXCEL_ACCEPT,
               onFileChange: importManagers,
             },
             {

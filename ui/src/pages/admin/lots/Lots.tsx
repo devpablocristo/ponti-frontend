@@ -29,7 +29,7 @@ import {
   mapApiLotIndicators,
 } from "./lotTableUtils";
 import { useLotColumns } from "./useLotColumns";
-import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildTimestampedFilename, downloadBlob, EXCEL_ACCEPT } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedLots from "../master-data/lots/ArchivedLots";
@@ -349,7 +349,7 @@ function Lots() {
       setImportGlobalErrors(globalErrors);
       setImportDrawerOpen(true);
     } catch {
-      setErrorMessage("No se pudo procesar el CSV. Use CSV válido.");
+      setErrorMessage("No se pudo procesar el Excel. Use .xlsx válido.");
     }
   };
 
@@ -381,7 +381,7 @@ function Lots() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            accept: ".csv,text/csv",
+            accept: EXCEL_ACCEPT,
             onFileChange: handleImport,
           },
           {

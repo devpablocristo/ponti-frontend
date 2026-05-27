@@ -18,7 +18,12 @@ import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import useProjects from "../../../../hooks/useDatabase/projects";
-import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
+import {
+  buildTimestampedFilename,
+  downloadBlob,
+  EXCEL_ACCEPT,
+  readImportTableAsCsvText,
+} from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { useSelection } from "../../../login/context/useSelection";
@@ -282,7 +287,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       const file = event.target.files?.[0];
       if (!file) return;
       try {
-        const content = await file.text();
+        const content = await readImportTableAsCsvText(file);
         const names = content
           .split(/\r?\n/)
           .map((line) => line.split(/[;,]/)[0]?.replace(/^"|"$/g, "").trim())
@@ -299,7 +304,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
         notify.success(`Se importaron ${uniqueNames.length} clientes.`);
         refresh();
       } catch {
-        notify.error("No se pudo importar clientes. Usá CSV con una columna Cliente.");
+        notify.error("No se pudo importar clientes. Usá Excel con una columna Cliente.");
       }
     },
     [createCustomer, refresh],
@@ -449,21 +454,27 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       <AppFilterBar
         filters={filters}
         actions={[
-          {
-            label: "Importar",
-            icon: <Download className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            accept: ".csv,text/csv",
-            onFileChange: importCustomers,
-          },
-          {
-            label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: exportVisibleCustomers,
-          },
+          ...(
+            projectsOnly
+              ? []
+              : [
+                  {
+                    label: "Importar",
+                    icon: <Download className="h-4 w-4" />,
+                    variant: "primary" as const,
+                    isPrimary: true,
+                    accept: EXCEL_ACCEPT,
+                    onFileChange: importCustomers,
+                  },
+                  {
+                    label: "Exportar",
+                    icon: <Upload className="h-4 w-4" />,
+                    variant: "primary" as const,
+                    isPrimary: true,
+                    onClick: exportVisibleCustomers,
+                  },
+                ]
+          ),
           {
             label: "Archivados",
             icon: <Archive className="h-4 w-4" />,

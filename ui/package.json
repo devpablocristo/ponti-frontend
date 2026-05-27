@@ -27,6 +27,7 @@
     "@devpablocristo/platform-http": "^0.1.0",
     "@devpablocristo/platform-ui-data-display": "^0.1.0",
     "axios": "^1.16.0",
+    "exceljs": "^4.4.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.477.0",
     "react": "^19.0.0",

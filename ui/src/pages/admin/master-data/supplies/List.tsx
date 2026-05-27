@@ -379,7 +379,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
         open={importDrawerOpen}
         onClose={() => setImportDrawerOpen(false)}
         title="Importar insumos"
-        subtitle="Cargá insumos manualmente o importalos desde CSV para el proyecto seleccionado."
+        subtitle="Cargá insumos manualmente o importalos desde Excel para el proyecto seleccionado."
       >
         <SuppliesCatalog
           embedded

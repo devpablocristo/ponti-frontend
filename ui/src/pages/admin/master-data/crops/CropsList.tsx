@@ -22,7 +22,7 @@ import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import { formatProperName } from "../../../../lib/properName";
 import { Column } from "../../types";
 import { CROP_ENTITY as ENTITY } from "../../entities";
-import { buildTimestampedFilename, CSV_ACCEPT, csvEscape, downloadBlob } from "../../fileTransfer";
+import { buildTimestampedFilename, EXCEL_ACCEPT, csvEscape, downloadBlob } from "../../fileTransfer";
 import ArchivedCrops from "./ArchivedCrops";
 import CropFormDrawer from "./CropFormDrawer";
 import { normalizeCropImportName, parseCropImportCsv, readCropImportFile } from "./importUtils";
@@ -301,7 +301,7 @@ export default function CropsList({
 
         notify.error("No se pudo importar cultivos.");
       } catch {
-        notify.error("No se pudo importar cultivos. Usá CSV con una columna Nombre.");
+        notify.error("No se pudo importar cultivos. Usá Excel con una columna Nombre.");
       }
     },
     [createCrop, crops, onAfterChange, refresh],
@@ -353,7 +353,7 @@ export default function CropsList({
                   icon: <Download className="h-4 w-4" />,
                   variant: "primary" as const,
                   isPrimary: true,
-                  accept: CSV_ACCEPT,
+                  accept: EXCEL_ACCEPT,
                   onFileChange: handleImport,
                 },
                 {

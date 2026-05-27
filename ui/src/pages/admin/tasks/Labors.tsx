@@ -23,7 +23,7 @@ import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
 import { WORKORDER_ENTITY } from "../entities";
-import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildTimestampedFilename, downloadBlob, EXCEL_ACCEPT } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedWorkOrders from "../master-data/work-orders/ArchivedWorkOrders";
@@ -663,7 +663,7 @@ export function Labors() {
       setImportDrawerOpen(true);
     } catch (error) {
       setExportErrorMessage(
-        formatError(error, { fallback: "No se pudo procesar el CSV. Verificá que el archivo tenga el formato correcto." }),
+        formatError(error, { fallback: "No se pudo procesar el Excel. Verificá que el archivo tenga el formato correcto." }),
       );
     }
   };
@@ -724,7 +724,7 @@ export function Labors() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            accept: ".csv,text/csv",
+            accept: EXCEL_ACCEPT,
             onFileChange: handleImport,
           },
           {

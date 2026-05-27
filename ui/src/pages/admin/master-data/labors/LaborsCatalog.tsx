@@ -22,7 +22,7 @@ import {
   parseCsv,
   parsePartialPrice,
 } from "./importUtils";
-import { CSV_ACCEPT } from "../../fileTransfer";
+import { EXCEL_ACCEPT, readImportTableAsCsvText } from "../../fileTransfer";
 
 import {
   type Labor,
@@ -310,15 +310,17 @@ export default function LaborsCatalog({
     }
 
     const lowerName = file.name.toLowerCase();
-    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
+    const isExcel =
+      lowerName.endsWith(".xlsx") ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    if (!isCsv) {
-      setErrorMessage("Formato no soportado. Use .csv.");
+    if (!isExcel) {
+      setErrorMessage("Formato no soportado. Use .xlsx.");
       return;
     }
 
     try {
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const parsedRows = parseCsv(text);
 
       if (parsedRows.length === 0) {
@@ -428,7 +430,7 @@ export default function LaborsCatalog({
         setErrorMessage("No se encontraron filas importables en el archivo.");
       }
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx.");
     }
   };
 
@@ -456,7 +458,7 @@ export default function LaborsCatalog({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={CSV_ACCEPT}
+                  accept={EXCEL_ACCEPT}
                   onChange={handleImportLaborsFromFile}
                   className="hidden"
                 />

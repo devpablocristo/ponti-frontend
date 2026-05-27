@@ -1,4 +1,5 @@
 import { normalizeHeader } from "../../../../lib/importHelpers";
+import { readImportTableAsCsvText } from "../../fileTransfer";
 
 export type CropImportRow = {
   name: string;
@@ -71,7 +72,9 @@ export function parseCropImportCsv(content: string): CropImportRow[] {
   const parsedRows: CropImportRow[] = [];
 
   dataRows.forEach((row) => {
-    const name = String(row[nameIndex] ?? "").replace(/\s+/g, " ").trim();
+    const name = String(row[nameIndex] ?? "")
+      .replace(/\s+/g, " ")
+      .trim();
     const key = normalizeCropImportName(name);
     if (!key || seen.has(key)) return;
     seen.add(key);
@@ -82,14 +85,5 @@ export function parseCropImportCsv(content: string): CropImportRow[] {
 }
 
 export function readCropImportFile(file: File) {
-  if (typeof file.text === "function") {
-    return file.text();
-  }
-
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(reader.error ?? new Error("No se pudo leer el archivo."));
-    reader.readAsText(file);
-  });
+  return readImportTableAsCsvText(file);
 }

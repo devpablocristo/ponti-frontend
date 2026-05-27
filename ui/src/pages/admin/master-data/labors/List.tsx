@@ -25,7 +25,12 @@ import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
-import { buildTimestampedFilename, downloadBlob, CSV_ACCEPT } from "../../fileTransfer";
+import {
+  buildTimestampedFilename,
+  downloadBlob,
+  EXCEL_ACCEPT,
+  readImportTableAsCsvText,
+} from "../../fileTransfer";
 
 import { LABOR_ENTITY as ENTITY } from "../../entities";
 import ArchivedLabors from "./ArchivedLabors";
@@ -236,15 +241,17 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     }
 
     const lowerName = file.name.toLowerCase();
-    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    if (!isCsv) {
-      setErrorMessage("Formato no soportado. Use .csv.");
+    const isExcel =
+      lowerName.endsWith(".xlsx") ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    if (!isExcel) {
+      setErrorMessage("Formato no soportado. Use .xlsx.");
       return;
     }
 
     try {
       setErrorMessage("");
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const parsedRows = parseCsv(text);
       if (parsedRows.length === 0) {
         setErrorMessage("El archivo no tiene datos válidos. Verifique encabezados y filas.");
@@ -286,7 +293,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
       setImportedRows(previewRows);
       setImportDrawerOpen(true);
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx.");
     }
   };
 
@@ -312,7 +319,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept={CSV_ACCEPT}
+        accept={EXCEL_ACCEPT}
         onChange={handleImportFromFile}
         className="hidden"
       />

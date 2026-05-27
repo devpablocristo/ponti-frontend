@@ -1,5 +1,6 @@
 import { apiClient } from "@/api/client";
 import { formatError } from "@/lib/format";
+import { readImportTableAsCsvText } from "../fileTransfer";
 import {
   getValueByAliases,
   normalizeText,
@@ -115,11 +116,11 @@ export async function parseAndResolveLotsCsv({
   fallbackLots,
   crops,
 }: ParseArgs): Promise<ParseLotsResult> {
-  const rawRows = parseCsv(await file.text());
+  const rawRows = parseCsv(await readImportTableAsCsvText(file));
   if (rawRows.length === 0) {
     return {
       rows: [],
-      globalErrors: ["El archivo no tiene lotes válidos. Use CSV con encabezados."],
+      globalErrors: ["El archivo no tiene lotes válidos. Use Excel con encabezados."],
     };
   }
 

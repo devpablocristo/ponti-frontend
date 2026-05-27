@@ -19,7 +19,7 @@ import { SupplyMovement } from "../../../hooks/useSupplyMovements/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
-import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildTimestampedFilename, downloadBlob, EXCEL_ACCEPT } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import {
@@ -596,7 +596,7 @@ export function SupplyMovements() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            accept: ".csv,text/csv",
+            accept: EXCEL_ACCEPT,
             onFileChange: handleImportFile,
           },
           {

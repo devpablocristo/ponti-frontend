@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import * as ExcelJS from "exceljs";
 import type React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -54,14 +55,22 @@ vi.mock("@/api/client", () => ({
 }));
 
 vi.mock("../../../../components/crud/ResponsiveTable", () => ({
-  ResponsiveTable: ({ data, columns }: { data: Crop[]; columns: Array<{ key: keyof Crop; render?: (value: unknown, item: Crop) => React.ReactNode }> }) => (
+  ResponsiveTable: ({
+    data,
+    columns,
+  }: {
+    data: Crop[];
+    columns: Array<{ key: keyof Crop; render?: (value: unknown, item: Crop) => React.ReactNode }>;
+  }) => (
     <table>
       <tbody>
         {data.map((row) => (
           <tr key={row.id}>
             {columns.map((column) => (
               <td key={String(column.key)}>
-                {column.render ? column.render(row[column.key], row) : String(row[column.key] ?? "")}
+                {column.render
+                  ? column.render(row[column.key], row)
+                  : String(row[column.key] ?? "")}
               </td>
             ))}
           </tr>
@@ -75,8 +84,18 @@ function renderCropsList() {
   return render(
     <ConfirmDialogProvider>
       <CropsList />
-    </ConfirmDialogProvider>,
+    </ConfirmDialogProvider>
   );
+}
+
+async function createExcelFile(rows: unknown[][]) {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Cultivos");
+  rows.forEach((row) => sheet.addRow(row));
+  const buffer = await workbook.xlsx.writeBuffer();
+  return new File([buffer as BlobPart], "cultivos.xlsx", {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
 }
 
 describe("CropsList", () => {
@@ -109,13 +128,13 @@ describe("CropsList", () => {
     expect(screen.getByRole("button", { name: "Nuevo" })).toBeInTheDocument();
   });
 
-  it("imports crop names from CSV and skips existing crops", async () => {
+  it("imports crop names from Excel and skips existing crops", async () => {
     mockUseCrops.state.crops = [{ id: 1, name: "soja" }];
     const { container } = renderCropsList();
     const input = container.querySelector('input[type="file"]');
     expect(input).toBeInstanceOf(HTMLInputElement);
 
-    const file = new File(["Nombre\nSoja\nTrigo\n"], "cultivos.csv", { type: "text/csv" });
+    const file = await createExcelFile([["Nombre"], ["Soja"], ["Trigo"]]);
     fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
 
     await waitFor(() => {

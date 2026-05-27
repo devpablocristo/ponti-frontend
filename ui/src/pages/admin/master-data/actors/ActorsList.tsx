@@ -34,7 +34,7 @@ import useManagers from "../../../../hooks/useManagers";
 import { Column } from "../../types";
 import ActorFormDrawer from "./ActorFormDrawer";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
-import { downloadCsvRows } from "../../fileTransfer";
+import { downloadCsvRows, EXCEL_ACCEPT, readImportTableAsCsvText } from "../../fileTransfer";
 import ArchivedActorsByRole from "./ArchivedActorsByRole";
 import type { ActorListFilters } from "./ArchivedActors";
 import {
@@ -345,7 +345,7 @@ export default function ActorsList({
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const inputs = parseCsv(text)
         .map(rowToActorInput)
         .filter((input): input is ActorPayloadInput => input !== null);
@@ -570,7 +570,7 @@ export default function ActorsList({
                   icon: <Download className="h-4 w-4" />,
                   variant: "primary" as const,
                   isPrimary: true,
-                  accept: ".csv,text/csv",
+                  accept: EXCEL_ACCEPT,
                   onFileChange: handleImport,
                 },
                 {

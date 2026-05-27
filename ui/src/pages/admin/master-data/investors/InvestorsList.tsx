@@ -27,7 +27,7 @@ import { Column } from "../../types";
 import { INVESTOR_ENTITY as ENTITY } from "../../entities";
 import InvestorFormDrawer from "./InvestorFormDrawer";
 import ArchivedInvestors from "./ArchivedInvestors";
-import { downloadCsvRows } from "../../fileTransfer";
+import { downloadCsvRows, EXCEL_ACCEPT, readImportTableAsCsvText } from "../../fileTransfer";
 
 const toFilterOptions = (values: string[], formatDisplay = true) =>
   values.map((value, index) => ({
@@ -221,7 +221,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const names = Array.from(
         new Set(
           text
@@ -394,7 +394,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               icon: <Download className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
-              accept: ".csv,text/csv",
+              accept: EXCEL_ACCEPT,
               onFileChange: importInvestors,
             },
             {

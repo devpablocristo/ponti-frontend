@@ -27,7 +27,7 @@ import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall"
 import { formatError } from "@/lib/format";
 import { notify } from "@/lib/notify";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
-import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildTimestampedFilename, downloadBlob, EXCEL_ACCEPT } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import { matchesSelectFilter } from "@/lib/tableFilters";
@@ -888,7 +888,7 @@ export function WorkOrders() {
       setImportDrawerOpen(true);
     } catch (error) {
       setErrorMessage(
-        formatError(error, { fallback: "No se pudo procesar el CSV. Verificá que el archivo tenga el formato correcto." }),
+        formatError(error, { fallback: "No se pudo procesar el Excel. Verificá que el archivo tenga el formato correcto." }),
       );
     } finally {
       setImportLoading(false);
@@ -931,7 +931,7 @@ export function WorkOrders() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            accept: ".csv,text/csv",
+            accept: EXCEL_ACCEPT,
             onFileChange: handleImport,
           },
           {
