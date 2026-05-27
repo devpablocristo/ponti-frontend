@@ -892,19 +892,21 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
   return (
     <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
       <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-3">
-        <h3 className="text-[1.05rem] font-semibold text-slate-950">Vista Integral</h3>
+        <h3 className="text-[1.05rem] font-semibold text-slate-950 dark:text-slate-100">
+          Vista Integral
+        </h3>
       </div>
       <ScrollableTable>
-        <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.78rem]">
+        <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.86rem]">
           <thead className="bg-slate-50 dark:bg-slate-900">
             <tr>
-              <th className="sticky left-0 z-sticky w-[220px] bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="sticky left-0 z-sticky w-[220px] bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Métrica
               </th>
               {data.columns.map((column) => (
                 <th key={column.id} className="min-w-[180px] px-4 py-3 text-center">
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                    <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                       {column.field_name}
                     </span>
                     <CropBadgeV2 cropName={column.crop_name} />
@@ -928,7 +930,7 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
                         className={
                           row.strong
                             ? "font-semibold tabular-nums"
-                            : "font-medium tabular-nums text-slate-700 dark:text-slate-200"
+                            : "font-medium tabular-nums"
                         }
                       >
                         {formatNumberAr(value)}
@@ -936,8 +938,8 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
                       <span
                         className={
                           row.key === "operating_result"
-                            ? "ml-1 text-[9px] text-white/60"
-                            : "ml-1 text-[9px] text-slate-400"
+                            ? "ml-1 text-[0.7rem] text-white/60 dark:text-slate-600"
+                            : "ml-1 text-[0.7rem] text-slate-500 dark:text-slate-400"
                         }
                       >
                         {row.unit}

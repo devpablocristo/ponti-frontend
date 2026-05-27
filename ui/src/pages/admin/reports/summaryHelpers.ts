@@ -90,15 +90,47 @@ export function cropIdFromUnknown(value: unknown): string {
 }
 
 export function integralMetricCellClass(row: IntegralRow, index: number) {
-  const base = "px-2 py-2 text-[8px] font-medium";
-  const alignment = index === 0 ? "text-left pl-3" : "text-right";
-  const strong = row.strong ? "text-slate-900 font-semibold" : "text-slate-600";
-  return `${base} ${alignment} ${strong}`;
+  const base = "px-4 py-3 text-[0.82rem] text-left font-medium";
+  const zebra =
+    index % 2 === 1 ? "bg-slate-50/60 dark:bg-slate-900/40" : "bg-white dark:bg-slate-800";
+  const highlighted =
+    row.key === "total_invested" || row.key === "operating_result" || row.key === "return_pct";
+  const highlight =
+    row.key === "total_invested"
+      ? "bg-rose-100 text-slate-950 dark:bg-rose-950/40 dark:text-rose-100"
+      : row.key === "operating_result"
+        ? "bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950"
+        : row.key === "return_pct"
+          ? "bg-rose-50 text-slate-950 dark:bg-rose-950/30 dark:text-rose-100"
+          : zebra;
+  const strong = row.strong ? "font-semibold" : "";
+  const text = highlighted
+    ? ""
+    : row.strong
+      ? "text-slate-900 dark:text-slate-100"
+      : "text-slate-600 dark:text-slate-300";
+  return `${base} ${highlight} ${strong} ${text}`;
 }
 
 export function integralValueCellClass(row: IntegralRow, index: number) {
-  const base = "px-2 py-2 text-[8px] tabular-nums";
-  const alignment = index === 0 ? "text-left pl-3" : "text-right";
-  const strong = row.strong ? "font-semibold text-slate-900" : "text-slate-700";
-  return `${base} ${alignment} ${strong}`;
+  const base = "px-4 py-3 text-center text-[0.82rem] tabular-nums";
+  const zebra =
+    index % 2 === 1 ? "bg-slate-50/60 dark:bg-slate-900/40" : "bg-white dark:bg-slate-800";
+  const highlighted =
+    row.key === "total_invested" || row.key === "operating_result" || row.key === "return_pct";
+  const highlight =
+    row.key === "total_invested"
+      ? "bg-rose-100 text-slate-950 dark:bg-rose-950/40 dark:text-rose-100"
+      : row.key === "operating_result"
+        ? "bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950"
+        : row.key === "return_pct"
+          ? "bg-rose-50 text-slate-950 dark:bg-rose-950/30 dark:text-rose-100"
+          : zebra;
+  const strong = row.strong ? "font-semibold" : "";
+  const text = highlighted
+    ? ""
+    : row.strong
+      ? "text-slate-900 dark:text-slate-100"
+      : "text-slate-700 dark:text-slate-200";
+  return `${base} ${highlight} ${strong} ${text}`;
 }
