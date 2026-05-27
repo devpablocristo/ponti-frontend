@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, MapPin, Plus, Upload } from "lucide-react";
 
-import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTransfer";
+import { buildTimestampedFilename, downloadExcelRows } from "../../fileTransfer";
 
 import { usePagination } from "@/lib/dataDisplay";
 import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
@@ -59,19 +59,13 @@ export default function FieldsList({
 }: FieldsListProps) {
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [contextMode, setContextMode] = useState<"current" | "all">(
-    hasPositiveId(contextFilters?.projectId) ? "current" : "all",
+    hasPositiveId(contextFilters?.projectId) ? "current" : "all"
   );
   const pagination = usePagination({ perPage: 25 });
   const [editorContext, setEditorContext] = useState<{
     initialProjectId: number | null;
   } | null>(null);
-  const {
-    fields,
-    processing,
-    error,
-    getFields,
-    archiveField,
-  } = useFields();
+  const { fields, processing, error, getFields, archiveField } = useFields();
 
   useEffect(() => {
     if (error) notify.error(error);
@@ -88,7 +82,7 @@ export default function FieldsList({
   // workspace se cargue, pero lo escondemos del filter bar.
   const filters = useMemo(
     () => allFilters.filter((f) => f.name !== "campo" && f.name !== "field"),
-    [allFilters],
+    [allFilters]
   );
 
   useEffect(() => {
@@ -141,7 +135,7 @@ export default function FieldsList({
 
   const selectedFieldIds = useMemo(
     () => new Set(selectionMode?.selectedIds ?? []),
-    [selectionMode?.selectedIds],
+    [selectionMode?.selectedIds]
   );
 
   const addSelectedFields = () => {
@@ -164,25 +158,24 @@ export default function FieldsList({
   }, [refresh]);
 
   const handleExport = useCallback(() => {
-    const header = ["Nombre", "Tipo de contrato"].join(",");
-    const rows = visibleFields.map((f) =>
-      [csvEscape(f.name), csvEscape(f.lease_type_name ?? "")].join(","),
-    );
-    const csv = [header, ...rows].join("\n");
-    downloadBlob(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      buildTimestampedFilename("campos", "csv"),
+    void downloadExcelRows(
+      buildTimestampedFilename("campos", "xlsx"),
+      visibleFields.map((field) => ({
+        Nombre: field.name,
+        "Tipo de contrato": field.lease_type_name ?? "",
+      })),
+      "Campos"
     );
   }, [visibleFields]);
 
   const selectColumn = useMemo<Column<Field>>(
     () => makeSelectColumn<Field>(bulk, (f) => f.name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const tableColumns = useMemo<Column<Field>[]>(
     () => [selectColumn, ...baseColumns],
-    [selectColumn],
+    [selectColumn]
   );
 
   return (

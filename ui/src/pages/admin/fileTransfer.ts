@@ -3,7 +3,7 @@ export const EXCEL_ACCEPT = `.xlsx,${EXCEL_MIME}`;
 
 export function buildTimestampedFilename(
   prefix: string,
-  extension: "csv",
+  extension: "xlsx",
   id?: number | string | null
 ) {
   const suffix = id == null ? "" : `_${id}`;
@@ -24,6 +24,13 @@ export function downloadBlob(blob: Blob, filename: string) {
 
 export function csvEscape(value: unknown) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function excelExportCellToValue(value: unknown): string | number | boolean | Date {
+  if (value == null) return "";
+  if (value instanceof Date) return value;
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  return String(value);
 }
 
 function excelCellToString(value: unknown): string {
@@ -86,12 +93,29 @@ export async function readImportTableAsCsvText(file: File): Promise<string> {
   return rows.map((row) => row.map(csvEscape).join(",")).join("\n");
 }
 
-export function downloadCsvRows(filename: string, rows: Record<string, unknown>[]) {
+export async function downloadExcelRows(
+  filename: string,
+  rows: Record<string, unknown>[],
+  sheetName = "Datos"
+) {
   const headers = Object.keys(rows[0] ?? {});
-  const csv = [
-    headers.join(","),
-    ...rows.map((row) => headers.map((header) => csvEscape(row[header])).join(",")),
-  ].join("\n");
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet(sheetName || "Datos");
 
-  downloadBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), filename);
+  if (headers.length > 0) {
+    sheet.addRow(headers);
+    rows.forEach((row) => {
+      sheet.addRow(headers.map((header) => excelExportCellToValue(row[header])));
+    });
+    sheet.columns.forEach((column) => {
+      column.width = Math.max(
+        12,
+        ...((column.values ?? []).map((value) => String(value ?? "").length + 2) as number[])
+      );
+    });
+  }
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  downloadBlob(new Blob([buffer], { type: EXCEL_MIME }), filename);
 }

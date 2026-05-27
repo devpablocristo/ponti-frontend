@@ -14,20 +14,15 @@ import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPan
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
-import useCampaigns, {
-  Campaign,
-  CampaignPayloadInput,
-} from "../../../../hooks/useCampaigns";
+import useCampaigns, { Campaign, CampaignPayloadInput } from "../../../../hooks/useCampaigns";
 import { Column } from "../../types";
 import { CAMPAIGN_ENTITY as ENTITY } from "../../entities";
 import CampaignFormDrawer from "./CampaignFormDrawer";
 import ArchivedCampaigns from "./ArchivedCampaigns";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTransfer";
+import { buildTimestampedFilename, downloadExcelRows } from "../../fileTransfer";
 
-const baseColumns: Column<Campaign>[] = [
-  { key: "name", header: "Nombre" },
-];
+const baseColumns: Column<Campaign>[] = [{ key: "name", header: "Nombre" }];
 
 type CampaignsListProps = {
   editorOnly?: boolean;
@@ -60,13 +55,10 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
   // "campaign" en el set forzado, así que lo descartamos en el render.
   const filters = useMemo(
     () => allFilters.filter((f) => f.name !== "campaña" && f.name !== "campaign"),
-    [allFilters],
+    [allFilters]
   );
 
-  const refresh = useCallback(
-    () => getCampaigns(""),
-    [getCampaigns],
-  );
+  const refresh = useCallback(() => getCampaigns(""), [getCampaigns]);
 
   // Client-side filter using the workspace selection. The workspace's
   // `campaigns` list is already scoped to the selected customer (one row per
@@ -77,7 +69,7 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
     const scopedIds = new Set(
       workspaceCampaigns
         .filter((c) => !selectedProject || c.project_id === selectedProject.id)
-        .map((c) => c.id),
+        .map((c) => c.id)
     );
     return campaigns.filter((c) => scopedIds.has(c.id));
   }, [campaigns, workspaceCampaigns, selectedCustomer, selectedProject]);
@@ -99,13 +91,10 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
   });
 
   const handleExport = useCallback(() => {
-    const csv = [
-      "Nombre",
-      ...campaigns.map((campaign) => csvEscape(campaign.name)),
-    ].join("\n");
-    downloadBlob(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      buildTimestampedFilename("campanias", "csv"),
+    void downloadExcelRows(
+      buildTimestampedFilename("campanias", "xlsx"),
+      campaigns.map((campaign) => ({ Nombre: campaign.name })),
+      "Campañas"
     );
   }, [campaigns]);
 
@@ -115,15 +104,12 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
 
   const selectColumn = useMemo<Column<Campaign>>(
     () => makeSelectColumn<Campaign>(bulk, (c) => c.name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const tableColumns = useMemo<Column<Campaign>[]>(
-    () => [
-      selectColumn,
-      ...baseColumns,
-    ],
-    [selectColumn],
+    () => [selectColumn, ...baseColumns],
+    [selectColumn]
   );
 
   return (
@@ -169,15 +155,17 @@ export default function CampaignsList({ editorOnly = false }: CampaignsListProps
                 ? "No hay campañas disponibles para editar."
                 : "Creá la primera para asociarla a tus proyectos."
             }
-            cta={!editorOnly ? (
-              <Button
-                variant="primary"
-                iconLeft={<Plus className="h-4 w-4" />}
-                onClick={drawer.openCreate}
-              >
-                Nueva campaña
-              </Button>
-            ) : undefined}
+            cta={
+              !editorOnly ? (
+                <Button
+                  variant="primary"
+                  iconLeft={<Plus className="h-4 w-4" />}
+                  onClick={drawer.openCreate}
+                >
+                  Nueva campaña
+                </Button>
+              ) : undefined
+            }
           />
         ) : (
           <>

@@ -3,10 +3,7 @@ import { Archive, Download, Plus, Upload } from "lucide-react";
 
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import {
-  useClientTableFilters,
-  usePagination,
-} from "@/lib/dataDisplay";
+import { useClientTableFilters, usePagination } from "@/lib/dataDisplay";
 import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
@@ -35,12 +32,7 @@ import {
 import { LABOR_ENTITY as ENTITY } from "../../entities";
 import ArchivedLabors from "./ArchivedLabors";
 import LaborsCatalog, { type Labor as LaborRow } from "./LaborsCatalog";
-import {
-  getValueByAliases,
-  LABOR_HEADER_ALIASES,
-  normalizeText,
-  parseCsv,
-} from "./importUtils";
+import { getValueByAliases, LABOR_HEADER_ALIASES, normalizeText, parseCsv } from "./importUtils";
 
 import { newLabor, renderPriceCell } from "./listHelpers";
 
@@ -90,16 +82,9 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     rows: safeLabors,
     onChange: resetPage,
   });
-  const safeCategories = useMemo(
-    () => (Array.isArray(categories) ? categories : []),
-    [categories]
-  );
+  const safeCategories = useMemo(() => (Array.isArray(categories) ? categories : []), [categories]);
 
-  const { filters, projectId } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-  ]);
+  const { filters, projectId } = useWorkspaceFilters(["customer", "project", "campaign"]);
 
   const refresh = useCallback(() => {
     if (projectId) getLabors(projectId);
@@ -132,7 +117,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
 
   const selectColumn = useMemo<Column<LaborInfo>>(
     () => makeSelectColumn<LaborInfo>(bulk, (l) => l.name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const columns = useMemo<Column<LaborInfo>[]>(
@@ -141,9 +126,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
       {
         key: "name",
         header: "Labor",
-        render: (value) => (
-          <strong className="text-blue-700">{String(value ?? "")}</strong>
-        ),
+        render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("name"),
       },
@@ -258,9 +241,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         return;
       }
 
-      const categoryByName = new Map(
-        safeCategories.map((c) => [normalizeText(c.name), c]),
-      );
+      const categoryByName = new Map(safeCategories.map((c) => [normalizeText(c.name), c]));
 
       const previewRows: LaborRow[] = [];
       parsedRows.forEach((rawRow) => {
@@ -276,10 +257,8 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         previewRows.push({
           id: previewRows.length,
           name,
-          category:
-            categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
-          price:
-            !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : priceRaw,
+          category: categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
+          price: !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : priceRaw,
           contractor,
           is_partial_price: false,
         });
@@ -308,7 +287,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("labores", "csv", projectId));
+      downloadBlob(response, buildTimestampedFilename("labores", "xlsx", projectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de labores.");
     }

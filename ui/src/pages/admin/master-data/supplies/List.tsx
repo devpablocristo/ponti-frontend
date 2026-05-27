@@ -5,11 +5,7 @@ import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
 import { usePagination } from "@/lib/dataDisplay";
 import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
-import {
-  Supply,
-  SupplyCreatePayload,
-  SuppliesMode,
-} from "../../../../hooks/useSupplies/types";
+import { Supply, SupplyCreatePayload, SuppliesMode } from "../../../../hooks/useSupplies/types";
 import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
 import InputField from "../../../../components/Input/InputField";
@@ -28,10 +24,7 @@ import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { SUPPLY_ENTITY as ENTITY } from "../../entities";
 import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
-import {
-  matchesSelectFilter,
-  matchesTextFilter,
-} from "@/lib/tableFilters";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 import ArchivedSupplies from "./ArchivedSupplies";
 import SuppliesCatalog from "./SuppliesCatalog";
 import { renderPriceCell, newSupply } from "./listHelpers";
@@ -77,20 +70,13 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
   const lastHandledResultUpdateRef = useRef<string>("");
   const closeModalOnNextUpdateRef = useRef(false);
 
-  const { filters, projectId } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-  ]);
+  const { filters, projectId } = useWorkspaceFilters(["customer", "project", "campaign"]);
 
   const refresh = useCallback(() => {
     if (projectId) getSupplies(projectId, suppliesMode);
   }, [projectId, suppliesMode, getSupplies]);
 
-  const safeSupplies = useMemo(
-    () => (Array.isArray(supplies) ? supplies : []),
-    [supplies],
-  );
+  const safeSupplies = useMemo(() => (Array.isArray(supplies) ? supplies : []), [supplies]);
 
   const handleEdit = useCallback((supplyItem: Supply) => {
     setItem(supplyItem);
@@ -187,7 +173,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
 
   const selectColumn = useMemo<Column<Supply>>(
     () => makeSelectColumn<Supply>(bulk, (s) => s.name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const columns = useMemo<Column<Supply>[]>(() => {
@@ -323,7 +309,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("insumosbd", "csv", projectId));
+      downloadBlob(response, buildTimestampedFilename("insumosbd", "xlsx", projectId));
     } catch {
       // error exporting products
     }
@@ -332,42 +318,45 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
   return (
     <div className="w-full mx-auto">
       {/* Orden canónico Datos Maestros: extras → Importar → Exportar → Archivados → Nuevo. */}
-      <AppFilterBar filters={filters} actions={[
-        {
-          label: "Importar",
-          icon: <Download className="h-4 w-4" />,
-          variant: "primary",
-          isPrimary: true,
-          disabled: !projectId,
-          onClick: () => setImportDrawerOpen(true),
-        },
-        {
-          label: "Exportar",
-          icon: <Upload className="h-4 w-4" />,
-          variant: "primary",
-          isPrimary: true,
-          disabled: !projectId,
-          onClick: () => handleExport(),
-        },
-        {
-          label: "Archivados",
-          icon: <Archive className="h-4 w-4" />,
-          variant: "primary",
-          isPrimary: true,
-          onClick: () => setArchivedDrawerOpen(true),
-        },
-        {
-          label: "Nuevo",
-          icon: <Plus className="h-4 w-4" />,
-          variant: "primary",
-          isPrimary: true,
-          disabled: !projectId,
-          onClick: () => {
-            setItem(newSupply());
-            setModalOpen(true);
+      <AppFilterBar
+        filters={filters}
+        actions={[
+          {
+            label: "Importar",
+            icon: <Download className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            disabled: !projectId,
+            onClick: () => setImportDrawerOpen(true),
           },
-        },
-      ]} />
+          {
+            label: "Exportar",
+            icon: <Upload className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            disabled: !projectId,
+            onClick: () => handleExport(),
+          },
+          {
+            label: "Archivados",
+            icon: <Archive className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            onClick: () => setArchivedDrawerOpen(true),
+          },
+          {
+            label: "Nuevo",
+            icon: <Plus className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            disabled: !projectId,
+            onClick: () => {
+              setItem(newSupply());
+              setModalOpen(true);
+            },
+          },
+        ]}
+      />
       <ArchivedDrawer
         open={archivedDrawerOpen}
         title="Insumos archivados"
@@ -435,9 +424,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
                   ? `Edicion de insumo ${item.name || ""}`
                   : "Nuevo insumo"
             }
-            submitLabel={
-              suppliesMode === "pending" ? "Completar" : "Guardar"
-            }
+            submitLabel={suppliesMode === "pending" ? "Completar" : "Guardar"}
             processing={processing}
             onSubmit={handleSave}
           >
@@ -506,11 +493,7 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
               <SelectField
                 label="Rubro"
                 name={`category-${item?.name || ""}`}
-                value={
-                  item?.category_id && item.category_id > 0
-                    ? item.category_id.toString()
-                    : ""
-                }
+                value={item?.category_id && item.category_id > 0 ? item.category_id.toString() : ""}
                 onChange={(e) => {
                   if (!item) return;
                   const category = parseInt(e.target.value);
@@ -535,7 +518,6 @@ export default function ListSupplies({ editorOnly = false }: ListSuppliesProps) 
                 }}
                 options={types}
               />
-
             </div>
           </EntityFormDrawer>
           <div className="flex items-center gap-2 mb-4">

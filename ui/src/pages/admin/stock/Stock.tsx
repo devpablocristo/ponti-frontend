@@ -24,20 +24,12 @@ import { getUnitName } from "../../../constants/units";
 import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import {
-  matchesSelectFilter,
-  matchesTextFilter,
-} from "@/lib/tableFilters";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 
 import { CloseStockDate } from "./_components/CloseStockDate";
 import { EditableCell } from "./_components/EditableCell";
 import { StockIndicators } from "./_components/StockIndicators";
-import {
-  MISSING_ENTRY_LABEL,
-  MULTIPLE_INVESTORS_LABEL,
-  getStockFilterValue,
-} from "./stockHelpers";
-
+import { MISSING_ENTRY_LABEL, MULTIPLE_INVESTORS_LABEL, getStockFilterValue } from "./stockHelpers";
 
 export function Stock() {
   const navigate = useNavigate();
@@ -47,9 +39,7 @@ export function Stock() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
-  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
-    null
-  );
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -84,8 +74,15 @@ export function Stock() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { projectId, filters, selectedCustomer, selectedCampaignId, selectedField, customers, hasWorkspaceSelection } =
-    useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+  const {
+    projectId,
+    filters,
+    selectedCustomer,
+    selectedCampaignId,
+    selectedField,
+    customers,
+    hasWorkspaceSelection,
+  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const {
     getStock,
@@ -129,10 +126,7 @@ export function Stock() {
   const refreshStock = useCallback(() => {
     if (!hasWorkspaceSelection) return;
 
-    getStock(
-      stockQuery,
-      period === "0" ? "" : stockPeriods[Number(period)]?.name || ""
-    );
+    getStock(stockQuery, period === "0" ? "" : stockPeriods[Number(period)]?.name || "");
   }, [getStock, hasWorkspaceSelection, period, stockPeriods, stockQuery]);
 
   const handleStockCreated = () => {
@@ -224,9 +218,7 @@ export function Stock() {
       })
     );
 
-    return [...new Set(filtered.map((i) => getStockFilterValue(i, key)))].filter(
-      Boolean
-    );
+    return [...new Set(filtered.map((i) => getStockFilterValue(i, key)))].filter(Boolean);
   }
 
   const columns: Column<GetStockItems>[] = useMemo(
@@ -240,11 +232,7 @@ export function Stock() {
         headerPadding: "xs",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "supply_name",
-          stockRows,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("supply_name", stockRows, columnsFilters),
         render: (value, item) => (
           <button
             type="button"
@@ -263,11 +251,7 @@ export function Stock() {
         headerPadding: "xs",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "class_type",
-          stockRows,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("class_type", stockRows, columnsFilters),
       },
       {
         key: "investor_name",
@@ -276,20 +260,14 @@ export function Stock() {
         padding: "xs",
         headerPadding: "xs",
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "investor_name",
-          stockRows,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("investor_name", stockRows, columnsFilters),
         render: (value, item) => {
           const investorName = String(value ?? "").trim();
 
           if (!investorName) {
             return (
               <span className="font-semibold text-red-600">
-                {item.has_multiple_investors
-                  ? MULTIPLE_INVESTORS_LABEL
-                  : MISSING_ENTRY_LABEL}
+                {item.has_multiple_investors ? MULTIPLE_INVESTORS_LABEL : MISSING_ENTRY_LABEL}
               </span>
             );
           }
@@ -303,15 +281,16 @@ export function Stock() {
         filterable: true,
         filterType: "select",
         headerPadding: "xs",
-        filterOptions: getFilterOptionsForColumn(
-          "entry_stock",
-          stockRows,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("entry_stock", stockRows, columnsFilters),
         header: "Ingresados",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
+          return (
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}{" "}
+              <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span>
+            </span>
+          );
         },
       },
       {
@@ -322,14 +301,15 @@ export function Stock() {
         headerPadding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
+          return (
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}{" "}
+              <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span>
+            </span>
+          );
         },
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "consumed",
-          stockRows,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("consumed", stockRows, columnsFilters),
       },
       {
         key: "stock_units",
@@ -339,14 +319,15 @@ export function Stock() {
         padding: "xs",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span></span>;
+          return (
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}{" "}
+              <span className="text-gray-900 dark:text-gray-100 font-bold text-xs">{unit}</span>
+            </span>
+          );
         },
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "stock_units",
-          stockRows,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("stock_units", stockRows, columnsFilters),
       },
       {
         key: "real_stock_units",
@@ -378,11 +359,7 @@ export function Stock() {
         filterType: "select",
         padding: "xs",
         headerPadding: "xs",
-        filterOptions: getFilterOptionsForColumn(
-          "stock_difference",
-          stockRows,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("stock_difference", stockRows, columnsFilters),
         header: "Diferencia",
         render: (diff) => {
           const value = normalizeNumber(diff);
@@ -416,8 +393,7 @@ export function Stock() {
                   borderColor: "rgba(16, 185, 129, 0.35)",
                 }}
               >
-                <Check className="w-3.5 h-3.5" />
-                +{formatNumberAr(Math.abs(value))}
+                <Check className="w-3.5 h-3.5" />+{formatNumberAr(Math.abs(value))}
               </span>
             );
           }
@@ -436,11 +412,7 @@ export function Stock() {
         filterType: "select",
         padding: "xs",
         headerPadding: "xs",
-        filterOptions: getFilterOptionsForColumn(
-          "close_date",
-          stockRows,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("close_date", stockRows, columnsFilters),
         header: "Fecha de cierre",
         render: (dateString) => {
           if (!dateString) return " - ";
@@ -457,7 +429,11 @@ export function Stock() {
         padding: "xs",
         headerPadding: "xs",
         filterable: false,
-        render: (value) => <span className="font-bold text-gray-900 dark:text-gray-100">u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}</span>,
+        render: (value) => (
+          <span className="font-bold text-gray-900 dark:text-gray-100">
+            u$ {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}
+          </span>
+        ),
       },
       {
         key: "total_usd",
@@ -564,13 +540,11 @@ export function Stock() {
     try {
       setWarningMessage(null);
       setExportErrorMessage(null);
-      const response = await apiClient.get<Blob>(
-        `/stock/export/${projectId}`,
-        undefined,
-        { responseType: "blob" }
-      );
+      const response = await apiClient.get<Blob>(`/stock/export/${projectId}`, undefined, {
+        responseType: "blob",
+      });
 
-      downloadBlob(response, buildTimestampedFilename("stock", "csv", projectId));
+      downloadBlob(response, buildTimestampedFilename("stock", "xlsx", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el stock.");
     }
@@ -604,7 +578,7 @@ export function Stock() {
                 { projectId },
                 ["project"],
                 "crear",
-                "un ingreso de stock",
+                "un ingreso de stock"
               );
               if (warning) {
                 setWarningMessage(warning);
@@ -675,15 +649,15 @@ export function Stock() {
           />
         )}
         <BaseModal
-  isOpen={stockValidationModal !== null}
-  onClose={() => setStockValidationModal(null)}
-  title={stockValidationModal?.title ?? ""}
-  message={stockValidationModal?.message ?? ""}
-  primaryButtonText="Cerrar"
-  secondaryButtonText={null}
-  primaryButtonColor="bg-blue-600 hover:bg-blue-800 focus:ring-blue-300"
-  onPrimaryAction={() => setStockValidationModal(null)}
-/>
+          isOpen={stockValidationModal !== null}
+          onClose={() => setStockValidationModal(null)}
+          title={stockValidationModal?.title ?? ""}
+          message={stockValidationModal?.message ?? ""}
+          primaryButtonText="Cerrar"
+          secondaryButtonText={null}
+          primaryButtonColor="bg-blue-600 hover:bg-blue-800 focus:ring-blue-300"
+          onPrimaryAction={() => setStockValidationModal(null)}
+        />
         <BaseModal
           isOpen={isModalOpen}
           onClose={() => {

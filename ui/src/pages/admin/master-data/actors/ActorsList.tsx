@@ -7,10 +7,7 @@ import { usePagination } from "@/lib/dataDisplay";
 import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
-import {
-  AppFilterBar,
-  FilterOption,
-} from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar, FilterOption } from "../../../../components/filters/AppFilterBar";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
@@ -34,7 +31,12 @@ import useManagers from "../../../../hooks/useManagers";
 import { Column } from "../../types";
 import ActorFormDrawer from "./ActorFormDrawer";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
-import { downloadCsvRows, EXCEL_ACCEPT, readImportTableAsCsvText } from "../../fileTransfer";
+import {
+  buildTimestampedFilename,
+  downloadExcelRows,
+  EXCEL_ACCEPT,
+  readImportTableAsCsvText,
+} from "../../fileTransfer";
 import ArchivedActorsByRole from "./ArchivedActorsByRole";
 import type { ActorListFilters } from "./ArchivedActors";
 import {
@@ -234,7 +236,7 @@ export default function ActorsList({
   const [duplicatesDrawerOpen, setDuplicatesDrawerOpen] = useState(false);
   const hasContextFilters = hasActorContextFilters(contextFilters);
   const [contextMode, setContextMode] = useState<"current" | "all">(
-    hasContextFilters ? "current" : "all",
+    hasContextFilters ? "current" : "all"
   );
   const [projectDetails, setProjectDetails] = useState<Record<number, Project>>({});
   const [loadingContextDetails, setLoadingContextDetails] = useState(false);
@@ -310,16 +312,13 @@ export default function ActorsList({
     });
   }, [actors, selectedKind, selectedRole]);
 
-  const roleContextMatch = useMemo(
-    () => {
-      if (!contextFilters) return null;
-      if (selectedRole === "inversor") {
-        return buildInvestorContextMatch(investors, projects, projectDetails, contextFilters);
-      }
-      return buildResponsibleContextMatch(managers, projects, projectDetails, contextFilters);
-    },
-    [contextFilters, investors, managers, projectDetails, projects, selectedRole],
-  );
+  const roleContextMatch = useMemo(() => {
+    if (!contextFilters) return null;
+    if (selectedRole === "inversor") {
+      return buildInvestorContextMatch(investors, projects, projectDetails, contextFilters);
+    }
+    return buildResponsibleContextMatch(managers, projects, projectDetails, contextFilters);
+  }, [contextFilters, investors, managers, projectDetails, projects, selectedRole]);
 
   const visibleRows = useMemo(() => {
     if (!embedded || contextMode !== "current" || !roleContextMatch || !hasContextFilters) {
@@ -330,7 +329,7 @@ export default function ActorsList({
 
   const selectedActorIdSet = useMemo(
     () => new Set(selectionMode?.selectedActorIds ?? []),
-    [selectionMode?.selectedActorIds],
+    [selectionMode?.selectedActorIds]
   );
 
   const actorListFilters = useMemo<ActorListFilters>(
@@ -338,7 +337,7 @@ export default function ActorsList({
       role: selectedRole,
       kind: selectedKind,
     }),
-    [selectedKind, selectedRole],
+    [selectedKind, selectedRole]
   );
 
   const handleImport = useCallback(
@@ -357,8 +356,8 @@ export default function ActorsList({
   );
 
   const handleExport = useCallback(() => {
-    downloadCsvRows(
-      `actores_${new Date().toISOString()}.csv`,
+    void downloadExcelRows(
+      buildTimestampedFilename("actores", "xlsx"),
       visibleRows.map((actor) => ({
         Actor: actor.display_name,
         Tipo: kindLabel(actor.actor_kind),
@@ -370,13 +369,14 @@ export default function ActorsList({
         Aliases: actor.aliases?.map((alias) => alias.alias).join(" | ") ?? "",
         Email: actor.primary_email ?? "",
         Telefono: actor.primary_phone ?? "",
-      }))
+      })),
+      "Actores"
     );
   }, [visibleRows]);
 
   const actorArchiveRelations = useMemo(
     () => buildActorArchiveRelations({ customers, managers, investors }),
-    [customers, investors, managers],
+    [customers, investors, managers]
   );
 
   const archiveActorRow = useCallback(
@@ -400,23 +400,13 @@ export default function ActorsList({
           return;
       }
     },
-    [
-      actorArchiveRelations,
-      archiveActor,
-      archiveCustomer,
-      archiveInvestor,
-      archiveManager,
-      rows,
-    ],
+    [actorArchiveRelations, archiveActor, archiveCustomer, archiveInvestor, archiveManager, rows]
   );
 
-  const bulkEntity = useMemo(
-    () => getActorBulkEntity(selectedRole),
-    [selectedRole],
-  );
+  const bulkEntity = useMemo(() => getActorBulkEntity(selectedRole), [selectedRole]);
   const defaultActorFormRoles = useMemo<ActorRole[]>(
     () => (selectedRole ? [selectedRole] : []),
-    [selectedRole],
+    [selectedRole]
   );
 
   const bulk = useBulkActions<Actor>({
@@ -452,7 +442,7 @@ export default function ActorsList({
       missingProjects.map(async (project) => {
         const response = await apiClient.get<SuccessResponse<Project>>(`/projects/${project.id}`);
         return [project.id, response.data] as const;
-      }),
+      })
     )
       .then((entries) => {
         if (cancelled) return;
@@ -489,14 +479,14 @@ export default function ActorsList({
     if (bulk.selectedItems.length === 0) {
       notify.warning(
         selectionMode.emptySelectionMessage ??
-          `Seleccioná al menos un ${selectionMode.entityLabel ?? "actor"}.`,
+          `Seleccioná al menos un ${selectionMode.entityLabel ?? "actor"}.`
       );
       return;
     }
     if (actorsToAdd.length === 0) {
       notify.info(
         selectionMode.duplicateMessage ??
-          "Los actores seleccionados ya están cargados en el proyecto.",
+          "Los actores seleccionados ya están cargados en el proyecto."
       );
       return;
     }
@@ -508,9 +498,7 @@ export default function ActorsList({
   return (
     <div className={embedded ? "relative" : "relative"}>
       <LoadingOverlay
-        show={
-          (processing || projectsProcessing || loadingContextDetails) && visibleRows.length > 0
-        }
+        show={(processing || projectsProcessing || loadingContextDetails) && visibleRows.length > 0}
       />
 
       <AppFilterBar
@@ -588,7 +576,8 @@ export default function ActorsList({
                   ? [
                       {
                         label: "Proyecto Actual",
-                        variant: contextMode === "current" ? ("light" as const) : ("primary" as const),
+                        variant:
+                          contextMode === "current" ? ("light" as const) : ("primary" as const),
                         isPrimary: true,
                         onClick: () => setContextMode("current"),
                       },

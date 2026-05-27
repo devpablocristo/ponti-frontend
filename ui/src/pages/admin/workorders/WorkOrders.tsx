@@ -32,10 +32,7 @@ import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import { matchesSelectFilter } from "@/lib/tableFilters";
 import ArchivedWorkOrders from "../master-data/work-orders/ArchivedWorkOrders";
-import {
-  parseAndResolveWorkOrdersCsv,
-  WorkOrderPreviewRow,
-} from "./importWorkOrders";
+import { parseAndResolveWorkOrdersCsv, WorkOrderPreviewRow } from "./importWorkOrders";
 import ImportWorkOrdersPreview from "./ImportWorkOrdersPreview";
 import { OrdersHeader } from "./_components/OrdersHeader";
 import { OrdersIndicators } from "./_components/OrdersIndicators";
@@ -76,8 +73,7 @@ export function WorkOrders() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [drawerUpdateOpen, setDrawerUpdateOpen] = useState(false);
-  const [orderToDuplicate, setOrderToDuplicate] =
-    useState<WorkorderData | null>(null);
+  const [orderToDuplicate, setOrderToDuplicate] = useState<WorkorderData | null>(null);
 
   // Drawer del preview/editor del import. El flujo: clic Importar → parseamos
   // el CSV y resolvemos nombres → abrimos este drawer con las filas detectadas
@@ -101,10 +97,7 @@ export function WorkOrders() {
     error,
   } = useOrders();
 
-  const safeOrders = useMemo(
-    () => (Array.isArray(orders) ? orders : []),
-    [orders],
-  );
+  const safeOrders = useMemo(() => (Array.isArray(orders) ? orders : []), [orders]);
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
@@ -117,53 +110,45 @@ export function WorkOrders() {
   );
 
   // Helper: filtra las órdenes según todos los filtros activos
-  const filterOrders = useCallback(
-    (data: OrdersData[], filters: Record<string, unknown>) => {
-      return data.filter((order) => {
-        return Object.entries(filters).every(([key, value]) => {
-          if (!value || (Array.isArray(value) && value.length === 0)) return true;
+  const filterOrders = useCallback((data: OrdersData[], filters: Record<string, unknown>) => {
+    return data.filter((order) => {
+      return Object.entries(filters).every(([key, value]) => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-          if (key === "date") {
-            const orderDate = normalizeDate(String(order.date));
-            if (Array.isArray(value)) {
-              return value.some((v) => orderDate === normalizeDate(String(v)));
-            }
-            return orderDate === normalizeDate(String(value));
+        if (key === "date") {
+          const orderDate = normalizeDate(String(order.date));
+          if (Array.isArray(value)) {
+            return value.some((v) => orderDate === normalizeDate(String(v)));
           }
+          return orderDate === normalizeDate(String(value));
+        }
 
-          if (key === "status") {
-            const normalizedStatus = mapStatusFilterLabelToApi(String(order.status));
-
-            if (Array.isArray(value)) {
-              return value.some(
-                (v) => normalizedStatus === mapStatusFilterLabelToApi(String(v))
-              );
-            }
-
-            return normalizedStatus === mapStatusFilterLabelToApi(String(value));
-          }
-
-          const orderValRaw = order[key as keyof OrdersData];
+        if (key === "status") {
+          const normalizedStatus = mapStatusFilterLabelToApi(String(order.status));
 
           if (Array.isArray(value)) {
-            return matchesSelectFilter(orderValRaw, value);
+            return value.some((v) => normalizedStatus === mapStatusFilterLabelToApi(String(v)));
           }
 
-          return matchesSelectFilter(orderValRaw, [value]);
-        });
+          return normalizedStatus === mapStatusFilterLabelToApi(String(value));
+        }
+
+        const orderValRaw = order[key as keyof OrdersData];
+
+        if (Array.isArray(value)) {
+          return matchesSelectFilter(orderValRaw, value);
+        }
+
+        return matchesSelectFilter(orderValRaw, [value]);
       });
-    },
-    []
-  );
+    });
+  }, []);
 
   // Helper: obtiene las opciones válidas para una columna
   const getFilterOptionsForColumn = useCallback(
     (
       key: keyof OrdersData,
-      customSort?: (
-        a: OrdersData[keyof OrdersData],
-        b: OrdersData[keyof OrdersData]
-      ) => number
+      customSort?: (a: OrdersData[keyof OrdersData], b: OrdersData[keyof OrdersData]) => number
     ) => {
       const filtersExceptCurrent = { ...columnsFilters };
       delete filtersExceptCurrent[key];
@@ -272,8 +257,9 @@ export function WorkOrders() {
           const cropName = String(crop);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-                }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${
+                cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
             >
               {cropName}
             </span>
@@ -290,8 +276,9 @@ export function WorkOrders() {
           const laborName = String(labor);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-                }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${
+                laborColors[laborName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
             >
               {laborName}
             </span>
@@ -319,7 +306,10 @@ export function WorkOrders() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("surface_ha"),
         render: (value) => (
-          <span className="font-semibold text-gray-900 dark:text-gray-100">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 dark:text-gray-100 font-normal text-xs">Has</span></span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100">
+            {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}{" "}
+            <span className="text-gray-900 dark:text-gray-100 font-normal text-xs">Has</span>
+          </span>
         ),
       },
       {
@@ -335,7 +325,9 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("consumption"),
-        render: (value) => <span className="font-bold text-gray-900 dark:text-gray-100">{String(value)}</span>,
+        render: (value) => (
+          <span className="font-bold text-gray-900 dark:text-gray-100">{String(value)}</span>
+        ),
       },
       {
         key: "category_name",
@@ -350,7 +342,9 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("dose"),
-        render: (value) => <span className="font-bold text-gray-900 dark:text-gray-100">{String(value)}</span>
+        render: (value) => (
+          <span className="font-bold text-gray-900 dark:text-gray-100">{String(value)}</span>
+        ),
       },
       {
         key: "cost_per_ha",
@@ -360,7 +354,11 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("cost_per_ha"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return (
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
+            </span>
+          );
         },
       },
       {
@@ -371,7 +369,11 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("unit_price"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return (
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
+            </span>
+          );
         },
       },
       {
@@ -382,28 +384,24 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("total_cost"),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return (
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
+            </span>
+          );
         },
       },
     ];
-  }, [
-    getFilterOptionsForColumn,
-    handleOpenOrder,
-  ]);
+  }, [getFilterOptionsForColumn, handleOpenOrder]);
 
   const allColumns = useMemo(
     () =>
       Array.from(
-        new Map<keyof OrdersData, Column<OrdersData>>(
-          columns.map((col) => [col.key, col])
-        ).values()
+        new Map<keyof OrdersData, Column<OrdersData>>(columns.map((col) => [col.key, col])).values()
       ),
     [columns]
   );
-  const allColumnKeys = useMemo(
-    () => allColumns.map((col) => col.key),
-    [allColumns]
-  );
+  const allColumnKeys = useMemo(() => allColumns.map((col) => col.key), [allColumns]);
   const latestAllColumnKeysRef = useRef(allColumnKeys);
 
   useEffect(() => {
@@ -464,7 +462,13 @@ export function WorkOrders() {
       fieldId: selectedField?.id,
       extra: { supply_id: selectedSupplyFilter.id },
     });
-  }, [effectiveProjectId, selectedCampaignId, selectedCustomer, selectedField, selectedSupplyFilter.id]);
+  }, [
+    effectiveProjectId,
+    selectedCampaignId,
+    selectedCustomer,
+    selectedField,
+    selectedSupplyFilter.id,
+  ]);
 
   const workOrdersQuery = useMemo(() => {
     const params = new URLSearchParams(workOrdersBaseQuery);
@@ -475,7 +479,6 @@ export function WorkOrders() {
 
   const workOrdersFilterDatasetQuery = workOrdersBaseQuery;
 
-
   const handleOrderCreated = useCallback(() => {
     if (!effectiveHasWorkspaceSelection) return;
 
@@ -484,7 +487,6 @@ export function WorkOrders() {
     getMetrics(workOrdersQuery);
     setFilterDatasetVersion((version) => version + 1);
   }, [effectiveHasWorkspaceSelection, getOrders, getMetrics, resetPage, workOrdersQuery]);
-
 
   async function handlePublishOrder(order: OrdersData) {
     if (!isDigitalOrder(order) || order.status !== "draft") return;
@@ -497,10 +499,7 @@ export function WorkOrders() {
       handleOrderCreated();
     } catch (error) {
       const status = extractErrorStatus(error);
-      const rawMessage = extractErrorMessage(
-        error,
-        "No se pudo publicar la orden digital."
-      );
+      const rawMessage = extractErrorMessage(error, "No se pudo publicar la orden digital.");
       const message = translatePendingSupplyPublishError(rawMessage);
 
       if (isPendingSupplyPublishError(message)) {
@@ -554,7 +553,7 @@ export function WorkOrders() {
   function handlePrePublish(order: OrdersData) {
     setModalConfig({
       title: "Confirmar publicación",
-            message:
+      message:
         `¿Está seguro que desea publicar la orden ${order.number}?\n\n` +
         "Si la orden contiene insumos pendientes de completar, la publicación será bloqueada.",
       primaryButtonText: "Sí, Publicar",
@@ -571,7 +570,7 @@ export function WorkOrders() {
     message: "",
     primaryButtonText: "",
     secondaryButtonText: "Cancelar",
-    onConfirm: () => { },
+    onConfirm: () => {},
   });
 
   useEffect(() => {
@@ -598,9 +597,7 @@ export function WorkOrders() {
       const validData = globalFilterSourceOrders.filter((o) => {
         const orderValue = String(o[parent as keyof OrdersData]).toLowerCase();
         if (Array.isArray(parentFilter)) {
-          return parentFilter.some(
-            (val) => String(val).toLowerCase() === orderValue
-          );
+          return parentFilter.some((val) => String(val).toLowerCase() === orderValue);
         } else {
           return orderValue === String(parentFilter).toLowerCase();
         }
@@ -614,9 +611,7 @@ export function WorkOrders() {
         const childFilter = columnsFilters[child];
         if (childFilter) {
           if (Array.isArray(childFilter)) {
-            const validChildValues = childFilter.filter((val) =>
-              validValues.has(val)
-            );
+            const validChildValues = childFilter.filter((val) => validValues.has(val));
             if (validChildValues.length !== childFilter.length) {
               setColumnsFilters((prev) => {
                 const updated = { ...prev };
@@ -642,15 +637,20 @@ export function WorkOrders() {
     });
   }, [columnsFilters, globalFilterSourceOrders]);
 
-
-
   useEffect(() => {
     setVisibleColumns(latestAllColumnKeysRef.current);
     setColumnsFilters({});
     setFilterDatasetOrders([]);
     setFilterDatasetReady(false);
     resetPage();
-  }, [effectiveProjectId, selectedField, selectedCampaignId, selectedCustomer?.id, selectedSupplyFilter.id, resetPage]);
+  }, [
+    effectiveProjectId,
+    selectedField,
+    selectedCampaignId,
+    selectedCustomer?.id,
+    selectedSupplyFilter.id,
+    resetPage,
+  ]);
 
   useEffect(() => {
     setWarningMessage("");
@@ -659,12 +659,7 @@ export function WorkOrders() {
 
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
-  }, [
-    effectiveHasWorkspaceSelection,
-    workOrdersQuery,
-    getOrders,
-    getMetrics,
-  ]);
+  }, [effectiveHasWorkspaceSelection, workOrdersQuery, getOrders, getMetrics]);
 
   useEffect(() => {
     let active = true;
@@ -677,11 +672,10 @@ export function WorkOrders() {
       };
     }
 
-    const querySuffix = workOrdersFilterDatasetQuery
-      ? `?${workOrdersFilterDatasetQuery}`
-      : "";
+    const querySuffix = workOrdersFilterDatasetQuery ? `?${workOrdersFilterDatasetQuery}` : "";
 
-    apiClient.get<WorkOrdersListResponse>(`/work-orders/filter-rows${querySuffix}`)
+    apiClient
+      .get<WorkOrdersListResponse>(`/work-orders/filter-rows${querySuffix}`)
       .then((response) => {
         if (!active) return;
         setFilterDatasetOrders(Array.isArray(response.data?.rows) ? response.data.rows : []);
@@ -694,18 +688,14 @@ export function WorkOrders() {
         setErrorMessage(
           formatError(error, {
             fallback: "No se pudieron cargar las opciones de filtros.",
-          }),
+          })
         );
       });
 
     return () => {
       active = false;
     };
-  }, [
-    effectiveHasWorkspaceSelection,
-    workOrdersFilterDatasetQuery,
-    filterDatasetVersion,
-  ]);
+  }, [effectiveHasWorkspaceSelection, workOrdersFilterDatasetQuery, filterDatasetVersion]);
 
   const handleOrderDuplicated = (order: WorkorderData) => {
     setSelectedOrderRow(null);
@@ -732,9 +722,7 @@ export function WorkOrders() {
         if (key === "status") {
           const normalizedStatus = mapStatusFilterLabelToApi(String(order.status));
           if (Array.isArray(value)) {
-            return value.some(
-              (v) => normalizedStatus === mapStatusFilterLabelToApi(String(v))
-            );
+            return value.some((v) => normalizedStatus === mapStatusFilterLabelToApi(String(v)));
           }
           return normalizedStatus === mapStatusFilterLabelToApi(String(value));
         }
@@ -750,7 +738,10 @@ export function WorkOrders() {
 
   const derivedMetrics: Metrics = useMemo(() => {
     const toNum = (v: unknown) => Number(v) || 0;
-    let surface_ha = 0, liters = 0, kilograms = 0, direct_cost = 0;
+    let surface_ha = 0,
+      liters = 0,
+      kilograms = 0,
+      direct_cost = 0;
 
     filteredOrders.forEach((order) => {
       surface_ha += toNum(order.surface_ha);
@@ -775,7 +766,7 @@ export function WorkOrders() {
   }, [filteredOrders]);
 
   const hasColumnFilters = useMemo(
-    () => Object.values(columnsFilters).some((v) => Array.isArray(v) ? v.length > 0 : !!v),
+    () => Object.values(columnsFilters).some((v) => (Array.isArray(v) ? v.length > 0 : !!v)),
     [columnsFilters]
   );
 
@@ -799,18 +790,16 @@ export function WorkOrders() {
   const displayedRowsTotal = !effectiveHasWorkspaceSelection
     ? 0
     : hasColumnFilters
-    ? filteredOrders.length
-    : pageInfo?.total ?? safeOrders.length;
+      ? filteredOrders.length
+      : (pageInfo?.total ?? safeOrders.length);
   const displayedOrdersCount = !effectiveHasWorkspaceSelection
     ? 0
     : hasColumnFilters
-    ? derivedMetrics.orders_count
-    : Number(metrics.orders_count) ||
-      countUniqueOrderBaseNumbers(
-        filterDatasetReady && filterDatasetOrders.length > 0
-          ? filterDatasetOrders
-          : safeOrders
-      );
+      ? derivedMetrics.orders_count
+      : Number(metrics.orders_count) ||
+        countUniqueOrderBaseNumbers(
+          filterDatasetReady && filterDatasetOrders.length > 0 ? filterDatasetOrders : safeOrders
+        );
 
   // El bulk opera sobre TODAS las filas del workspace (post filtros por columna),
   // no sobre la página visible. Así "Seleccionar todo" marca las 212 filas y no
@@ -826,12 +815,12 @@ export function WorkOrders() {
 
   const selectColumn = useMemo<Column<OrdersData>>(
     () => makeSelectColumn<OrdersData>(bulk, (order) => order.number, WORKORDER_ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const visibleColumnsWithSelection = useMemo(
     () => [selectColumn, ...columnsToShow],
-    [columnsToShow, selectColumn],
+    [columnsToShow, selectColumn]
   );
 
   const handleExport = async () => {
@@ -848,7 +837,7 @@ export function WorkOrders() {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("ordenes", "csv", effectiveProjectId));
+      downloadBlob(response, buildTimestampedFilename("ordenes", "xlsx", effectiveProjectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de órdenes.");
     }
@@ -888,17 +877,17 @@ export function WorkOrders() {
       setImportDrawerOpen(true);
     } catch (error) {
       setErrorMessage(
-        formatError(error, { fallback: "No se pudo procesar el Excel. Verificá que el archivo tenga el formato correcto." }),
+        formatError(error, {
+          fallback:
+            "No se pudo procesar el Excel. Verificá que el archivo tenga el formato correcto.",
+        })
       );
     } finally {
       setImportLoading(false);
     }
   };
 
-  const handleImportCompleted = (result: {
-    imported: number;
-    errors: string[];
-  }) => {
+  const handleImportCompleted = (result: { imported: number; errors: string[] }) => {
     setImportDrawerOpen(false);
     setImportRows([]);
     setImportGlobalErrors([]);
@@ -907,7 +896,7 @@ export function WorkOrders() {
       setSuccessMessage(
         result.errors.length
           ? `Se importaron ${result.imported} órdenes. Se omitieron ${result.errors.length} filas.`
-          : `Se importaron ${result.imported} órdenes correctamente.`,
+          : `Se importaron ${result.imported} órdenes correctamente.`
       );
       handleOrderCreated();
     }
@@ -958,7 +947,7 @@ export function WorkOrders() {
                 { projectId: effectiveProjectId },
                 ["project"],
                 "crear",
-                "una orden",
+                "una orden"
               );
               if (warning) {
                 setWarningMessage(warning);
@@ -971,15 +960,18 @@ export function WorkOrders() {
           },
         ]}
       />
-      {effectiveHasWorkspaceSelection && !processing && !errorMetrics && displayedOrders.length > 0 && (
-        <div className="my-3">
-          <OrdersIndicators
-            metrics={displayedMetrics}
-            processing={processingMetrics}
-            ordersAmount={displayedOrdersCount}
-          />
-        </div>
-      )}
+      {effectiveHasWorkspaceSelection &&
+        !processing &&
+        !errorMetrics &&
+        displayedOrders.length > 0 && (
+          <div className="my-3">
+            <OrdersIndicators
+              metrics={displayedMetrics}
+              processing={processingMetrics}
+              ordersAmount={displayedOrdersCount}
+            />
+          </div>
+        )}
       <div className="mt-3 relative">
         <LoadingOverlay show={isProcessing && displayedOrders.length > 0} />
         {selectedProject && (
@@ -1029,7 +1021,9 @@ export function WorkOrders() {
               <div className="flex items-center justify-between gap-3">
                 <span>
                   Filtrando órdenes que consumen:{" "}
-                  <strong>{selectedSupplyFilter.name || `Insumo ${selectedSupplyFilter.id}`}</strong>
+                  <strong>
+                    {selectedSupplyFilter.name || `Insumo ${selectedSupplyFilter.id}`}
+                  </strong>
                 </span>
                 <button
                   type="button"
@@ -1104,10 +1098,9 @@ export function WorkOrders() {
                 />
               }
               message="Todavía no hay órdenes de trabajo con los filtros actuales."
-              pagination={pagination.buildPagination(
-                displayedRowsTotal,
-                { serverSide: !hasColumnFilters }
-              )}
+              pagination={pagination.buildPagination(displayedRowsTotal, {
+                serverSide: !hasColumnFilters,
+              })}
             />
           </>
         )}

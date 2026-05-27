@@ -33,11 +33,7 @@ import { buildTimestampedFilename, downloadBlob, EXCEL_ACCEPT } from "../fileTra
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedLots from "../master-data/lots/ArchivedLots";
-import {
-  parseAndResolveLotsCsv,
-  LotPreviewRow,
-  ImportLotsResult,
-} from "./importLots";
+import { parseAndResolveLotsCsv, LotPreviewRow, ImportLotsResult } from "./importLots";
 import ImportLotsPreview from "./ImportLotsPreview";
 import { notify } from "@/lib/notify";
 
@@ -73,9 +69,7 @@ function Lots() {
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
   const [importRows, setImportRows] = useState<LotPreviewRow[]>([]);
   const [importGlobalErrors, setImportGlobalErrors] = useState<string[]>([]);
-  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>(
-    {}
-  );
+  const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
 
   const {
     getLots,
@@ -95,7 +89,6 @@ function Lots() {
   useEffect(() => {
     if (error) notify.error(error);
   }, [error]);
-
 
   const {
     selectedCustomer,
@@ -143,8 +136,7 @@ function Lots() {
   );
 
   const getFilterOptionsForColumn = useCallback(
-    (columnKey: keyof LotsData) =>
-      getLotFilterOptions(lots, columnsFilters, columnKey),
+    (columnKey: keyof LotsData) => getLotFilterOptions(lots, columnsFilters, columnKey),
     [columnsFilters, lots]
   );
 
@@ -161,18 +153,16 @@ function Lots() {
     () =>
       Array.from(
         new Map<keyof LotsData, Column<LotsData>>(
-          [...columns, ...harvestColumns, ...commercializationColumns].map(
-            (column) => [column.key, column]
-          )
+          [...columns, ...harvestColumns, ...commercializationColumns].map((column) => [
+            column.key,
+            column,
+          ])
         ).values()
       ),
     [columns, commercializationColumns, harvestColumns]
   );
 
-  const defaultColumnKeys = useMemo(
-    () => columns.map((column) => column.key),
-    [columns]
-  );
+  const defaultColumnKeys = useMemo(() => columns.map((column) => column.key), [columns]);
   const defaultColumnKeysRef = useRef(defaultColumnKeys);
   const [selectedColumns, setSelectedColumns] = useState<Array<keyof LotsData>>(
     () => defaultColumnKeys
@@ -198,24 +188,12 @@ function Lots() {
   useEffect(() => {
     setColumnsFilters({});
     resetPage();
-  }, [
-    projectId,
-    resetPage,
-    selectedCampaignId,
-    selectedCustomer,
-    selectedFieldId,
-  ]);
+  }, [projectId, resetPage, selectedCampaignId, selectedCustomer, selectedFieldId]);
 
   useEffect(() => {
     setMessage("");
     reloadFromFirstPage();
-  }, [
-    projectId,
-    reloadFromFirstPage,
-    selectedCampaignId,
-    selectedCustomer,
-    selectedFieldId,
-  ]);
+  }, [projectId, reloadFromFirstPage, selectedCampaignId, selectedCustomer, selectedFieldId]);
 
   useEffect(() => {
     if (!result) return;
@@ -228,14 +206,8 @@ function Lots() {
     [columnsFilters, hasWorkspaceSelection, lots]
   );
 
-  const calculatedKpis = useMemo(
-    () => calculateLotIndicators(filteredLots),
-    [filteredLots]
-  );
-  const hasColumnFilters = useMemo(
-    () => hasActiveLotFilters(columnsFilters),
-    [columnsFilters]
-  );
+  const calculatedKpis = useMemo(() => calculateLotIndicators(filteredLots), [filteredLots]);
+  const hasColumnFilters = useMemo(() => hasActiveLotFilters(columnsFilters), [columnsFilters]);
   const indicators = useMemo(
     () =>
       hasWorkspaceSelection
@@ -264,14 +236,11 @@ function Lots() {
 
   const selectColumn = useMemo<Column<LotsData>>(
     () => makeSelectColumn<LotsData>(bulk, (l) => l.lot_name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const columnsToShow = useMemo(
-    () => [
-      selectColumn,
-      ...allColumns.filter((column) => visibleColumns.includes(column.key)),
-    ],
+    () => [selectColumn, ...allColumns.filter((column) => visibleColumns.includes(column.key))],
     [allColumns, selectColumn, visibleColumns]
   );
 
@@ -285,7 +254,7 @@ function Lots() {
       },
       ["customer", "project", "campaign", "field"],
       "crear",
-      "un lote",
+      "un lote"
     );
 
     if (warning) {
@@ -304,13 +273,11 @@ function Lots() {
 
     try {
       setMessage("");
-      const response = await apiClient.get<Blob>(
-        `/lots/export/${projectId}`,
-        undefined,
-        { responseType: "blob" }
-      );
+      const response = await apiClient.get<Blob>(`/lots/export/${projectId}`, undefined, {
+        responseType: "blob",
+      });
 
-      downloadBlob(response, buildTimestampedFilename("lotes", "csv", projectId));
+      downloadBlob(response, buildTimestampedFilename("lotes", "xlsx", projectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de lotes.");
     }
@@ -362,7 +329,7 @@ function Lots() {
       setSuccessMessage(
         result.errors.length
           ? `Se crearon ${result.imported} lotes. Se omitieron ${result.errors.length} filas.`
-          : `Se crearon ${result.imported} lotes correctamente.`,
+          : `Se crearon ${result.imported} lotes correctamente.`
       );
       reloadFromFirstPage();
     }
@@ -480,7 +447,10 @@ function Lots() {
             entity={ENTITY}
           />
         ) : null}
-        {hasWorkspaceSelection && !(processing && filteredLots.length === 0) && !message && !error ? (
+        {hasWorkspaceSelection &&
+        !(processing && filteredLots.length === 0) &&
+        !message &&
+        !error ? (
           <ResponsiveTable<LotsData>
             data={filteredLots}
             columns={columnsToShow}

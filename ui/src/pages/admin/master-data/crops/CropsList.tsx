@@ -22,7 +22,7 @@ import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import { formatProperName } from "../../../../lib/properName";
 import { Column } from "../../types";
 import { CROP_ENTITY as ENTITY } from "../../entities";
-import { buildTimestampedFilename, EXCEL_ACCEPT, csvEscape, downloadBlob } from "../../fileTransfer";
+import { buildTimestampedFilename, downloadExcelRows, EXCEL_ACCEPT } from "../../fileTransfer";
 import ArchivedCrops from "./ArchivedCrops";
 import CropFormDrawer from "./CropFormDrawer";
 import { normalizeCropImportName, parseCropImportCsv, readCropImportFile } from "./importUtils";
@@ -57,9 +57,7 @@ const normalizeCropName = (value: unknown) =>
 function collectProjectCrops(project: Project, fieldId?: number): CropScope {
   const ids = new Set<number>();
   const names = new Set<string>();
-  const fields = fieldId
-    ? project.fields.filter((field) => field.id === fieldId)
-    : project.fields;
+  const fields = fieldId ? project.fields.filter((field) => field.id === fieldId) : project.fields;
 
   fields.forEach((field) => {
     field.lots.forEach((lot) => {
@@ -85,19 +83,11 @@ export default function CropsList({
   const [scopeLoading, setScopeLoading] = useState(false);
   const [scopeError, setScopeError] = useState<string | null>(null);
   const [contextMode, setContextMode] = useState<"current" | "all">(
-    embedded && hasPositiveId(contextFilters?.projectId) ? "current" : "all",
+    embedded && hasPositiveId(contextFilters?.projectId) ? "current" : "all"
   );
   const pagination = usePagination({ perPage: 25 });
   const { resetPage } = pagination;
-  const {
-    crops,
-    processing,
-    error,
-    getCrops,
-    createCrop,
-    updateCrop,
-    archiveCrop,
-  } = useCrops();
+  const { crops, processing, error, getCrops, createCrop, updateCrop, archiveCrop } = useCrops();
   const {
     filters,
     selectedCustomer,
@@ -131,7 +121,9 @@ export default function CropsList({
     if (selectedField?.project_id) return [selectedField.project_id];
 
     if (selectedCampaignId) {
-      const projectId = campaigns.find((campaign) => campaign.id === selectedCampaignId)?.project_id;
+      const projectId = campaigns.find(
+        (campaign) => campaign.id === selectedCampaignId
+      )?.project_id;
       return projectId ? [projectId] : [];
     }
 
@@ -154,10 +146,7 @@ export default function CropsList({
   const hasContextFilter = Boolean(
     embedded
       ? contextMode === "current" && hasPositiveId(contextFilters?.projectId)
-      : selectedCustomer?.id ||
-          selectedProject?.id ||
-          selectedCampaignId ||
-          selectedField?.id,
+      : selectedCustomer?.id || selectedProject?.id || selectedCampaignId || selectedField?.id
   );
 
   useEffect(() => {
@@ -184,9 +173,11 @@ export default function CropsList({
       try {
         const projects = await Promise.all(
           scopedProjectIds.map(async (projectId) => {
-            const response = await apiClient.get<SuccessResponse<Project>>(`/projects/${projectId}`);
+            const response = await apiClient.get<SuccessResponse<Project>>(
+              `/projects/${projectId}`
+            );
             return response.data;
-          }),
+          })
         );
         if (cancelled) return;
 
@@ -194,7 +185,7 @@ export default function CropsList({
         projects.forEach((project) => {
           const projectScope = collectProjectCrops(
             project,
-            embedded ? contextFilters?.fieldId ?? undefined : selectedField?.id,
+            embedded ? (contextFilters?.fieldId ?? undefined) : selectedField?.id
           );
           projectScope.ids.forEach((id) => nextScope.ids.add(id));
           projectScope.names.forEach((name) => nextScope.names.add(name));
@@ -220,7 +211,7 @@ export default function CropsList({
   const visibleCrops = useMemo(() => {
     if (!cropScope) return crops;
     return crops.filter(
-      (crop) => cropScope.ids.has(crop.id) || cropScope.names.has(normalizeCropName(crop.name)),
+      (crop) => cropScope.ids.has(crop.id) || cropScope.names.has(normalizeCropName(crop.name))
     );
   }, [cropScope, crops]);
 
@@ -241,13 +232,10 @@ export default function CropsList({
   });
 
   const handleExport = useCallback(() => {
-    const csv = [
-      "Nombre",
-      ...visibleCrops.map((crop) => csvEscape(formatProperName(crop.name))),
-    ].join("\n");
-    downloadBlob(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      buildTimestampedFilename("cultivos", "csv"),
+    void downloadExcelRows(
+      buildTimestampedFilename("cultivos", "xlsx"),
+      visibleCrops.map((crop) => ({ Nombre: formatProperName(crop.name) })),
+      "Cultivos"
     );
   }, [visibleCrops]);
 
@@ -265,7 +253,7 @@ export default function CropsList({
 
         const existingNames = new Set(crops.map((crop) => normalizeCropImportName(crop.name)));
         const rowsToCreate = rows.filter(
-          (row) => !existingNames.has(normalizeCropImportName(row.name)),
+          (row) => !existingNames.has(normalizeCropImportName(row.name))
         );
         const skippedCount = rows.length - rowsToCreate.length;
 
@@ -275,7 +263,7 @@ export default function CropsList({
         }
 
         const results = await Promise.allSettled(
-          rowsToCreate.map((row) => createCrop({ name: row.name })),
+          rowsToCreate.map((row) => createCrop({ name: row.name }))
         );
         const createdCount = results.filter((result) => result.status === "fulfilled").length;
         const failedCount = results.length - createdCount;
@@ -289,7 +277,7 @@ export default function CropsList({
           notify.success(
             `Se importaron ${createdCount} ${importedLabel}.${
               skippedCount > 0 ? ` ${skippedCount} ${skippedLabel}.` : ""
-            }`,
+            }`
           );
           return;
         }
@@ -304,7 +292,7 @@ export default function CropsList({
         notify.error("No se pudo importar cultivos. Usá Excel con una columna Nombre.");
       }
     },
-    [createCrop, crops, onAfterChange, refresh],
+    [createCrop, crops, onAfterChange, refresh]
   );
 
   useEffect(() => {
@@ -317,12 +305,12 @@ export default function CropsList({
 
   const selectColumn = useMemo<Column<Crop>>(
     () => makeSelectColumn<Crop>(bulk, (crop) => formatProperName(crop.name), ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const tableColumns = useMemo<Column<Crop>[]>(
     () => [selectColumn, ...baseColumns],
-    [selectColumn],
+    [selectColumn]
   );
 
   return (

@@ -17,17 +17,19 @@ import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPan
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
-import useInvestors, {
-  Investor,
-  InvestorPayloadInput,
-} from "../../../../hooks/useInvestors";
+import useInvestors, { Investor, InvestorPayloadInput } from "../../../../hooks/useInvestors";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import { Project } from "../../../../hooks/useDatabase/projects/types";
 import { Column } from "../../types";
 import { INVESTOR_ENTITY as ENTITY } from "../../entities";
 import InvestorFormDrawer from "./InvestorFormDrawer";
 import ArchivedInvestors from "./ArchivedInvestors";
-import { downloadCsvRows, EXCEL_ACCEPT, readImportTableAsCsvText } from "../../fileTransfer";
+import {
+  buildTimestampedFilename,
+  downloadExcelRows,
+  EXCEL_ACCEPT,
+  readImportTableAsCsvText,
+} from "../../fileTransfer";
 
 const toFilterOptions = (values: string[], formatDisplay = true) =>
   values.map((value, index) => ({
@@ -112,15 +114,9 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
     if (projectsError) notify.error(projectsError);
   }, [projectsError]);
 
-  const refresh = useCallback(
-    () => getInvestors("limit=1000"),
-    [getInvestors],
-  );
+  const refresh = useCallback(() => getInvestors("limit=1000"), [getInvestors]);
 
-  const refreshProjects = useCallback(
-    () => getProjects("page=1&per_page=1000"),
-    [getProjects],
-  );
+  const refreshProjects = useCallback(() => getProjects("page=1&per_page=1000"), [getProjects]);
 
   const filteredProjects = useMemo(
     () =>
@@ -131,19 +127,11 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
             (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer) &&
           (!selectedProject || project.name === selectedProject) &&
           (!selectedCampaign ||
-            (projectDetails[project.id]?.campaign.name || project.campaign) ===
-              selectedCampaign) &&
+            (projectDetails[project.id]?.campaign.name || project.campaign) === selectedCampaign) &&
           (!selectedField || fieldNames.includes(selectedField))
         );
       }),
-    [
-      projectDetails,
-      projects,
-      selectedCampaign,
-      selectedCustomer,
-      selectedField,
-      selectedProject,
-    ],
+    [projectDetails, projects, selectedCampaign, selectedCustomer, selectedField, selectedProject]
   );
 
   const hasActiveFilters =
@@ -152,61 +140,52 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
     Boolean(selectedCampaign) ||
     Boolean(selectedField);
 
-  const rows = useMemo(
-    () => {
-      const builtRows = buildInvestorRows(investors, filteredProjects, projectDetails);
-      return hasActiveFilters
-        ? builtRows.filter((row) => row.project_count > 0)
-        : builtRows;
-    },
-    [filteredProjects, hasActiveFilters, investors, projectDetails],
-  );
+  const rows = useMemo(() => {
+    const builtRows = buildInvestorRows(investors, filteredProjects, projectDetails);
+    return hasActiveFilters ? builtRows.filter((row) => row.project_count > 0) : builtRows;
+  }, [filteredProjects, hasActiveFilters, investors, projectDetails]);
 
   const filterOptions = useMemo(
     () => ({
       customers: uniqueOptions(
-        projects.map((project) => projectDetails[project.id]?.customer.name || project.customer),
+        projects.map((project) => projectDetails[project.id]?.customer.name || project.customer)
       ),
       projects: uniqueOptions(
         projects
           .filter(
             (project) =>
               !selectedCustomer ||
-              (projectDetails[project.id]?.customer.name || project.customer) ===
-                selectedCustomer,
+              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer
           )
-          .map((project) => project.name),
+          .map((project) => project.name)
       ),
       campaigns: uniqueOptions(
         projects
           .filter(
             (project) =>
               !selectedCustomer ||
-              (projectDetails[project.id]?.customer.name || project.customer) ===
-                selectedCustomer,
+              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer
           )
           .filter((project) => !selectedProject || project.name === selectedProject)
-          .map((project) => projectDetails[project.id]?.campaign.name || project.campaign),
+          .map((project) => projectDetails[project.id]?.campaign.name || project.campaign)
       ),
       fields: uniqueOptions(
         projects
           .filter(
             (project) =>
               !selectedCustomer ||
-              (projectDetails[project.id]?.customer.name || project.customer) ===
-                selectedCustomer,
+              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer
           )
           .filter((project) => !selectedProject || project.name === selectedProject)
           .filter(
             (project) =>
               !selectedCampaign ||
-              (projectDetails[project.id]?.campaign.name || project.campaign) ===
-                selectedCampaign,
+              (projectDetails[project.id]?.campaign.name || project.campaign) === selectedCampaign
           )
-          .flatMap((project) => getProjectFieldNames(project, projectDetails[project.id])),
+          .flatMap((project) => getProjectFieldNames(project, projectDetails[project.id]))
       ),
     }),
-    [projectDetails, projects, selectedCampaign, selectedCustomer, selectedProject],
+    [projectDetails, projects, selectedCampaign, selectedCustomer, selectedProject]
   );
 
   const drawer = useEntityFormDrawer<Investor, InvestorPayloadInput>({
@@ -228,18 +207,18 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
             .split(/\r?\n/)
             .map((line) => line.split(/[;,]/)[0]?.replace(/^"|"$/g, "").trim())
             .filter(Boolean)
-            .filter((name, index) => index > 0 || !/inversor|nombre|name/i.test(name)),
-        ),
+            .filter((name, index) => index > 0 || !/inversor|nombre|name/i.test(name))
+        )
       );
       await Promise.all(names.map((name) => createInvestor({ name })));
       refresh();
     },
-    [createInvestor, refresh],
+    [createInvestor, refresh]
   );
 
   const handleExport = useCallback(() => {
-    downloadCsvRows(
-      `inversores_${new Date().toISOString()}.csv`,
+    void downloadExcelRows(
+      buildTimestampedFilename("inversores", "xlsx"),
       rows.map((row) => ({
         Nombre: row.name,
         Proyectos: row.project_count,
@@ -248,6 +227,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
         Campañas: row.related_campaigns,
         Aportes: row.related_percentages,
       })),
+      "Inversores"
     );
   }, [rows]);
 
@@ -278,11 +258,9 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
 
     Promise.all(
       missingProjects.map(async (project) => {
-        const response = await apiClient.get<SuccessResponse<Project>>(
-          `/projects/${project.id}`,
-        );
+        const response = await apiClient.get<SuccessResponse<Project>>(`/projects/${project.id}`);
         return [project.id, response.data] as const;
-      }),
+      })
     )
       .then((entries) => {
         if (cancelled) return;
@@ -308,21 +286,20 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
 
   const selectColumn = useMemo<Column<InvestorRow>>(
     () => makeSelectColumn<InvestorRow>(bulk, (i) => i.name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const tableColumns = useMemo<Column<InvestorRow>[]>(
-    () => [
-      selectColumn,
-      ...relationColumns,
-    ],
-    [selectColumn],
+    () => [selectColumn, ...relationColumns],
+    [selectColumn]
   );
 
   return (
     <div>
       <div className="relative">
-        <LoadingOverlay show={(processing || projectsProcessing || loadingDetails) && rows.length > 0} />
+        <LoadingOverlay
+          show={(processing || projectsProcessing || loadingDetails) && rows.length > 0}
+        />
         <AppFilterBar
           filters={[
             {
@@ -335,7 +312,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               onChange: setSelectedCustomer,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
-                setSelectedCustomer(option?.id === 0 ? "" : option?.name ?? "");
+                setSelectedCustomer(option?.id === 0 ? "" : (option?.name ?? ""));
                 setSelectedProject("");
                 setSelectedCampaign("");
                 setSelectedField("");
@@ -352,7 +329,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               onChange: setSelectedProject,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
-                setSelectedProject(option?.id === 0 ? "" : option?.name ?? "");
+                setSelectedProject(option?.id === 0 ? "" : (option?.name ?? ""));
                 setSelectedCampaign("");
                 setSelectedField("");
               },
@@ -368,7 +345,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               onChange: setSelectedCampaign,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
-                setSelectedCampaign(option?.id === 0 ? "" : option?.name ?? "");
+                setSelectedCampaign(option?.id === 0 ? "" : (option?.name ?? ""));
                 setSelectedField("");
               },
               allLabel: "Todas las campañas",
@@ -383,7 +360,7 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
               onChange: setSelectedField,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
-                setSelectedField(option?.id === 0 ? "" : option?.name ?? "");
+                setSelectedField(option?.id === 0 ? "" : (option?.name ?? ""));
               },
               allLabel: "Todos los campos",
             },
@@ -431,15 +408,17 @@ export default function InvestorsList({ editorOnly = false }: InvestorsListProps
                 ? "No hay inversores disponibles para editar."
                 : "Creá el primero para asociarlo a tus proyectos."
             }
-            cta={!editorOnly ? (
-              <Button
-                variant="primary"
-                iconLeft={<Plus className="h-4 w-4" />}
-                onClick={drawer.openCreate}
-              >
-                Nuevo inversor
-              </Button>
-            ) : undefined}
+            cta={
+              !editorOnly ? (
+                <Button
+                  variant="primary"
+                  iconLeft={<Plus className="h-4 w-4" />}
+                  onClick={drawer.openCreate}
+                >
+                  Nuevo inversor
+                </Button>
+              ) : undefined
+            }
           />
         ) : (
           <>
