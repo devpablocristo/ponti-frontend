@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { Download, List, Plus, Trash2 } from "lucide-react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
@@ -465,11 +465,11 @@ export default function LaborsCatalog({
                 <Button
                   variant="primary"
                   size="sm"
-                  className="text-sm font-medium flex items-center gap-1"
+                  className="text-sm font-medium"
+                  iconLeft={<Download className="h-4 w-4" />}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Download className="h-4 w-4" />
-                  Importar Labores
+                  Importar
                 </Button>
               </>
             )}
@@ -477,24 +477,11 @@ export default function LaborsCatalog({
             <Button
               variant="primary"
               size="sm"
-              className="text-sm font-medium flex items-center gap-1"
+              className="text-sm font-medium"
+              iconLeft={<List className="h-4 w-4" />}
               href="/admin/master-data/labors/list"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                />
-              </svg>
-              Ver Listado
+              Listado
             </Button>
             )}
           </div>

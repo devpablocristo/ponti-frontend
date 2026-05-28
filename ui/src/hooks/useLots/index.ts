@@ -20,6 +20,7 @@ const useLots = () => {
   const [processingKpis, setProcessingKpis] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorKpis, setErrorKpis] = useState<string | null>(null);
+  const [updateLotError, setUpdateLotError] = useState<string | null>(null);
 
   const [processingTons, setProcessingTons] = useState(false);
   const [errorTons, setErrorTons] = useState<string | null>(null);
@@ -55,6 +56,7 @@ const useLots = () => {
         setProcessingTons,
         setErrorTons,
         setResultTons,
+        setUpdateLotError,
       }),
     [dispatch],
   );
@@ -70,6 +72,7 @@ const useLots = () => {
     processingTons,
     error,
     errorKpis,
+    updateLotError,
     errorTons,
     resultTons,
     setResultTons,
@@ -80,6 +83,7 @@ const useLots = () => {
     archiveLot: mutations.archiveLot,
     restoreLot: mutations.restoreLot,
     hardDeleteLot: mutations.hardDeleteLot,
+    updateLot: mutations.updateLot,
     updateTons: mutations.updateTons,
   };
 };

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Download } from "lucide-react";
+import { Download, List } from "lucide-react";
 import { useBlocker } from "react-router-dom";
 import { parsePartialPrice } from "@/lib/importHelpers";
 import InputField from "../../../../components/Input/InputField";
@@ -629,34 +629,21 @@ export default function SuppliesCatalog({ embedded = false, onCancel, onSaved }:
             <Button
               variant="primary"
               size="sm"
-              className="text-sm font-medium flex items-center gap-1"
+              className="text-sm font-medium"
+              iconLeft={<Download className="h-4 w-4" />}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Download className="h-4 w-4" />
-              Importar Insumos
+              Importar
             </Button>
             {!embedded && (
               <Button
                 variant="primary"
                 size="sm"
-                className="text-sm font-medium flex items-center gap-1"
+                className="text-sm font-medium"
+                iconLeft={<List className="h-4 w-4" />}
                 href="/admin/master-data/supplies/list"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                  />
-                </svg>
-                Ver Listado
+                Listado
               </Button>
             )}
           </div>

@@ -6,7 +6,7 @@ import { formatError } from "@/lib/format";
 
 import * as actions from "./actions";
 import type { Action } from "./lotsReducer";
-import type { LotsData } from "./types";
+import type { LotsData, LotsDataUpdate } from "./types";
 
 type LotMutationResponse = SuccessResponse<unknown>;
 
@@ -18,6 +18,7 @@ type MutationDeps = {
   setProcessingTons: (v: boolean) => void;
   setErrorTons: (v: string | null) => void;
   setResultTons: (v: string | null) => void;
+  setUpdateLotError: (v: string | null) => void;
 };
 
 export function createLotMutations(deps: MutationDeps) {
@@ -29,6 +30,7 @@ export function createLotMutations(deps: MutationDeps) {
     setProcessingTons,
     setErrorTons,
     setResultTons,
+    setUpdateLotError,
   } = deps;
 
   const lifecycleAction = async (
@@ -64,6 +66,29 @@ export function createLotMutations(deps: MutationDeps) {
 
   const hardDeleteLot = (id: number) =>
     lifecycleAction("delete", `/lots/${id}/hard`, "No se pudo eliminar el lote.");
+
+  const updateLot = async (lot: LotsDataUpdate) => {
+    setProcessing(true);
+    setUpdateLotError(null);
+    dispatch({ type: actions.SET_RESULT, payload: "" });
+
+    try {
+      const response = await apiClient.put<LotMutationResponse>(`/lots/${lot.id}`, lot);
+      if (response.success) {
+        dispatch({ type: actions.SET_RESULT, payload: "Se ha modificado el lote con éxito!" });
+        return;
+      }
+      setUpdateLotError("No se pudo modificar el lote.");
+    } catch (error) {
+      setUpdateLotError(
+        formatError(error, {
+          fallback: "No se pudo modificar el lote.",
+        }),
+      );
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   // updateTons usa su propio par processingTons/errorTons/resultTons porque
   // es una mutation muy frecuente (inline en celda de tabla) y necesita feedback
@@ -108,5 +133,5 @@ export function createLotMutations(deps: MutationDeps) {
     }
   };
 
-  return { archiveLot, restoreLot, hardDeleteLot, updateTons };
+  return { archiveLot, restoreLot, hardDeleteLot, updateLot, updateTons };
 }

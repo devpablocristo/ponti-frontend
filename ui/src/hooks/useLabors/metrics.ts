@@ -16,7 +16,16 @@ type MetricsDeps = {
 export function createLaborMetricsService(deps: MetricsDeps) {
   const { dispatch, setProcessingMetrics, setErrorMetrics } = deps;
 
-  const getMetrics = async (queryString: string) => {
+  const normalizeMetricsQuery = (queryOrProjectId: string | number, queryString = "") => {
+    if (typeof queryOrProjectId !== "number") return queryOrProjectId;
+
+    const params = new URLSearchParams(queryString.replace(/^\?/, ""));
+    params.set("project_id", String(queryOrProjectId));
+    return params.toString();
+  };
+
+  const getMetrics = async (queryOrProjectId: string | number, legacyQuery = "") => {
+    const queryString = normalizeMetricsQuery(queryOrProjectId, legacyQuery);
     setProcessingMetrics(true);
     setErrorMetrics(null);
     try {
