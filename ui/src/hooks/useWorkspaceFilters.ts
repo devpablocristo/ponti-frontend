@@ -5,6 +5,7 @@ import useProjects from "./useDatabase/projects";
 import useCampaigns from "./useCampaigns";
 import useFields from "./useFields";
 import { useTenant } from "../pages/login/context/useTenant";
+import { normalizeEntityName } from "../lib/entityNameMatcher";
 import { formatProperName } from "../lib/properName";
 
 export interface Customer {
@@ -81,6 +82,12 @@ export interface UseWorkspaceFiltersReturn {
 
 type FilterKey = "customer" | "project" | "campaign" | "field";
 
+type WorkspaceFilterOptions = {
+  requiredFilters?: FilterKey[];
+  allowAll?: boolean;
+  uniqueProjectNames?: boolean;
+};
+
 export function formatWorkspaceFilterName(value: string | undefined): string {
   return formatProperName(value ?? "");
 }
@@ -94,8 +101,20 @@ export function withWorkspaceFilterDisplayName<T extends { name: string }>(
   }));
 }
 
+function uniqueByProjectName<T extends { name: string }>(options: T[]): T[] {
+  const seenNames = new Set<string>();
+  return options.filter((option) => {
+    const key = normalizeEntityName(option.name);
+    if (!key) return true;
+    if (seenNames.has(key)) return false;
+    seenNames.add(key);
+    return true;
+  });
+}
+
 export const useWorkspaceFilters = (
-  enabledFilters: FilterKey[] = ["customer", "project", "campaign", "field"]
+  enabledFilters: FilterKey[] = ["customer", "project", "campaign", "field"],
+  options: WorkspaceFilterOptions = {}
 ): UseWorkspaceFiltersReturn => {
   const enabledFiltersKey = Array.from(
     new Set<FilterKey>(["customer", "project", "campaign", ...enabledFilters])
@@ -104,6 +123,12 @@ export const useWorkspaceFilters = (
     () => new Set(enabledFiltersKey ? (enabledFiltersKey.split("|") as FilterKey[]) : []),
     [enabledFiltersKey]
   );
+  const requiredFiltersKey = (options.requiredFilters ?? []).join("|");
+  const requiredFilterSet = useMemo(
+    () => new Set(requiredFiltersKey ? (requiredFiltersKey.split("|") as FilterKey[]) : []),
+    [requiredFiltersKey]
+  );
+  const filterAllowAll = options.allowAll ?? true;
   const { tenantId, loading: tenantLoading } = useTenant();
   const tenantReady = Boolean(tenantId) && !tenantLoading;
 
@@ -193,8 +218,7 @@ export const useWorkspaceFilters = (
     selectedProject && typeof selectedProject.id === "number" && selectedProject.id > 0
       ? selectedProject
       : undefined;
-  const selectedProjectId =
-    typeof projectId === "number" && projectId > 0 ? projectId : undefined;
+  const selectedProjectId = typeof projectId === "number" && projectId > 0 ? projectId : undefined;
   const normalizedProjectId = selectedProjectId;
   const normalizedSelectedField =
     selectedField && typeof selectedField.id === "number" && selectedField.id > 0
@@ -209,7 +233,7 @@ export const useWorkspaceFilters = (
     projectScopeSelected;
   const campaignEnabled = !campaignRequiresProject || projectScopeSelected;
   const fieldEnabled = campaignScopeSelected;
-  const workspaceReady = Boolean(
+  const defaultWorkspaceReady = Boolean(
     selectedCustomer &&
     selectedCustomer.id > 0 &&
     normalizedSelectedProject &&
@@ -217,6 +241,18 @@ export const useWorkspaceFilters = (
     selectedCampaignId &&
     selectedCampaignId > 0
   );
+  const requiredWorkspaceReady =
+    requiredFilterSet.size === 0
+      ? defaultWorkspaceReady
+      : (!requiredFilterSet.has("customer") ||
+          Boolean(selectedCustomer?.id && selectedCustomer.id > 0)) &&
+        (!requiredFilterSet.has("project") ||
+          Boolean(normalizedSelectedProject?.id && normalizedSelectedProject.id > 0)) &&
+        (!requiredFilterSet.has("campaign") ||
+          Boolean(selectedCampaignId && selectedCampaignId > 0)) &&
+        (!requiredFilterSet.has("field") ||
+          Boolean(normalizedSelectedField?.id && normalizedSelectedField.id > 0));
+  const workspaceReady = Boolean(requiredWorkspaceReady);
   const hasWorkspaceSelection = Boolean(
     allCustomersSelected ||
     allProjectsSelected ||
@@ -269,16 +305,16 @@ export const useWorkspaceFilters = (
     error: loadingFieldsError,
   } = useFields();
 
-  const projectOptionsForSelection = useMemo(
-    () =>
-      selectedCustomer
-        ? projectsDropdown || []
-        : (projects || []).map((project) => ({
-            id: project.id,
-            name: project.name,
-          })),
-    [projects, projectsDropdown, selectedCustomer]
-  );
+  const uniqueProjectNames = options.uniqueProjectNames ?? false;
+  const projectOptionsForSelection = useMemo(() => {
+    const source = selectedCustomer
+      ? projectsDropdown || []
+      : (projects || []).map((project) => ({
+          id: project.id,
+          name: project.name,
+        }));
+    return uniqueProjectNames ? uniqueByProjectName(source) : source;
+  }, [projects, projectsDropdown, selectedCustomer, uniqueProjectNames]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -340,13 +376,7 @@ export const useWorkspaceFilters = (
     if (!refreshed || refreshed.name === selectedCustomer.name) return;
 
     contextSetCustomer({ id: refreshed.id, name: refreshed.name });
-  }, [
-    allCustomersSelected,
-    contextSetCustomer,
-    customers,
-    loadingCustomers,
-    selectedCustomer,
-  ]);
+  }, [allCustomersSelected, contextSetCustomer, customers, loadingCustomers, selectedCustomer]);
 
   useEffect(() => {
     if (allProjectsSelected || !normalizedSelectedProject?.id || loadingProjects) return;
@@ -464,6 +494,7 @@ export const useWorkspaceFilters = (
       loading: loadingCustomers,
       error: loadingCustomersError,
       emptyMessage: "Sin clientes",
+      allowAll: filterAllowAll,
       allLabel: "Todos los clientes",
       preserveAllSelection: true,
     });
@@ -565,6 +596,7 @@ export const useWorkspaceFilters = (
       loading: loadingProjects,
       error: loadingProjectsError,
       emptyMessage: "Sin proyectos",
+      allowAll: filterAllowAll,
       allLabel: "Todos los proyectos",
       preserveAllSelection: true,
     });
@@ -651,6 +683,7 @@ export const useWorkspaceFilters = (
       loading: loadingCampaigns,
       error: loadingCampaignsError,
       emptyMessage: campaignEnabled ? "Sin campañas" : "Seleccioná un proyecto",
+      allowAll: filterAllowAll,
       allLabel: "Todas las campañas",
       preserveAllSelection: true,
     });
@@ -711,9 +744,7 @@ export const useWorkspaceFilters = (
       name: "campo",
       label: "Campo",
       placeholder: "Buscar",
-      options: withWorkspaceFilterDisplayName(
-        fieldEnabled && Array.isArray(fields) ? fields : []
-      ),
+      options: withWorkspaceFilterDisplayName(fieldEnabled && Array.isArray(fields) ? fields : []),
       total: totalFields,
       value: queryField,
       onChange: setQueryField,
@@ -736,6 +767,7 @@ export const useWorkspaceFilters = (
       loading: loadingFields,
       error: loadingFieldsError,
       emptyMessage: fieldEnabled ? "Sin campos" : "Seleccioná una campaña",
+      allowAll: filterAllowAll,
       allLabel: "Todos los campos",
       preserveAllSelection: true,
     });

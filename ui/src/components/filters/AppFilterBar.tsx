@@ -27,6 +27,7 @@ export interface FilterItem {
   emptyMessage?: string;
   allowAll?: boolean;
   allLabel?: string;
+  clearOnClickOutside?: boolean;
   preserveAllSelection?: boolean;
   onChange: (value: string) => void;
   setData: (value: unknown) => void;
@@ -266,6 +267,12 @@ export function AppFilterBar({
     const handleClick = (event: MouseEvent) => {
       Object.entries(refs.current).forEach(([name, element]) => {
         if (suggestionsVisible[name] && element && !element.contains(event.target as Node)) {
+          const filter = filters.find((item) => item.name === name);
+          if (filter?.clearOnClickOutside) {
+            filter.setData(undefined);
+            filter.onChange("");
+            setSearchByFilter((prev) => ({ ...prev, [name]: "" }));
+          }
           hideSuggestions(name);
         }
       });
@@ -283,7 +290,7 @@ export function AppFilterBar({
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [hideSuggestions, suggestionsVisible]);
+  }, [filters, hideSuggestions, suggestionsVisible]);
 
   const handleSuggestionClick = useCallback(
     (filter: FilterItem, option: FilterOption) => {

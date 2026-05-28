@@ -37,6 +37,7 @@ const baseColumns: Column<Field>[] = [
 type FieldsListProps = {
   editorOnly?: boolean;
   embedded?: boolean;
+  selectionOnly?: boolean;
   contextFilters?: ActorContextFilters;
   selectionMode?: {
     label?: string;
@@ -53,6 +54,7 @@ const hasPositiveId = (value: unknown): value is number =>
 export default function FieldsList({
   editorOnly = false,
   embedded = false,
+  selectionOnly = false,
   contextFilters,
   selectionMode,
   onAfterChange,
@@ -128,7 +130,7 @@ export default function FieldsList({
   const bulk = useBulkActions<Field>({
     items: visibleFields,
     entity: ENTITY,
-    archive: archiveField,
+    archive: selectionOnly ? undefined : archiveField,
     onEdit: embedded ? undefined : openFieldEditor,
     onAfter: refresh,
   });
@@ -191,12 +193,16 @@ export default function FieldsList({
                   isPrimary: true,
                   onClick: () => setContextMode("current"),
                 },
-                {
-                  label: "Todos",
-                  variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
-                  isPrimary: true,
-                  onClick: () => setContextMode("all"),
-                },
+                ...(!selectionOnly
+                  ? [
+                      {
+                        label: "Todos",
+                        variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
+                        isPrimary: true,
+                        onClick: () => setContextMode("all"),
+                      },
+                    ]
+                  : []),
               ]
             : []),
           ...(embedded && selectionMode
@@ -222,13 +228,17 @@ export default function FieldsList({
                 },
               ]
             : []),
-          {
-            label: "Archivados",
-            icon: <Archive className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: () => setArchivedDrawerOpen(true),
-          },
+          ...(!selectionOnly
+            ? [
+                {
+                  label: "Archivados",
+                  icon: <Archive className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: () => setArchivedDrawerOpen(true),
+                },
+              ]
+            : []),
           ...(embedded && selectionMode?.onCreateNew
             ? [
                 {
@@ -252,9 +262,11 @@ export default function FieldsList({
             icon={MapPin}
             title="Aún no hay campos"
             description={
-              editorOnly
-                ? "No hay campos disponibles para editar."
-                : "Los campos se crean desde el editor de cada proyecto."
+              selectionOnly
+                ? "No hay campos disponibles para el contexto seleccionado."
+                : editorOnly
+                  ? "No hay campos disponibles para editar."
+                  : "Los campos se crean desde el editor de cada proyecto."
             }
           />
         ) : (

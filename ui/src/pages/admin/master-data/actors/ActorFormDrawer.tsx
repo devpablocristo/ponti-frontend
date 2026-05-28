@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import Button from "../../../../components/Button/Button";
@@ -6,6 +6,7 @@ import { IconActionButton } from "../../../../components/Button/IconActionButton
 import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import InputField from "../../../../components/Input/InputField";
 import { Checkbox } from "../../../../components/Input/Checkbox";
+import SmartEntityInput from "../../../../components/SmartEntityInput/SmartEntityInput";
 import {
   Actor,
   ActorAlias,
@@ -14,6 +15,8 @@ import {
   ActorPayloadInput,
   ActorRole,
 } from "../../../../hooks/useActors";
+import { findEntityMatches } from "../../../../lib/entityNameMatcher";
+import { formatProperName } from "../../../../lib/properName";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
 
 type ActorFormDrawerProps = {
@@ -22,6 +25,7 @@ type ActorFormDrawerProps = {
   processing?: boolean;
   errorMessage?: string | null;
   defaultRoles?: ActorRole[];
+  actorOptions?: Actor[];
   onClose: () => void;
   onSubmit: (input: ActorPayloadInput) => void | Promise<void>;
 };
@@ -42,6 +46,7 @@ export default function ActorFormDrawer({
   processing = false,
   errorMessage,
   defaultRoles = EMPTY_DEFAULT_ROLES,
+  actorOptions = [],
   onClose,
   onSubmit,
 }: ActorFormDrawerProps) {
@@ -64,6 +69,18 @@ export default function ActorFormDrawer({
   const [taxCondition, setTaxCondition] = useState("");
   const [fiscalAddress, setFiscalAddress] = useState("");
   const [validation, setValidation] = useState<string | null>(null);
+  const actorNameOptions = useMemo(
+    () =>
+      actorOptions
+        .filter((option) => option.id !== actor?.id)
+        .map((option) => ({ id: option.id, name: option.display_name })),
+    [actor?.id, actorOptions],
+  );
+  const nameMatches = useMemo(
+    () => findEntityMatches(displayName, actorNameOptions),
+    [actorNameOptions, displayName],
+  );
+  const duplicateActorName = displayName.trim() ? nameMatches.exactMatch : null;
 
   useEffect(() => {
     if (!open) return;
@@ -127,6 +144,12 @@ export default function ActorFormDrawer({
     const trimmedName = displayName.trim();
     if (!trimmedName) {
       setValidation("El nombre visible es obligatorio.");
+      return;
+    }
+    if (duplicateActorName) {
+      setValidation(
+        `Ya existe un actor con ese nombre: ${formatProperName(duplicateActorName.name)}. No se pueden crear actores duplicados.`,
+      );
       return;
     }
 
@@ -195,6 +218,32 @@ export default function ActorFormDrawer({
       submitLabel={isEdit ? "Guardar cambios" : "Crear actor"}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <SmartEntityInput
+            label="Nombre visible"
+            name="display_name"
+            value={displayName}
+            options={actorNameOptions}
+            entityLabel="Actor"
+            onChange={(value) => {
+              setDisplayName(value);
+              setValidation(null);
+            }}
+            onSelectExisting={(option) => {
+              setDisplayName(option.name ?? "");
+              setValidation(
+                `Ya existe un actor con ese nombre: ${formatProperName(option.name)}. No se pueden crear actores duplicados.`,
+              );
+            }}
+            size="sm"
+            formatDisplayValue={false}
+          />
+          {duplicateActorName ? (
+            <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-red-400">
+              Ya existe un actor con ese nombre: {formatProperName(duplicateActorName.name)}.
+            </p>
+          ) : null}
+        </div>
         <div>
           <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">Tipo de actor</label>
           <select
@@ -209,13 +258,6 @@ export default function ActorFormDrawer({
             ))}
           </select>
         </div>
-        <InputField
-          label="Nombre visible"
-          name="display_name"
-          value={displayName}
-          onChange={(event) => setDisplayName(event.target.value)}
-          size="sm"
-        />
         <InputField
           label="Email"
           name="primary_email"

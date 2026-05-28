@@ -9,6 +9,8 @@ import {
   validateActorIdentity,
   validateCustomerIdentity,
   validateProjectForSave,
+  validateProjectSelectionsForSave,
+  validateUniqueProjectName,
 } from "./customerEditorValidation";
 
 function baseProject(): Project {
@@ -18,9 +20,7 @@ function baseProject(): Project {
     campaign: { id: 2, name: "2025-2026" },
     managers: [{ id: 0, actor_id: 20, name: "Responsable 1" }],
     investors: [{ id: 0, actor_id: 30, name: "Inversor 1", percentage: 100 }],
-    admin_cost_investors: [
-      { id: 0, actor_id: 31, name: "Inversor costo", percentage: 100 },
-    ],
+    admin_cost_investors: [{ id: 0, actor_id: 31, name: "Inversor costo", percentage: 100 }],
     admin_cost: 1000,
     planned_cost: 2000,
     fields: [
@@ -124,9 +124,7 @@ describe("customerEditorValidation", () => {
 
   it("bloquea arrendatarios duplicados o con suma distinta a 100 por campo", () => {
     const draft = baseProject();
-    draft.fields[0].investors = [
-      { id: 0, actor_id: 44, name: "Arrendatario", percentage: 90 },
-    ];
+    draft.fields[0].investors = [{ id: 0, actor_id: 44, name: "Arrendatario", percentage: 90 }];
 
     expect(validateProjectForSave(draft)).toContain(
       "Arrendatarios del campo 1: la suma de porcentajes debe ser 100% (hoy 90%)."
@@ -161,6 +159,55 @@ describe("customerEditorValidation", () => {
     );
   });
 
+  it("bloquea seleccion obligatoria cuando una entidad relacionada fue tipeada", () => {
+    const draft = baseProject();
+    draft.customer = { id: null, actor_id: null, name: "Cliente tipeado" };
+    draft.campaign = { id: null, name: "2026-2027" };
+    draft.managers = [{ id: 0, actor_id: null, name: "Responsable tipeado" }];
+    draft.fields[0].id = 0;
+    draft.fields[0].lots[0].id = 0;
+    draft.fields[0].lots[0].current_crop_id = 0;
+
+    expect(validateProjectSelectionsForSave(draft)).toEqual(
+      expect.arrayContaining([
+        "Cliente / Sociedad: seleccioná un cliente existente.",
+        "Campaña: seleccioná una campaña existente.",
+        "Responsables: seleccioná responsables existentes.",
+        "Campo 1: seleccioná un campo existente.",
+        "Campo 1, lote 1: seleccioná un lote existente.",
+        "Campo 1, lote 1: seleccioná el cultivo actual existente.",
+      ])
+    );
+  });
+
+  it("bloquea proyectos duplicados por nombre dentro del contexto filtrado", () => {
+    expect(
+      validateUniqueProjectName(
+        "metan norte",
+        [
+          { id: 41, name: "METAN NORTE" },
+          { id: 42, name: "JUJUY" },
+        ],
+        null
+      )
+    ).toBe(
+      'Proyecto: ya existe un proyecto con el nombre "METAN NORTE" en los filtros seleccionados.'
+    );
+  });
+
+  it("permite conservar el nombre del proyecto que se esta editando", () => {
+    expect(
+      validateUniqueProjectName(
+        "metan norte",
+        [
+          { id: 41, name: "METAN NORTE" },
+          { id: 42, name: "JUJUY" },
+        ],
+        41
+      )
+    ).toBeNull();
+  });
+
   it("traduce errores backend por campo a un mensaje operativo", () => {
     expect(parseProjectFieldErrorMessage("fields[2].lease_type_percent bad")).toBe(
       "Campo 3: porcentaje de arriendo."
@@ -182,10 +229,7 @@ const managerOptions: IdentityOption[] = [
 describe("validateCustomerIdentity", () => {
   it("case 1: allows a brand-new customer with no assigned id", () => {
     expect(
-      validateCustomerIdentity(
-        { id: null, actor_id: null, name: "CLIENTE NUEVO" },
-        customerOptions
-      )
+      validateCustomerIdentity({ id: null, actor_id: null, name: "CLIENTE NUEVO" }, customerOptions)
     ).toBeNull();
   });
 
@@ -227,28 +271,19 @@ describe("validateCustomerIdentity", () => {
 
   it("trusts an established customer slot even when the typed name belongs to another customer (BE handles the rename / link)", () => {
     expect(
-      validateCustomerIdentity(
-        { id: 17, actor_id: 201, name: "AGRO TUC" },
-        customerOptions
-      )
+      validateCustomerIdentity({ id: 17, actor_id: 201, name: "AGRO TUC" }, customerOptions)
     ).toBeNull();
   });
 
   it("case 4: permits swapping to a different existing customer", () => {
     expect(
-      validateCustomerIdentity(
-        { id: 31, actor_id: 203, name: "AGRO TUC" },
-        customerOptions
-      )
+      validateCustomerIdentity({ id: 31, actor_id: 203, name: "AGRO TUC" }, customerOptions)
     ).toBeNull();
   });
 
   it("ignores empty input", () => {
     expect(
-      validateCustomerIdentity(
-        { id: null, actor_id: null, name: "   " },
-        customerOptions
-      )
+      validateCustomerIdentity({ id: null, actor_id: null, name: "   " }, customerOptions)
     ).toBeNull();
   });
 });
@@ -300,11 +335,9 @@ describe("validateActorIdentity", () => {
     // The dropdown lists SOALEN SRL with another role (e.g. cliente). The
     // editor must not block the save.
     expect(
-      validateActorIdentity(
-        "Inversores",
-        { id: 600, actor_id: null, name: "SOALEN SRL" },
-        [{ id: 999, name: "SOALEN SRL" }]
-      )
+      validateActorIdentity("Inversores", { id: 600, actor_id: null, name: "SOALEN SRL" }, [
+        { id: 999, name: "SOALEN SRL" },
+      ])
     ).toBeNull();
   });
 

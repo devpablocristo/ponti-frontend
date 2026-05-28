@@ -15,6 +15,11 @@ type ValidateProjectOptions = {
   customerOnly?: boolean;
 };
 
+export type ProjectNameOption = {
+  id?: number | null;
+  name?: string | null;
+};
+
 export type PercentageActorEntity = {
   id: number | null;
   actor_id?: number | null;
@@ -222,17 +227,19 @@ export function buildProjectPayloadForSave(
                   }))
                 : [],
               lots: Array.isArray(field.lots)
-                ? field.lots.filter((lot) => !isEmptyLot(lot)).map((lot) => ({
-                    ...lot,
-                    id: idForPayload(lot.id, options.editing),
-                    name: canonicalizeName(lot.name),
-                    hectares: numericValue(lot.hectares),
-                    previous_crop_id: Number(lot.previous_crop_id || 0),
-                    previous_crop_name: canonicalizeName(lot.previous_crop_name),
-                    current_crop_id: Number(lot.current_crop_id || 0),
-                    current_crop_name: canonicalizeName(lot.current_crop_name),
-                    season: canonicalizeName(lot.season),
-                  }))
+                ? field.lots
+                    .filter((lot) => !isEmptyLot(lot))
+                    .map((lot) => ({
+                      ...lot,
+                      id: idForPayload(lot.id, options.editing),
+                      name: canonicalizeName(lot.name),
+                      hectares: numericValue(lot.hectares),
+                      previous_crop_id: Number(lot.previous_crop_id || 0),
+                      previous_crop_name: canonicalizeName(lot.previous_crop_name),
+                      current_crop_id: Number(lot.current_crop_id || 0),
+                      current_crop_name: canonicalizeName(lot.current_crop_name),
+                      season: canonicalizeName(lot.season),
+                    }))
                 : [],
             };
           })
@@ -351,6 +358,91 @@ export function validateProjectForSave(
   return errors;
 }
 
+function hasSelectedExistingEntity(entity: NamedEntity): boolean {
+  return Boolean(
+    (typeof entity.id === "number" && entity.id > 0) ||
+    (typeof entity.actor_id === "number" && entity.actor_id > 0)
+  );
+}
+
+export function validateProjectSelectionsForSave(project: Project): string[] {
+  const errors: string[] = [];
+
+  if (!hasSelectedExistingEntity(project.customer)) {
+    errors.push("Cliente / Sociedad: seleccioná un cliente existente.");
+  }
+
+  if (!project.campaign.id || project.campaign.id <= 0) {
+    errors.push("Campaña: seleccioná una campaña existente.");
+  }
+
+  if ((project.managers ?? []).some((manager) => !hasSelectedExistingEntity(manager))) {
+    errors.push("Responsables: seleccioná responsables existentes.");
+  }
+
+  if ((project.investors ?? []).some((investor) => !hasSelectedExistingEntity(investor))) {
+    errors.push("Inversores: seleccioná inversores existentes.");
+  }
+
+  if (
+    (project.admin_cost_investors ?? []).some((investor) => !hasSelectedExistingEntity(investor))
+  ) {
+    errors.push("Costo administrativo: seleccioná inversores existentes.");
+  }
+
+  (project.fields ?? []).forEach((field, fieldIndex) => {
+    const fieldLabel = `Campo ${fieldIndex + 1}`;
+    if (!field.id || field.id <= 0) {
+      errors.push(`${fieldLabel}: seleccioná un campo existente.`);
+    }
+
+    (field.investors ?? []).forEach((investor) => {
+      if (hasActorEntityValue(investor) && !hasSelectedExistingEntity(investor)) {
+        errors.push(
+          `Arrendatarios del ${fieldLabel.toLowerCase()}: seleccioná actores existentes.`
+        );
+      }
+    });
+
+    (field.lots ?? []).forEach((lot, lotIndex) => {
+      const lotLabel = `${fieldLabel}, lote ${lotIndex + 1}`;
+      if (!lot.id || lot.id <= 0) {
+        errors.push(`${lotLabel}: seleccioná un lote existente.`);
+      }
+      if (!lot.previous_crop_id || lot.previous_crop_id <= 0) {
+        errors.push(`${lotLabel}: seleccioná el cultivo anterior existente.`);
+      }
+      if (!lot.current_crop_id || lot.current_crop_id <= 0) {
+        errors.push(`${lotLabel}: seleccioná el cultivo actual existente.`);
+      }
+    });
+  });
+
+  return errors;
+}
+
+export function validateUniqueProjectName(
+  projectName: string,
+  existingProjects: ProjectNameOption[],
+  currentProjectId?: number | null
+): string | null {
+  const nameKey = normalizeEntityName(projectName);
+  if (!nameKey) return null;
+
+  const duplicate = existingProjects.find((project) => {
+    const projectId =
+      typeof project.id === "number" && Number.isFinite(project.id) ? project.id : null;
+    if (currentProjectId && projectId === currentProjectId) return false;
+    return normalizeEntityName(project.name) === nameKey;
+  });
+
+  if (!duplicate) return null;
+
+  return `Proyecto: ya existe un proyecto con el nombre "${
+    duplicate.name ?? projectName
+  }" en los filtros seleccionados.`;
+}
+
 export const parseProjectFieldErrorMessage = (message: string): string | null => {
   const match = message.match(/fields\[(\d+)\]\.([a-z_]+)/i);
   if (!match) {
@@ -411,8 +503,7 @@ export function validateActorIdentity(
   const match = findEntityMatches(name, options);
   if (!match.exactMatch) return null;
 
-  const matchedActorId =
-    typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
+  const matchedActorId = typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
   const assignedActorId = entity.actor_id ?? null;
   if (assignedActorId !== null && matchedActorId === assignedActorId) {
     return null;
@@ -438,16 +529,12 @@ export function validateCustomerIdentity(
   const match = findEntityMatches(name, options);
   if (!match.exactMatch) return null;
 
-  const matchedActorId =
-    typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
+  const matchedActorId = typeof match.exactMatch.id === "number" ? match.exactMatch.id : null;
   const matchedCustomerId =
-    typeof match.exactMatch.customer_id === "number"
-      ? match.exactMatch.customer_id
-      : null;
+    typeof match.exactMatch.customer_id === "number" ? match.exactMatch.customer_id : null;
   const assignedActorId = customer.actor_id ?? null;
 
-  const sameByActor =
-    assignedActorId !== null && matchedActorId === assignedActorId;
+  const sameByActor = assignedActorId !== null && matchedActorId === assignedActorId;
   if (sameByActor) return null;
   // matchedCustomerId without an assigned customer.id (handled above) is
   // unreachable here, but keep the variable accessible for callers reading

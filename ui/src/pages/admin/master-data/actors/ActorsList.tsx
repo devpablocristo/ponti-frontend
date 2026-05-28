@@ -108,6 +108,8 @@ type ActorSelectionMode = {
 type ActorsListProps = {
   rolePreset?: ActorRole;
   embedded?: boolean;
+  allowCreate?: boolean;
+  allowArchived?: boolean;
   contextFilters?: ActorContextFilters;
   selectionMode?: ActorSelectionMode;
   onAfterChange?: () => void | Promise<void>;
@@ -225,6 +227,8 @@ const columns: Column<Actor>[] = [
 export default function ActorsList({
   rolePreset,
   embedded = false,
+  allowCreate = true,
+  allowArchived = true,
   contextFilters,
   selectionMode,
   onAfterChange,
@@ -412,8 +416,8 @@ export default function ActorsList({
   const bulk = useBulkActions<Actor>({
     items: visibleRows,
     entity: bulkEntity,
-    archive: archiveActorRow,
-    onEdit: (item) => drawer.openEdit(item),
+    archive: allowArchived ? archiveActorRow : undefined,
+    onEdit: allowCreate ? (item) => drawer.openEdit(item) : undefined,
     onAfter: () => {
       void afterActorChange();
     },
@@ -581,12 +585,17 @@ export default function ActorsList({
                         isPrimary: true,
                         onClick: () => setContextMode("current"),
                       },
-                      {
-                        label: "Todos",
-                        variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
-                        isPrimary: true,
-                        onClick: () => setContextMode("all"),
-                      },
+                      ...(allowCreate
+                        ? [
+                            {
+                              label: "Todos",
+                              variant:
+                                contextMode === "all" ? ("light" as const) : ("primary" as const),
+                              isPrimary: true,
+                              onClick: () => setContextMode("all"),
+                            },
+                          ]
+                        : []),
                     ]
                   : []),
                 {
@@ -599,20 +608,28 @@ export default function ActorsList({
                 },
               ]
             : []),
-          {
-            label: "Archivados",
-            icon: <Archive className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: () => setArchivedDrawerOpen(true),
-          },
-          {
-            label: "Nuevo",
-            icon: <Plus className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: drawer.openCreate,
-          },
+          ...(allowArchived
+            ? [
+                {
+                  label: "Archivados",
+                  icon: <Archive className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: () => setArchivedDrawerOpen(true),
+                },
+              ]
+            : []),
+          ...(allowCreate
+            ? [
+                {
+                  label: "Nuevo",
+                  icon: <Plus className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: drawer.openCreate,
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -628,17 +645,23 @@ export default function ActorsList({
           }
           description={
             embedded && contextMode === "current"
-              ? `Cambiá a Todos para buscar ${embeddedEntityLabel.toLowerCase()} fuera del proyecto actual.`
-              : "Creá el primer actor maestro para asignarle roles y relaciones."
+              ? allowCreate
+                ? `Cambiá a Todos para buscar ${embeddedEntityLabel.toLowerCase()} fuera del proyecto actual.`
+                : `No hay ${embeddedEntityLabel.toLowerCase()} disponibles para el contexto seleccionado.`
+              : allowCreate
+                ? "Creá el primer actor maestro para asignarle roles y relaciones."
+                : "No hay actores disponibles para seleccionar."
           }
           cta={
-            <Button
-              variant="primary"
-              iconLeft={<Plus className="h-4 w-4" />}
-              onClick={drawer.openCreate}
-            >
-              Nuevo
-            </Button>
+            allowCreate ? (
+              <Button
+                variant="primary"
+                iconLeft={<Plus className="h-4 w-4" />}
+                onClick={drawer.openCreate}
+              >
+                Nuevo
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -669,6 +692,7 @@ export default function ActorsList({
         processing={processing}
         errorMessage={drawer.submitError}
         defaultRoles={defaultActorFormRoles}
+        actorOptions={actors}
         onClose={drawer.close}
         onSubmit={drawer.handleSubmit}
       />

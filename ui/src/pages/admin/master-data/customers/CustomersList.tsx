@@ -48,6 +48,7 @@ import {
   normalizeFilter,
   projectMatchesFilters,
   sumProjectHectares,
+  uniqueProjectRowsByName,
 } from "./customersListHelpers";
 
 type CustomersListProps = {
@@ -61,9 +62,13 @@ type CustomersListProps = {
    * comportamiento histórico de "Clientes y Proyectos" mezclados.
    */
   projectsOnly?: boolean;
+  selectionOnlyRelations?: boolean;
 };
 
-export default function CustomersList({ projectsOnly = false }: CustomersListProps = {}) {
+export default function CustomersList({
+  projectsOnly = false,
+  selectionOnlyRelations,
+}: CustomersListProps = {}) {
   const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
   const [editingCustomerId, setEditingCustomerId] = useState<number | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<number | null>(null);
@@ -80,6 +85,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   const [projectsLoading, setProjectsLoading] = useState(false);
   const { deleteProject } = useProjects();
   const { allSelection } = useSelection();
+  const restrictedProjectFlow = selectionOnlyRelations ?? projectsOnly;
   const {
     filters,
     selectedCustomer,
@@ -88,11 +94,25 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     selectedField,
     campaigns,
     hasWorkspaceSelection,
-  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
+    workspaceReady,
+  } = useWorkspaceFilters(
+    ["customer", "project", "campaign", "field"],
+    restrictedProjectFlow
+      ? {
+          requiredFilters: ["customer", "project", "campaign"],
+          allowAll: false,
+          uniqueProjectNames: true,
+        }
+      : {}
+  );
   const selectedCampaign = useMemo(
     () => campaigns.find((campaign) => campaign.id === selectedCampaignId),
     [campaigns, selectedCampaignId]
   );
+  const canLoadList = restrictedProjectFlow ? workspaceReady : hasWorkspaceSelection;
+  const canCreateProject = restrictedProjectFlow
+    ? Boolean(selectedCustomer?.id && selectedCampaign?.id)
+    : true;
   const hasProjectScope = Boolean(
     selectedProject?.id ||
     selectedCampaign?.id ||
@@ -112,7 +132,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   }, [refresh]);
 
   const visibleCustomers = useMemo(() => {
-    if (!hasWorkspaceSelection) return [];
+    if (!canLoadList) return [];
 
     return customers.filter((customer) => {
       if (!customerMatchesFilter(customer, selectedCustomer, allSelection.customer)) return false;
@@ -134,6 +154,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     });
   }, [
     customers,
+    canLoadList,
     hasWorkspaceSelection,
     projectsByCustomer,
     allSelection.customer,
@@ -147,7 +168,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   ]);
 
   const totalVisibleHectares = useMemo(() => {
-    if (!hasWorkspaceSelection) return 0;
+    if (!canLoadList) return 0;
 
     return visibleCustomers.reduce((total, customer) => {
       const projects = projectsByCustomer[customer.id] ?? [];
@@ -165,6 +186,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     }, 0);
   }, [
     projectsByCustomer,
+    canLoadList,
     hasWorkspaceSelection,
     selectedCampaign,
     selectedField,
@@ -172,8 +194,33 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     visibleCustomers,
   ]);
 
+  const visibleProjectNameOptions = useMemo(() => {
+    if (!canLoadList) return [];
+
+    return visibleCustomers
+      .flatMap((customer) => {
+        const allProjects = projectsByCustomer[customer.id] ?? [];
+        return allProjects
+          .filter((project) =>
+            projectMatchesFilters(project, selectedProject, selectedCampaign, selectedField)
+          )
+          .map((project) => ({
+            id: project.id ?? null,
+            name: project.name ?? "",
+          }));
+      })
+      .filter((project) => project.name.trim());
+  }, [
+    canLoadList,
+    projectsByCustomer,
+    selectedCampaign,
+    selectedField,
+    selectedProject,
+    visibleCustomers,
+  ]);
+
   const visibleProjectRows = useMemo<CustomerProjectRow[]>(() => {
-    if (!hasWorkspaceSelection) return [];
+    if (!canLoadList) return [];
 
     const baseRows = visibleCustomers.flatMap((customer): CustomerProjectRow[] => {
       const allProjects = projectsByCustomer[customer.id] ?? [];
@@ -236,15 +283,18 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       const key = `${row.customerId}|${normalizeFilter(row.projectName)}`;
       groupSizes.set(key, (groupSizes.get(key) ?? 0) + 1);
     }
-    return baseRows.map((row) => {
+    const annotatedRows = baseRows.map((row) => {
       if (row.mode !== "project") return row;
       const key = `${row.customerId}|${normalizeFilter(row.projectName)}`;
       return { ...row, groupSize: groupSizes.get(key) ?? 1 };
     });
+    return restrictedProjectFlow ? uniqueProjectRowsByName(annotatedRows) : annotatedRows;
   }, [
     projectsByCustomer,
+    canLoadList,
     hasWorkspaceSelection,
     isProjectMode,
+    restrictedProjectFlow,
     selectedCampaign,
     selectedField,
     selectedProject,
@@ -295,16 +345,16 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   );
 
   useEffect(() => {
-    if (!hasWorkspaceSelection) return;
+    if (!canLoadList) return;
 
     refresh();
-  }, [hasWorkspaceSelection, refresh]);
+  }, [canLoadList, refresh]);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadSummaries = async () => {
-      if (!hasWorkspaceSelection || customers.length === 0) {
+      if (!canLoadList || customers.length === 0) {
         setProjectsByCustomer({});
         return;
       }
@@ -342,7 +392,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     return () => {
       cancelled = true;
     };
-  }, [customers, dataVersion, hasWorkspaceSelection]);
+  }, [canLoadList, customers, dataVersion]);
 
   const bulkEntity = isProjectMode ? PROJECT_ENTITY : CUSTOMER_ENTITY;
   const bulkRows = useMemo(
@@ -463,11 +513,18 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
             onClick: () => setArchivedDrawerOpen(true),
           },
           {
-            label: "Nuevo",
+            label: projectsOnly ? "Nuevo Proyecto" : "Nuevo",
             icon: <Plus className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            onClick: () => setCreateDrawerOpen(true),
+            disabled: !canCreateProject,
+            onClick: () => {
+              if (!canCreateProject) {
+                notify.warning("Seleccioná cliente y campaña para crear un proyecto.");
+                return;
+              }
+              setCreateDrawerOpen(true);
+            },
           },
         ]}
       />
@@ -480,6 +537,14 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
         <CustomerEditor
           embedded
           mode={projectsOnly ? "project" : undefined}
+          createNewProject={projectsOnly}
+          selectionOnlyRelations={restrictedProjectFlow}
+          initialCustomer={selectedCustomer ?? null}
+          initialCampaign={
+            selectedCampaign ? { id: selectedCampaign.id, name: selectedCampaign.name } : null
+          }
+          contextProject={selectedProject ?? null}
+          projectNameScope={visibleProjectNameOptions}
           onSaved={refreshAfterArchivedRestore}
           onClose={() => setCreateDrawerOpen(false)}
         />
@@ -498,6 +563,13 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
           mode={editingProjectId ? "project" : "customerOnly"}
           customerId={editingCustomerId}
           initialProjectId={editingProjectId}
+          selectionOnlyRelations={restrictedProjectFlow}
+          initialCustomer={selectedCustomer ?? null}
+          initialCampaign={
+            selectedCampaign ? { id: selectedCampaign.id, name: selectedCampaign.name } : null
+          }
+          contextProject={selectedProject ?? null}
+          projectNameScope={visibleProjectNameOptions}
           onSaved={refreshAfterArchivedRestore}
           onClose={() => {
             setEditingCustomerId(null);
@@ -526,26 +598,45 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
             visibleProjectRows.length > 0
           }
         />
-        {!hasWorkspaceSelection ? (
+        {!canLoadList ? (
           <EmptyState
             icon={Briefcase}
-            title="Seleccioná filtros para ver clientes y proyectos"
-            description="El listado no carga datos globales automáticamente."
+            title={
+              restrictedProjectFlow
+                ? "Seleccioná cliente, proyecto y campaña"
+                : "Seleccioná filtros para ver clientes y proyectos"
+            }
+            description={
+              restrictedProjectFlow
+                ? "El listado de proyectos se muestra únicamente dentro de ese contexto."
+                : "El listado no carga datos globales automáticamente."
+            }
           />
         ) : (processing || projectsLoading) && visibleProjectRows.length === 0 ? (
           <TableSkeleton rows={10} columns={tableColumns.length} />
         ) : visibleCustomers.length === 0 ? (
           <EmptyState
             icon={Briefcase}
-            title="Aún no hay clientes"
-            description="Creá el primero para empezar a gestionar proyectos."
+            title={projectsOnly ? "No hay proyectos para los filtros" : "Aún no hay clientes"}
+            description={
+              projectsOnly
+                ? "Cambiá la selección o creá un proyecto para el cliente y campaña elegidos."
+                : "Creá el primero para empezar a gestionar proyectos."
+            }
             cta={
               <Button
                 variant="primary"
                 iconLeft={<Plus className="h-4 w-4" />}
-                onClick={() => setCreateDrawerOpen(true)}
+                disabled={!canCreateProject}
+                onClick={() => {
+                  if (!canCreateProject) {
+                    notify.warning("Seleccioná cliente y campaña para crear un proyecto.");
+                    return;
+                  }
+                  setCreateDrawerOpen(true);
+                }}
               >
-                Nuevo Cliente
+                {projectsOnly ? "Nuevo Proyecto" : "Nuevo Cliente"}
               </Button>
             }
           />

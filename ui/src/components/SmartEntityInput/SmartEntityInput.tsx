@@ -37,6 +37,11 @@ type SmartEntityInputProps<T extends EntityNameOption> = {
    * would have surprising side effects on other rows that share the catalog.
    */
   lockName?: boolean;
+  /**
+   * Selection-only keeps the input searchable, but typing does not commit a
+   * free-text value. Callers use it when an existing entity must be selected.
+   */
+  selectionOnly?: boolean;
   required?: boolean;
   placeholder?: string;
   size?: SmartEntityInputSize;
@@ -54,6 +59,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
   onSelectExisting,
   disabled = false,
   lockName = false,
+  selectionOnly = false,
   required = false,
   placeholder,
   size = "md",
@@ -81,6 +87,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
   );
   const showDropdown = open && !disabled && visibleOptions.length > 0;
   const inputValue = formatDisplayValue ? formatProperName(value) : value;
+  const displayedInputValue = selectionOnly && open ? searchText : inputValue;
   const dropdownStyle: CSSProperties | undefined = dropdownPosition
     ? {
         position: "fixed",
@@ -172,11 +179,11 @@ export function SmartEntityInput<T extends EntityNameOption>({
     ) : null;
 
   return (
-    <div
-      ref={rootRef}
-      className={`relative ${className}`.trim()}
-    >
-      <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300" htmlFor={name}>
+    <div ref={rootRef} className={`relative ${className}`.trim()}>
+      <label
+        className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300"
+        htmlFor={name}
+      >
         {label}
       </label>
       <input
@@ -187,11 +194,13 @@ export function SmartEntityInput<T extends EntityNameOption>({
         aria-expanded={showDropdown}
         type="text"
         name={name}
-        value={inputValue}
+        value={displayedInputValue}
         onChange={(event) => {
           if (lockName) return;
           setSearchText(event.target.value);
-          onChange(event.target.value);
+          if (!selectionOnly) {
+            onChange(event.target.value);
+          }
           updateDropdownPosition();
           setOpen(true);
         }}
@@ -203,7 +212,9 @@ export function SmartEntityInput<T extends EntityNameOption>({
         readOnly={lockName}
         required={required}
         className={`input-base block ${
-          disabled ? "cursor-not-allowed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 dark:text-slate-400" : ""
+          disabled
+            ? "cursor-not-allowed border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 dark:text-slate-400"
+            : ""
         } ${lockName && !disabled ? "cursor-pointer bg-slate-50 dark:bg-slate-900" : ""} ${sizeClasses}`}
       />
 
