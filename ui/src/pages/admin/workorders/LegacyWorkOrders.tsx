@@ -6,6 +6,7 @@ import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders
 import useOrders from "../../../hooks/useWorkOrders";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
+import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
 import CreateOrder from "./CreateOrder";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { BaseModal } from "../../../components/Modal/BaseModal";
@@ -206,12 +207,12 @@ function OrdersIndicators({
   processing: boolean;
 }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <div>
       {processing ? (
-        <div className="flex items-center justify-center py-4">
-          <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
-          <span className="text-sm text-gray-500 font-medium">Cargando indicadores...</span>
-        </div>
+        <InlineSpinner
+          label="Cargando indicadores..."
+          spinnerClassName="text-custom-btn"
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <IndicatorCard
@@ -1098,20 +1099,20 @@ export function WorkOrders() {
         ]}
       />
       {errorMessage && (
-        <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+        <div className="flex items-center gap-2 p-3 mb-2 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200" role="alert">
           <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
           <div><span className="font-semibold">Error:</span> {errorMessage}</div>
         </div>
       )}
       {!processing && !errorMetrics && orders.length > 0 && (
-        <div className="my-4">
+        <div className="my-3">
           <OrdersIndicators
             metrics={displayedMetrics}
             processing={processingMetrics}
           />
         </div>
       )}
-      <div className="mt-4 relative">
+      <div className="mt-3 relative">
         {isProcessing && (
           <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />

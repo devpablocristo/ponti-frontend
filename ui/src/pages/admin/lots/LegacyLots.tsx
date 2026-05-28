@@ -275,7 +275,7 @@ export function LegacyLots() {
 
       {message ? (
         <div
-          className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"
+          className="mb-2 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
           role="alert"
         >
           <AlertCircle className="h-5 w-5 flex-shrink-0 text-amber-500" />
@@ -285,7 +285,7 @@ export function LegacyLots() {
 
       {error ? (
         <div
-          className="mb-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          className="mb-2 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
           role="alert"
         >
           <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-500" />
@@ -296,7 +296,7 @@ export function LegacyLots() {
       ) : null}
 
       {!message && !error ? (
-        <div className="my-4">
+        <div className="my-3">
           <LegacyLotsIndicators
             kpis={indicators}
             processing={!hasColumnFilters && processingKpis}
@@ -305,7 +305,7 @@ export function LegacyLots() {
         </div>
       ) : null}
 
-      <div className="relative mt-4">
+      <div className="relative mt-3">
         {processing ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm dark:bg-slate-900/70">
             <LoaderCircle className="h-10 w-10 animate-spin text-blue-600" />

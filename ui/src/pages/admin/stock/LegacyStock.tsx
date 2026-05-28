@@ -193,38 +193,37 @@ function CloseStockDate({
   }, [date]);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="h-1.5 w-full bg-gray-900" />
-      <div className="px-4 py-3">
-        <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block mb-2">
-          Cerrar stock a fecha
-        </label>
-        <div className="flex items-center gap-3">
+    <div>
+      <label className="block mb-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+        Cerrar stock a fecha
+      </label>
+      <div className="flex items-center gap-3">
+        <input
+          type="date"
+          disabled={disabledCloseStock}
+          value={internalDate}
+          onChange={(e) => setInternalDate(e.target.value)}
+          className="input-base appearance-none focus:ring-0 block text-sm py-2 px-3.5 disabled:bg-gray-100 dark:bg-slate-800 disabled:text-gray-400"
+        />
+        <label className={`inline-flex items-center gap-2 cursor-pointer ${disabledCloseStock ? "opacity-50 cursor-not-allowed" : ""}`}>
           <input
-            type="date"
+            type="checkbox"
+            checked={enabledCloseStock}
+            onChange={() => {
+              if (!enabledCloseStock && internalDate) {
+                setEnabledCloseStock(true);
+                onDateChange(internalDate);
+              } else {
+                setEnabledCloseStock(false);
+              }
+            }}
+            className="w-4 h-4 text-custom-btn border-gray-300 dark:border-gray-600 rounded focus:ring-custom-btn/30"
             disabled={disabledCloseStock}
-            value={internalDate}
-            onChange={(e) => setInternalDate(e.target.value)}
-            className="px-3 py-1.5 border border-gray-300 rounded-lg bg-white text-gray-900 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-custom-btn/30 focus:border-custom-btn disabled:bg-gray-100 disabled:text-gray-400"
           />
-          <label className={`inline-flex items-center gap-2 cursor-pointer ${disabledCloseStock ? "opacity-50 cursor-not-allowed" : ""}`}>
-            <input
-              type="checkbox"
-              checked={enabledCloseStock}
-              onChange={() => {
-                if (!enabledCloseStock && internalDate) {
-                  setEnabledCloseStock(true);
-                  onDateChange(internalDate);
-                } else {
-                  setEnabledCloseStock(false);
-                }
-              }}
-              className="w-4 h-4 text-custom-btn border-gray-300 rounded focus:ring-custom-btn/30"
-              disabled={disabledCloseStock}
-            />
-            <span className="text-xs font-semibold text-gray-600">Cerrar stock</span>
-          </label>
-        </div>
+          <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+            Cerrar stock
+          </span>
+        </label>
       </div>
     </div>
   );
@@ -232,22 +231,12 @@ function CloseStockDate({
 
 function ItemsIndicators({
   summary,
-  selectedDate,
-  onDateChange,
-  enabledCloseStock,
-  setEnabledCloseStock,
-  disabledCloseStock,
 }: {
   summary: Summary;
-  selectedDate: string;
-  onDateChange: (date: string) => void;
-  enabledCloseStock: boolean;
-  setEnabledCloseStock: (enabled: boolean) => void;
-  disabledCloseStock: boolean;
 }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <IndicatorCard
           title="Total invertido Kg"
           value={formatNumberAr(summary.total_kg) + " Kg"}
@@ -262,13 +251,6 @@ function ItemsIndicators({
           title="Total u$ / Neto"
           value={"u$ " + formatNumberAr(summary.total_usd)}
           color="red"
-        />
-        <CloseStockDate
-          date={selectedDate}
-          onDateChange={onDateChange}
-          enabledCloseStock={enabledCloseStock}
-          setEnabledCloseStock={setEnabledCloseStock}
-          disabledCloseStock={disabledCloseStock}
         />
       </div>
     </div>
@@ -805,18 +787,13 @@ export function Stock() {
         ]}
       />
       {!error && projectId && selectedCustomer && selectedCampaignId && (
-        <div className="my-4">
+        <div className="my-3">
           <ItemsIndicators
             summary={derivedSummary}
-            selectedDate={selectedDate}
-            disabledCloseStock={disabledCloseStock}
-            onDateChange={handleDateChange}
-            enabledCloseStock={enabledCloseStock}
-            setEnabledCloseStock={setEnabledCloseStock}
           />
         </div>
       )}
-      <div className="mt-4 relative">
+      <div className="mt-3 relative">
         {processing && (
           <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
             <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
@@ -824,13 +801,13 @@ export function Stock() {
         )}
 
         {(error || exportErrorMessage) && (
-          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+          <div className="flex items-center gap-2 p-3 mb-2 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200" role="alert">
             <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
             <div><span className="font-semibold">Error:</span> {exportErrorMessage || error}</div>
           </div>
         )}
         {stockPeriods && stockPeriods.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-end gap-6">
             <SelectField
               label="Periodo (fecha de cierre)"
               name="period"
@@ -840,10 +817,17 @@ export function Stock() {
               size="sm"
               onChange={(e) => setPeriod(e.target.value)}
             />
+            <CloseStockDate
+              date={selectedDate}
+              onDateChange={handleDateChange}
+              enabledCloseStock={enabledCloseStock}
+              setEnabledCloseStock={setEnabledCloseStock}
+              disabledCloseStock={disabledCloseStock || !projectId}
+            />
           </div>
         )}
         {errorPeriods && (
-          <div className="flex items-center gap-2 p-3 mb-3 text-sm text-amber-800 rounded-xl bg-amber-50 border border-amber-200">
+          <div className="flex items-center gap-2 p-3 mb-2 text-sm text-amber-800 rounded-lg bg-amber-50 border border-amber-200">
             <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.168 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>
             <span>{errorPeriods}</span>
           </div>
