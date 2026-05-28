@@ -56,7 +56,8 @@ type CustomersListProps = {
    *   - lista solo filas de tipo project (sin customers vacíos)
    *   - botón "+ Nuevo" crea proyecto (no cliente)
    *   - títulos y copy adaptados
-   * Se monta desde `/admin/master-data/projects/list`. Si es false (default),
+   * Se monta desde `/admin/projects` (alias legacy:
+   * `/admin/master-data/projects/list`). Si es false (default),
    * comportamiento histórico de "Clientes y Proyectos" mezclados.
    */
   projectsOnly?: boolean;

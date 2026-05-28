@@ -1,6 +1,9 @@
 const primaryTitles = new Map<string, string>([
   ["/admin/dashboard", "Dashboard"],
-  ["/admin/master-data/customers/list", "Clientes y Proyectos"],
+  ["/admin/customers", "Clientes y Sociedades"],
+  ["/admin/projects", "Proyectos"],
+  ["/admin/master-data/customers/list", "Proyectos"],
+  ["/admin/master-data/projects/list", "Proyectos"],
   ["/admin/lots", "Lotes"],
   ["/admin/work-orders", "Órdenes de Trabajo"],
   ["/admin/tasks", "Labores"],
@@ -27,6 +30,9 @@ const secondaryTitles = new Map<string, string>([
   ["/admin/master-data/customers/editor", "Editar"],
   ["/admin/master-data/customers/archived", "Archivados"],
   ["/admin/master-data/projects/archived", "Archivados"],
+  ["/admin/database/customers", "Crear Clientes y Sociedades"],
+  ["/admin/database/customers/archived", "Archivados"],
+  ["/admin/database/projects/archived", "Archivados"],
   ["/admin/master-data/labors", "Crear"],
   ["/admin/master-data/labors/list", "Editar"],
   ["/admin/master-data/labors/archived", "Archivados"],
@@ -62,6 +68,10 @@ export function getSidebarTitle(pathname: string) {
   }
 
   if (pathname.startsWith("/admin/master-data/customers/")) {
+    return "Editar";
+  }
+
+  if (pathname.startsWith("/admin/database/customers/")) {
     return "Editar";
   }
 

@@ -64,6 +64,11 @@ const menuReports: MenuItem[] = [
 
 const menuDatabase: MenuItem[] = [
   {
+    name: "Crear Clientes y Sociedades",
+    icon: lucideIcon(Users),
+    route: "/admin/database/customers",
+  },
+  {
     name: "Administrar Actores",
     icon: lucideIcon(Users),
     route: "/admin/master-data/actors",
@@ -148,6 +153,11 @@ const menuItems: MenuItem[] = [
     route: "/admin/dashboard",
   },
   {
+    name: "Clientes y Sociedades",
+    icon: lucideIcon(Users),
+    route: "/admin/customers",
+  },
+  {
     name: "Proyectos",
     icon: (color: string) => (
       <svg
@@ -165,7 +175,7 @@ const menuItems: MenuItem[] = [
         />
       </svg>
     ),
-    route: "/admin/master-data/projects/list",
+    route: "/admin/projects",
   },
   {
     name: "Lotes",

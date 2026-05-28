@@ -10,10 +10,14 @@ import { SupplyMovements } from "./pages/admin/supply-movements/SupplyMovements"
 import { Profile } from "./pages/admin/profile/Profile";
 import { Stock } from "./pages/admin/stock/Stock";
 import Access from "./pages/admin/access/Access";
-import CustomersList from "./pages/admin/master-data/customers/CustomersList";
-import CustomerEditor from "./pages/admin/master-data/customers/CustomerEditor";
-import ArchivedCustomers from "./pages/admin/master-data/customers/ArchivedCustomers";
-import ArchivedProjects from "./pages/admin/master-data/projects/ArchivedProjects";
+import LegacyCustomers from "./pages/admin/customers/Customers";
+import LegacyDatabaseCustomers from "./pages/admin/database/customers/Customers";
+import LegacyArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
+import LegacyArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
+import CurrentProjectsList from "./pages/admin/master-data/customers/CustomersList";
+import CurrentCustomerEditor from "./pages/admin/master-data/customers/CustomerEditor";
+import CurrentArchivedCustomers from "./pages/admin/master-data/customers/ArchivedCustomers";
+import CurrentArchivedProjects from "./pages/admin/master-data/projects/ArchivedProjects";
 import ArchivedInvestors from "./pages/admin/master-data/investors/ArchivedInvestors";
 import InvestorsList from "./pages/admin/master-data/investors/InvestorsList";
 import ArchivedLots from "./pages/admin/master-data/lots/ArchivedLots";
@@ -108,6 +112,14 @@ export default [
         element: <Access />,
       },
       {
+        path: "customers",
+        element: <LegacyCustomers />,
+      },
+      {
+        path: "projects",
+        element: <CurrentProjectsList projectsOnly />,
+      },
+      {
         path: "lots",
         element: <Lots />,
       },
@@ -165,23 +177,23 @@ export default [
       },
       {
         path: "master-data/customers/list",
-        element: <Navigate to="/admin/master-data/projects/list" replace />,
+        element: <Navigate to="/admin/projects" replace />,
       },
       {
         path: "master-data/projects/list",
-        element: <CustomersList projectsOnly />,
+        element: <Navigate to="/admin/projects" replace />,
       },
       {
         path: "master-data/customers/archived",
-        element: <ArchivedCustomers />,
+        element: <CurrentArchivedCustomers />,
       },
       {
         path: "master-data/customers/editor",
-        element: <CustomerEditor />,
+        element: <CurrentCustomerEditor />,
       },
       {
         path: "master-data/customers/:id/editor",
-        element: <CustomerEditor />,
+        element: <CurrentCustomerEditor />,
       },
       {
         path: "master-data/customers/:id",
@@ -189,7 +201,23 @@ export default [
       },
       {
         path: "master-data/projects/archived",
-        element: <ArchivedProjects />,
+        element: <CurrentArchivedProjects />,
+      },
+      {
+        path: "database/customers",
+        element: <LegacyDatabaseCustomers />,
+      },
+      {
+        path: "database/customers/archived",
+        element: <LegacyArchivedCustomers />,
+      },
+      {
+        path: "database/customers/:id",
+        element: <LegacyDatabaseCustomers />,
+      },
+      {
+        path: "database/projects/archived",
+        element: <LegacyArchivedProjects />,
       },
       {
         path: "master-data/investors",
