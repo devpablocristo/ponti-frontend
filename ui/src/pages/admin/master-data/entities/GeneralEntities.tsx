@@ -1124,7 +1124,7 @@ export default function GeneralEntities() {
 
       <div className="space-y-2">
         <AppFilterBar
-          className="z-[80]"
+          className="z-popover"
           filters={filterItems(["customer", "project", "investor", "campaign", "provider"])}
           actions={[
             {
@@ -1143,7 +1143,7 @@ export default function GeneralEntities() {
           ]}
         />
         <AppFilterBar
-          className="z-[70]"
+          className="z-dropdown"
           filters={filterItems(["manager", "tenant", "field", "lot", "crop"])}
         />
       </div>
