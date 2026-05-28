@@ -144,19 +144,21 @@ describe("lotTableUtils", () => {
 
   it("maps API KPI strings to numeric display values", () => {
     expect(
-      mapApiLotIndicators({
-        seeded_area: "1700.7",
-        harvested_area: "0",
-        yield_tn_per_ha: "0",
-        cost_per_hectare: "363.5",
-        superficie_total: "1697.7",
-      })
-    ).toEqual({
-      seeded_area: 1700.7,
-      harvested_area: 0,
-      yield_tn_per_ha: 0,
-      cost_per_hectare: 363.5,
-      superficie_total: 1697.7,
-    });
+  mapApiLotIndicators({
+    seeded_area: "1700.7",
+    harvested_area: "0",
+    yield_tn_per_ha: "0",
+    cost_per_hectare: "363.5",
+    superficie_total: "1697.7",
+    total_tons: "0",
+  })
+).toEqual({
+  seeded_area: 1700.7,
+  harvested_area: 0,
+  yield_tn_per_ha: 0,
+  cost_per_hectare: 363.5,
+  superficie_total: 1697.7,
+  total_tons: 0,
+});
   });
 });
