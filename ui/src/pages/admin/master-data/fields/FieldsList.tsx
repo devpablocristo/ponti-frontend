@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, MapPin, Upload } from "lucide-react";
+import { Archive, MapPin, Plus, Upload } from "lucide-react";
 
-import { buildTimestampedFilename, csvEscape, downloadBlob } from "../../fileTransfer";
+import { buildTimestampedFilename, downloadExcelRows } from "../../fileTransfer";
 
 import { usePagination } from "@/lib/dataDisplay";
 import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
@@ -23,6 +23,7 @@ import { Column } from "../../types";
 import { FIELD_ENTITY as ENTITY } from "../../entities";
 import CustomerEditor from "../customers/CustomerEditor";
 import ArchivedFields from "./ArchivedFields";
+import type { ActorContextFilters } from "../actors/actorContextFilters";
 
 const baseColumns: Column<Field>[] = [
   { key: "name", header: "Nombre", render: (value) => formatProperName(value) },
@@ -35,21 +36,36 @@ const baseColumns: Column<Field>[] = [
 
 type FieldsListProps = {
   editorOnly?: boolean;
+  embedded?: boolean;
+  contextFilters?: ActorContextFilters;
+  selectionMode?: {
+    label?: string;
+    selectedIds?: number[];
+    onAdd: (fields: Field[]) => void;
+    onCreateNew?: () => void;
+  };
+  onAfterChange?: () => void | Promise<void>;
 };
 
-export default function FieldsList({ editorOnly = false }: FieldsListProps) {
+const hasPositiveId = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value > 0;
+
+export default function FieldsList({
+  editorOnly = false,
+  embedded = false,
+  contextFilters,
+  selectionMode,
+  onAfterChange,
+}: FieldsListProps) {
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
+  const [contextMode, setContextMode] = useState<"current" | "all">(
+    hasPositiveId(contextFilters?.projectId) ? "current" : "all"
+  );
   const pagination = usePagination({ perPage: 25 });
   const [editorContext, setEditorContext] = useState<{
     initialProjectId: number | null;
   } | null>(null);
-  const {
-    fields,
-    processing,
-    error,
-    getFields,
-    archiveField,
-  } = useFields();
+  const { fields, processing, error, getFields, archiveField } = useFields();
 
   useEffect(() => {
     if (error) notify.error(error);
@@ -66,21 +82,44 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
   // workspace se cargue, pero lo escondemos del filter bar.
   const filters = useMemo(
     () => allFilters.filter((f) => f.name !== "campo" && f.name !== "field"),
-    [allFilters],
+    [allFilters]
   );
 
-  const refresh = useCallback(() => getFields(""), [getFields]);
+  useEffect(() => {
+    setContextMode(hasPositiveId(contextFilters?.projectId) ? "current" : "all");
+  }, [contextFilters?.projectId]);
+
+  const refresh = useCallback(async () => {
+    await getFields("");
+    await onAfterChange?.();
+  }, [getFields, onAfterChange]);
 
   // Client-side filter using the workspace selection. workspaceFields is
   // already scoped to the selected project (or all when no project selected).
   // We use it as the allow-list when any workspace filter is active and
   // intersect with the full catalog loaded locally.
   const visibleFields = useMemo(() => {
+    if (embedded) {
+      if (contextMode !== "current" || !hasPositiveId(contextFilters?.projectId)) {
+        return fields;
+      }
+      return fields.filter((field) => field.project_id === contextFilters.projectId);
+    }
+
     const isScoped = Boolean(selectedCustomer || selectedProject || selectedCampaignId);
     if (!isScoped) return fields;
     const scopedIds = new Set(workspaceFields.map((f) => f.id));
     return fields.filter((f) => scopedIds.has(f.id));
-  }, [fields, workspaceFields, selectedCustomer, selectedProject, selectedCampaignId]);
+  }, [
+    contextFilters?.projectId,
+    contextMode,
+    embedded,
+    fields,
+    selectedCampaignId,
+    selectedCustomer,
+    selectedProject,
+    workspaceFields,
+  ]);
 
   const openFieldEditor = useCallback((field: Field) => {
     setEditorContext({ initialProjectId: field.project_id ?? null });
@@ -90,48 +129,99 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
     items: visibleFields,
     entity: ENTITY,
     archive: archiveField,
-    onEdit: openFieldEditor,
+    onEdit: embedded ? undefined : openFieldEditor,
     onAfter: refresh,
   });
+
+  const selectedFieldIds = useMemo(
+    () => new Set(selectionMode?.selectedIds ?? []),
+    [selectionMode?.selectedIds]
+  );
+
+  const addSelectedFields = () => {
+    if (!selectionMode) return;
+    if (bulk.selectedItems.length === 0) {
+      notify.warning("Seleccioná al menos un campo.");
+      return;
+    }
+    const fieldsToAdd = bulk.selectedItems.filter((field) => !selectedFieldIds.has(field.id));
+    if (fieldsToAdd.length === 0) {
+      notify.info("Los campos seleccionados ya están cargados en el proyecto.");
+      return;
+    }
+    selectionMode.onAdd(fieldsToAdd);
+    bulk.clear();
+  };
 
   useEffect(() => {
     refresh();
   }, [refresh]);
 
   const handleExport = useCallback(() => {
-    const header = ["Nombre", "Tipo de contrato"].join(",");
-    const rows = visibleFields.map((f) =>
-      [csvEscape(f.name), csvEscape(f.lease_type_name ?? "")].join(","),
-    );
-    const csv = [header, ...rows].join("\n");
-    downloadBlob(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      buildTimestampedFilename("campos", "csv"),
+    void downloadExcelRows(
+      buildTimestampedFilename("campos", "xlsx"),
+      visibleFields.map((field) => ({
+        Nombre: field.name,
+        "Tipo de contrato": field.lease_type_name ?? "",
+      })),
+      "Campos"
     );
   }, [visibleFields]);
 
   const selectColumn = useMemo<Column<Field>>(
     () => makeSelectColumn<Field>(bulk, (f) => f.name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const tableColumns = useMemo<Column<Field>[]>(
     () => [selectColumn, ...baseColumns],
-    [selectColumn],
+    [selectColumn]
   );
 
   return (
     <div>
       <AppFilterBar
-        filters={filters}
+        filters={embedded ? [] : filters}
         actions={[
-          {
-            label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: handleExport,
-          },
+          ...(embedded && selectionMode && hasPositiveId(contextFilters?.projectId)
+            ? [
+                {
+                  label: "Proyecto Actual",
+                  variant: contextMode === "current" ? ("light" as const) : ("primary" as const),
+                  isPrimary: true,
+                  onClick: () => setContextMode("current"),
+                },
+                {
+                  label: "Todos",
+                  variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
+                  isPrimary: true,
+                  onClick: () => setContextMode("all"),
+                },
+              ]
+            : []),
+          ...(embedded && selectionMode
+            ? [
+                {
+                  label: selectionMode.label ?? "Agregar",
+                  icon: <Plus className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  disabled: bulk.selectedCount === 0,
+                  onClick: addSelectedFields,
+                },
+              ]
+            : []),
+          ...(!embedded
+            ? [
+                {
+                  label: "Exportar",
+                  icon: <Upload className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: handleExport,
+                },
+              ]
+            : []),
           {
             label: "Archivados",
             icon: <Archive className="h-4 w-4" />,
@@ -139,6 +229,17 @@ export default function FieldsList({ editorOnly = false }: FieldsListProps) {
             isPrimary: true,
             onClick: () => setArchivedDrawerOpen(true),
           },
+          ...(embedded && selectionMode?.onCreateNew
+            ? [
+                {
+                  label: "Nuevo",
+                  icon: <Plus className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: selectionMode.onCreateNew,
+                },
+              ]
+            : []),
         ]}
       />
 

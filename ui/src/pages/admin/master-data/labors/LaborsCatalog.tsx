@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Plus, Trash2 } from "lucide-react";
+import { Download, List, Plus, Trash2 } from "lucide-react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import SelectField from "../../../../components/Input/SelectField";
@@ -22,7 +22,7 @@ import {
   parseCsv,
   parsePartialPrice,
 } from "./importUtils";
-import { CSV_ACCEPT } from "../../fileTransfer";
+import { EXCEL_ACCEPT, readImportTableAsCsvText } from "../../fileTransfer";
 
 import {
   type Labor,
@@ -310,15 +310,17 @@ export default function LaborsCatalog({
     }
 
     const lowerName = file.name.toLowerCase();
-    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
+    const isExcel =
+      lowerName.endsWith(".xlsx") ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    if (!isCsv) {
-      setErrorMessage("Formato no soportado. Use .csv.");
+    if (!isExcel) {
+      setErrorMessage("Formato no soportado. Use .xlsx.");
       return;
     }
 
     try {
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const parsedRows = parseCsv(text);
 
       if (parsedRows.length === 0) {
@@ -428,7 +430,7 @@ export default function LaborsCatalog({
         setErrorMessage("No se encontraron filas importables en el archivo.");
       }
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx.");
     }
   };
 
@@ -456,18 +458,18 @@ export default function LaborsCatalog({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept={CSV_ACCEPT}
+                  accept={EXCEL_ACCEPT}
                   onChange={handleImportLaborsFromFile}
                   className="hidden"
                 />
                 <Button
                   variant="primary"
                   size="sm"
-                  className="text-sm font-medium flex items-center gap-1"
+                  className="text-sm font-medium"
+                  iconLeft={<Download className="h-4 w-4" />}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Download className="h-4 w-4" />
-                  Importar Labores
+                  Importar
                 </Button>
               </>
             )}
@@ -475,24 +477,11 @@ export default function LaborsCatalog({
             <Button
               variant="primary"
               size="sm"
-              className="text-sm font-medium flex items-center gap-1"
+              className="text-sm font-medium"
+              iconLeft={<List className="h-4 w-4" />}
               href="/admin/master-data/labors/list"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                />
-              </svg>
-              Ver Listado
+              Listado
             </Button>
             )}
           </div>

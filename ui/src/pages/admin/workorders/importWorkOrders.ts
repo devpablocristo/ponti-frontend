@@ -1,5 +1,6 @@
 import { apiClient } from "@/api/client";
 import { formatError } from "@/lib/format";
+import { readImportTableAsCsvText } from "../fileTransfer";
 import {
   getValueByAliases,
   normalizeText,
@@ -86,7 +87,7 @@ function indexBy(items: Indexable[] | null | undefined, nameKeys: string[]): Map
 }
 
 // La cadena pasa por el BFF, no por el BE directo. Cada endpoint del BFF
-// (`ponti-frontend/api/src/routes/*.ts`) envuelve la respuesta a su manera:
+// (`web/api/src/routes/*.ts`) envuelve la respuesta a su manera:
 //
 // - `/crops` y `/projects/:id/labors` → `{success: true, data: [...array...]}`
 // - `/investors`, `/fields?project_id=X`, `/lots` →
@@ -200,11 +201,11 @@ export async function parseAndResolveWorkOrdersCsv({
   projectId,
   defaultFieldId,
 }: ParseArgs): Promise<ParseResult> {
-  const rawRows = parseCsv(await file.text());
+  const rawRows = parseCsv(await readImportTableAsCsvText(file));
   if (rawRows.length === 0) {
     return {
       rows: [],
-      globalErrors: ["El archivo no tiene órdenes válidas. Use CSV con encabezados."],
+      globalErrors: ["El archivo no tiene órdenes válidas. Use Excel con encabezados."],
       diag: [],
     };
   }

@@ -37,7 +37,7 @@ type Data = {
   archived_at?: string | null;
 };
 
-type Field = {
+export type Field = {
   id: number;
   name: string;
   lease_type_name?: string;

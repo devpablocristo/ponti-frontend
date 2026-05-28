@@ -18,7 +18,12 @@ import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import useProjects from "../../../../hooks/useDatabase/projects";
-import { buildTimestampedFilename, downloadBlob } from "../../fileTransfer";
+import {
+  buildTimestampedFilename,
+  downloadExcelRows,
+  EXCEL_ACCEPT,
+  readImportTableAsCsvText,
+} from "../../fileTransfer";
 import useCustomers from "../../../../hooks/useCustomers";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { useSelection } from "../../../login/context/useSelection";
@@ -51,7 +56,8 @@ type CustomersListProps = {
    *   - lista solo filas de tipo project (sin customers vacíos)
    *   - botón "+ Nuevo" crea proyecto (no cliente)
    *   - títulos y copy adaptados
-   * Se monta desde `/admin/master-data/projects/list`. Si es false (default),
+   * Se monta desde `/admin/projects` (alias legacy:
+   * `/admin/master-data/projects/list`). Si es false (default),
    * comportamiento histórico de "Clientes y Proyectos" mezclados.
    */
   projectsOnly?: boolean;
@@ -64,14 +70,8 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
   const pagination = usePagination({ perPage: 25 });
-  const {
-    customers,
-    processing,
-    error,
-    getCustomers,
-    createCustomer,
-    archiveCustomer,
-  } = useCustomers();
+  const { customers, processing, error, getCustomers, createCustomer, archiveCustomer } =
+    useCustomers();
 
   useEffect(() => {
     if (error) notify.error(error);
@@ -91,24 +91,21 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const selectedCampaign = useMemo(
     () => campaigns.find((campaign) => campaign.id === selectedCampaignId),
-    [campaigns, selectedCampaignId],
+    [campaigns, selectedCampaignId]
   );
   const hasProjectScope = Boolean(
     selectedProject?.id ||
-      selectedCampaign?.id ||
-      selectedField?.id ||
-      allSelection.project ||
-      allSelection.campaign ||
-      allSelection.field,
+    selectedCampaign?.id ||
+    selectedField?.id ||
+    allSelection.project ||
+    allSelection.campaign ||
+    allSelection.field
   );
   const mode: CustomerProjectMode = projectsOnly || hasProjectScope ? "project" : "customer";
   const isProjectMode = mode === "project";
   const archivedShowsProjects = projectsOnly || hasProjectScope;
 
-  const refresh = useCallback(
-    () => getCustomers("per_page=1000"),
-    [getCustomers],
-  );
+  const refresh = useCallback(() => getCustomers("per_page=1000"), [getCustomers]);
   const refreshAfterArchivedRestore = useCallback(async () => {
     await refresh();
     setDataVersion((current) => current + 1);
@@ -155,14 +152,14 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
     return visibleCustomers.reduce((total, customer) => {
       const projects = projectsByCustomer[customer.id] ?? [];
       const filteredProjects = projects.filter((project) =>
-        projectMatchesFilters(project, selectedProject, selectedCampaign, selectedField),
+        projectMatchesFilters(project, selectedProject, selectedCampaign, selectedField)
       );
 
       return (
         total +
         filteredProjects.reduce(
           (subtotal, project) => subtotal + sumProjectHectares(project, selectedField),
-          0,
+          0
         )
       );
     }, 0);
@@ -262,18 +259,10 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       "Cantidad de Campos": row.fieldCount,
     }));
 
-    const csv = [
-      ["Cliente", "Proyecto", "Cantidad de Campañas", "Cantidad de Campos"].join(","),
-      ...rows.map((row) =>
-        Object.values(row)
-          .map((value) => `"${String(value).replace(/"/g, '""')}"`)
-          .join(","),
-      ),
-    ].join("\n");
-
-    downloadBlob(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-      buildTimestampedFilename("clientes_proyectos", "csv"),
+    void downloadExcelRows(
+      buildTimestampedFilename("clientes_proyectos", "xlsx"),
+      rows,
+      "Clientes"
     );
   }, [visibleProjectRows]);
 
@@ -282,7 +271,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       const file = event.target.files?.[0];
       if (!file) return;
       try {
-        const content = await file.text();
+        const content = await readImportTableAsCsvText(file);
         const names = content
           .split(/\r?\n/)
           .map((line) => line.split(/[;,]/)[0]?.replace(/^"|"$/g, "").trim())
@@ -299,10 +288,10 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
         notify.success(`Se importaron ${uniqueNames.length} clientes.`);
         refresh();
       } catch {
-        notify.error("No se pudo importar clientes. Usá CSV con una columna Cliente.");
+        notify.error("No se pudo importar clientes. Usá Excel con una columna Cliente.");
       }
     },
-    [createCustomer, refresh],
+    [createCustomer, refresh]
   );
 
   useEffect(() => {
@@ -326,17 +315,15 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
           customers.map(async (customer) => {
             try {
               const response = await apiClient.get<ProjectSummaryResponse>(
-                `/projects/customers/${customer.id}?page=1&per_page=1000`,
+                `/projects/customers/${customer.id}?page=1&per_page=1000`
               );
-              const projects = Array.isArray(response.data?.data)
-                ? response.data.data
-                : [];
+              const projects = Array.isArray(response.data?.data) ? response.data.data : [];
               const detailedProjects = await loadProjectDetails(projects);
               return [customer.id, detailedProjects] as const;
             } catch {
               return [customer.id, [] as RawProject[]] as const;
             }
-          }),
+          })
         );
 
         if (!cancelled) {
@@ -360,7 +347,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
   const bulkEntity = isProjectMode ? PROJECT_ENTITY : CUSTOMER_ENTITY;
   const bulkRows = useMemo(
     () => (isProjectMode ? visibleProjectRows.filter((row) => row.projectId) : visibleProjectRows),
-    [isProjectMode, visibleProjectRows],
+    [isProjectMode, visibleProjectRows]
   );
   const rowArchive = useCallback(
     async (rowId: number) => {
@@ -375,7 +362,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
 
       await archiveCustomer(row.customerId);
     },
-    [archiveCustomer, deleteProject, visibleProjectRows],
+    [archiveCustomer, deleteProject, visibleProjectRows]
   );
 
   const bulk = useBulkActions<CustomerProjectRow>({
@@ -397,22 +384,22 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       align: "center",
       width: "40px",
       render: (_value, row) => (
-          <Checkbox
-            checked={bulk.isSelected(row.id)}
-            onChange={(event) => {
-              event.stopPropagation();
-              bulk.toggle(row.id);
-            }}
-            onClick={(event) => event.stopPropagation()}
-            aria-label={
-              isProjectMode
-                ? `Seleccionar proyecto ${row.projectName}`
-                : `Seleccionar cliente ${row.customerName}`
-            }
-          />
+        <Checkbox
+          checked={bulk.isSelected(row.id)}
+          onChange={(event) => {
+            event.stopPropagation();
+            bulk.toggle(row.id);
+          }}
+          onClick={(event) => event.stopPropagation()}
+          aria-label={
+            isProjectMode
+              ? `Seleccionar proyecto ${row.projectName}`
+              : `Seleccionar cliente ${row.customerName}`
+          }
+        />
       ),
     }),
-    [bulk, isProjectMode],
+    [bulk, isProjectMode]
   );
 
   const tableColumns = useMemo<Column<CustomerProjectRow>[]>(
@@ -441,7 +428,7 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
         align: "center",
       },
     ],
-    [selectColumn],
+    [selectColumn]
   );
 
   return (
@@ -449,21 +436,25 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       <AppFilterBar
         filters={filters}
         actions={[
-          {
-            label: "Importar",
-            icon: <Download className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            accept: ".csv,text/csv",
-            onFileChange: importCustomers,
-          },
-          {
-            label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: exportVisibleCustomers,
-          },
+          ...(projectsOnly
+            ? []
+            : [
+                {
+                  label: "Importar",
+                  icon: <Download className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  accept: EXCEL_ACCEPT,
+                  onFileChange: importCustomers,
+                },
+                {
+                  label: "Exportar",
+                  icon: <Upload className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: exportVisibleCustomers,
+                },
+              ]),
           {
             label: "Archivados",
             icon: <Archive className="h-4 w-4" />,
@@ -528,7 +519,13 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
       </ArchivedDrawer>
 
       <div className="relative">
-        <LoadingOverlay show={hasWorkspaceSelection && (processing || projectsLoading) && visibleProjectRows.length > 0} />
+        <LoadingOverlay
+          show={
+            hasWorkspaceSelection &&
+            (processing || projectsLoading) &&
+            visibleProjectRows.length > 0
+          }
+        />
         {!hasWorkspaceSelection ? (
           <EmptyState
             icon={Briefcase}
@@ -581,7 +578,6 @@ export default function CustomersList({ projectsOnly = false }: CustomersListPro
           </>
         )}
       </div>
-
     </div>
   );
 }

@@ -21,7 +21,16 @@ type QueryDeps = {
 export function createLaborQueries(deps: QueryDeps) {
   const { dispatch, setProcessing, setError } = deps;
 
-  const getLaborGroups = async (query: string) => {
+  const normalizeLaborGroupQuery = (queryOrProjectId: string | number, query = "") => {
+    if (typeof queryOrProjectId !== "number") return queryOrProjectId;
+
+    const params = new URLSearchParams(query.replace(/^\?/, ""));
+    params.set("project_id", String(queryOrProjectId));
+    return params.toString();
+  };
+
+  const getLaborGroups = async (queryOrProjectId: string | number, legacyQuery = "") => {
+    const query = normalizeLaborGroupQuery(queryOrProjectId, legacyQuery);
     setProcessing(true);
     setError(null);
     dispatch({ type: actions.SET_LABOR_GROUPS, payload: [] });

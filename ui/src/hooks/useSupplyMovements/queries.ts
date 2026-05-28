@@ -40,7 +40,13 @@ export function createSupplyMovementQueries(deps: QueryDeps) {
     });
   };
 
-  const getSupplyMovements = async (query: string): Promise<void> => {
+  const normalizeSupplyMovementQuery = (queryOrProjectId: string | number): string => {
+    if (typeof queryOrProjectId !== "number") return queryOrProjectId;
+    return new URLSearchParams({ project_id: String(queryOrProjectId) }).toString();
+  };
+
+  const getSupplyMovements = async (queryOrProjectId: string | number): Promise<void> => {
+    const query = normalizeSupplyMovementQuery(queryOrProjectId);
     setProcessing(true);
     setError(null);
     try {

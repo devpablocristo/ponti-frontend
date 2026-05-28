@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, Download, GitCompare, Plus, Upload, Users } from "lucide-react";
 
+import { apiClient } from "@/api/client";
+import { SuccessResponse } from "@/api/types";
 import { usePagination } from "@/lib/dataDisplay";
 import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { formatProperName } from "@/lib/properName";
 import Button from "../../../../components/Button/Button";
-import {
-  AppFilterBar,
-  FilterOption,
-} from "../../../../components/filters/AppFilterBar";
+import { AppFilterBar, FilterOption } from "../../../../components/filters/AppFilterBar";
 import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPanel";
 import { ArchivedDrawer } from "../../../../components/crud/ArchivedDrawer";
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
@@ -24,12 +23,35 @@ import useActors, {
   ActorPayloadInput,
   ActorRole,
 } from "../../../../hooks/useActors";
+import useCustomers from "../../../../hooks/useCustomers";
+import useProjects from "../../../../hooks/useDatabase/projects";
+import type { Project } from "../../../../hooks/useDatabase/projects/types";
+import useInvestors from "../../../../hooks/useInvestors";
+import useManagers from "../../../../hooks/useManagers";
 import { Column } from "../../types";
-import { ACTOR_ENTITY as ENTITY } from "../../entities";
 import ActorFormDrawer from "./ActorFormDrawer";
 import { ACTOR_KIND_OPTIONS, ACTOR_ROLE_OPTIONS } from "./constants";
-import { downloadCsvRows } from "../../fileTransfer";
-import ArchivedActors, { ActorListFilters } from "./ArchivedActors";
+import {
+  buildTimestampedFilename,
+  downloadExcelRows,
+  EXCEL_ACCEPT,
+  readImportTableAsCsvText,
+} from "../../fileTransfer";
+import ArchivedActorsByRole from "./ArchivedActorsByRole";
+import type { ActorListFilters } from "./ArchivedActors";
+import {
+  buildActorArchiveRelations,
+  getActorArchivedDrawerTitle,
+  getActorBulkEntity,
+  resolveActorArchiveTarget,
+} from "./actorCrudarRouting";
+import {
+  actorMatchesResponsibleContext,
+  buildInvestorContextMatch,
+  buildResponsibleContextMatch,
+  hasActorContextFilters,
+  type ActorContextFilters,
+} from "./actorContextFilters";
 import DuplicateActors from "./DuplicateActors";
 
 const kindLabel = (kind?: string) =>
@@ -37,6 +59,25 @@ const kindLabel = (kind?: string) =>
 
 const roleLabel = (role: string) =>
   ACTOR_ROLE_OPTIONS.find((option) => option.value === role)?.label ?? role;
+
+const rolePluralLabel = (role: ActorRole | "") => {
+  switch (role) {
+    case "responsable":
+      return "Responsables";
+    case "inversor":
+      return "Inversores";
+    case "cliente":
+      return "Clientes";
+    case "arrendatario":
+      return "Arrendatarios";
+    case "proveedor":
+      return "Proveedores";
+    case "contratista":
+      return "Contratistas";
+    default:
+      return "Actores";
+  }
+};
 
 const normalize = (value: unknown) =>
   String(value ?? "")
@@ -55,8 +96,21 @@ const kindOptions: FilterOption[] = ACTOR_KIND_OPTIONS.map((kind) => ({
   name: kind.label,
 }));
 
+type ActorSelectionMode = {
+  label?: string;
+  entityLabel?: string;
+  emptySelectionMessage?: string;
+  duplicateMessage?: string;
+  selectedActorIds?: number[];
+  onAdd: (actors: Actor[]) => void;
+};
+
 type ActorsListProps = {
   rolePreset?: ActorRole;
+  embedded?: boolean;
+  contextFilters?: ActorContextFilters;
+  selectionMode?: ActorSelectionMode;
+  onAfterChange?: () => void | Promise<void>;
 };
 
 function parseCsv(text: string) {
@@ -168,24 +222,72 @@ const columns: Column<Actor>[] = [
   },
 ];
 
-export default function ActorsList({ rolePreset }: ActorsListProps) {
+export default function ActorsList({
+  rolePreset,
+  embedded = false,
+  contextFilters,
+  selectionMode,
+  onAfterChange,
+}: ActorsListProps) {
   const [selectedRole, setSelectedRole] = useState<ActorRole | "">(rolePreset ?? "");
   const [selectedKind, setSelectedKind] = useState<ActorKind | "">("");
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const pagination = usePagination({ perPage: 25 });
   const [duplicatesDrawerOpen, setDuplicatesDrawerOpen] = useState(false);
+  const hasContextFilters = hasActorContextFilters(contextFilters);
+  const [contextMode, setContextMode] = useState<"current" | "all">(
+    hasContextFilters ? "current" : "all"
+  );
+  const [projectDetails, setProjectDetails] = useState<Record<number, Project>>({});
+  const [loadingContextDetails, setLoadingContextDetails] = useState(false);
   const { actors, processing, error, getActors, createActor, updateActor, archiveActor } =
     useActors();
+  const { customers, getCustomers, archiveCustomer } = useCustomers();
+  const { managers, getManagers, archiveManager } = useManagers();
+  const { investors, getInvestors, archiveInvestor } = useInvestors();
+  const {
+    projects,
+    processing: projectsProcessing,
+    error: projectsError,
+    getProjects,
+  } = useProjects();
 
   useEffect(() => {
     if (error) notify.error(error);
   }, [error]);
+  useEffect(() => {
+    if (projectsError) notify.error(projectsError);
+  }, [projectsError]);
 
-  const refresh = useCallback(() => {
+  useEffect(() => {
+    setContextMode(hasContextFilters ? "current" : "all");
+  }, [hasContextFilters]);
+
+  const refreshCrudarRelations = useCallback(async () => {
+    await Promise.allSettled([
+      getCustomers("page=1&per_page=1000"),
+      getManagers("page=1&per_page=1000"),
+      getInvestors("page=1&per_page=1000"),
+    ]);
+  }, [getCustomers, getInvestors, getManagers]);
+
+  const refresh = useCallback(async () => {
     const params = new URLSearchParams({ page: "1", per_page: "1000" });
     if (selectedRole) params.set("role", selectedRole);
-    return getActors(params.toString());
-  }, [getActors, selectedRole]);
+    await getActors(params.toString());
+    await refreshCrudarRelations();
+  }, [getActors, refreshCrudarRelations, selectedRole]);
+
+  const refreshProjects = useCallback(() => {
+    if (!embedded || !hasContextFilters) return;
+    getProjects("page=1&per_page=1000");
+  }, [embedded, getProjects, hasContextFilters]);
+
+  const afterActorChange = useCallback(async () => {
+    await refresh();
+    refreshProjects();
+    await onAfterChange?.();
+  }, [onAfterChange, refresh, refreshProjects]);
 
   const saveActor = useCallback(
     async (id: number, input: ActorPayloadInput) => {
@@ -199,7 +301,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
     create: createActor,
     update: (id, input) => saveActor(id, input),
     fallbackErrorMessage: "No se pudo guardar el actor",
-    onAfter: refresh,
+    onAfter: afterActorChange,
   });
 
   const rows = useMemo(() => {
@@ -210,33 +312,53 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
     });
   }, [actors, selectedKind, selectedRole]);
 
+  const roleContextMatch = useMemo(() => {
+    if (!contextFilters) return null;
+    if (selectedRole === "inversor") {
+      return buildInvestorContextMatch(investors, projects, projectDetails, contextFilters);
+    }
+    return buildResponsibleContextMatch(managers, projects, projectDetails, contextFilters);
+  }, [contextFilters, investors, managers, projectDetails, projects, selectedRole]);
+
+  const visibleRows = useMemo(() => {
+    if (!embedded || contextMode !== "current" || !roleContextMatch || !hasContextFilters) {
+      return rows;
+    }
+    return rows.filter((actor) => actorMatchesResponsibleContext(actor, roleContextMatch));
+  }, [contextMode, embedded, hasContextFilters, roleContextMatch, rows]);
+
+  const selectedActorIdSet = useMemo(
+    () => new Set(selectionMode?.selectedActorIds ?? []),
+    [selectionMode?.selectedActorIds]
+  );
+
   const actorListFilters = useMemo<ActorListFilters>(
     () => ({
       role: selectedRole,
       kind: selectedKind,
     }),
-    [selectedKind, selectedRole],
+    [selectedKind, selectedRole]
   );
 
   const handleImport = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const inputs = parseCsv(text)
         .map(rowToActorInput)
         .filter((input): input is ActorPayloadInput => input !== null);
 
       await Promise.all(inputs.map((input) => createActor(input)));
-      refresh();
+      void afterActorChange();
     },
-    [createActor, refresh]
+    [afterActorChange, createActor]
   );
 
   const handleExport = useCallback(() => {
-    downloadCsvRows(
-      `actores_${new Date().toISOString()}.csv`,
-      rows.map((actor) => ({
+    void downloadExcelRows(
+      buildTimestampedFilename("actores", "xlsx"),
+      visibleRows.map((actor) => ({
         Actor: actor.display_name,
         Tipo: kindLabel(actor.actor_kind),
         Roles: (actor.roles ?? []).map(roleLabel).join(" | "),
@@ -247,21 +369,60 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         Aliases: actor.aliases?.map((alias) => alias.alias).join(" | ") ?? "",
         Email: actor.primary_email ?? "",
         Telefono: actor.primary_phone ?? "",
-      }))
+      })),
+      "Actores"
     );
-  }, [rows]);
+  }, [visibleRows]);
+
+  const actorArchiveRelations = useMemo(
+    () => buildActorArchiveRelations({ customers, managers, investors }),
+    [customers, investors, managers]
+  );
+
+  const archiveActorRow = useCallback(
+    async (actorId: number) => {
+      const actor = rows.find((item) => item.id === actorId);
+      if (!actor) return;
+
+      const target = resolveActorArchiveTarget(actor, actorArchiveRelations);
+      switch (target.kind) {
+        case "customer":
+          await archiveCustomer(target.id);
+          return;
+        case "manager":
+          await archiveManager(target.id);
+          return;
+        case "investor":
+          await archiveInvestor(target.id);
+          return;
+        case "actor":
+          await archiveActor(target.id);
+          return;
+      }
+    },
+    [actorArchiveRelations, archiveActor, archiveCustomer, archiveInvestor, archiveManager, rows]
+  );
+
+  const bulkEntity = useMemo(() => getActorBulkEntity(selectedRole), [selectedRole]);
+  const defaultActorFormRoles = useMemo<ActorRole[]>(
+    () => (selectedRole ? [selectedRole] : []),
+    [selectedRole]
+  );
 
   const bulk = useBulkActions<Actor>({
-    items: rows,
-    entity: ENTITY,
-    archive: archiveActor,
+    items: visibleRows,
+    entity: bulkEntity,
+    archive: archiveActorRow,
     onEdit: (item) => drawer.openEdit(item),
-    onAfter: refresh,
+    onAfter: () => {
+      void afterActorChange();
+    },
   });
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
+    refreshProjects();
+  }, [refresh, refreshProjects]);
 
   useEffect(() => {
     if (rolePreset) {
@@ -269,35 +430,99 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
     }
   }, [rolePreset]);
 
+  useEffect(() => {
+    if (!embedded || !hasContextFilters || projects.length === 0) return;
+    const missingProjects = projects.filter((project) => !projectDetails[project.id]);
+    if (missingProjects.length === 0) return;
+
+    let cancelled = false;
+    setLoadingContextDetails(true);
+
+    Promise.all(
+      missingProjects.map(async (project) => {
+        const response = await apiClient.get<SuccessResponse<Project>>(`/projects/${project.id}`);
+        return [project.id, response.data] as const;
+      })
+    )
+      .then((entries) => {
+        if (cancelled) return;
+        setProjectDetails((prev) => {
+          const next = { ...prev };
+          entries.forEach(([id, detail]) => {
+            next[id] = detail;
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        // El modo embebido conserva la lista general aunque no pueda hidratar contexto.
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingContextDetails(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [embedded, hasContextFilters, projectDetails, projects]);
+
   const selectColumn = useMemo<Column<Actor>>(
-    () => makeSelectColumn<Actor>(bulk, (actor) => actor.display_name, ENTITY),
-    [bulk]
+    () => makeSelectColumn<Actor>(bulk, (actor) => actor.display_name, bulkEntity),
+    [bulk, bulkEntity]
   );
 
   const tableColumns = useMemo<Column<Actor>[]>(() => [selectColumn, ...columns], [selectColumn]);
 
+  const addSelectedActors = () => {
+    if (!selectionMode) return;
+    const actorsToAdd = bulk.selectedItems.filter((actor) => !selectedActorIdSet.has(actor.id));
+    if (bulk.selectedItems.length === 0) {
+      notify.warning(
+        selectionMode.emptySelectionMessage ??
+          `Seleccioná al menos un ${selectionMode.entityLabel ?? "actor"}.`
+      );
+      return;
+    }
+    if (actorsToAdd.length === 0) {
+      notify.info(
+        selectionMode.duplicateMessage ??
+          "Los actores seleccionados ya están cargados en el proyecto."
+      );
+      return;
+    }
+    selectionMode.onAdd(actorsToAdd);
+    bulk.clear();
+  };
+  const embeddedEntityLabel = rolePluralLabel(selectedRole);
+
   return (
-    <div className="relative">
-      <LoadingOverlay show={processing && rows.length > 0} />
+    <div className={embedded ? "relative" : "relative"}>
+      <LoadingOverlay
+        show={(processing || projectsProcessing || loadingContextDetails) && visibleRows.length > 0}
+      />
 
       <AppFilterBar
         filters={[
-          {
-            type: "search",
-            name: "rol",
-            label: "Rol",
-            placeholder: "Buscar",
-            value: selectedRole ? roleLabel(selectedRole) : "Todos los roles",
-            options: roleOptions,
-            disabled: Boolean(rolePreset),
-            onChange: () => {},
-            setData: (data) => {
-              if (rolePreset) return;
-              const option = data as FilterOption | undefined;
-              setSelectedRole((option?.id as ActorRole | undefined) ?? "");
-            },
-            allLabel: "Todos los roles",
-          },
+          ...(!rolePreset
+            ? [
+                {
+                  type: "search" as const,
+                  name: "rol",
+                  label: "Rol",
+                  placeholder: "Buscar",
+                  value: selectedRole ? roleLabel(selectedRole) : "Todos los roles",
+                  options: roleOptions,
+                  disabled: Boolean(rolePreset),
+                  onChange: () => {},
+                  setData: (data: unknown) => {
+                    if (rolePreset) return;
+                    const option = data as FilterOption | undefined;
+                    setSelectedRole((option?.id as ActorRole | undefined) ?? "");
+                  },
+                  allLabel: "Todos los roles",
+                },
+              ]
+            : []),
           {
             type: "search",
             name: "tipo",
@@ -315,7 +540,7 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         ]}
         // Orden canónico Datos Maestros: extras → Importar → Exportar → Archivados → Nuevo.
         actions={[
-          ...(!rolePreset
+          ...(!rolePreset && !embedded
             ? [
                 {
                   label: "Duplicados",
@@ -326,21 +551,54 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
                 },
               ]
             : []),
-          {
-            label: "Importar",
-            icon: <Download className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            accept: ".csv,text/csv",
-            onFileChange: handleImport,
-          },
-          {
-            label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: handleExport,
-          },
+          ...(!embedded
+            ? [
+                {
+                  label: "Importar",
+                  icon: <Download className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  accept: EXCEL_ACCEPT,
+                  onFileChange: handleImport,
+                },
+                {
+                  label: "Exportar",
+                  icon: <Upload className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: handleExport,
+                },
+              ]
+            : []),
+          ...(selectionMode
+            ? [
+                ...(hasContextFilters
+                  ? [
+                      {
+                        label: "Proyecto Actual",
+                        variant:
+                          contextMode === "current" ? ("light" as const) : ("primary" as const),
+                        isPrimary: true,
+                        onClick: () => setContextMode("current"),
+                      },
+                      {
+                        label: "Todos",
+                        variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
+                        isPrimary: true,
+                        onClick: () => setContextMode("all"),
+                      },
+                    ]
+                  : []),
+                {
+                  label: selectionMode.label ?? "Agregar",
+                  icon: <Plus className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  disabled: bulk.selectedCount === 0,
+                  onClick: addSelectedActors,
+                },
+              ]
+            : []),
           {
             label: "Archivados",
             icon: <Archive className="h-4 w-4" />,
@@ -358,13 +616,21 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         ]}
       />
 
-      {processing && rows.length === 0 ? (
+      {(processing || projectsProcessing || loadingContextDetails) && visibleRows.length === 0 ? (
         <TableSkeleton rows={10} columns={tableColumns.length} />
-      ) : rows.length === 0 ? (
+      ) : visibleRows.length === 0 ? (
         <EmptyState
           icon={Users}
-          title="Aún no hay actores"
-          description="Creá el primer actor maestro para asignarle roles y relaciones."
+          title={
+            embedded && contextMode === "current"
+              ? `No Hay ${embeddedEntityLabel} En El Proyecto Actual`
+              : "Aún No Hay Actores"
+          }
+          description={
+            embedded && contextMode === "current"
+              ? `Cambiá a Todos para buscar ${embeddedEntityLabel.toLowerCase()} fuera del proyecto actual.`
+              : "Creá el primer actor maestro para asignarle roles y relaciones."
+          }
           cta={
             <Button
               variant="primary"
@@ -379,17 +645,17 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         <>
           <BulkSelectionPanel
             selectedCount={bulk.selectedCount}
-            totalCount={rows.length}
+            totalCount={visibleRows.length}
             allSelected={bulk.allSelected}
             onToggleAll={bulk.toggleAll}
             onClear={bulk.clear}
             actions={bulk.actions}
-            entity={ENTITY}
+            entity={bulkEntity}
           />
           <ResponsiveTable<Actor>
-            data={rows}
+            data={visibleRows}
             columns={tableColumns}
-            pagination={pagination.buildPagination(rows.length)}
+            pagination={pagination.buildPagination(visibleRows.length)}
             primaryKey="display_name"
             rowKey={(a) => a.id}
             emptyMessage="No hay actores para mostrar"
@@ -402,15 +668,16 @@ export default function ActorsList({ rolePreset }: ActorsListProps) {
         actor={drawer.editing}
         processing={processing}
         errorMessage={drawer.submitError}
+        defaultRoles={defaultActorFormRoles}
         onClose={drawer.close}
         onSubmit={drawer.handleSubmit}
       />
       <ArchivedDrawer
         open={archivedDrawerOpen}
-        title="Actores archivados"
+        title={getActorArchivedDrawerTitle(selectedRole)}
         onClose={() => setArchivedDrawerOpen(false)}
       >
-        <ArchivedActors filters={actorListFilters} onAfterRestore={refresh} />
+        <ArchivedActorsByRole filters={actorListFilters} onAfterRestore={afterActorChange} />
       </ArchivedDrawer>
       <ArchivedDrawer
         open={duplicatesDrawerOpen}

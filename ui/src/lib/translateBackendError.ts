@@ -109,6 +109,14 @@ export function translateBackendError(raw: string): string {
     return `El actor tiene ${n} referencia${n === "1" ? "" : "s"} activa${n === "1" ? "" : "s"} (clientes, responsables, inversores). Archivá o reasigná esas referencias antes de archivar el actor.`;
   }
 
+  const investorHasActiveAssignments = msg.match(
+    /^investor has (\d+) active assignment(?:\(s\)|s)?; remove them first$/i,
+  );
+  if (investorHasActiveAssignments) {
+    const n = investorHasActiveAssignments[1];
+    return `El inversor tiene ${n} asignación${n === "1" ? "" : "es"} activa${n === "1" ? "" : "s"} en proyectos, campos, órdenes o costo administrativo. Quitá esas asignaciones antes de archivarlo.`;
+  }
+
   // "work order already exists for number X and project Y"
   if (/^work order already exists for number/i.test(msg)) {
     return "Ya existe una orden de trabajo con ese número en este proyecto.";

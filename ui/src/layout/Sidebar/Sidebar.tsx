@@ -1,5 +1,7 @@
 import {
   BarChart3,
+  Bell,
+  Bot,
   CalendarRange,
   ChevronDown,
   DollarSign,
@@ -62,6 +64,11 @@ const menuReports: MenuItem[] = [
 
 const menuDatabase: MenuItem[] = [
   {
+    name: "Crear Clientes y Sociedades",
+    icon: lucideIcon(Users),
+    route: "/admin/database/customers",
+  },
+  {
     name: "Administrar Actores",
     icon: lucideIcon(Users),
     route: "/admin/master-data/actors",
@@ -77,14 +84,19 @@ const menuDatabase: MenuItem[] = [
     route: "/admin/master-data/fields",
   },
   {
-    name: "Administrar Labores",
-    icon: lucideIcon(Wrench),
-    route: "/admin/master-data/labors/list",
+    name: "Administrar Cultivos",
+    icon: lucideIcon(Sprout),
+    route: "/admin/master-data/crops",
   },
   {
-    name: "Administrar Insumos",
+    name: "Crear Labores",
+    icon: lucideIcon(Wrench),
+    route: "/admin/database/tasks",
+  },
+  {
+    name: "Crear Insumos",
     icon: lucideIcon(Package),
-    route: "/admin/master-data/supplies/list",
+    route: "/admin/database/items",
   },
   {
     name: "Cargar Dólar Promedio",
@@ -101,52 +113,70 @@ const menuDatabase: MenuItem[] = [
 const menuAIItems: MenuItem[] = [
   {
     name: "Asistente",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M8 2.66667C5.42267 2.66667 3.33333 4.756 3.33333 7.33333C3.33333 9.91067 5.42267 12 8 12C10.5773 12 12.6667 9.91067 12.6667 7.33333C12.6667 4.756 10.5773 2.66667 8 2.66667Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path d="M5.33333 13.3333H10.6667" stroke={color} strokeLinecap="round" />
-        <path d="M6.66667 10.6667H9.33333" stroke={color} strokeLinecap="round" />
-      </svg>
-    ),
+    icon: lucideIcon(Bot),
     route: "/admin/ai-assistant",
   },
   {
     name: "Notificaciones",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M8 1.33334C5.42267 1.33334 3.33333 3.42267 3.33333 6.00001V8.66667L2 10.6667H14L12.6667 8.66667V6.00001C12.6667 3.42267 10.5773 1.33334 8 1.33334Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M6 12C6 13.1046 6.89543 14 8 14C9.10457 14 10 13.1046 10 12"
-          stroke={color}
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    icon: lucideIcon(Bell),
     route: "/admin/notifications",
   },
 ];
+
+const lotsIcon = (color: string) => (
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M3.33671 7.46V8L8.00204 10.6947L12.6667 8V7.46M3.33337 10.7667V11.3067L7.99804 14L12.6634 11.3053V10.7653M8.00204 2L3.33671 4.69467L8.00204 7.38933L12.6667 4.69467L8.00204 2Z"
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const workOrdersIcon = (color: string) => (
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M6.66671 2V4.66667C6.66671 4.84348 6.59647 5.01305 6.47144 5.13807C6.34642 5.2631 6.17685 5.33333 6.00004 5.33333H3.33337M8.66671 4H10.6667M8.66671 6H10.6667M8.00004 8V12M10.6667 10H5.33337M12.6667 2.66667V13.3333C12.6667 13.5101 12.5965 13.6797 12.4714 13.8047C12.3464 13.9298 12.1769 14 12 14H4.00004C3.82323 14 3.65366 13.9298 3.52864 13.8047C3.40361 13.6797 3.33337 13.5101 3.33337 13.3333V5.276C3.33341 5.0992 3.40367 4.92966 3.52871 4.80467L6.13804 2.19533C6.26304 2.0703 6.43258 2.00004 6.60937 2H12C12.1769 2 12.3464 2.07024 12.4714 2.19526C12.5965 2.32029 12.6667 2.48986 12.6667 2.66667ZM5.33337 8V12H10.6667V8H5.33337Z"
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const laborsIcon = (color: string) => (
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M8.66667 4.66659H12.6667L14 7.33325M8.66667 4.66659V9.99992M8.66667 4.66659V3.99992C8.66667 3.82311 8.59643 3.65354 8.4714 3.52851C8.34638 3.40349 8.17681 3.33325 8 3.33325H2.66667C2.48986 3.33325 2.32029 3.40349 2.19526 3.52851C2.07024 3.65354 2 3.82311 2 3.99992V9.99992H3.33333M14 7.33325V9.99992H12.6667M14 7.33325H10.6667M8.66667 9.99992H6M8.66667 9.99992H10M13 10.9999C13 11.4419 12.8244 11.8659 12.5118 12.1784C12.1993 12.491 11.7754 12.6666 11.3333 12.6666C10.8913 12.6666 10.4674 12.491 10.1548 12.1784C9.84226 11.8659 9.66667 11.4419 9.66667 10.9999C9.66667 10.5579 9.84226 10.134 10.1548 9.82141C10.4674 9.50885 10.8913 9.33325 11.3333 9.33325C11.7754 9.33325 12.1993 9.50885 12.5118 9.82141C12.8244 10.134 13 10.5579 13 10.9999ZM6.33333 10.9999C6.33333 11.4419 6.15774 11.8659 5.84518 12.1784C5.53262 12.491 5.10869 12.6666 4.66667 12.6666C4.22464 12.6666 3.80072 12.491 3.48816 12.1784C3.17559 11.8659 3 11.4419 3 10.9999C3 10.5579 3.17559 10.134 3.48816 9.82141C3.80072 9.50885 4.22464 9.33325 4.66667 9.33325C5.10869 9.33325 5.53262 9.50885 5.84518 9.82141C6.15774 10.134 6.33333 10.5579 6.33333 10.9999Z"
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const suppliesIcon = (color: string) => (
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M6.55932 8.30298C6.55932 8.30298 7.39257 6.24417 6.41515 4.77629C5.43775 3.30841 3.05785 2.73935 2.932 2.82918C2.80615 2.91902 2.18662 5.04615 3.16402 6.51403C4.14142 7.98191 6.55932 8.30298 6.55932 8.30298ZM6.55932 8.30298C6.89264 8.96965 8.00004 10.0001 8.00004 12.0001V13.3334C8.00004 12.0001 7.71311 11.0542 9.37977 9.38758M9.37977 9.38758C9.37977 9.38758 9.05351 7.52838 10.1268 6.48233C11.2002 5.43628 13.1204 5.45111 13.2402 5.62614C13.3601 5.80117 13.528 7.52198 12.5196 8.50471C11.4463 9.55078 9.37977 9.38758 9.37977 9.38758Z"
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const stockIcon = (color: string) => (
+  <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M2 10.0001V12.6667M6 8.66675V12.6667M10 10.0001V12.6667M14 8.66675V12.6667M2 7.33341L6 4.00008L10 7.33341L13.6667 3.66675"
+      stroke={color}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 const menuItems: MenuItem[] = [
   {
@@ -178,6 +208,11 @@ const menuItems: MenuItem[] = [
     route: "/admin/dashboard",
   },
   {
+    name: "Clientes y Sociedades",
+    icon: lucideIcon(Users),
+    route: "/admin/customers",
+  },
+  {
     name: "Proyectos",
     icon: (color: string) => (
       <svg
@@ -195,107 +230,57 @@ const menuItems: MenuItem[] = [
         />
       </svg>
     ),
-    route: "/admin/master-data/projects/list",
+    route: "/admin/projects/new",
   },
   {
     name: "Lotes",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M3.33671 7.46V8L8.00204 10.6947L12.6667 8V7.46M3.33337 10.7667V11.3067L7.99804 14L12.6634 11.3053V10.7653M8.00204 2L3.33671 4.69467L8.00204 7.38933L12.6667 4.69467L8.00204 2Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: lotsIcon,
     route: "/admin/lots",
   },
   {
+    name: "Lotes Nuevo",
+    icon: lotsIcon,
+    route: "/admin/lots/new",
+  },
+  {
     name: "Órdenes de Trabajo",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M6.66671 2V4.66667C6.66671 4.84348 6.59647 5.01305 6.47144 5.13807C6.34642 5.2631 6.17685 5.33333 6.00004 5.33333H3.33337M8.66671 4H10.6667M8.66671 6H10.6667M8.00004 8V12M10.6667 10H5.33337M12.6667 2.66667V13.3333C12.6667 13.5101 12.5965 13.6797 12.4714 13.8047C12.3464 13.9298 12.1769 14 12 14H4.00004C3.82323 14 3.65366 13.9298 3.52864 13.8047C3.40361 13.6797 3.33337 13.5101 3.33337 13.3333V5.276C3.33341 5.0992 3.40367 4.92966 3.52871 4.80467L6.13804 2.19533C6.26304 2.0703 6.43258 2.00004 6.60937 2H12C12.1769 2 12.3464 2.07024 12.4714 2.19526C12.5965 2.32029 12.6667 2.48986 12.6667 2.66667ZM5.33337 8V12H10.6667V8H5.33337Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: workOrdersIcon,
     route: "/admin/work-orders",
   },
   {
+    name: "Órdenes Nuevo",
+    icon: workOrdersIcon,
+    route: "/admin/work-orders/new",
+  },
+  {
     name: "Labores",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M8.66667 4.66659H12.6667L14 7.33325M8.66667 4.66659V9.99992M8.66667 4.66659V3.99992C8.66667 3.82311 8.59643 3.65354 8.4714 3.52851C8.34638 3.40349 8.17681 3.33325 8 3.33325H2.66667C2.48986 3.33325 2.32029 3.40349 2.19526 3.52851C2.07024 3.65354 2 3.82311 2 3.99992V9.99992H3.33333M14 7.33325V9.99992H12.6667M14 7.33325H10.6667M8.66667 9.99992H6M8.66667 9.99992H10M13 10.9999C13 11.4419 12.8244 11.8659 12.5118 12.1784C12.1993 12.491 11.7754 12.6666 11.3333 12.6666C10.8913 12.6666 10.4674 12.491 10.1548 12.1784C9.84226 11.8659 9.66667 11.4419 9.66667 10.9999C9.66667 10.5579 9.84226 10.134 10.1548 9.82141C10.4674 9.50885 10.8913 9.33325 11.3333 9.33325C11.7754 9.33325 12.1993 9.50885 12.5118 9.82141C12.8244 10.134 13 10.5579 13 10.9999ZM6.33333 10.9999C6.33333 11.4419 6.15774 11.8659 5.84518 12.1784C5.53262 12.491 5.10869 12.6666 4.66667 12.6666C4.22464 12.6666 3.80072 12.491 3.48816 12.1784C3.17559 11.8659 3 11.4419 3 10.9999C3 10.5579 3.17559 10.134 3.48816 9.82141C3.80072 9.50885 4.22464 9.33325 4.66667 9.33325C5.10869 9.33325 5.53262 9.50885 5.84518 9.82141C6.15774 10.134 6.33333 10.5579 6.33333 10.9999Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: laborsIcon,
     route: "/admin/tasks",
   },
   {
+    name: "Labores Nuevo",
+    icon: laborsIcon,
+    route: "/admin/tasks/new",
+  },
+  {
     name: "Insumos",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M6.55932 8.30298C6.55932 8.30298 7.39257 6.24417 6.41515 4.77629C5.43775 3.30841 3.05785 2.73935 2.932 2.82918C2.80615 2.91902 2.18662 5.04615 3.16402 6.51403C4.14142 7.98191 6.55932 8.30298 6.55932 8.30298ZM6.55932 8.30298C6.89264 8.96965 8.00004 10.0001 8.00004 12.0001V13.3334C8.00004 12.0001 7.71311 11.0542 9.37977 9.38758M9.37977 9.38758C9.37977 9.38758 9.05351 7.52838 10.1268 6.48233C11.2002 5.43628 13.1204 5.45111 13.2402 5.62614C13.3601 5.80117 13.528 7.52198 12.5196 8.50471C11.4463 9.55078 9.37977 9.38758 9.37977 9.38758Z"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: suppliesIcon,
     route: "/admin/supply-movements",
   },
   {
+    name: "Insumos Nuevo",
+    icon: suppliesIcon,
+    route: "/admin/supply-movements/new",
+  },
+  {
     name: "Stock",
-    icon: (color: string) => (
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 16 16"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <path
-          d="M2 10.0001V12.6667M6 8.66675V12.6667M10 10.0001V12.6667M14 8.66675V12.6667M2 7.33341L6 4.00008L10 7.33341L13.6667 3.66675"
-          stroke={color}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: stockIcon,
     route: "/admin/stock",
+  },
+  {
+    name: "Stock Nuevo",
+    icon: stockIcon,
+    route: "/admin/stock/new",
   },
 ];
 

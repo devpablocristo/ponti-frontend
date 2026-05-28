@@ -3,10 +3,7 @@ import { Archive, Download, Plus, Upload } from "lucide-react";
 
 import { AppFilterBar } from "../../../../components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
-import {
-  useClientTableFilters,
-  usePagination,
-} from "@/lib/dataDisplay";
+import { useClientTableFilters, usePagination } from "@/lib/dataDisplay";
 import { ResponsiveTable } from "../../../../components/crud/ResponsiveTable";
 import { LaborInfo, LaborToSave } from "../../../../hooks/useLabors/types";
 import Button from "../../../../components/Button/Button";
@@ -25,17 +22,17 @@ import { EntityFormDrawer } from "../../../../components/crud/EntityFormDrawer";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { Checkbox } from "../../../../components/Input/Checkbox";
 import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
-import { buildTimestampedFilename, downloadBlob, CSV_ACCEPT } from "../../fileTransfer";
+import {
+  buildTimestampedFilename,
+  downloadBlob,
+  EXCEL_ACCEPT,
+  readImportTableAsCsvText,
+} from "../../fileTransfer";
 
 import { LABOR_ENTITY as ENTITY } from "../../entities";
 import ArchivedLabors from "./ArchivedLabors";
 import LaborsCatalog, { type Labor as LaborRow } from "./LaborsCatalog";
-import {
-  getValueByAliases,
-  LABOR_HEADER_ALIASES,
-  normalizeText,
-  parseCsv,
-} from "./importUtils";
+import { getValueByAliases, LABOR_HEADER_ALIASES, normalizeText, parseCsv } from "./importUtils";
 
 import { newLabor, renderPriceCell } from "./listHelpers";
 
@@ -85,16 +82,9 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     rows: safeLabors,
     onChange: resetPage,
   });
-  const safeCategories = useMemo(
-    () => (Array.isArray(categories) ? categories : []),
-    [categories]
-  );
+  const safeCategories = useMemo(() => (Array.isArray(categories) ? categories : []), [categories]);
 
-  const { filters, projectId } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-  ]);
+  const { filters, projectId } = useWorkspaceFilters(["customer", "project", "campaign"]);
 
   const refresh = useCallback(() => {
     if (projectId) getLabors(projectId);
@@ -127,7 +117,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
 
   const selectColumn = useMemo<Column<LaborInfo>>(
     () => makeSelectColumn<LaborInfo>(bulk, (l) => l.name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const columns = useMemo<Column<LaborInfo>[]>(
@@ -136,9 +126,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
       {
         key: "name",
         header: "Labor",
-        render: (value) => (
-          <strong className="text-blue-700">{String(value ?? "")}</strong>
-        ),
+        render: (value) => <strong className="text-blue-700">{String(value ?? "")}</strong>,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("name"),
       },
@@ -236,24 +224,24 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
     }
 
     const lowerName = file.name.toLowerCase();
-    const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
-    if (!isCsv) {
-      setErrorMessage("Formato no soportado. Use .csv.");
+    const isExcel =
+      lowerName.endsWith(".xlsx") ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    if (!isExcel) {
+      setErrorMessage("Formato no soportado. Use .xlsx.");
       return;
     }
 
     try {
       setErrorMessage("");
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const parsedRows = parseCsv(text);
       if (parsedRows.length === 0) {
         setErrorMessage("El archivo no tiene datos válidos. Verifique encabezados y filas.");
         return;
       }
 
-      const categoryByName = new Map(
-        safeCategories.map((c) => [normalizeText(c.name), c]),
-      );
+      const categoryByName = new Map(safeCategories.map((c) => [normalizeText(c.name), c]));
 
       const previewRows: LaborRow[] = [];
       parsedRows.forEach((rawRow) => {
@@ -269,10 +257,8 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         previewRows.push({
           id: previewRows.length,
           name,
-          category:
-            categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
-          price:
-            !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : priceRaw,
+          category: categoryId && !Number.isNaN(categoryId) ? String(categoryId) : "",
+          price: !Number.isNaN(priceValue) && priceValue > 0 ? String(priceValue) : priceRaw,
           contractor,
           is_partial_price: false,
         });
@@ -286,7 +272,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
       setImportedRows(previewRows);
       setImportDrawerOpen(true);
     } catch {
-      setErrorMessage("No se pudo leer el archivo. Use .csv.");
+      setErrorMessage("No se pudo leer el archivo. Use .xlsx.");
     }
   };
 
@@ -301,7 +287,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("labores", "csv", projectId));
+      downloadBlob(response, buildTimestampedFilename("labores", "xlsx", projectId));
     } catch {
       setErrorMessage("No se pudo exportar el listado de labores.");
     }
@@ -312,7 +298,7 @@ export default function ListTasks({ editorOnly = false }: ListTasksProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept={CSV_ACCEPT}
+        accept={EXCEL_ACCEPT}
         onChange={handleImportFromFile}
         className="hidden"
       />

@@ -19,13 +19,10 @@ import { SupplyMovement } from "../../../hooks/useSupplyMovements/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
-import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildTimestampedFilename, downloadBlob, EXCEL_ACCEPT } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import {
-  matchesSelectFilter,
-  matchesTextFilter,
-} from "@/lib/tableFilters";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 import ArchivedSupplyMovements from "./ArchivedSupplyMovements";
 
 import { SupplyMovementsIndicators } from "./_components/SupplyMovementsIndicators";
@@ -60,13 +57,9 @@ export function SupplyMovements() {
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [editingMovement, setEditingMovement] = useState<SupplyMovement | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(
-    null
-  );
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
-  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
-    null
-  );
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
 
   // Estado → toast (patrón en CreateOrder.tsx).
   useEffect(() => {
@@ -140,10 +133,7 @@ export function SupplyMovements() {
     return [...new Set(filtered.map((i) => String(i[key] ?? "")))].filter(Boolean);
   }
 
-  function getDateFilterOptions(
-    data: SupplyMovement[],
-    filters: Record<string, unknown>
-  ) {
+  function getDateFilterOptions(data: SupplyMovement[], filters: Record<string, unknown>) {
     const otherFilters = { ...filters };
     delete otherFilters.entry_date;
 
@@ -161,11 +151,7 @@ export function SupplyMovements() {
       })
     );
 
-    return [
-      ...new Set(
-        filtered.map((m) => normalizeDate(String(m.entry_date)))
-      ),
-    ];
+    return [...new Set(filtered.map((m) => normalizeDate(String(m.entry_date))))];
   }
 
   const columns: Column<SupplyMovement>[] = useMemo(
@@ -175,11 +161,7 @@ export function SupplyMovements() {
         header: "Ingreso",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "entry_type",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("entry_type", supplyMovements, columnsFilters),
         render: (value) => {
           const text = String(value ?? "");
           if (text === "Movimiento interno entrada") {
@@ -246,10 +228,7 @@ export function SupplyMovements() {
         header: "Fecha",
         filterable: true,
         filterType: "select",
-        filterOptions: getDateFilterOptions(
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getDateFilterOptions(supplyMovements, columnsFilters),
         render: (dateString) => {
           if (!dateString) return "";
           const datePart = normalizeDate(String(dateString));
@@ -262,22 +241,14 @@ export function SupplyMovements() {
         header: "Inversor",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "investor_name",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("investor_name", supplyMovements, columnsFilters),
       },
       {
         key: "supply_name",
         header: "Insumo",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "supply_name",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("supply_name", supplyMovements, columnsFilters),
         render: (value) => <strong>{String(value ?? "")}</strong>,
       },
       {
@@ -285,11 +256,7 @@ export function SupplyMovements() {
         header: "Cantidad",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "quantity",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("quantity", supplyMovements, columnsFilters),
         render: (value) => (
           <span className="font-bold text-gray-900 dark:text-gray-100">{String(value ?? "")}</span>
         ),
@@ -299,47 +266,35 @@ export function SupplyMovements() {
         header: "Rubro",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "category",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("category", supplyMovements, columnsFilters),
       },
       {
         key: "type",
         header: "Tipo/Clase",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "type",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("type", supplyMovements, columnsFilters),
       },
       {
         key: "provider_name",
         header: "Proveedor",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "provider_name",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("provider_name", supplyMovements, columnsFilters),
       },
       {
         key: "price_usd",
         header: "Precio u$",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "price_usd",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("price_usd", supplyMovements, columnsFilters),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return (
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
+            </span>
+          );
         },
       },
       {
@@ -347,26 +302,29 @@ export function SupplyMovements() {
         header: "Total u$",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "total_usd",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("total_usd", supplyMovements, columnsFilters),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900 dark:text-gray-100">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return (
+            <span className="font-bold text-gray-900 dark:text-gray-100">
+              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
+            </span>
+          );
         },
       },
     ],
     [supplyMovements, columnsFilters]
   );
 
-  const { projectId, filters, customers, selectedCustomer, selectedCampaignId, selectedField, hasWorkspaceSelection } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-    "field",
-  ]);
+  const {
+    projectId,
+    filters,
+    customers,
+    selectedCustomer,
+    selectedCampaignId,
+    selectedField,
+    hasWorkspaceSelection,
+  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const supplyMovementQuery = useMemo(
     () =>
@@ -411,7 +369,7 @@ export function SupplyMovements() {
   const handleEdit = (movement: SupplyMovement) => {
     if (isMovementEditionBlocked(movement.entry_type)) {
       setActionErrorMessage(
-        `No se puede editar un ${movement.entry_type}: afecta stock en dos proyectos o es un conteo de stock terminal.`,
+        `No se puede editar un ${movement.entry_type}: afecta stock en dos proyectos o es un conteo de stock terminal.`
       );
       setSuccessMessage(null);
       return;
@@ -441,7 +399,7 @@ export function SupplyMovements() {
         getSupplyMovements(supplyMovementQuery);
       }
     },
-    [hasWorkspaceSelection, supplyMovementQuery, getSupplyMovements],
+    [hasWorkspaceSelection, supplyMovementQuery, getSupplyMovements]
   );
 
   const filteredMovements = useMemo(() => {
@@ -459,9 +417,7 @@ export function SupplyMovements() {
         if (key === "entry_date") {
           const itemDate = normalizeDate(String(rawValue));
           if (Array.isArray(value)) {
-            return value.some(
-              (v) => normalizeDate(String(v)) === itemDate
-            );
+            return value.some((v) => normalizeDate(String(v)) === itemDate);
           }
           return normalizeDate(String(value)) === itemDate;
         }
@@ -475,7 +431,6 @@ export function SupplyMovements() {
           }
           return Number(value) === num;
         }
-
 
         if (Array.isArray(value)) {
           return matchesSelectFilter(rawValue, value);
@@ -492,15 +447,13 @@ export function SupplyMovements() {
       singular: "movimiento",
       plural: "movimientos",
     }),
-    [],
+    []
   );
 
   const bulk = useBulkActions<SupplyMovement>({
     items: filteredMovements,
     entity: movementEntity,
-    archive: projectId
-      ? (id) => archiveSupplyMovement(id, projectId)
-      : undefined,
+    archive: projectId ? (id) => archiveSupplyMovement(id, projectId) : undefined,
     onEdit: handleEdit,
     onAfter: () => {
       if (!hasWorkspaceSelection) return;
@@ -514,15 +467,12 @@ export function SupplyMovements() {
         bulk,
         (item) => item.supply_name,
         movementEntity,
-        (item) => !isMovementEditionBlocked(item.entry_type),
+        (item) => !isMovementEditionBlocked(item.entry_type)
       ),
-    [bulk, movementEntity],
+    [bulk, movementEntity]
   );
 
-  const columnsWithSelection = useMemo(
-    () => [selectColumn, ...columns],
-    [columns, selectColumn],
-  );
+  const columnsWithSelection = useMemo(() => [selectColumn, ...columns], [columns, selectColumn]);
 
   const derivedSummary = useMemo(() => {
     let totalKg = 0;
@@ -556,8 +506,6 @@ export function SupplyMovements() {
     };
   }, [filteredMovements]);
 
-
-
   const handleExport = async () => {
     if (!projectId) {
       setWarningMessage("Para exportar movimientos de insumos, seleccioná un proyecto.");
@@ -573,7 +521,7 @@ export function SupplyMovements() {
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("insumos", "csv", projectId));
+      downloadBlob(response, buildTimestampedFilename("insumos", "xlsx", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el listado de insumos.");
     }
@@ -583,8 +531,6 @@ export function SupplyMovements() {
     setColumnsFilters(filters);
     pagination.resetPage();
   };
-
-
 
   return (
     <div>
@@ -596,7 +542,7 @@ export function SupplyMovements() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            accept: ".csv,text/csv",
+            accept: EXCEL_ACCEPT,
             onFileChange: handleImportFile,
           },
           {
@@ -623,7 +569,7 @@ export function SupplyMovements() {
                 { projectId },
                 ["project"],
                 "crear",
-                "un movimiento de insumos",
+                "un movimiento de insumos"
               );
               if (warning) {
                 setWarningMessage(warning);
@@ -633,7 +579,6 @@ export function SupplyMovements() {
               setEditingMovement(null);
               setDrawerOpen(true);
             },
-
           },
         ]}
       />
@@ -643,7 +588,9 @@ export function SupplyMovements() {
         </div>
       )}
       <div className="mt-3 relative">
-        <LoadingOverlay show={hasWorkspaceSelection && processing && filteredMovements.length > 0} />
+        <LoadingOverlay
+          show={hasWorkspaceSelection && processing && filteredMovements.length > 0}
+        />
 
         {projectId && (
           <>
@@ -680,9 +627,7 @@ export function SupplyMovements() {
           title="Movimientos archivados"
           onClose={() => setArchivedDrawerOpen(false)}
         >
-          <ArchivedSupplyMovements
-            onAfterRestore={() => getSupplyMovements(supplyMovementQuery)}
-          />
+          <ArchivedSupplyMovements onAfterRestore={() => getSupplyMovements(supplyMovementQuery)} />
         </ArchivedDrawer>
         {!hasWorkspaceSelection ? (
           <EmptyState

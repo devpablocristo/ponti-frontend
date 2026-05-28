@@ -70,7 +70,11 @@ export function getFieldCropValue(
 
 export function cropIdFromUnknown(value: unknown): string {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  if (typeof value === "string") return value.trim() || "0";
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed || /^todos\b/i.test(trimmed)) return "0";
+    return trimmed;
+  }
 
   if (value && typeof value === "object") {
     const maybeOption = value as {

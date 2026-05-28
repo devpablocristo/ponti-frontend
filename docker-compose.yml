@@ -15,7 +15,7 @@ services:
     image: node:20.19.0
     user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app
-    command: sh -c "if [ ! -f node_modules/.yarn-integrity ] || [ ! -d node_modules/@devpablocristo/platform-authn ] || [ ! -d node_modules/@devpablocristo/platform-browser ] || [ ! -d node_modules/@devpablocristo/platform-http ] || [ ! -d node_modules/@devpablocristo/platform-ui-data-display ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev --host 0.0.0.0"
+    command: sh -c "yarn install --frozen-lockfile --check-files --network-timeout 600000 --network-concurrency 1 && yarn dev --host 0.0.0.0"
     ports:
       - "5173:5173"
     volumes:

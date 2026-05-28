@@ -1,11 +1,21 @@
 const primaryTitles = new Map<string, string>([
   ["/admin/dashboard", "Dashboard"],
-  ["/admin/master-data/customers/list", "Clientes y Proyectos"],
+  ["/admin/customers", "Clientes y Sociedades"],
+  ["/admin/projects", "Proyectos"],
+  ["/admin/projects/new", "Proyectos"],
+  ["/admin/master-data/customers/list", "Proyectos"],
+  ["/admin/master-data/projects/list", "Proyectos"],
   ["/admin/lots", "Lotes"],
+  ["/admin/lots/new", "Lotes"],
   ["/admin/work-orders", "Órdenes de Trabajo"],
+  ["/admin/work-orders/new", "Órdenes de Trabajo"],
   ["/admin/tasks", "Labores"],
+  ["/admin/tasks/new", "Labores"],
   ["/admin/supply-movements", "Insumos"],
+  ["/admin/supply-movements/new", "Insumos"],
+  ["/admin/products", "Insumos"],
   ["/admin/stock", "Stock"],
+  ["/admin/stock/new", "Stock"],
   ["/admin/ai-assistant", "Asistente"],
   ["/admin/notifications", "Notificaciones"],
   ["/admin/access", "Accesos"],
@@ -27,6 +37,11 @@ const secondaryTitles = new Map<string, string>([
   ["/admin/master-data/customers/editor", "Editar"],
   ["/admin/master-data/customers/archived", "Archivados"],
   ["/admin/master-data/projects/archived", "Archivados"],
+  ["/admin/database/customers", "Crear Clientes y Sociedades"],
+  ["/admin/database/customers/archived", "Archivados"],
+  ["/admin/database/projects/archived", "Archivados"],
+  ["/admin/database/tasks", "Crear Labores"],
+  ["/admin/database/items", "Crear Insumos"],
   ["/admin/master-data/labors", "Crear"],
   ["/admin/master-data/labors/list", "Editar"],
   ["/admin/master-data/labors/archived", "Archivados"],
@@ -43,6 +58,8 @@ const secondaryTitles = new Map<string, string>([
   ["/admin/master-data/campaigns/create", "Crear"],
   ["/admin/master-data/campaigns", "Editar"],
   ["/admin/master-data/campaigns/archived", "Archivados"],
+  ["/admin/master-data/crops", "Editar"],
+  ["/admin/master-data/crops/archived", "Archivados"],
   ["/admin/master-data/lots/archived", "Lotes Archivados"],
   ["/admin/master-data/fields/archived", "Campos Archivados"],
   ["/admin/master-data/work-orders/archived", "Archivados"],
@@ -60,6 +77,10 @@ export function getSidebarTitle(pathname: string) {
   }
 
   if (pathname.startsWith("/admin/master-data/customers/")) {
+    return "Editar";
+  }
+
+  if (pathname.startsWith("/admin/database/customers/")) {
     return "Editar";
   }
 

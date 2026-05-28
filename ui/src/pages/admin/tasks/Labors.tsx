@@ -23,7 +23,7 @@ import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
 import { WORKORDER_ENTITY } from "../entities";
-import { buildTimestampedFilename, downloadBlob } from "../fileTransfer";
+import { buildTimestampedFilename, downloadBlob, EXCEL_ACCEPT } from "../fileTransfer";
 import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
 import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
 import ArchivedWorkOrders from "../master-data/work-orders/ArchivedWorkOrders";
@@ -32,25 +32,15 @@ import CreateOrder from "../workorders/CreateOrder";
 // (eso está en /admin/master-data/labors). Acá las filas son las labores
 // aplicadas a Órdenes de Trabajo — mismo importer que /admin/work-orders,
 // solo cambia que el CSV viene sin columnas de insumos (items vacío).
-import {
-  parseAndResolveWorkOrdersCsv,
-  WorkOrderPreviewRow,
-} from "../workorders/importWorkOrders";
+import { parseAndResolveWorkOrdersCsv, WorkOrderPreviewRow } from "../workorders/importWorkOrders";
 import ImportWorkOrdersPreview from "../workorders/ImportWorkOrdersPreview";
 import { formatError } from "@/lib/format";
 import { notify } from "@/lib/notify";
-import {
-  matchesSelectFilter,
-  matchesTextFilter,
-} from "@/lib/tableFilters";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 
 import { LaborsHeader } from "./_components/LaborsHeader";
 import { TasksIndicators } from "./_components/TasksIndicators";
-import {
-  invoiceEmptyStatus,
-  invoiceStatusOptions,
-  statusConfig,
-} from "./helpers";
+import { invoiceEmptyStatus, invoiceStatusOptions, statusConfig } from "./helpers";
 
 export function Labors() {
   const {
@@ -130,12 +120,7 @@ export function Labors() {
     selectedCampaignId,
     selectedField,
     hasWorkspaceSelection,
-  } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-    "field",
-  ]);
+  } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
   const laborQuery = useMemo(
     () =>
@@ -205,7 +190,9 @@ export function Labors() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("workorder_number", laborGroups, taskFilters),
-        render: (value) => <strong className="text-gray-900 dark:text-gray-100">{String(value ?? "")}</strong>,
+        render: (value) => (
+          <strong className="text-gray-900 dark:text-gray-100">{String(value ?? "")}</strong>
+        ),
       },
       {
         key: "date",
@@ -251,8 +238,9 @@ export function Labors() {
           const cropName = String(crop);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-                }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${
+                cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
             >
               {cropName}
             </span>
@@ -276,8 +264,9 @@ export function Labors() {
           const laborName = String(crop);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-green-200 text-green-800"
-                }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${
+                laborColors[laborName] || "bg-green-200 text-green-800"
+              }`}
             >
               {laborName}
             </span>
@@ -450,11 +439,7 @@ export function Labors() {
         },
       },
     ],
-    [
-      laborGroups,
-      taskFilters,
-      getFilterOptionsForColumn,
-    ]
+    [laborGroups, taskFilters, getFilterOptionsForColumn]
   );
 
   const allColumns = useMemo(() => {
@@ -528,7 +513,7 @@ export function Labors() {
         ...task,
         id: task.workorder_id,
       })),
-    [filteredTasks],
+    [filteredTasks]
   );
 
   const openInvoiceEditor = useCallback((item: LaborGroupData) => {
@@ -549,9 +534,7 @@ export function Labors() {
       return;
     }
 
-    const statusOption = invoiceStatusOptions.find(
-      (opt) => opt.name === item.invoice_status
-    );
+    const statusOption = invoiceStatusOptions.find((opt) => opt.name === item.invoice_status);
 
     setInvoice({
       workorder_id: item.workorder_id,
@@ -581,16 +564,18 @@ export function Labors() {
   });
 
   const selectColumn = useMemo<Column<SelectableLaborGroup>>(
-    () => makeSelectColumn<SelectableLaborGroup>(bulk, (task) => task.workorder_number, WORKORDER_ENTITY),
-    [bulk],
+    () =>
+      makeSelectColumn<SelectableLaborGroup>(
+        bulk,
+        (task) => task.workorder_number,
+        WORKORDER_ENTITY
+      ),
+    [bulk]
   );
 
   const columnsWithSelection = useMemo<Column<SelectableLaborGroup>[]>(
-    () => [
-      selectColumn,
-      ...(columnsToShow as Column<SelectableLaborGroup>[]),
-    ],
-    [columnsToShow, selectColumn],
+    () => [selectColumn, ...(columnsToShow as Column<SelectableLaborGroup>[])],
+    [columnsToShow, selectColumn]
   );
 
   const derivedMetrics: Metrics = useMemo(() => {
@@ -663,15 +648,15 @@ export function Labors() {
       setImportDrawerOpen(true);
     } catch (error) {
       setExportErrorMessage(
-        formatError(error, { fallback: "No se pudo procesar el CSV. Verificá que el archivo tenga el formato correcto." }),
+        formatError(error, {
+          fallback:
+            "No se pudo procesar el Excel. Verificá que el archivo tenga el formato correcto.",
+        })
       );
     }
   };
 
-  const handleImportCompleted = (result: {
-    imported: number;
-    errors: string[];
-  }) => {
+  const handleImportCompleted = (result: { imported: number; errors: string[] }) => {
     setImportDrawerOpen(false);
     setImportRows([]);
     setImportGlobalErrors([]);
@@ -680,7 +665,7 @@ export function Labors() {
       setResultInvoiceMessage(
         result.errors.length
           ? `Se importaron ${result.imported} órdenes. Se omitieron ${result.errors.length} filas.`
-          : `Se importaron ${result.imported} órdenes correctamente.`,
+          : `Se importaron ${result.imported} órdenes correctamente.`
       );
       refreshLabors();
     }
@@ -702,7 +687,7 @@ export function Labors() {
         responseType: "blob",
       });
 
-      downloadBlob(response, buildTimestampedFilename("labores", "csv", projectId));
+      downloadBlob(response, buildTimestampedFilename("labores", "xlsx", projectId));
     } catch {
       setExportErrorMessage("No se pudo exportar el listado de labores.");
     }
@@ -724,7 +709,7 @@ export function Labors() {
             icon: <Download className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            accept: ".csv,text/csv",
+            accept: EXCEL_ACCEPT,
             onFileChange: handleImport,
           },
           {
@@ -751,7 +736,7 @@ export function Labors() {
                 { projectId },
                 ["project"],
                 "crear",
-                "una orden de trabajo",
+                "una orden de trabajo"
               );
               if (warning) {
                 setWarningMessage(warning);
@@ -843,11 +828,7 @@ export function Labors() {
                   allColumns={allColumns}
                 />
               }
-              pagination={
-                pageInfo
-                  ? pagination.buildPagination(filteredTasks.length)
-                  : undefined
-              }
+              pagination={pageInfo ? pagination.buildPagination(filteredTasks.length) : undefined}
               rowKey={(t, i) => `${t.id ?? i}`}
               emptyMessage="Todavía no hay labores con los filtros actuales."
             />

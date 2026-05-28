@@ -8,6 +8,7 @@ import useSupplies from "../../../hooks/useSupplies";
 import useSupplyMovements from "../../../hooks/useSupplyMovements";
 import { apiClient } from "@/api/client";
 import { Notification } from "../../../components/feedback/Notification";
+import { readImportTableAsCsvText } from "../fileTransfer";
 import { replaceSupplyIdsWithNames } from "../utils";
 import {
   normalizeText,
@@ -178,19 +179,21 @@ export default function ImportSupplyMovements({
       }
 
       const lowerName = file.name.toLowerCase();
-      const isCsv = lowerName.endsWith(".csv") || file.type.includes("csv");
+      const isExcel =
+        lowerName.endsWith(".xlsx") ||
+        file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-      if (!isCsv) {
+      if (!isExcel) {
         if (!cancelled) {
           setPreviewRows([]);
-          setParseError("Formato no soportado. Use .csv.");
+          setParseError("Formato no soportado. Use .xlsx.");
           setParsedFileKey(fileKey);
         }
         return;
       }
 
       try {
-        const parsedRows = parseCsv(await file.text());
+        const parsedRows = parseCsv(await readImportTableAsCsvText(file));
 
         if (parsedRows.length === 0) {
           if (!cancelled) {
@@ -503,7 +506,7 @@ export default function ImportSupplyMovements({
       } catch {
         if (!cancelled) {
           setPreviewRows([]);
-          setParseError("No se pudo leer el archivo. Use .csv válido.");
+          setParseError("No se pudo leer el archivo. Use .xlsx válido.");
           setParsedFileKey(fileKey);
         }
       }
@@ -794,4 +797,3 @@ export default function ImportSupplyMovements({
     </DrawerShell>
   );
 }
-

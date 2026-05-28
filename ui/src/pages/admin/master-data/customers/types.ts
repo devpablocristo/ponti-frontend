@@ -34,8 +34,6 @@ export type FieldPayload = {
   total: number;
 };
 
-export type CropPayload = EntityOption[];
-
 export type EntityOptionsPayload =
   | EntityOption[]
   | { data?: EntityOption[]; items?: EntityOption[] };

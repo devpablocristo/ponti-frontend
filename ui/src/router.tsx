@@ -6,14 +6,18 @@ import { Navigate } from "react-router-dom";
 import { BaseLayout } from "./layout/BaseLayout";
 import SignInPage from "./pages/login/Login";
 import { Dashboard } from "./pages/admin/dashboard/Dashboard";
-import { SupplyMovements } from "./pages/admin/supply-movements/SupplyMovements";
+import { SupplyMovements as CurrentSupplyMovements } from "./pages/admin/supply-movements/SupplyMovements";
 import { Profile } from "./pages/admin/profile/Profile";
-import { Stock } from "./pages/admin/stock/Stock";
+import { Stock as CurrentStock } from "./pages/admin/stock/Stock";
 import Access from "./pages/admin/access/Access";
-import CustomersList from "./pages/admin/master-data/customers/CustomersList";
-import CustomerEditor from "./pages/admin/master-data/customers/CustomerEditor";
-import ArchivedCustomers from "./pages/admin/master-data/customers/ArchivedCustomers";
-import ArchivedProjects from "./pages/admin/master-data/projects/ArchivedProjects";
+import LegacyCustomers from "./pages/admin/customers/Customers";
+import LegacyDatabaseCustomers from "./pages/admin/database/customers/Customers";
+import LegacyArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
+import LegacyArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
+import CurrentProjectsList from "./pages/admin/master-data/customers/CustomersList";
+import CurrentCustomerEditor from "./pages/admin/master-data/customers/CustomerEditor";
+import CurrentArchivedCustomers from "./pages/admin/master-data/customers/ArchivedCustomers";
+import CurrentArchivedProjects from "./pages/admin/master-data/projects/ArchivedProjects";
 import ArchivedInvestors from "./pages/admin/master-data/investors/ArchivedInvestors";
 import InvestorsList from "./pages/admin/master-data/investors/InvestorsList";
 import ArchivedLots from "./pages/admin/master-data/lots/ArchivedLots";
@@ -25,9 +29,13 @@ import ArchivedManagers from "./pages/admin/master-data/managers/ArchivedManager
 import ManagersList from "./pages/admin/master-data/managers/ManagersList";
 import ArchivedCampaigns from "./pages/admin/master-data/campaigns/ArchivedCampaigns";
 import CampaignsList from "./pages/admin/master-data/campaigns/CampaignsList";
+import ArchivedCrops from "./pages/admin/master-data/crops/ArchivedCrops";
+import CropsList from "./pages/admin/master-data/crops/CropsList";
 import DataIntegrity from "./pages/admin/master-data/data-integrity/Integrity";
 import DatabaseLaborsCatalog from "./pages/admin/master-data/labors/LaborsCatalog";
 import SuppliesCatalog from "./pages/admin/master-data/supplies/SuppliesCatalog";
+import LegacyDatabaseItems from "./pages/admin/database/products/Items";
+import LegacyDatabaseTasksForm from "./pages/admin/database/tasks/TasksForm";
 import DollarForm from "./pages/admin/master-data/dollar/DollarForm";
 import CommerceForm from "./pages/admin/master-data/commerce/CommerceForm";
 import ListSupplies from "./pages/admin/master-data/supplies/List";
@@ -41,16 +49,31 @@ import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionRe
 // está embebido como drawer en Lots/CustomersList/FieldsList — un lazy
 // allí no rinde chunk separado y solo agrega Suspense flicker.
 // El fallback Suspense lo provee `ProtectedLayout` envolviendo el `<Outlet />`.
-const WorkOrders = lazy(() =>
+const CurrentWorkOrders = lazy(() =>
   import("./pages/admin/workorders/WorkOrders").then((m) => ({ default: m.WorkOrders }))
 );
-const Lots = lazy(() => import("./pages/admin/lots/Lots"));
+const LegacyWorkOrders = lazy(() =>
+  import("./pages/admin/workorders/LegacyWorkOrders").then((m) => ({ default: m.WorkOrders }))
+);
+const CurrentLots = lazy(() => import("./pages/admin/lots/Lots"));
+const LegacyLots = lazy(() => import("./pages/admin/lots/LegacyLots"));
 const SummaryResultsReport = lazy(
   () => import("./pages/admin/reports/SummaryResultsReport.tsx")
 );
 const AIAssistant = lazy(() => import("./pages/admin/ai-assistant/AIAssistant"));
-const Labors = lazy(() =>
+const CurrentLabors = lazy(() =>
   import("./pages/admin/tasks/Labors").then((m) => ({ default: m.Labors }))
+);
+const LegacyTasks = lazy(() =>
+  import("./pages/admin/tasks/LegacyTasks").then((m) => ({ default: m.Tasks }))
+);
+const LegacySupplyMovements = lazy(() =>
+  import("./pages/admin/supply-movements/LegacySupplyMovements").then((m) => ({
+    default: m.Products,
+  }))
+);
+const LegacyStock = lazy(() =>
+  import("./pages/admin/stock/LegacyStock").then((m) => ({ default: m.Stock }))
 );
 import Notifications from "./pages/admin/notifications/Notifications";
 import ArchivedSupplyMovements from "./pages/admin/supply-movements/ArchivedSupplyMovements";
@@ -106,24 +129,60 @@ export default [
         element: <Access />,
       },
       {
+        path: "customers",
+        element: <LegacyCustomers />,
+      },
+      {
+        path: "projects",
+        element: <Navigate to="/admin/projects/new" replace />,
+      },
+      {
+        path: "projects/new",
+        element: <CurrentProjectsList projectsOnly />,
+      },
+      {
         path: "lots",
-        element: <Lots />,
+        element: <LegacyLots />,
+      },
+      {
+        path: "lots/new",
+        element: <CurrentLots />,
       },
       {
         path: "supply-movements",
-        element: <SupplyMovements />,
+        element: <LegacySupplyMovements />,
+      },
+      {
+        path: "supply-movements/new",
+        element: <CurrentSupplyMovements />,
+      },
+      {
+        path: "products",
+        element: <Navigate to="/admin/supply-movements" replace />,
       },
       {
         path: "tasks",
-        element: <Labors />,
+        element: <LegacyTasks />,
+      },
+      {
+        path: "tasks/new",
+        element: <CurrentLabors />,
       },
       {
         path: "stock",
-        element: <Stock />,
+        element: <LegacyStock />,
+      },
+      {
+        path: "stock/new",
+        element: <CurrentStock />,
       },
       {
         path: "work-orders",
-        element: <WorkOrders />,
+        element: <LegacyWorkOrders />,
+      },
+      {
+        path: "work-orders/new",
+        element: <CurrentWorkOrders />,
       },
       {
         path: "master-data/customers",
@@ -163,23 +222,23 @@ export default [
       },
       {
         path: "master-data/customers/list",
-        element: <Navigate to="/admin/master-data/projects/list" replace />,
+        element: <Navigate to="/admin/projects/new" replace />,
       },
       {
         path: "master-data/projects/list",
-        element: <CustomersList projectsOnly />,
+        element: <Navigate to="/admin/projects/new" replace />,
       },
       {
         path: "master-data/customers/archived",
-        element: <ArchivedCustomers />,
+        element: <CurrentArchivedCustomers />,
       },
       {
         path: "master-data/customers/editor",
-        element: <CustomerEditor />,
+        element: <CurrentCustomerEditor />,
       },
       {
         path: "master-data/customers/:id/editor",
-        element: <CustomerEditor />,
+        element: <CurrentCustomerEditor />,
       },
       {
         path: "master-data/customers/:id",
@@ -187,7 +246,23 @@ export default [
       },
       {
         path: "master-data/projects/archived",
-        element: <ArchivedProjects />,
+        element: <CurrentArchivedProjects />,
+      },
+      {
+        path: "database/customers",
+        element: <LegacyDatabaseCustomers />,
+      },
+      {
+        path: "database/customers/archived",
+        element: <LegacyArchivedCustomers />,
+      },
+      {
+        path: "database/customers/:id",
+        element: <LegacyDatabaseCustomers />,
+      },
+      {
+        path: "database/projects/archived",
+        element: <LegacyArchivedProjects />,
       },
       {
         path: "master-data/investors",
@@ -250,6 +325,14 @@ export default [
         element: <ArchivedCampaigns />,
       },
       {
+        path: "master-data/crops",
+        element: <CropsList />,
+      },
+      {
+        path: "master-data/crops/archived",
+        element: <ArchivedCrops />,
+      },
+      {
         path: "master-data/data-integrity",
         element: <DataIntegrity />,
       },
@@ -258,16 +341,32 @@ export default [
         element: <DatabaseLaborsCatalog />,
       },
       {
+        path: "database/tasks",
+        element: <LegacyDatabaseTasksForm />,
+      },
+      {
         path: "master-data/supplies",
         element: <SuppliesCatalog />,
+      },
+      {
+        path: "database/items",
+        element: <LegacyDatabaseItems />,
       },
       {
         path: "master-data/supplies/list",
         element: <ListSupplies editorOnly />,
       },
       {
+        path: "database/items/list",
+        element: <Navigate to="/admin/master-data/supplies/list" replace />,
+      },
+      {
         path: "master-data/labors/list",
         element: <ListTasks editorOnly />,
+      },
+      {
+        path: "database/tasks/list",
+        element: <Navigate to="/admin/master-data/labors/list" replace />,
       },
       {
         path: "master-data/labors/archived",

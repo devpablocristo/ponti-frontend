@@ -338,10 +338,10 @@
   }
 
   /* Mobile (<md): full-width — el drawer toma la pantalla completa.
-     Desktop (md+): cap progresivo con max-w para que no quede absurdamente
-     ancho en 4K (era 70vw → 1344px en 1920px). 2xl es el techo. */
+     Desktop (md+): cap progresivo 30% mas ancho que los caps previos:
+     2xl=42rem -> 54.6rem, 3xl=48rem -> 62.4rem, 4xl=56rem -> 72.8rem. */
   .drawer-panel {
-    @apply relative ml-auto flex h-full w-full flex-col overflow-hidden md:max-w-2xl lg:max-w-3xl 2xl:max-w-4xl;
+    @apply relative ml-auto flex h-full w-full flex-col overflow-hidden md:max-w-[54.6rem] lg:max-w-[62.4rem] 2xl:max-w-[72.8rem];
     background-color: var(--color-surface);
     box-shadow: var(--shadow-xl);
     animation: drawer-slide-in var(--transition-slow) ease-out both;

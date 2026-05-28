@@ -26,6 +26,7 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useReporting from "../../../hooks/useReporting";
 import type { FieldCropReportData } from "../../../hooks/useReporting/types.ts";
 import { formatNumberAr } from "../utils";
+import { formatProperName } from "../../../lib/properName";
 import { CropBadgeV2 } from "./reportV2/CropBadgeV2";
 import { IndicatorDot } from "./reportV2/IndicatorDot";
 import {
@@ -233,6 +234,24 @@ export function SummaryResultsReport() {
     filename: `informe-resumen-resultados-${timestamp}.pdf`,
   });
 
+  const cropFilterOptions = useMemo(
+    () =>
+      data
+        ? data.crops.map((crop) => ({
+            id: crop.crop_id,
+            name: formatProperName(crop.crop_name),
+          }))
+        : [],
+    [data],
+  );
+
+  const selectedCropFilterValue = useMemo(() => {
+    if (selectedCrop === "0") return "Todos";
+    return (
+      cropFilterOptions.find((option) => String(option.id) === selectedCrop)?.name ?? "Todos"
+    );
+  }, [cropFilterOptions, selectedCrop]);
+
   const reportFilters = useMemo(
     () => [
       ...filters,
@@ -241,22 +260,15 @@ export function SummaryResultsReport() {
         name: "cultivo",
         label: "Cultivo",
         placeholder: "Todos",
-        options: data
-          ? [
-              { id: 0, name: "Todos" },
-              ...data.crops.map((crop) => ({
-                id: crop.crop_id,
-                name: crop.crop_name,
-              })),
-            ]
-          : [{ id: 0, name: "Todos" }],
-        value: Number(selectedCrop),
-        onChange: (value: unknown) => setSelectedCrop(cropIdFromUnknown(value)),
+        options: cropFilterOptions,
+        value: selectedCropFilterValue,
+        onChange: () => undefined,
         setData: (value: unknown) => setSelectedCrop(cropIdFromUnknown(value)),
+        allLabel: "Todos",
         disabled: !data || data.crops.length === 0,
       },
     ],
-    [data, filters, selectedCrop]
+    [cropFilterOptions, data, filters, selectedCropFilterValue]
   );
 
   const isLoading =

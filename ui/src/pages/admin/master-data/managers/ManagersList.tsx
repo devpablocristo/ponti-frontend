@@ -17,17 +17,19 @@ import { BulkSelectionPanel } from "../../../../components/crud/BulkSelectionPan
 import { makeSelectColumn } from "../../../../components/crud/makeSelectColumn";
 import { useBulkActions } from "../../../../hooks/useBulkActions";
 import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
-import useManagers, {
-  Manager,
-  ManagerPayloadInput,
-} from "../../../../hooks/useManagers";
+import useManagers, { Manager, ManagerPayloadInput } from "../../../../hooks/useManagers";
 import useProjects from "../../../../hooks/useDatabase/projects";
 import { Project } from "../../../../hooks/useDatabase/projects/types";
 import { Column } from "../../types";
 import { MANAGER_ENTITY as ENTITY } from "../../entities";
 import ManagerFormDrawer from "./ManagerFormDrawer";
 import ArchivedManagers from "./ArchivedManagers";
-import { downloadCsvRows } from "../../fileTransfer";
+import {
+  buildTimestampedFilename,
+  downloadExcelRows,
+  EXCEL_ACCEPT,
+  readImportTableAsCsvText,
+} from "../../fileTransfer";
 
 const toFilterOptions = (values: string[], formatDisplay = true) =>
   values.map((value, index) => ({
@@ -89,15 +91,8 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
   const [selectedField, setSelectedField] = useState("");
   const [projectDetails, setProjectDetails] = useState<Record<number, Project>>({});
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const {
-    managers,
-    processing,
-    error,
-    getManagers,
-    createManager,
-    updateManager,
-    archiveManager,
-  } = useManagers();
+  const { managers, processing, error, getManagers, createManager, updateManager, archiveManager } =
+    useManagers();
   const {
     projects,
     processing: projectsProcessing,
@@ -132,7 +127,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
           (!selectedField || fieldNames.includes(selectedField))
         );
       }),
-    [projectDetails, projects, selectedCampaign, selectedCustomer, selectedField, selectedProject],
+    [projectDetails, projects, selectedCampaign, selectedCustomer, selectedField, selectedProject]
   );
 
   const hasActiveFilters =
@@ -143,52 +138,50 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
 
   const rows = useMemo(() => {
     const builtRows = buildManagerRows(managers, filteredProjects, projectDetails);
-    return hasActiveFilters
-      ? builtRows.filter((row) => row.project_count > 0)
-      : builtRows;
+    return hasActiveFilters ? builtRows.filter((row) => row.project_count > 0) : builtRows;
   }, [filteredProjects, hasActiveFilters, managers, projectDetails]);
 
   const filterOptions = useMemo(
     () => ({
       customers: uniqueOptions(
-        projects.map((project) => projectDetails[project.id]?.customer.name || project.customer),
+        projects.map((project) => projectDetails[project.id]?.customer.name || project.customer)
       ),
       projects: uniqueOptions(
         projects
           .filter(
             (project) =>
               !selectedCustomer ||
-              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer,
+              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer
           )
-          .map((project) => project.name),
+          .map((project) => project.name)
       ),
       campaigns: uniqueOptions(
         projects
           .filter(
             (project) =>
               !selectedCustomer ||
-              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer,
+              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer
           )
           .filter((project) => !selectedProject || project.name === selectedProject)
-          .map((project) => projectDetails[project.id]?.campaign.name || project.campaign),
+          .map((project) => projectDetails[project.id]?.campaign.name || project.campaign)
       ),
       fields: uniqueOptions(
         projects
           .filter(
             (project) =>
               !selectedCustomer ||
-              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer,
+              (projectDetails[project.id]?.customer.name || project.customer) === selectedCustomer
           )
           .filter((project) => !selectedProject || project.name === selectedProject)
           .filter(
             (project) =>
               !selectedCampaign ||
-              (projectDetails[project.id]?.campaign.name || project.campaign) === selectedCampaign,
+              (projectDetails[project.id]?.campaign.name || project.campaign) === selectedCampaign
           )
-          .flatMap((project) => getProjectFieldNames(project, projectDetails[project.id])),
+          .flatMap((project) => getProjectFieldNames(project, projectDetails[project.id]))
       ),
     }),
-    [projectDetails, projects, selectedCampaign, selectedCustomer, selectedProject],
+    [projectDetails, projects, selectedCampaign, selectedCustomer, selectedProject]
   );
 
   const drawer = useEntityFormDrawer<Manager, ManagerPayloadInput>({
@@ -203,25 +196,25 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
-      const text = await file.text();
+      const text = await readImportTableAsCsvText(file);
       const names = Array.from(
         new Set(
           text
             .split(/\r?\n/)
             .map((line) => line.split(/[;,]/)[0]?.replace(/^"|"$/g, "").trim())
             .filter(Boolean)
-            .filter((name, index) => index > 0 || !/responsable|nombre|name/i.test(name)),
-        ),
+            .filter((name, index) => index > 0 || !/responsable|nombre|name/i.test(name))
+        )
       );
       await Promise.all(names.map((name) => createManager({ name })));
       refresh();
     },
-    [createManager, refresh],
+    [createManager, refresh]
   );
 
   const handleExport = useCallback(() => {
-    downloadCsvRows(
-      `responsables_${new Date().toISOString()}.csv`,
+    void downloadExcelRows(
+      buildTimestampedFilename("responsables", "xlsx"),
       rows.map((row) => ({
         Nombre: row.name,
         Proyectos: row.project_count,
@@ -230,6 +223,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
         Campañas: row.related_campaigns,
         Campos: row.related_fields,
       })),
+      "Responsables"
     );
   }, [rows]);
 
@@ -259,11 +253,9 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
 
     Promise.all(
       missingProjects.map(async (project) => {
-        const response = await apiClient.get<SuccessResponse<Project>>(
-          `/projects/${project.id}`,
-        );
+        const response = await apiClient.get<SuccessResponse<Project>>(`/projects/${project.id}`);
         return [project.id, response.data] as const;
-      }),
+      })
     )
       .then((entries) => {
         if (cancelled) return;
@@ -289,21 +281,20 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
 
   const selectColumn = useMemo<Column<ManagerRow>>(
     () => makeSelectColumn<ManagerRow>(bulk, (m) => m.name, ENTITY),
-    [bulk],
+    [bulk]
   );
 
   const tableColumns = useMemo<Column<ManagerRow>[]>(
-    () => [
-      selectColumn,
-      ...relationColumns,
-    ],
-    [selectColumn],
+    () => [selectColumn, ...relationColumns],
+    [selectColumn]
   );
 
   return (
     <div>
       <div className="relative">
-        <LoadingOverlay show={(processing || projectsProcessing || loadingDetails) && rows.length > 0} />
+        <LoadingOverlay
+          show={(processing || projectsProcessing || loadingDetails) && rows.length > 0}
+        />
         <AppFilterBar
           filters={[
             {
@@ -316,7 +307,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
               onChange: setSelectedCustomer,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
-                setSelectedCustomer(option?.id === 0 ? "" : option?.name ?? "");
+                setSelectedCustomer(option?.id === 0 ? "" : (option?.name ?? ""));
                 setSelectedProject("");
                 setSelectedCampaign("");
                 setSelectedField("");
@@ -333,7 +324,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
               onChange: setSelectedProject,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
-                setSelectedProject(option?.id === 0 ? "" : option?.name ?? "");
+                setSelectedProject(option?.id === 0 ? "" : (option?.name ?? ""));
                 setSelectedCampaign("");
                 setSelectedField("");
               },
@@ -349,7 +340,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
               onChange: setSelectedCampaign,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
-                setSelectedCampaign(option?.id === 0 ? "" : option?.name ?? "");
+                setSelectedCampaign(option?.id === 0 ? "" : (option?.name ?? ""));
                 setSelectedField("");
               },
               allLabel: "Todas las campañas",
@@ -364,7 +355,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
               onChange: setSelectedField,
               setData: (data) => {
                 const option = data as { id?: number | string; name?: string } | undefined;
-                setSelectedField(option?.id === 0 ? "" : option?.name ?? "");
+                setSelectedField(option?.id === 0 ? "" : (option?.name ?? ""));
               },
               allLabel: "Todos los campos",
             },
@@ -375,7 +366,7 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
               icon: <Download className="h-4 w-4" />,
               variant: "primary",
               isPrimary: true,
-              accept: ".csv,text/csv",
+              accept: EXCEL_ACCEPT,
               onFileChange: importManagers,
             },
             {
@@ -412,15 +403,17 @@ export default function ManagersList({ editorOnly = false }: ManagersListProps) 
                 ? "No hay responsables disponibles para editar."
                 : "Creá el primero para asociarlo a tus proyectos."
             }
-            cta={!editorOnly ? (
-              <Button
-                variant="primary"
-                iconLeft={<Plus className="h-4 w-4" />}
-                onClick={drawer.openCreate}
-              >
-                Nuevo responsable
-              </Button>
-            ) : undefined}
+            cta={
+              !editorOnly ? (
+                <Button
+                  variant="primary"
+                  iconLeft={<Plus className="h-4 w-4" />}
+                  onClick={drawer.openCreate}
+                >
+                  Nuevo responsable
+                </Button>
+              ) : undefined
+            }
           />
         ) : (
           <>
