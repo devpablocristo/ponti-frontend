@@ -265,20 +265,21 @@ export function Customers() {
             href: "/admin/database/customers",
           },
         ]}
-      >
+      />
+
+      <div className="my-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <IndicatorCard
           title="Superficie total de hectáreas"
           value={`${totalHectares} Has`}
           color="amber"
-          className="w-[220px] max-w-[220px] flex-none"
         />
-      </FilterBar>
+      </div>
 
       {errors.customers ||
         errors.projects ||
         (errors.campaigns && (
           <div
-            className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+            className="p-3 mb-2 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
             role="alert"
           >
             <span className="font-medium">Error!</span> {errors.customers}{" "}
@@ -286,7 +287,7 @@ export function Customers() {
           </div>
         ))}
 
-      <div className="mt-2 relative">
+      <div className="mt-3 relative">
         {processing ||
           loading.campaigns ||
           loading.customers ||
@@ -310,7 +311,7 @@ export function Customers() {
         />
         {error && (
           <div
-            className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+            className="p-3 mb-2 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
             role="alert"
           >
             <span className="font-medium">Error!</span> {error}

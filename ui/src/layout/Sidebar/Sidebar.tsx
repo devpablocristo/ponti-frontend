@@ -27,6 +27,7 @@ type MenuItem = {
   name: string;
   icon: (color: string) => ReactNode;
   route: string;
+  hidden?: boolean;
 };
 
 /**
@@ -213,7 +214,7 @@ const menuItems: MenuItem[] = [
     route: "/admin/customers",
   },
   {
-    name: "Proyectos",
+    name: "Proyectos Nuevo",
     icon: (color: string) => (
       <svg
         width="20"
@@ -231,6 +232,7 @@ const menuItems: MenuItem[] = [
       </svg>
     ),
     route: "/admin/projects/new",
+    hidden: true,
   },
   {
     name: "Lotes",
@@ -241,6 +243,7 @@ const menuItems: MenuItem[] = [
     name: "Lotes Nuevo",
     icon: lotsIcon,
     route: "/admin/lots/new",
+    hidden: true,
   },
   {
     name: "Órdenes de Trabajo",
@@ -251,6 +254,7 @@ const menuItems: MenuItem[] = [
     name: "Órdenes Nuevo",
     icon: workOrdersIcon,
     route: "/admin/work-orders/new",
+    hidden: true,
   },
   {
     name: "Labores",
@@ -261,6 +265,7 @@ const menuItems: MenuItem[] = [
     name: "Labores Nuevo",
     icon: laborsIcon,
     route: "/admin/tasks/new",
+    hidden: true,
   },
   {
     name: "Insumos",
@@ -271,6 +276,7 @@ const menuItems: MenuItem[] = [
     name: "Insumos Nuevo",
     icon: suppliesIcon,
     route: "/admin/supply-movements/new",
+    hidden: true,
   },
   {
     name: "Stock",
@@ -281,8 +287,11 @@ const menuItems: MenuItem[] = [
     name: "Stock Nuevo",
     icon: stockIcon,
     route: "/admin/stock/new",
+    hidden: true,
   },
 ];
+
+const visibleMenuItems = menuItems.filter((item) => !item.hidden);
 
 interface SidebarProps {
   isSidebarOpen: boolean;
@@ -516,7 +525,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebar
 
         <SidebarSection name="Operación" routes={menuItems.map((item) => item.route)}>
           <ul className="flex flex-col gap-0.5 font-medium">
-            {menuItems.map((item) => (
+            {visibleMenuItems.map((item) => (
               <li key={item.name}>
                 <SidebarItem setTitle={setTitle} item={item} setIsSidebarOpen={setIsSidebarOpen} />
               </li>

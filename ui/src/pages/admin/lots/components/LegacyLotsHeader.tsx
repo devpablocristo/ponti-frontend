@@ -61,7 +61,7 @@ export function LegacyLotsHeader({
             key={tab}
             type="button"
             className={[
-              "border border-gray-200 px-4 py-2 text-sm font-medium transition-colors duration-150 focus:z-10 focus:outline-none dark:border-slate-700",
+              "border border-gray-200 px-3 py-2 text-sm font-medium transition-colors duration-150 focus:z-10 focus:outline-none sm:px-4 dark:border-slate-700",
               index === 0 ? "rounded-s-lg" : "",
               index === tabs.length - 1 ? "rounded-e-lg" : "",
               index > 0 ? "border-l-0" : "",
