@@ -63,19 +63,26 @@ export function Lots() {
   const selectedFieldId = selectedField?.id;
 
   const loadCurrentLots = useCallback(() => {
-    if (selectedFieldId) {
-      const query = `field_id=${selectedFieldId}`;
-      getLots(query);
-      getLotsKpis(query);
-      return;
-    }
+    if (!selectedCustomer?.id || !projectId || !selectedCampaignId) return;
 
-    if (projectId) {
-      const query = `project_id=${projectId}`;
-      getLots(query);
-      getLotsKpis(query);
-    }
-  }, [getLots, getLotsKpis, projectId, selectedFieldId]);
+    const queryParams = new URLSearchParams({
+      customer_id: String(selectedCustomer.id),
+      project_id: String(projectId),
+      campaign_id: String(selectedCampaignId),
+    });
+    if (selectedFieldId) queryParams.set("field_id", String(selectedFieldId));
+
+    const query = queryParams.toString();
+    getLots(query);
+    getLotsKpis(query);
+  }, [
+    getLots,
+    getLotsKpis,
+    projectId,
+    selectedCampaignId,
+    selectedCustomer?.id,
+    selectedFieldId,
+  ]);
 
   const reloadFromFirstPage = useCallback(() => {
     resetPage();

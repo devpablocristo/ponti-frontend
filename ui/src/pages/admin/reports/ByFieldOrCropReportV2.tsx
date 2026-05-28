@@ -166,6 +166,34 @@ export function ByFieldOrCropReportV2() {
     return { ...data, columns };
   }, [data, selectedField, selectedCrop]);
 
+  const fieldOptions = useMemo(() => {
+    if (!data?.columns) return [];
+
+    return data.columns.reduce(
+      (acc, column) => {
+        if (!acc.some((field) => field.id === column.field_id)) {
+          acc.push({ id: column.field_id, name: column.field_name });
+        }
+        return acc;
+      },
+      [{ id: 0, name: "Todos" }],
+    );
+  }, [data]);
+
+  const cropOptions = useMemo(() => {
+    if (!data?.columns) return [];
+
+    return data.columns.reduce(
+      (acc, column) => {
+        if (!acc.some((crop) => crop.id === column.crop_id)) {
+          acc.push({ id: column.crop_id, name: column.crop_name });
+        }
+        return acc;
+      },
+      [{ id: 0, name: "Todos" }],
+    );
+  }, [data]);
+
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
   const { toPDF, targetRef } = usePDF({
     filename: `informe-campo-cultivo-${timestamp}.pdf`,
@@ -254,19 +282,7 @@ export function ByFieldOrCropReportV2() {
                   name="field"
                   value={selectedField}
                   onChange={(e) => setSelectedField(e.target.value)}
-                  options={
-                    data?.columns
-                      ? data.columns.reduce(
-                          (acc, col) => {
-                            if (acc.findIndex((f) => f.id === col.field_id) === -1) {
-                              acc.push({ id: col.field_id, name: col.field_name });
-                            }
-                            return acc;
-                          },
-                          [{ id: 0, name: "Todos" }],
-                        )
-                      : []
-                  }
+                  options={fieldOptions}
                   size="sm"
                   fullWidth
                 />
@@ -277,17 +293,7 @@ export function ByFieldOrCropReportV2() {
                   name="crop"
                   value={selectedCrop}
                   onChange={(e) => setSelectedCrop(e.target.value)}
-                  options={
-                    data?.columns
-                      ? [
-                          { id: 0, name: "Todos" },
-                          ...data.columns.map((col) => ({
-                            id: col.crop_id,
-                            name: col.crop_name,
-                          })),
-                        ]
-                      : []
-                  }
+                  options={cropOptions}
                   size="sm"
                   fullWidth
                 />

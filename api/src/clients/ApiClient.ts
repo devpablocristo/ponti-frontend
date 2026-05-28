@@ -114,16 +114,31 @@ export class ApiClient {
     config: AxiosRequestConfig = {},
   ): AxiosRequestConfig {
     const auth = requestContext.getAuthorization();
-    if (!auth) {
+    const tenantId = requestContext.getTenantId();
+    if (!auth && !tenantId) {
       return config;
     }
     return {
       ...config,
       headers: {
         ...(config.headers || {}),
-        Authorization:
-          (config.headers as Record<string, string | undefined>)
-            ?.Authorization || auth,
+        ...(auth
+          ? {
+              Authorization:
+                (config.headers as Record<string, string | undefined>)
+                  ?.Authorization || auth,
+            }
+          : {}),
+        ...(tenantId
+          ? {
+              "X-Tenant-Id":
+                (
+                  config.headers as
+                    | Record<string, string | undefined>
+                    | undefined
+                )?.["X-Tenant-Id"] || tenantId,
+            }
+          : {}),
       },
     };
   }

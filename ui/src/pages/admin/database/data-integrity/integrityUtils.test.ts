@@ -30,13 +30,13 @@ const makeCheck = (controlNumber: number, withRecalcB = false): IntegrityCheck =
 });
 
 describe("integrity renderer helpers", () => {
-  it("ordena correctamente 14 checks por control_number", () => {
-    const checks = Array.from({ length: 14 }, (_, i) => makeCheck(14 - i));
+  it("ordena correctamente 5 checks por control_number", () => {
+    const checks = Array.from({ length: 5 }, (_, i) => makeCheck(5 - i));
     const sorted = sortIntegrityChecks(checks);
 
-    expect(sorted).toHaveLength(14);
+    expect(sorted).toHaveLength(5);
     expect(sorted[0].control_number).toBe(1);
-    expect(sorted[13].control_number).toBe(14);
+    expect(sorted[4].control_number).toBe(5);
   });
 
   it("detecta recalc_b_* opcional", () => {

@@ -79,16 +79,6 @@ const menuDatabase: MenuItem[] = [
     route: "/admin/database/customers",
   },
   {
-    name: "Administrar Labores",
-    icon: lucideIcon(Wrench),
-    route: "/admin/database/tasks/list",
-  },
-  {
-    name: "Administrar Insumos",
-    icon: lucideIcon(Package),
-    route: "/admin/database/items/list",
-  },
-  {
     name: "Crear Labor",
     icon: lucideIcon(CalendarRange),
     route: "/admin/database/tasks",
@@ -108,7 +98,6 @@ const menuDatabase: MenuItem[] = [
     icon: lucideIcon(Tag),
     route: "/admin/database/commerce",
   },
-  { name: "Accesos", icon: lucideIcon(ShieldCheck), route: "/admin/access" },
 ];
 
 const menuCopilot: MenuItem[] = [

@@ -1,11 +1,87 @@
 // contexts/SelectionContext.tsx
-import { useState, useEffect } from "react";
-import { createBrowserStorageNamespace } from "@devpablocristo/platform-browser/storage";
+import { useEffect, useState } from "react";
 import type { Entity } from "../../../hooks/useDatabase/options/types";
 import type { Data } from "../../../hooks/useFields/types";
-import { SelectionContext } from "./SelectionContext.shared";
+import {
+  SelectionContext,
+  type WorkspaceAllSelection,
+} from "./SelectionContext.shared";
 
-const storage = createBrowserStorageNamespace({ namespace: "ponti" });
+const storageKey = (key: string) => `ponti:${key}`;
+const emptyAllSelection: WorkspaceAllSelection = {
+  customer: false,
+  project: false,
+  campaign: false,
+  field: false,
+};
+const workspaceStorageKeys = [
+  "customer",
+  "project",
+  "project_id",
+  "campaign",
+  "field",
+  "workspace_all_selection",
+];
+
+function readStoredJson<T>(key: string): T | undefined {
+  if (typeof window === "undefined") return undefined;
+
+  const raw =
+    window.localStorage.getItem(storageKey(key)) ??
+    window.localStorage.getItem(key);
+  if (!raw) return undefined;
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return undefined;
+  }
+}
+
+function readStoredNumber(key: string): number | undefined {
+  if (typeof window === "undefined") return undefined;
+
+  const raw =
+    window.localStorage.getItem(storageKey(key)) ??
+    window.localStorage.getItem(key);
+  if (!raw) return undefined;
+
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+function writeStoredJson<T>(key: string, value: T | undefined) {
+  if (typeof window === "undefined") return;
+
+  if (value === undefined) {
+    window.localStorage.removeItem(storageKey(key));
+    window.localStorage.removeItem(key);
+    return;
+  }
+
+  window.localStorage.setItem(storageKey(key), JSON.stringify(value));
+}
+
+function writeStoredNumber(key: string, value: number | null | undefined) {
+  if (typeof window === "undefined") return;
+
+  if (!value || value <= 0) {
+    window.localStorage.removeItem(storageKey(key));
+    window.localStorage.removeItem(key);
+    return;
+  }
+
+  window.localStorage.setItem(storageKey(key), String(value));
+}
+
+function clearStoredWorkspaceSelection() {
+  if (typeof window === "undefined") return;
+
+  workspaceStorageKeys.forEach((key) => {
+    window.localStorage.removeItem(storageKey(key));
+    window.localStorage.removeItem(key);
+  });
+}
 
 export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -17,48 +93,81 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
     { name: "Verano", id: 4 },
   ];
 
-  const [customer, setCustomer] = useState<Entity | undefined>(() => {
-    return storage.getJSON<Entity>("customer") ?? undefined;
-  });
-
-  const [project, setProject] = useState<Entity | undefined>(() => {
-    return storage.getJSON<Entity>("project") ?? undefined;
-  });
-
-  const [projectId, setProjectId] = useState<number | null | undefined>(() => {
-    return storage.getJSON<number | null>("project_id") ?? undefined;
-  });
-
-  const [campaign, setCampaign] = useState<Entity | undefined>(() => {
-    return storage.getJSON<Entity>("campaign") ?? undefined;
-  });
-
-  const [field, setField] = useState<Data | undefined>(() => {
-    return storage.getJSON<Data>("field") ?? undefined;
-  });
-
-  useEffect(() => {
-    storage.setJSON("customer", customer);
-  }, [customer]);
+  const [customer, setCustomerState] = useState<Entity | undefined>(() =>
+    readStoredJson<Entity>("customer")
+  );
+  const [project, setProjectState] = useState<Entity | undefined>(() =>
+    readStoredJson<Entity>("project")
+  );
+  const [projectId, setProjectIdState] = useState<number | null | undefined>(() =>
+    readStoredNumber("project_id")
+  );
+  const [campaign, setCampaignState] = useState<Entity | undefined>(() =>
+    readStoredJson<Entity>("campaign")
+  );
+  const [field, setFieldState] = useState<Data | undefined>(() =>
+    readStoredJson<Data>("field")
+  );
+  const [allSelection, setAllSelectionState] = useState<WorkspaceAllSelection>(() => ({
+    ...emptyAllSelection,
+    ...(readStoredJson<Partial<WorkspaceAllSelection>>("workspace_all_selection") ?? {}),
+  }));
 
   useEffect(() => {
-    storage.setJSON("project", project);
-  }, [project]);
+    const resetSelection = () => {
+      setCustomerState(undefined);
+      setProjectState(undefined);
+      setProjectIdState(undefined);
+      setCampaignState(undefined);
+      setFieldState(undefined);
+      setAllSelectionState(emptyAllSelection);
+      clearStoredWorkspaceSelection();
+    };
 
-  useEffect(() => {
-    storage.setJSON("project_id", projectId);
-  }, [projectId]);
+    window.addEventListener("ponti:tenant-changed", resetSelection);
+    window.addEventListener("ponti:workspace-selection-reset", resetSelection);
+    return () => {
+      window.removeEventListener("ponti:tenant-changed", resetSelection);
+      window.removeEventListener("ponti:workspace-selection-reset", resetSelection);
+    };
+  }, []);
 
-  useEffect(() => {
-    storage.setJSON("campaign", campaign);
-    if (campaign && typeof project?.id === "number") {
-      storage.setJSON("project_id", project.id);
-    }
-  }, [campaign, project]);
+  const setCustomer = (value: Entity | undefined) => {
+    setCustomerState(value);
+    writeStoredJson("customer", value);
+  };
 
-  useEffect(() => {
-    storage.setJSON("field", field);
-  }, [field]);
+  const setProject = (value: Entity | undefined) => {
+    setProjectState(value);
+    writeStoredJson("project", value);
+  };
+
+  const setProjectId = (value: number | null | undefined) => {
+    setProjectIdState(value);
+    writeStoredNumber("project_id", value);
+  };
+
+  const setCampaign = (value: Entity | undefined) => {
+    setCampaignState(value);
+    writeStoredJson("campaign", value);
+  };
+
+  const setField = (value: Data | undefined) => {
+    setFieldState(value);
+    writeStoredJson("field", value);
+  };
+
+  const setAllSelection = (
+    value:
+      | WorkspaceAllSelection
+      | ((current: WorkspaceAllSelection) => WorkspaceAllSelection)
+  ) => {
+    setAllSelectionState((current) => {
+      const next = typeof value === "function" ? value(current) : value;
+      writeStoredJson("workspace_all_selection", next);
+      return next;
+    });
+  };
 
   return (
     <SelectionContext.Provider
@@ -73,6 +182,8 @@ export const SelectionProvider: React.FC<{ children: React.ReactNode }> = ({
         setCampaign,
         field,
         setField,
+        allSelection,
+        setAllSelection,
         seasons,
       }}
     >

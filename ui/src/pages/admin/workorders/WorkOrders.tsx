@@ -601,7 +601,9 @@ export function WorkOrders() {
     filters,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const effectiveProjectId = projectId ?? selectedProject?.id ?? routeProjectId;
-  const hasWorkOrderScope = Boolean(effectiveProjectId || selectedField);
+  const hasWorkOrderScope = Boolean(
+    selectedCustomer?.id && effectiveProjectId && selectedCampaignId
+  );
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -617,19 +619,15 @@ export function WorkOrders() {
   }
 
   const workOrdersBaseQuery = useMemo(() => {
+    if (!hasWorkOrderScope || !selectedCustomer?.id || !effectiveProjectId || !selectedCampaignId) {
+      return "";
+    }
+
     const params: Record<string, string> = {};
 
-    if (selectedCustomer && selectedCustomer.id !== 0) {
-      params.customer_id = String(selectedCustomer.id);
-    }
-
-    if (effectiveProjectId) {
-      params.project_id = String(effectiveProjectId);
-    }
-
-    if (selectedCampaignId) {
-      params.campaign_id = String(selectedCampaignId);
-    }
+    params.customer_id = String(selectedCustomer.id);
+    params.project_id = String(effectiveProjectId);
+    params.campaign_id = String(selectedCampaignId);
 
     if (selectedField && selectedField.id !== 0) {
       params.field_id = String(selectedField.id);
@@ -640,7 +638,14 @@ export function WorkOrders() {
     }
 
     return new URLSearchParams(params).toString();
-  }, [effectiveProjectId, selectedCampaignId, selectedCustomer, selectedField, selectedSupplyFilter.id]);
+  }, [
+    effectiveProjectId,
+    hasWorkOrderScope,
+    selectedCampaignId,
+    selectedCustomer,
+    selectedField,
+    selectedSupplyFilter.id,
+  ]);
 
   const workOrdersQuery = useMemo(() => {
     const params = new URLSearchParams(workOrdersBaseQuery);
@@ -866,7 +871,7 @@ export function WorkOrders() {
 
   useEffect(() => {
     if (!hasWorkOrderScope) {
-      setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
+      setErrorMessage("Seleccione un cliente, proyecto y campaña para ver las órdenes");
       return;
     }
 

@@ -53,3 +53,23 @@ export const apiClient = createAuthenticatedAxiosClient({
   },
   invalidTokenMatcher: isInvalidTokenError,
 });
+
+apiClient.raw().interceptors.request.use((config) => {
+  if (config.headers?.["X-Skip-Tenant"]) {
+    delete config.headers["X-Skip-Tenant"];
+    return config;
+  }
+
+  if (typeof window === "undefined") {
+    return config;
+  }
+
+  const tenantId =
+    window.localStorage.getItem("ponti:tenant_id") ||
+    window.localStorage.getItem("tenant_id") ||
+    "";
+  if (tenantId.trim()) {
+    config.headers["X-Tenant-Id"] = tenantId.trim();
+  }
+  return config;
+});

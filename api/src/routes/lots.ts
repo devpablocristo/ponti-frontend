@@ -107,14 +107,13 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const { fieldId, projectId } = getLotQueryFilters(req);
-    if (fieldId === 0 && projectId === 0) {
+    const lotIds = getLotQueryFilters(req);
+    if (lotIds.fieldId === 0 && lotIds.projectId === 0) {
       res.status(400).json({ message: "Campo o proyecto obligatorio" });
       return;
     }
 
     const { page, perPage } = parsePaginationQueryParams(req.query);
-    const lotIds = { fieldId, projectId };
     const key = buildLotsListCacheKey(lotIds, { page, perPage });
 
     const cachedLots = cache.get<LotListPayload>(key);
@@ -172,13 +171,12 @@ router.get("/metrics", async (req: Request, res: Response) => {
       return;
     }
 
-    const { fieldId, projectId } = getLotQueryFilters(req);
-    if (fieldId === 0 && projectId === 0) {
+    const lotIds = getLotQueryFilters(req);
+    if (lotIds.fieldId === 0 && lotIds.projectId === 0) {
       res.status(400).json({ message: "Campo o proyecto obligatorio" });
       return;
     }
 
-    const lotIds = { fieldId, projectId };
     const key = buildLotsMetricsCacheKey(lotIds);
 
     const cachedLots = cache.get<LotMetricsPayload>(key);

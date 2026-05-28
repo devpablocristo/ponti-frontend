@@ -21,6 +21,7 @@ export type ManagerChatStreamParams = {
   path: string;
   apiKey: string;
   userId: string;
+  tenantId?: string;
   projectId: string;
   jsonBody: unknown;
   authorization?: string;
@@ -49,6 +50,9 @@ export async function proxyManagerChatStreamPost(
   };
   if (p.authorization) {
     headers.Authorization = p.authorization;
+  }
+  if (p.tenantId) {
+    headers["X-Tenant-Id"] = p.tenantId;
   }
 
   const opts: http.RequestOptions = {

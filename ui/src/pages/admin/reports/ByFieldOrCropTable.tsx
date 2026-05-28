@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { FieldCropReportData, RowToRender } from "../../../hooks/useReporting/types.ts";
 import { cropColors } from "../colors";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -111,7 +111,7 @@ export const ByFieldOrCropTable = ({
             <th></th>
             {data.columns &&
               data.columns.map((row) => (
-                <>
+                <Fragment key={`header-${row.id}`}>
                   <th className="w-2"></th>
                   {/* --- MODIFICACIÓN DEL ENCABEZADO --- */}
                   <th className="p-2 align-middle w-[165px]">
@@ -124,7 +124,7 @@ export const ByFieldOrCropTable = ({
                       <CropBadge cropName={row.crop_name} />
                     </div>
                   </th>
-                </>
+                </Fragment>
               ))}
           </tr>
         </thead>
@@ -194,7 +194,7 @@ export const ByFieldOrCropTable = ({
         </th>
 
         {/* Columnas de datos */}
-        {data!.columns.map((column, index) => {
+        {data!.columns.map((column) => {
           const finalRowClasses = [
             !classNameRows.includes("text-") && "text-gray-600",
             !classNameRows.includes("bg-") && "bg-white",
@@ -209,11 +209,10 @@ export const ByFieldOrCropTable = ({
           const formattedValue = valueFormat.crop(rowValue);
 
           return (
-            <>
+            <Fragment key={`${key}-${column.id}`}>
               <td className="w-2 bg-white"></td>
               {showIndicator ? (
                 <td
-                  key={index}
                   className={`${finalRowClasses} p-0`}
                 >
                   <div className="flex items-center justify-center h-full w-full gap-1">
@@ -236,7 +235,6 @@ export const ByFieldOrCropTable = ({
                 </td>
               ) : (
                 <td
-                  key={index}
                   className={`${finalRowClasses} p-0`}
                 >
                   <div className="flex items-center justify-center h-full w-full">
@@ -244,7 +242,7 @@ export const ByFieldOrCropTable = ({
                   </div>
                 </td>
               )}
-            </>
+            </Fragment>
           );
         })}
       </tr>
@@ -255,12 +253,12 @@ export const ByFieldOrCropTable = ({
     }
 
     return (
-      <>
+      <Fragment key={`${key}-with-spacer`}>
         <tr aria-hidden="true">
           <td colSpan={data!.columns.length * 2 + 1} className={`${spacerBeforeHeight} bg-white`}></td>
         </tr>
         {rowContent}
-      </>
+      </Fragment>
     );
   }
 };

@@ -13,6 +13,7 @@ export const authTokenStorage = createBrowserTokenStorage({
     "project_id",
     "campaign",
     "field",
+    "workspace_all_selection",
   ],
 });
 

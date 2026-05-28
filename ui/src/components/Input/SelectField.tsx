@@ -47,8 +47,8 @@ const SelectField: React.FC<SelectFieldProps> = ({
           <option value="" disabled>
             {placeholder ? placeholder : "Seleccionar..."}
           </option>
-          {safeOptions.map((opt) => (
-            <option key={opt.id} value={opt.id}>
+          {safeOptions.map((opt, index) => (
+            <option key={`${name}-${opt.id}-${opt.name}-${index}`} value={opt.id}>
               {opt.name}
             </option>
           ))}

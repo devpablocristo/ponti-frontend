@@ -26,9 +26,55 @@ import dataIntegrity from "./data-integrity";
 import ai from "./ai";
 import admin from "./admin";
 import insights from "./insights";
+import me from "./me";
+import { requestContext } from "../requestContext";
 
 const router: Router = Router();
-export const cache = new NodeCache({ stdTTL: CACHE_TTL_DEFAULT, checkperiod: CACHE_TTL_DEFAULT });
+const nodeCache = new NodeCache({ stdTTL: CACHE_TTL_DEFAULT, checkperiod: CACHE_TTL_DEFAULT });
+
+function scopedCachePrefix(): string {
+  const tenantId = requestContext.getTenantId() || "no-tenant";
+  const userId = requestContext.getUserId() || "no-user";
+  return `tenant:${tenantId}:user:${userId}:`;
+}
+
+function scopedCacheKey(key: string | number): string {
+  return `${scopedCachePrefix()}${String(key)}`;
+}
+
+function unscopedCacheKey(key: string): string {
+  const prefix = scopedCachePrefix();
+  return key.startsWith(prefix) ? key.slice(prefix.length) : key;
+}
+
+export const cache = {
+  get<T>(key: string | number): T | undefined {
+    return nodeCache.get<T>(scopedCacheKey(key));
+  },
+  set<T>(key: string | number, value: T, ttl?: number | string): boolean {
+    if (ttl !== undefined) {
+      return nodeCache.set(scopedCacheKey(key), value, ttl);
+    }
+    return nodeCache.set(scopedCacheKey(key), value);
+  },
+  del(keys: string | number | Array<string | number>): number {
+    if (Array.isArray(keys)) {
+      return nodeCache.del(keys.map(scopedCacheKey));
+    }
+    return nodeCache.del(scopedCacheKey(keys));
+  },
+  keys(): string[] {
+    const prefix = scopedCachePrefix();
+    return nodeCache.keys().filter((key) => key.startsWith(prefix)).map(unscopedCacheKey);
+  },
+  flushAll(): void {
+    const prefix = scopedCachePrefix();
+    const keys = nodeCache.keys().filter((key) => key.startsWith(prefix));
+    if (keys.length > 0) {
+      nodeCache.del(keys);
+    }
+  },
+};
 
 router.get("/ping", (req, res) => {
   res.status(200).json({ message: "UI says Pong!" });
@@ -53,6 +99,7 @@ router.use("/auth", auth);
 
 router.use(verifyToken);
 
+router.use("/me", me);
 router.use("/projects", projects);
 router.use("/customers", customers);
 router.use("/campaigns", campaigns);

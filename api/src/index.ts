@@ -41,11 +41,18 @@ if (hasFrontendBundle) {
 app.use(express.json({ limit: "150mb" }));
 app.use(express.urlencoded({ extended: true, limit: "150mb" }));
 app.use((req, _res, next) => {
+  const tenantHeader = req.headers["x-tenant-id"];
+  const tenantId = Array.isArray(tenantHeader) ? tenantHeader[0] : tenantHeader;
+
   requestContext.run(
     {
       authorization:
         typeof req.headers.authorization === "string"
           ? req.headers.authorization
+          : undefined,
+      tenantId:
+        typeof tenantId === "string" && tenantId.trim() !== ""
+          ? tenantId.trim()
           : undefined,
     },
     next

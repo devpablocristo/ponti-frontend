@@ -8,6 +8,7 @@ import { useAuth } from "../pages/login/context/useAuth";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 import { SelectionProvider } from "../pages/login/context/SelectionContext";
+import { TenantProvider } from "../pages/login/context/TenantContext";
 import { getSidebarTitle } from "./Sidebar/sidebarTitle";
 
 const MainLayout: React.FC = () => {
@@ -97,9 +98,11 @@ const MainLayout: React.FC = () => {
 export const ProtectedLayout = () => {
   return (
     <AuthProvider>
-      <SelectionProvider>
-        <MainLayout />
-      </SelectionProvider>
+      <TenantProvider>
+        <SelectionProvider>
+          <MainLayout />
+        </SelectionProvider>
+      </TenantProvider>
     </AuthProvider>
   );
 };

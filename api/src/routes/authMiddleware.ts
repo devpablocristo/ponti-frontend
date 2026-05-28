@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { requestContext } from "../requestContext";
 
 declare global {
   namespace Express {
@@ -64,6 +65,7 @@ export const verifyToken = async (
       hash: decoded.Hash ? String(decoded.Hash) : "",
       exp,
     };
+    requestContext.setUserId(String(subject));
     next();
   } catch (error) {
     console.error("Error en autenticación:", error);

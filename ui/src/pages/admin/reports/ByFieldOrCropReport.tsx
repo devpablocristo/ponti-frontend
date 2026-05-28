@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LoaderCircle, SquareArrowOutUpRight } from "lucide-react";
 import { FilterBar } from "@/components/filters/AppFilterBar";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
@@ -273,6 +273,34 @@ export function ByFieldOrCropReport() {
       } : null;
   }
 
+  const fieldOptions = useMemo(() => {
+    if (!reportingData?.columns) return [];
+
+    return reportingData.columns.reduce(
+      (acc, column) => {
+        if (!acc.some((field) => field.id === column.field_id)) {
+          acc.push({ id: column.field_id, name: column.field_name });
+        }
+        return acc;
+      },
+      [{ id: 0, name: "Todos" }],
+    );
+  }, [reportingData]);
+
+  const cropOptions = useMemo(() => {
+    if (!reportingData?.columns) return [];
+
+    return reportingData.columns.reduce(
+      (acc, column) => {
+        if (!acc.some((crop) => crop.id === column.crop_id)) {
+          acc.push({ id: column.crop_id, name: column.crop_name });
+        }
+        return acc;
+      },
+      [{ id: 0, name: "Todos" }],
+    );
+  }, [reportingData]);
+
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
   const { toPDF, targetRef } = usePDF({ filename: `informe-campo-cultivo-${ timestamp }.pdf` });
 
@@ -327,14 +355,7 @@ export function ByFieldOrCropReport() {
                     name="field"
                     value={ selectedField }
                     onChange={ (e) => setSelectedField(e.target.value) }
-                    options={ reportingData && reportingData.columns
-                      ? reportingData.columns.reduce((acc, crop) => {
-                          if (acc.findIndex(f => f.id === crop.field_id) === -1) {
-                            acc.push({ id: crop.field_id, name: crop.field_name });
-                          }
-                          return acc;
-                        }, [{ id: 0, name: "Todos" }])
-                      : [] }
+                    options={ fieldOptions }
                     size="sm"
                     fullWidth
                   />
@@ -345,13 +366,7 @@ export function ByFieldOrCropReport() {
                     name="crop"
                     value={ selectedCrop }
                     onChange={ (e) => setSelectedCrop(e.target.value) }
-                    options={ reportingData && reportingData.columns ? [
-                      { id: 0, name: "Todos" },
-                      ...reportingData.columns.map((crop) => ({
-                        id: crop.crop_id,
-                        name: crop.crop_name,
-                      })),
-                    ] : [] }
+                    options={ cropOptions }
                     size="sm"
                     fullWidth
                   />

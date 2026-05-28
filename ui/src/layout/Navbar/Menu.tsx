@@ -144,6 +144,17 @@ const Menu: React.FC<NavbarProps> = ({ setIsLogoutModalOpen, username }) => {
             </svg>
             Mi Perfil
           </Link>
+          <Link
+            to="/admin/access"
+            onClick={toggleDropdown}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 transition-colors duration-150"
+            style={{ color: "#475569" }}
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-8.25-4.5h10.5A2.25 2.25 0 0 1 19.5 7.5v9A2.25 2.25 0 0 1 17.25 18.75H6.75A2.25 2.25 0 0 1 4.5 16.5v-9A2.25 2.25 0 0 1 6.75 5.25Z" />
+            </svg>
+            Accesos
+          </Link>
         </div>
         <div className="p-2 border-t border-slate-100">
           <button

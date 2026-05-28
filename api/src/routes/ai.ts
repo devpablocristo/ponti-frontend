@@ -42,11 +42,15 @@ const getProjectId = (req: Request): string | null => {
   return null;
 };
 
-const buildHeaders = (userId: string, projectId: string) => ({
-  "X-API-KEY": configService.apiKey,
-  "X-User-Id": userId,
-  "X-Project-Id": projectId,
-});
+const buildHeaders = (userId: string, projectId: string) => {
+  const tenantId = requestContext.getTenantId();
+  return {
+    "X-API-KEY": configService.apiKey,
+    "X-User-Id": userId,
+    "X-Project-Id": projectId,
+    ...(tenantId ? { "X-Tenant-Id": tenantId } : {}),
+  };
+};
 
 const requireUser = (req: Request, res: Response): string | null => {
   const userId = req.user?.userID;
@@ -112,6 +116,7 @@ router.post("/chat/stream", async (req: Request, res: Response) => {
       path: "/ai/chat/stream",
       apiKey: configService.apiKey,
       userId,
+      tenantId: requestContext.getTenantId(),
       projectId,
       jsonBody: req.body,
       authorization: requestContext.getAuthorization(),
