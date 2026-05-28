@@ -19,16 +19,16 @@ export function TentativePricesChip() {
   }, [getSupplies, projectId]);
 
   useEffect(() => {
-  const handleWorkspaceDataUpdated = () => {
-    if (!projectId) return;
-    getSupplies(projectId);
-  };
+    const handleWorkspaceDataUpdated = () => {
+      if (!projectId) return;
+      getSupplies(projectId);
+    };
 
-  window.addEventListener("ponti:workspace-data-updated", handleWorkspaceDataUpdated);
-  return () => {
-    window.removeEventListener("ponti:workspace-data-updated", handleWorkspaceDataUpdated);
-  };
-}, [getSupplies, projectId]);
+    window.addEventListener("ponti:workspace-data-updated", handleWorkspaceDataUpdated);
+    return () => {
+      window.removeEventListener("ponti:workspace-data-updated", handleWorkspaceDataUpdated);
+    };
+  }, [getSupplies, projectId]);
 
   useEffect(() => {
     if (!open) return;
@@ -55,7 +55,7 @@ export function TentativePricesChip() {
 
   if (!projectId || count === 0) return null;
 
-  
+
 
   return (
     <div ref={rootRef} className="relative hidden sm:block">
@@ -64,7 +64,7 @@ export function TentativePricesChip() {
         className="inline-flex h-9 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
-        title="Precios tentativos pendientes"
+        title="Precios pendientes de validación"
       >
         <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
         <span>{processing ? "Revisando..." : `${count} precios tentativos`}</span>
@@ -72,9 +72,10 @@ export function TentativePricesChip() {
 
       {open ? (
         <div className="absolute right-0 top-full z-nav-menu mt-2 w-72 rounded-xl border border-amber-200 bg-white p-3 text-sm text-slate-700 shadow-lg">
-          <p className="font-semibold text-slate-900">Precios tentativos pendientes</p>
+          <p className="font-semibold text-slate-900">Precios pendientes de validación</p>
           <p className="mt-1 text-xs leading-5 text-slate-600">
-            Revisalos antes de presentar o capturar informes.
+            Estos insumos o labores aún tienen valores tentativos.
+            Revisalos antes de generar o exportar informes.
           </p>
 
           <div className="mt-3 space-y-1.5">
