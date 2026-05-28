@@ -135,7 +135,7 @@ export function DrawerShell({
   if (!open) return null;
 
   return (
-    <div className="drawer-root">
+    <div className="drawer-root z-tooltip">
       <div className="drawer-backdrop" onClick={onClose} />
       <aside className="drawer-panel" role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <DrawerCloseButton onClose={onClose} />

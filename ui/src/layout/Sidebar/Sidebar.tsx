@@ -2,11 +2,9 @@ import {
   BarChart3,
   Bell,
   Bot,
-  CalendarRange,
   ChevronDown,
   Database,
   DollarSign,
-  MapPin,
   Monitor,
   Moon,
   Package,
@@ -72,26 +70,6 @@ const menuDatabase: MenuItem[] = [
     name: "Crear Clientes y Sociedades",
     icon: lucideIcon(Users),
     route: "/admin/database/customers",
-  },
-  {
-    name: "Administrar Actores",
-    icon: lucideIcon(Users),
-    route: "/admin/master-data/actors",
-  },
-  {
-    name: "Administrar Campañas",
-    icon: lucideIcon(CalendarRange),
-    route: "/admin/master-data/campaigns",
-  },
-  {
-    name: "Administrar Campos",
-    icon: lucideIcon(MapPin),
-    route: "/admin/master-data/fields",
-  },
-  {
-    name: "Administrar Cultivos",
-    icon: lucideIcon(Sprout),
-    route: "/admin/master-data/crops",
   },
   {
     name: "Crear Labores",

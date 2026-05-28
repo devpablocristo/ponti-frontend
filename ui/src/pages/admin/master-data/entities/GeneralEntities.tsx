@@ -1126,26 +1126,29 @@ export default function GeneralEntities() {
         <AppFilterBar
           className="z-popover"
           filters={filterItems(["customer", "project", "investor", "campaign", "provider"])}
-          actions={[
-            {
-              label: "Archivados",
-              icon: <Archive className="h-4 w-4" />,
-              variant: "primary",
-              isPrimary: true,
-              onClick: () => setArchivedOpen(true),
-            },
-            {
-              label: `Nuevo ${viewSingularLabel[createView]}`,
-              icon: <Plus className="h-4 w-4" />,
-              isPrimary: true,
-              onClick: openCreate,
-            },
-          ]}
         />
         <AppFilterBar
           className="z-dropdown"
           filters={filterItems(["manager", "tenant", "field", "lot", "crop"])}
         />
+        <div className="flex justify-end gap-2 pt-1">
+          <Button
+            variant="primary"
+            size="sm"
+            iconLeft={<Archive className="h-4 w-4" />}
+            onClick={() => setArchivedOpen(true)}
+          >
+            Archivados
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            iconLeft={<Plus className="h-4 w-4" />}
+            onClick={openCreate}
+          >
+            Nuevo {viewSingularLabel[createView]}
+          </Button>
+        </div>
       </div>
 
       {tableView ? (
