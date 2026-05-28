@@ -1,5 +1,5 @@
 import React from "react";
-
+import { TentativePricesChip } from "./TentativePricesChip";
 import Menu from "./Menu";
 import TenantSwitcher from "./TenantSwitcher";
 
@@ -53,13 +53,14 @@ const Navbar: React.FC<NavbarProps> = ({
             {title}
           </h1>
         </div>
-        <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
-          <TenantSwitcher />
-          <Menu
-            setIsLogoutModalOpen={setIsLogoutModalOpen}
-            username={username}
-          />
-        </div>
+      <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
+  <TentativePricesChip />
+  <TenantSwitcher />
+  <Menu
+    setIsLogoutModalOpen={setIsLogoutModalOpen}
+    username={username}
+  />
+</div>
       </div>
     </nav>
   );

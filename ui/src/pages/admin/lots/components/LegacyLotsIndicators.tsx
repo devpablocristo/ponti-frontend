@@ -27,7 +27,12 @@ export function LegacyLotsIndicators({
           {error}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <IndicatorCard
+            title="Superficie total"
+            value={`${formatNumberAr(kpis.superficie_total)} Has`}
+            color="amber"
+          />
           <IndicatorCard
             title="Sup. sembrada"
             value={`${formatNumberAr(kpis.seeded_area)} Has`}
@@ -39,19 +44,19 @@ export function LegacyLotsIndicators({
             color="amber"
           />
           <IndicatorCard
-            title="Tn / hectárea"
-            value={`${formatNumberAr(kpis.yield_tn_per_ha)} Tn`}
-            color="green"
-          />
-          <IndicatorCard
             title="Costo / hectárea"
             value={`u$ ${formatNumberAr(kpis.cost_per_hectare)}`}
             color="red"
           />
           <IndicatorCard
-            title="Superficie total"
-            value={`${formatNumberAr(kpis.superficie_total)} Has`}
-            color="amber"
+            title="Tn / hectárea"
+            value={`${formatNumberAr(kpis.yield_tn_per_ha)} Tn`}
+            color="green"
+          />
+          <IndicatorCard
+            title="Toneladas totales"
+            value={`${formatNumberAr(kpis.total_tons)} Tn`}
+            color="green"
           />
         </div>
       )}

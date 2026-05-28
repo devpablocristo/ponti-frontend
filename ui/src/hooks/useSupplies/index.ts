@@ -24,6 +24,11 @@ const useSupplies = () => {
   const [errorUpdate, setErrorUpdate] = useState<string | null>(null);
   const [resultUpdate, setResultUpdate] = useState<string | null>(null);
 
+  const notifyWorkspaceDataUpdated = () => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("ponti:workspace-data-updated"));
+};
+
   const getSupplies = React.useCallback(
     async (projectId: number, mode: SuppliesMode = "all") => {
       setProcessing(true);
@@ -66,12 +71,13 @@ const useSupplies = () => {
         );
 
         if (response.success) {
-          dispatch({
-            type: actions.SET_RESULT,
-            payload: "Se guardaron los insumos.",
-          });
-          return true;
-        }
+  dispatch({
+    type: actions.SET_RESULT,
+    payload: "Se guardaron los insumos.",
+  });
+  notifyWorkspaceDataUpdated();
+  return true;
+}
 
         setError("No se pudieron guardar los insumos.");
         return false;
@@ -265,9 +271,10 @@ const useSupplies = () => {
         );
 
         if (response.success) {
-          setResultUpdate("Se actualizó el insumo.");
-          return;
-        }
+  setResultUpdate("Se completó el insumo pendiente.");
+  notifyWorkspaceDataUpdated();
+  return;
+}
 
         setErrorUpdate("No se pudo actualizar el insumo.");
       } catch (error) {
@@ -300,9 +307,10 @@ const useSupplies = () => {
         );
 
         if (response.success) {
-          setResultUpdate("Se completó el insumo pendiente.");
-          return;
-        }
+  setResultUpdate("Se completó el insumo pendiente.");
+  notifyWorkspaceDataUpdated();
+  return;
+}
 
         setErrorUpdate("No se pudo completar el insumo pendiente.");
       } catch (error) {
@@ -313,6 +321,8 @@ const useSupplies = () => {
     },
     []
   );
+
+  
 
   return {
     supplies,

@@ -10,6 +10,7 @@ export type LotIndicatorValues = {
   yield_tn_per_ha: number;
   cost_per_hectare: number;
   superficie_total: number;
+  total_tons: number;
 };
 
 const emptyIndicators: LotIndicatorValues = {
@@ -18,6 +19,7 @@ const emptyIndicators: LotIndicatorValues = {
   yield_tn_per_ha: 0,
   cost_per_hectare: 0,
   superficie_total: 0,
+  total_tons: 0,
 };
 
 function toFiniteNumber(value: unknown): number {
@@ -106,6 +108,7 @@ export function calculateLotIndicators(lots: LotsData[]): LotIndicatorValues {
     yield_tn_per_ha: totalSeededArea > 0 ? totalTons / totalSeededArea : 0,
     cost_per_hectare: totalSurfaceArea > 0 ? weightedCost / totalSurfaceArea : 0,
     superficie_total: totalSurfaceArea,
+    total_tons: totalTons,
   };
 }
 
@@ -116,5 +119,6 @@ export function mapApiLotIndicators(kpis: LotKPIs): LotIndicatorValues {
     yield_tn_per_ha: toFiniteNumber(kpis.yield_tn_per_ha),
     cost_per_hectare: toFiniteNumber(kpis.cost_per_hectare),
     superficie_total: toFiniteNumber(kpis.superficie_total),
+    total_tons: toFiniteNumber(kpis.total_tons),
   };
 }

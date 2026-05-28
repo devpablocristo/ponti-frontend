@@ -1,0 +1,231 @@
+diff --git a/node_modules/@devpablocristo/platform-ui-data-display/src/DataTable.tsx b/node_modules/@devpablocristo/platform-ui-data-display/src/DataTable.tsx
+index ef4ff6c..59fda98 100644
+--- a/node_modules/@devpablocristo/platform-ui-data-display/src/DataTable.tsx
++++ b/node_modules/@devpablocristo/platform-ui-data-display/src/DataTable.tsx
+@@ -1,4 +1,5 @@
+ import React, { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
++import { createPortal } from "react-dom";
+ import { PaginationBar } from "./PaginationBar";
+ 
+ type FilterType = "text" | "number" | "select" | "date";
+@@ -133,6 +134,17 @@ function getVisibleFilterOptions(options: string[], search: string): string[] {
+   });
+ }
+ 
++type FilterPosition = {
++  top: number;
++  left: number;
++  width: number;
++};
++
++const FILTER_PANEL_MIN_WIDTH = 200;
++const FILTER_PANEL_MAX_WIDTH = 280;
++const FILTER_PANEL_MARGIN = 16;
++const FILTER_PANEL_OFFSET = 8;
++
+ export function DataTable<T>({
+   data,
+   filters,
+@@ -159,15 +171,65 @@ export function DataTable<T>({
+   const [expandedRow, setExpandedRow] = useState<number | null>(null);
+   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+   const [filterSearch, setFilterSearch] = useState<Record<string, string>>({});
+-  const filterRefs = useRef<Record<string, HTMLDivElement | null>>({});
++  const filterButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
++  const filterTriggerRefs = useRef<Record<string, HTMLDivElement | null>>({});
++  const filterPanelRefs = useRef<Record<string, HTMLDivElement | null>>({});
++  const [filterPosition, setFilterPosition] = useState<FilterPosition | null>(null);
++
++  const closeFilter = () => {
++    setActiveFilter(null);
++    setFilterPosition(null);
++  };
++
++  const getFilterPanelWidth = (key: string) => {
++    const column = columns.find((item) => String(item.key) === key);
++    if (!column?.filterOptions?.length) return FILTER_PANEL_MIN_WIDTH;
++
++    const longestOptionLength = Math.max(
++      ...column.filterOptions.map((option) => String(option ?? "").length),
++    );
++
++    return Math.min(
++      FILTER_PANEL_MAX_WIDTH,
++      Math.max(FILTER_PANEL_MIN_WIDTH, 96 + longestOptionLength * 7),
++    );
++  };
++
++  const updateFilterPosition = (key: string) => {
++    const rect = filterButtonRefs.current[key]?.getBoundingClientRect();
++    if (!rect) {
++      setFilterPosition(null);
++      return;
++    }
++
++    const width = getFilterPanelWidth(key);
++
++    setFilterPosition({
++      top: rect.bottom + FILTER_PANEL_OFFSET,
++      left: Math.max(
++        FILTER_PANEL_MARGIN,
++        Math.min(rect.left, window.innerWidth - width - FILTER_PANEL_MARGIN),
++      ),
++      width,
++    });
++  };
+ 
+   useEffect(() => {
+     const handleClickOutside = (event: MouseEvent) => {
++      const target = event.target as Node;
++      const insideTrigger = Object.values(filterTriggerRefs.current).some(
++        (ref) => ref && ref.contains(target),
++      );
++      const insidePanel = Object.values(filterPanelRefs.current).some(
++        (ref) => ref && ref.contains(target),
++      );
++
+       if (
+         activeFilter &&
+-        !Object.values(filterRefs.current).some((ref) => ref && ref.contains(event.target as Node))
++        !insideTrigger &&
++        !insidePanel
+       ) {
+-        setActiveFilter(null);
++        closeFilter();
+       }
+     };
+ 
+@@ -175,6 +237,19 @@ export function DataTable<T>({
+     return () => document.removeEventListener("mousedown", handleClickOutside);
+   }, [activeFilter]);
+ 
++  useEffect(() => {
++    if (!activeFilter) return;
++
++    const reposition = () => updateFilterPosition(activeFilter);
++    window.addEventListener("resize", reposition);
++    window.addEventListener("scroll", reposition, true);
++
++    return () => {
++      window.removeEventListener("resize", reposition);
++      window.removeEventListener("scroll", reposition, true);
++    };
++  }, [activeFilter]);
++
+   const toggleSort = (key: string) => {
+     if (sortKey !== key) {
+       setSortKey(key);
+@@ -235,7 +310,15 @@ export function DataTable<T>({
+ 
+   const toggleFilter = (key: string) => {
+     setFilterSearch((prev) => ({ ...prev, [key]: prev[key] ?? "" }));
+-    setActiveFilter((current) => (current === key ? null : key));
++    setActiveFilter((current) => {
++      if (current === key) {
++        setFilterPosition(null);
++        return null;
++      }
++
++      updateFilterPosition(key);
++      return key;
++    });
+   };
+ 
+   const handleFilterChange = (key: string, value: unknown) => {
+@@ -259,7 +342,7 @@ export function DataTable<T>({
+           <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase text-slate-500">
+             <tr>
+               {expandableRowRender ? <th className="w-8 p-2" /> : null}
+-              {columns.map((column, index) => {
++              {columns.map((column) => {
+                 const filterValue = filters?.[String(column.key)];
+                 const isFilterActive = Array.isArray(filterValue)
+                   ? filterValue.length > 0
+@@ -300,11 +383,14 @@ export function DataTable<T>({
+                         <div
+                           className="relative"
+                           ref={(element) => {
+-                            filterRefs.current[String(column.key)] = element;
++                            filterTriggerRefs.current[String(column.key)] = element;
+                           }}
+                         >
+                           <button
+                             type="button"
++                            ref={(element) => {
++                              filterButtonRefs.current[String(column.key)] = element;
++                            }}
+                             onClick={() => toggleFilter(String(column.key))}
+                             className={`relative ml-1 focus:outline-none ${
+                               activeFilter === String(column.key) || isFilterActive
+@@ -319,20 +405,27 @@ export function DataTable<T>({
+                             ) : null}
+                           </button>
+ 
+-                          {activeFilter === String(column.key) ? (
++                          {activeFilter === String(column.key) && filterPosition
++                            ? createPortal(
+                             <div
+-                              className={`absolute z-[9999] mt-2 w-48 rounded-xl border border-slate-200 bg-white p-3 shadow-lg ${
+-                                index === 0 ? "left-0" : "right-0"
+-                              }`}
++                              ref={(element) => {
++                                filterPanelRefs.current[String(column.key)] = element;
++                              }}
++                              className="fixed z-[9999] rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
++                              style={{
++                                top: filterPosition.top,
++                                left: filterPosition.left,
++                                width: filterPosition.width,
++                              }}
+                             >
+                               <div className="p-2">
+-                                <label className="mb-1 block text-xs text-slate-600">Filtro</label>
++                                <label className="mb-1 block text-[11px] font-semibold uppercase text-slate-600">Filtro</label>
+ 
+                                 {column.filterType === "select" && column.filterOptions ? (
+                                   <>
+                                     <input
+                                       type="text"
+-                                      className="mb-2 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600"
++                                      className="mb-2 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-normal normal-case text-slate-600"
+                                       placeholder="Buscar opción..."
+                                       value={filterSearch[String(column.key)] || ""}
+                                       onChange={(event) =>
+@@ -353,7 +446,7 @@ export function DataTable<T>({
+                                           return (
+                                             <label
+                                               key={option}
+-                                              className="flex items-center gap-2 py-1 text-xs text-slate-600"
++                                              className="flex items-start gap-2 py-1 text-[11px] font-semibold uppercase leading-5 text-slate-600"
+                                             >
+                                               <input
+                                                 type="checkbox"
+@@ -381,7 +474,7 @@ export function DataTable<T>({
+                                 ) : (
+                                   <input
+                                     type={column.filterType === "date" ? "date" : column.filterType === "number" ? "number" : "text"}
+-                                    className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600"
++                                    className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-normal normal-case text-slate-600"
+                                     placeholder={column.filterType === "text" ? "Buscar..." : undefined}
+                                     value={
+                                       typeof filters?.[String(column.key)] === "string" ||
+@@ -404,14 +497,16 @@ export function DataTable<T>({
+                                   <button
+                                     type="button"
+                                     className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs text-white transition-colors hover:bg-primary-700"
+-                                    onClick={() => setActiveFilter(null)}
++                                    onClick={closeFilter}
+                                   >
+                                     Aplicar
+                                   </button>
+                                 </div>
+                               </div>
+-                            </div>
+-                          ) : null}
++                            </div>,
++                            document.body,
++                          )
++                            : null}
+                         </div>
+                       ) : null}
+                     </div>

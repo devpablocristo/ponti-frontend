@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader runner",
+    "postinstall": "patch-package || true",
     "build": "tsc -b && vite build --configLoader runner",
     "generate:ai-types": "node ./scripts/generate-ai-types.mjs",
     "codegen:openapi": "swagger2openapi ../../core/docs/openapi/swagger.yaml -o ../../core/docs/openapi/openapi.yaml --yaml && openapi-typescript ../../core/docs/openapi/openapi.yaml -o src/api/generated/types.ts",
@@ -64,6 +65,7 @@
     "globals": "^15.15.0",
     "jsdom": "^26.0.0",
     "openapi-typescript": "^7.13.0",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.3",
     "prettier": "^3.8.1",
     "swagger2openapi": "^7.0.8",
