@@ -76,6 +76,18 @@ export default function ActorFormDrawer({
         .map((option) => ({ id: option.id, name: option.display_name })),
     [actor?.id, actorOptions],
   );
+  const roleScopedActorNameOptions = useMemo(() => {
+    const selectedRoles = new Set(roles);
+    if (selectedRoles.size === 0) return [];
+
+    return actorOptions
+      .filter(
+        (option) =>
+          option.id !== actor?.id &&
+          option.roles.some((role) => selectedRoles.has(role)),
+      )
+      .map((option) => ({ id: option.id, name: option.display_name }));
+  }, [actor?.id, actorOptions, roles]);
   const nameMatches = useMemo(
     () => findEntityMatches(displayName, actorNameOptions),
     [actorNameOptions, displayName],
@@ -211,19 +223,19 @@ export default function ActorFormDrawer({
       open={open}
       onClose={onClose}
       title={isEdit ? "Editar actor" : "Nuevo actor"}
-      subtitle={isEdit ? actor?.display_name : undefined}
+      subtitle={isEdit ? formatProperName(actor?.display_name) : undefined}
       processing={processing}
       errorMessage={validation ?? errorMessage ?? null}
       onSubmit={handleSubmit}
       submitLabel={isEdit ? "Guardar cambios" : "Crear actor"}
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
+        <div>
           <SmartEntityInput
-            label="Nombre visible"
+            label="Nombre"
             name="display_name"
             value={displayName}
-            options={actorNameOptions}
+            options={roleScopedActorNameOptions}
             entityLabel="Actor"
             onChange={(value) => {
               setDisplayName(value);
@@ -236,7 +248,6 @@ export default function ActorFormDrawer({
               );
             }}
             size="sm"
-            formatDisplayValue={false}
           />
           {duplicateActorName ? (
             <p className="mt-1.5 text-xs font-medium text-red-600 dark:text-red-400">
@@ -245,7 +256,7 @@ export default function ActorFormDrawer({
           ) : null}
         </div>
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">Tipo de actor</label>
+          <label className="mb-1.5 block text-xs font-medium text-slate-600 dark:text-slate-300">Tipo</label>
           <select
             className="input-base block w-full px-3.5 py-2 text-sm"
             value={actorKind}

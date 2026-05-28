@@ -8,10 +8,7 @@ import SelectField from "../../../../components/Input/SelectField";
 import { Crop, LotDate, LotsDataUpdate } from "../../../../hooks/useLots/types";
 
 type SelectOption = { id: number; name: string };
-type LotChangeHandler = <K extends keyof LotsDataUpdate>(
-  key: K,
-  value: LotsDataUpdate[K]
-) => void;
+type LotChangeHandler = <K extends keyof LotsDataUpdate>(key: K, value: LotsDataUpdate[K]) => void;
 
 type LegacyLotDrawerProps = {
   open: boolean;
@@ -77,6 +74,15 @@ function upsertDate(
   value: string
 ): LotDate[] {
   const nextDates = [...(dates ?? [])];
+  for (let position = 0; position <= index; position += 1) {
+    if (!nextDates[position]) {
+      nextDates[position] = {
+        sowing_date: "",
+        harvest_date: "",
+        sequence: position + 1,
+      };
+    }
+  }
   const current = nextDates[index] ?? {
     sowing_date: "",
     harvest_date: "",
@@ -92,6 +98,10 @@ function upsertDate(
 
 function drawerTitle(lot: LotsDataUpdate | null, selectedFieldName?: string) {
   if (!lot) return "Editar lote";
+  if (lot.id === 0) {
+    const fieldName = lot.field_name ?? selectedFieldName;
+    return fieldName ? `Nuevo lote (${fieldName})` : "Nuevo lote";
+  }
   const fieldName = lot.field_name ?? selectedFieldName;
   return `${lot.project_name ?? ""}${fieldName ? ` (${fieldName}: ${lot.lot_name})` : ""}`;
 }

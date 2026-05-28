@@ -73,10 +73,9 @@ function extractArray(payload: unknown): Indexable[] {
 async function fetchAllProjectLots(projectId: number): Promise<LotsData[]> {
   try {
     const body = await apiClient.get<Wrapped<unknown>>(
-      `/lots?project_id=${projectId}&per_page=10000`,
+      `/lots?project_id=${projectId}&per_page=10000`
     );
-    const candidate =
-      body && typeof body === "object" && "data" in body ? body.data : body;
+    const candidate = body && typeof body === "object" && "data" in body ? body.data : body;
     return extractArray(candidate) as LotsData[];
   } catch {
     return [];
@@ -88,10 +87,9 @@ async function fetchFieldsByName(projectId: number): Promise<Map<string, number>
   const out = new Map<string, number>();
   try {
     const body = await apiClient.get<Wrapped<unknown>>(
-      `/fields?project_id=${projectId}&per_page=1000`,
+      `/fields?project_id=${projectId}&per_page=1000`
     );
-    const candidate =
-      body && typeof body === "object" && "data" in body ? body.data : body;
+    const candidate = body && typeof body === "object" && "data" in body ? body.data : body;
     const arr = extractArray(candidate);
     for (const f of arr) {
       const id = typeof f.id === "number" ? f.id : Number(f.id);
@@ -132,9 +130,7 @@ export async function parseAndResolveLotsCsv({
 
   const globalErrors: string[] = [];
   if (fieldsByName.size === 0) {
-    globalErrors.push(
-      "Catálogo de campos vacío. No se puede crear lotes nuevos sin field_id.",
-    );
+    globalErrors.push("Catálogo de campos vacío. No se puede crear lotes nuevos sin field_id.");
   }
 
   // Index de lotes existentes: `${field_name_normalizado}|${lot_name_normalizado}` → LotsData.
@@ -163,18 +159,8 @@ export async function parseAndResolveLotsCsv({
 
   for (const [index, row] of rawRows.entries()) {
     const rowNumber = index + 2;
-    const rawName = getValueByAliases(row, [
-      "lote",
-      "lot",
-      "nombre",
-      "lot_name",
-      "lotes",
-    ]);
-    const rawFieldName = getValueByAliases(row, [
-      "campo",
-      "field",
-      "field_name",
-    ]).trim();
+    const rawName = getValueByAliases(row, ["lote", "lot", "nombre", "lot_name", "lotes"]);
+    const rawFieldName = getValueByAliases(row, ["campo", "field", "field_name"]).trim();
 
     if (rawName.trim().toUpperCase() === "TOTAL") continue;
 
@@ -219,12 +205,8 @@ export async function parseAndResolveLotsCsv({
     ]);
     const currentCrop = resolveCropId(rawCurrentCrop);
     const previousCrop = resolveCropId(rawPreviousCrop);
-    const sowingDate = parseImportDate(
-      getValueByAliases(row, ["fecha_siembra", "sowing_date"]),
-    );
-    const harvestDate = parseImportDate(
-      getValueByAliases(row, ["fecha_cosecha", "harvest_date"]),
-    );
+    const sowingDate = parseImportDate(getValueByAliases(row, ["fecha_siembra", "sowing_date"]));
+    const harvestDate = parseImportDate(getValueByAliases(row, ["fecha_cosecha", "harvest_date"]));
 
     const rowErrors: string[] = [];
     // Validamos requisitos del POST solo para filas que vamos a crear.
@@ -276,16 +258,14 @@ export async function parseAndResolveLotsCsv({
 // las haya pasado (red de seguridad — el drawer ya las deshabilita en UI).
 // Para reimportar un lote que ya existe, el usuario debe eliminarlo
 // primero por la UI normal y después subir el CSV de nuevo.
-export async function submitLotRows(
-  rows: LotPreviewRow[],
-): Promise<ImportLotsResult> {
+export async function submitLotRows(rows: LotPreviewRow[]): Promise<ImportLotsResult> {
   const errors: string[] = [];
   let imported = 0;
 
   for (const r of rows) {
     if (r.existing) {
       errors.push(
-        `Fila ${r.rowNumber}: lote '${r.rawLotName}' ya existe en el campo '${r.rawFieldName}'.`,
+        `Fila ${r.rowNumber}: lote '${r.rawLotName}' ya existe en el campo '${r.rawFieldName}'.`
       );
       continue;
     }
@@ -294,10 +274,13 @@ export async function submitLotRows(
       continue;
     }
 
+    const hectares = String(r.sowedArea ?? "").replace(",", ".");
     const payload = {
+      name: r.rawLotName,
       lot_name: r.rawLotName,
       field_id: r.fieldId,
-      sowed_area: r.sowedArea,
+      hectares,
+      sowed_area: hectares,
       season: r.season,
       current_crop_id: r.currentCropId ?? null,
       previous_crop_id: r.previousCropId ?? null,
@@ -322,7 +305,7 @@ export async function submitLotRows(
       // copy traducida (ej: "el lote ya existe", "el campo está archivado")
       // en lugar del mensaje inglés crudo del BE.
       errors.push(
-        `Fila ${r.rowNumber}: ${formatError(error, { fallback: "No se pudo crear el lote." })}`,
+        `Fila ${r.rowNumber}: ${formatError(error, { fallback: "No se pudo crear el lote." })}`
       );
     }
   }

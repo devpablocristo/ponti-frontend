@@ -37,7 +37,7 @@ import { useConfirmDialog } from "../../../../hooks/useConfirmDialog";
 import { useEntityFormDrawer } from "../../../../hooks/useEntityFormDrawer";
 import { formatError } from "../../../../lib/format";
 import { notify } from "../../../../lib/notify";
-import { formatProperName } from "../../../../lib/properName";
+import { formatEntityDisplayName, formatProperName } from "../../../../lib/properName";
 import { usePagination } from "../../../../lib/dataDisplay";
 import type { Column } from "../../types";
 import { ACTOR_ENTITY } from "../../entities";
@@ -85,10 +85,24 @@ type ProjectEditorState = {
   title: string;
 };
 
+type ActorEditorContext = {
+  syncCustomer: boolean;
+  customerId?: number | null;
+};
+
 const QUERY_ALL = "page=1&per_page=1000";
 
 const initialFilterModes = (): FilterModes =>
   Object.fromEntries(filterOrder.map((key) => [key, "search"])) as FilterModes;
+
+function filterValueExists(
+  options: Record<GeneralEntityTableView, string[]>,
+  key: GeneralEntityTableView,
+  value?: string,
+) {
+  if (!value) return false;
+  return options[key].some((option) => generalEntityValueMatches(option, value));
+}
 
 const filterLabels: Record<GeneralEntityTableView, string> = {
   customer: "Cliente",
@@ -146,6 +160,12 @@ function optionFromValue(value: string, index: number): FilterOption {
   return { id: `${index}-${value}`, name: value, displayName: formatProperName(value) };
 }
 
+function formatEntityValue(key: GeneralEntityTableView, value: string | undefined) {
+  if (!value) return "";
+  if (key === "campaign") return value;
+  return formatEntityDisplayName(value);
+}
+
 function activeViewFromFilters(
   filters: GeneralEntityFilters,
   modes: FilterModes,
@@ -167,9 +187,9 @@ function displayValue(
   view: GeneralEntityTableView,
   filters: GeneralEntityFilters,
 ) {
-  if (key === view) return row.name;
-  if (filters[key]) return filters[key] ?? "";
-  return row.filterValues[key].map(formatProperName).join(", ");
+  if (key === view) return formatEntityValue(key, row.name);
+  if (filters[key]) return formatEntityValue(key, filters[key]);
+  return row.filterValues[key].map((value) => formatEntityValue(key, value)).join(", ");
 }
 
 function toDisplayRow(
@@ -190,6 +210,15 @@ function actorRoleForView(view: GeneralEntityTableView): ActorRole | null {
 function rowActor(rows: Actor[], row: GeneralEntityRow) {
   if (row.entityKind !== "actor" || row.sourceId <= 0) return null;
   return rows.find((actor) => actor.id === row.sourceId) ?? null;
+}
+
+function actorIdFromResult(result: unknown) {
+  if (result && typeof result === "object" && "id" in result) {
+    const id = Number((result as { id?: unknown }).id);
+    return Number.isFinite(id) && id > 0 ? id : null;
+  }
+  const id = Number(result);
+  return Number.isFinite(id) && id > 0 ? id : null;
 }
 
 function rowHasActiveAssociations(row: GeneralEntityRow, rows: GeneralEntityRow[]) {
@@ -274,6 +303,8 @@ export default function GeneralEntities() {
   const {
     customers,
     getCustomers,
+    createCustomer,
+    updateCustomer,
     archiveCustomer,
     processing: customersProcessing,
   } = useCustomers();
@@ -335,6 +366,8 @@ export default function GeneralEntities() {
   const [loadingDetails, setLoadingDetails] = useState(false);
   const requestedProjectDetailIdsRef = useRef<Set<number>>(new Set());
   const [actorDefaultRoles, setActorDefaultRoles] = useState<ActorRole[]>([]);
+  const [actorEditorContext, setActorEditorContext] = useState<ActorEditorContext | null>(null);
+  const [actorSubmitError, setActorSubmitError] = useState<string | null>(null);
   const [projectEditor, setProjectEditor] = useState<ProjectEditorState | null>(null);
   const [editingLot, setEditingLot] = useState<LotsData | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -566,6 +599,34 @@ export default function GeneralEntities() {
     supplyMovementsProcessing ||
     loadingDetails;
 
+  useEffect(() => {
+    if (loading) return;
+
+    const invalidIndex = filterOrder.findIndex(
+      (key) =>
+        filterModes[key] === "value" &&
+        Boolean(filters[key]) &&
+        !filterValueExists(filterOptions, key, filters[key]),
+    );
+    if (invalidIndex < 0) return;
+
+    const keysToClear = filterOrder.slice(invalidIndex);
+    setFilters((current) => {
+      const next = { ...current };
+      keysToClear.forEach((key) => {
+        delete next[key];
+      });
+      return next;
+    });
+    setFilterModes((current) => {
+      const next = { ...current };
+      keysToClear.forEach((key) => {
+        next[key] = "search";
+      });
+      return next;
+    });
+  }, [filterModes, filterOptions, filters, loading]);
+
   const actorForm = useEntityFormDrawer<Actor, ActorPayloadInput>({
     buildSuccessLabel: (input) => `el actor "${input.display_name}"`,
     create: createActor,
@@ -595,6 +656,62 @@ export default function GeneralEntities() {
       void refreshAfterMutation();
     },
   });
+
+  const closeActorForm = useCallback(() => {
+    actorForm.close();
+    setActorEditorContext(null);
+    setActorSubmitError(null);
+  }, [actorForm]);
+
+  const handleActorSubmit = useCallback(
+    async (input: ActorPayloadInput) => {
+      setActorSubmitError(null);
+      if (!actorEditorContext?.syncCustomer) {
+        await actorForm.handleSubmit(input);
+        return;
+      }
+
+      try {
+        let actorId = actorForm.editing?.id ?? null;
+        if (actorForm.editing) {
+          await updateActor(actorForm.editing.id, input);
+        } else {
+          actorId = actorIdFromResult(await createActor(input));
+        }
+
+        if (!actorId) throw new Error("No se pudo vincular el actor del cliente.");
+
+        const customerPayload = {
+          name: input.display_name,
+          actor_id: actorId,
+        };
+        if (actorEditorContext.customerId) {
+          await updateCustomer(actorEditorContext.customerId, customerPayload);
+          notify.success("Cliente actualizado.");
+        } else {
+          await createCustomer(customerPayload);
+          notify.success("Cliente creado.");
+        }
+
+        closeActorForm();
+        await refreshAfterMutation();
+      } catch (error) {
+        setActorSubmitError(
+          formatError(error, { fallback: "No se pudo guardar el cliente." }),
+        );
+      }
+    },
+    [
+      actorEditorContext,
+      actorForm,
+      closeActorForm,
+      createActor,
+      createCustomer,
+      refreshAfterMutation,
+      updateActor,
+      updateCustomer,
+    ],
+  );
 
   const clearDownstream = useCallback((key: GeneralEntityTableView) => {
     const downstream = downstreamFilters[key];
@@ -652,7 +769,7 @@ export default function GeneralEntities() {
         name: key,
         label: filterLabels[key],
         options: filterOptions[key].map(optionFromValue),
-        value: filterModes[key] === "all" ? allLabels[key] : filters[key] ?? "",
+        value: filterModes[key] === "all" ? allLabels[key] : formatEntityValue(key, filters[key]),
         allowAll: true,
         allLabel: "Todos",
         clearOnClickOutside: true,
@@ -676,7 +793,12 @@ export default function GeneralEntities() {
         rowActor(actors, row) ??
         actors.find((candidate) => generalEntityValueMatches(candidate.display_name, row.name)) ??
         null;
+      setActorSubmitError(null);
       setActorDefaultRoles([fallbackRole]);
+      setActorEditorContext({
+        syncCustomer: row.entityKind === "customer",
+        customerId: row.entityKind === "customer" ? row.sourceId : null,
+      });
       if (actor) actorForm.openEdit(actor);
       else actorForm.openCreate();
     },
@@ -736,7 +858,12 @@ export default function GeneralEntities() {
   const openCreate = useCallback(() => {
     const role = actorRoleForView(createView);
     if (role) {
+      setActorSubmitError(null);
       setActorDefaultRoles([role]);
+      setActorEditorContext({
+        syncCustomer: createView === "customer",
+        customerId: null,
+      });
       actorForm.openCreate();
       return;
     }
@@ -1023,12 +1150,12 @@ export default function GeneralEntities() {
       <ActorFormDrawer
         open={actorForm.open}
         actor={actorForm.editing}
-        processing={actorsProcessing}
-        errorMessage={actorForm.submitError}
+        processing={actorsProcessing || (actorEditorContext?.syncCustomer ? customersProcessing : false)}
+        errorMessage={actorSubmitError ?? actorForm.submitError}
         defaultRoles={actorDefaultRoles}
         actorOptions={actors}
-        onClose={actorForm.close}
-        onSubmit={actorForm.handleSubmit}
+        onClose={closeActorForm}
+        onSubmit={handleActorSubmit}
       />
 
       <CampaignFormDrawer

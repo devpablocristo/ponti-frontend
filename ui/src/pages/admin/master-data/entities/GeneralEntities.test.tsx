@@ -21,6 +21,8 @@ const hookState = vi.hoisted(() => ({
   customers: {
     customers: [] as Array<{ id: number; actor_id?: number; name: string }>,
     getCustomers: vi.fn(),
+    createCustomer: vi.fn(),
+    updateCustomer: vi.fn(),
     archiveCustomer: vi.fn(),
     processing: false,
   },
@@ -172,8 +174,34 @@ vi.mock("../../../../components/crud/ResponsiveTable", () => ({
 }));
 
 vi.mock("../actors/ActorFormDrawer", () => ({
-  default: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="actor-form-drawer">Actor drawer</div> : null,
+  default: ({
+    open,
+    actor,
+    defaultRoles,
+    onSubmit,
+  }: {
+    open: boolean;
+    actor: { actor_kind?: "organization"; roles?: string[] } | null;
+    defaultRoles?: string[];
+    onSubmit: (input: Record<string, unknown>) => void;
+  }) =>
+    open ? (
+      <div data-testid="actor-form-drawer">
+        Actor drawer
+        <button
+          type="button"
+          onClick={() =>
+            onSubmit({
+              actor_kind: actor?.actor_kind ?? "organization",
+              display_name: "Cliente Editado",
+              roles: actor?.roles ?? defaultRoles ?? ["cliente"],
+            })
+          }
+        >
+          Guardar actor mock
+        </button>
+      </div>
+    ) : null,
 }));
 
 vi.mock("../campaigns/CampaignFormDrawer", () => ({
@@ -294,6 +322,24 @@ function resetState() {
   hookState.supplyMovements.supplyMovements = [];
   hookState.managers.managers = [];
   hookState.investors.investors = [];
+  hookState.actors.createActor.mockResolvedValue({
+    id: 99,
+    actor_kind: "organization",
+    display_name: "Cliente Editado",
+    roles: ["cliente"],
+  });
+  hookState.actors.updateActor.mockResolvedValue({
+    id: 1,
+    actor_kind: "organization",
+    display_name: "Cliente Editado",
+    roles: ["cliente"],
+  });
+  hookState.customers.createCustomer.mockResolvedValue({
+    id: 99,
+    actor_id: 99,
+    name: "Cliente Editado",
+  });
+  hookState.customers.updateCustomer.mockResolvedValue(undefined);
   hookState.confirm.mockResolvedValue(true);
   mockApiClient.get.mockResolvedValue({ success: true, data: projectDetail });
 }
@@ -363,6 +409,44 @@ describe("GeneralEntities", () => {
     });
   });
 
+  it("muestra el filtro seleccionado con reglas de visualización de nombres", async () => {
+    hookState.actors.actors = [
+      { id: 1, actor_kind: "organization", display_name: "agro lajitas srl", roles: ["cliente"] },
+    ];
+    hookState.customers.customers = [{ id: 1, actor_id: 1, name: "agro lajitas srl" }];
+    hookState.projects.projects = [];
+
+    render(<GeneralEntities />);
+
+    const customerFilter = screen.getByLabelText("Cliente");
+    fireEvent.focus(customerFilter);
+    fireEvent.click(await screen.findByText("Agro Lajitas SRL"));
+
+    expect(customerFilter).toHaveValue("Agro Lajitas SRL");
+    expect(screen.getByText("Agro Lajitas SRL")).toBeInTheDocument();
+    expect(screen.queryByText("agro lajitas srl")).not.toBeInTheDocument();
+  });
+
+  it("limpia filtros seleccionados cuando la entidad deja de estar activa", async () => {
+    const { rerender } = render(<GeneralEntities />);
+
+    const customerFilter = screen.getByLabelText("Cliente");
+    fireEvent.focus(customerFilter);
+    fireEvent.click(await screen.findByText("Cliente Uno"));
+
+    expect(customerFilter).toHaveValue("Cliente Uno");
+    expect(screen.getByRole("button", { name: /Nuevo Proyecto/i })).toBeInTheDocument();
+
+    hookState.customers.customers = [];
+    rerender(<GeneralEntities />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Cliente")).toHaveValue("");
+    });
+    expect(screen.getByRole("button", { name: /Nuevo Cliente/i })).toBeInTheDocument();
+    expect(screen.queryByText("1 de 1 clientes")).not.toBeInTheDocument();
+  });
+
   it("no carga detalles de proyectos al entrar y los carga por demanda", async () => {
     render(<GeneralEntities />);
 
@@ -388,5 +472,50 @@ describe("GeneralEntities", () => {
     fireEvent.click(screen.getByRole("button", { name: "Editar" }));
 
     expect(screen.getByTestId("lot-edit-drawer")).toBeInTheDocument();
+  });
+
+  it("editar cliente sincroniza actor y customer legacy", async () => {
+    render(<GeneralEntities />);
+
+    fireEvent.focus(screen.getByLabelText("Cliente"));
+    fireEvent.click(screen.getByText("Todos"));
+
+    expect(await screen.findByText("Cliente Uno")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Seleccionar Cliente Uno"));
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+
+    expect(screen.getByTestId("actor-form-drawer")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar actor mock" }));
+
+    await waitFor(() => {
+      expect(hookState.actors.updateActor).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ display_name: "Cliente Editado" }),
+      );
+      expect(hookState.customers.updateCustomer).toHaveBeenCalledWith(1, {
+        name: "Cliente Editado",
+        actor_id: 1,
+      });
+    });
+  });
+
+  it("nuevo cliente crea actor y customer legacy vinculado", async () => {
+    render(<GeneralEntities />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Nuevo Cliente/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar actor mock" }));
+
+    await waitFor(() => {
+      expect(hookState.actors.createActor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          display_name: "Cliente Editado",
+          roles: ["cliente"],
+        }),
+      );
+      expect(hookState.customers.createCustomer).toHaveBeenCalledWith({
+        name: "Cliente Editado",
+        actor_id: 99,
+      });
+    });
   });
 });
