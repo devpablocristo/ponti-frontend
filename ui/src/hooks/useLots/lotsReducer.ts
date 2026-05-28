@@ -23,6 +23,7 @@ const initialState: LotsState = {
     yield_tn_per_ha: "0",
     cost_per_hectare: "0",
     superficie_total: "0",
+    total_tons: "0",
   },
   pageInfo: null,
   crops: [],
