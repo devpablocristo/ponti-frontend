@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle, Plus, Upload } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { notify } from "@/lib/notify";
 import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
 import { AppFilterBar } from "../../../components/filters/AppFilterBar";
@@ -64,7 +65,7 @@ const EditableCell = ({
     }
 
     if (projectId === null) {
-      alert("Error al guardar");
+      notify.error("No se pudo guardar el stock de campo.");
       return;
     }
 
@@ -92,7 +93,7 @@ const EditableCell = ({
 
   useEffect(() => {
     if (errorStock) {
-      alert(errorStock);
+      notify.error(errorStock);
       return;
     }
     if (resultStock) {
@@ -722,13 +723,13 @@ export function Stock() {
 
   useEffect(() => {
     if (errorCloseStock) {
-      alert(errorCloseStock);
+      notify.error(errorCloseStock);
     }
   }, [errorCloseStock]);
 
   useEffect(() => {
     if (resultCloseStock && projectId) {
-      alert(resultCloseStock);
+      notify.success(resultCloseStock);
       getStock(projectId, "");
       getPeriods(projectId);
       setEnabledCloseStock(false);
