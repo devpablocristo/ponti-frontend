@@ -1,14 +1,21 @@
 import { AlertCircle, CheckCircle, LoaderCircle, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import Button from "../../../../components/Button/Button";
+import { ConfirmModal } from "../../../../components/crud/ConfirmModal";
 import { DrawerShell } from "../../../../components/Drawer/DrawerShell";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
+import { SmartEntityInput } from "../../../../components/SmartEntityInput/SmartEntityInput";
 import { Crop, LotDate, LotsDataUpdate } from "../../../../hooks/useLots/types";
 
 type SelectOption = { id: number; name: string };
 type LotChangeHandler = <K extends keyof LotsDataUpdate>(key: K, value: LotsDataUpdate[K]) => void;
+type RotationSnapshot = {
+  previousCropId: number;
+  currentCropId: number;
+  season: string;
+};
 
 type LegacyLotDrawerProps = {
   open: boolean;
@@ -99,11 +106,14 @@ function upsertDate(
 function drawerTitle(lot: LotsDataUpdate | null, selectedFieldName?: string) {
   if (!lot) return "Editar lote";
   if (lot.id === 0) {
-    const fieldName = lot.field_name ?? selectedFieldName;
-    return fieldName ? `Nuevo lote (${fieldName})` : "Nuevo lote";
+    return "Nuevo Lote";
   }
   const fieldName = lot.field_name ?? selectedFieldName;
   return `${lot.project_name ?? ""}${fieldName ? ` (${fieldName}: ${lot.lot_name})` : ""}`;
+}
+
+function cropName(crops: Crop[], cropId: number | undefined) {
+  return crops.find((crop) => crop.id === cropId)?.name ?? "";
 }
 
 export function LegacyLotDrawer({
@@ -121,6 +131,47 @@ export function LegacyLotDrawer({
   onLotChange,
   onSave,
 }: LegacyLotDrawerProps) {
+  const [pendingSeason, setPendingSeason] = useState<string | null>(null);
+  const [lastRotation, setLastRotation] = useState<RotationSnapshot | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setPendingSeason(null);
+      setLastRotation(null);
+    }
+  }, [open]);
+
+  const handleSeasonChange = (nextSeason: string) => {
+    if (nextSeason === (lot?.season ?? "")) return;
+    if (Number(lot?.current_crop_id || 0) > 0) {
+      setPendingSeason(nextSeason);
+      return;
+    }
+    setLastRotation(null);
+    onLotChange("season", nextSeason);
+  };
+
+  const applySeasonRotation = () => {
+    if (!pendingSeason) return;
+    setLastRotation({
+      previousCropId: Number(lot?.previous_crop_id || 0),
+      currentCropId: Number(lot?.current_crop_id || 0),
+      season: lot?.season ?? "",
+    });
+    onLotChange("previous_crop_id", Number(lot?.current_crop_id || 0));
+    onLotChange("current_crop_id", 0);
+    onLotChange("season", pendingSeason);
+    setPendingSeason(null);
+  };
+
+  const undoSeasonRotation = () => {
+    if (!lastRotation) return;
+    onLotChange("previous_crop_id", lastRotation.previousCropId);
+    onLotChange("current_crop_id", lastRotation.currentCropId);
+    onLotChange("season", lastRotation.season);
+    setLastRotation(null);
+  };
+
   return (
     <DrawerShell
       open={open}
@@ -204,25 +255,29 @@ export function LegacyLotDrawer({
               fullWidth
             />
 
-            <SelectField
+            <SmartEntityInput<Crop>
               label="Cultivo Anterior"
-              placeholder="Seleccione cultivo"
               name="previousCrop"
               options={crops}
-              value={String(lot?.previous_crop_id || "")}
-              onChange={(event) => onLotChange("previous_crop_id", Number(event.target.value))}
-              fullWidth
+              value={cropName(crops, lot?.previous_crop_id)}
+              entityLabel="Cultivo"
+              onChange={() => undefined}
+              onSelectExisting={(crop) => onLotChange("previous_crop_id", crop.id)}
+              selectionOnly
+              placeholder="Buscar"
               size="sm"
             />
 
-            <SelectField
+            <SmartEntityInput<Crop>
               label="Cultivo Actual"
-              placeholder="Seleccione cultivo"
               name="currentCrop"
               options={crops}
-              value={String(lot?.current_crop_id || "")}
-              onChange={(event) => onLotChange("current_crop_id", Number(event.target.value))}
-              fullWidth
+              value={cropName(crops, lot?.current_crop_id)}
+              entityLabel="Cultivo"
+              onChange={() => undefined}
+              onSelectExisting={(crop) => onLotChange("current_crop_id", crop.id)}
+              selectionOnly
+              placeholder="Buscar"
               size="sm"
             />
 
@@ -230,7 +285,7 @@ export function LegacyLotDrawer({
               label="Periodo"
               name="season"
               value={lot?.season || ""}
-              onChange={(event) => onLotChange("season", event.target.value)}
+              onChange={(event) => handleSeasonChange(event.target.value)}
               options={seasons}
               fullWidth
               size="sm"
@@ -247,6 +302,19 @@ export function LegacyLotDrawer({
             />
           </div>
 
+          {lastRotation ? (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <span>Rotación aplicada.</span>
+              <button
+                type="button"
+                className="font-semibold text-amber-900 underline-offset-2 hover:underline"
+                onClick={undoSeasonRotation}
+              >
+                Deshacer
+              </button>
+            </div>
+          ) : null}
+
           {errorMessage ? (
             <AlertMessage tone="error" onDismiss={onDismissError}>
               <span className="font-semibold">Error:</span> {errorMessage}
@@ -258,6 +326,17 @@ export function LegacyLotDrawer({
               <span className="font-semibold">{successMessage}</span>
             </AlertMessage>
           ) : null}
+
+          <ConfirmModal
+            isOpen={pendingSeason !== null}
+            onClose={() => setPendingSeason(null)}
+            onConfirm={applySeasonRotation}
+            title="Confirmar cambio de período"
+            message="Cambiar el período va a mover el cultivo actual a cultivo anterior y limpiar el cultivo actual."
+            severity="warning"
+            primaryLabel="Aplicar"
+            secondaryLabel="Cancelar"
+          />
         </form>
       )}
     </DrawerShell>

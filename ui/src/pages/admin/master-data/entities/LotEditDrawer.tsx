@@ -7,13 +7,14 @@ import { LegacyLotDrawer } from "../../lots/components/LegacyLotDrawer";
 type LotEditDrawerProps = {
   open: boolean;
   lot: LotsData | null;
+  initialLot?: LotsDataUpdate | null;
   seasons: { id: number; name: string }[];
   selectedFieldName?: string;
   onClose: () => void;
   onSaved?: () => void | Promise<void>;
 };
 
-function toEditableLot(lot: LotsData | null): LotsDataUpdate | null {
+function toEditableLot(lot: LotsData | LotsDataUpdate | null): LotsDataUpdate | null {
   if (!lot) return null;
   return {
     id: lot.id,
@@ -24,16 +25,22 @@ function toEditableLot(lot: LotsData | null): LotsDataUpdate | null {
     previous_crop_id: lot.previous_crop_id,
     current_crop_id: lot.current_crop_id,
     variety: lot.variety,
-    sowed_area: lot.sowed_area ?? "",
+    sowed_area: lot.sowed_area ?? ("hectares" in lot ? lot.hectares : "") ?? "",
     dates: lot.dates,
     season: lot.season,
     updated_at: lot.updated_at ?? new Date().toISOString(),
   };
 }
 
+function hasPositiveDecimal(value: string | null | undefined) {
+  const parsed = Number(String(value ?? "").trim().replace(",", "."));
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
 export default function LotEditDrawer({
   open,
   lot,
+  initialLot = null,
   seasons,
   selectedFieldName,
   onClose,
@@ -42,6 +49,7 @@ export default function LotEditDrawer({
   const {
     crops,
     getCrops,
+    createLot,
     updateLot,
     updateLotError,
     result,
@@ -53,11 +61,11 @@ export default function LotEditDrawer({
 
   useEffect(() => {
     if (!open) return;
-    setEditableLot(toEditableLot(lot));
+    setEditableLot(toEditableLot(lot ?? initialLot));
     setErrorMessage("");
     setSuccessMessage("");
     void getCrops();
-  }, [getCrops, lot, open]);
+  }, [getCrops, initialLot, lot, open]);
 
   useEffect(() => {
     if (updateLotError) {
@@ -105,15 +113,44 @@ export default function LotEditDrawer({
       return;
     }
 
-    if (!editableLot.sowed_area || editableLot.sowed_area === "0") {
-      setErrorMessage("Area de siembra obligatoria");
+    if (!editableLot.lot_name.trim()) {
+      setErrorMessage("Nombre de lote obligatorio.");
+      return;
+    }
+
+    if (!editableLot.field_id) {
+      setErrorMessage("Seleccione un campo para guardar el lote.");
+      return;
+    }
+
+    if (!hasPositiveDecimal(editableLot.sowed_area)) {
+      setErrorMessage("Hectáreas obligatorias.");
+      return;
+    }
+
+    if (!editableLot.previous_crop_id) {
+      setErrorMessage("Cultivo anterior obligatorio.");
+      return;
+    }
+
+    if (!editableLot.current_crop_id) {
+      setErrorMessage("Cultivo actual obligatorio.");
+      return;
+    }
+
+    if (!editableLot.season) {
+      setErrorMessage("Periodo obligatorio.");
       return;
     }
 
     setErrorMessage("");
     setSuccessMessage("");
-    void updateLot({ ...editableLot });
-  }, [editableLot, updateLot]);
+    if (editableLot.id > 0) {
+      void updateLot({ ...editableLot });
+      return;
+    }
+    void createLot({ ...editableLot });
+  }, [createLot, editableLot, updateLot]);
 
   return (
     <LegacyLotDrawer

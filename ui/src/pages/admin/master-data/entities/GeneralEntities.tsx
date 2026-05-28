@@ -29,7 +29,7 @@ import type { Project } from "../../../../hooks/useDatabase/projects/types";
 import useFields from "../../../../hooks/useFields";
 import useInvestors from "../../../../hooks/useInvestors";
 import useLots from "../../../../hooks/useLots";
-import type { LotsData } from "../../../../hooks/useLots/types";
+import type { LotsData, LotsDataUpdate } from "../../../../hooks/useLots/types";
 import useManagers from "../../../../hooks/useManagers";
 import useProviders from "../../../../hooks/useProviders";
 import useSupplyMovements from "../../../../hooks/useSupplyMovements";
@@ -53,6 +53,7 @@ import CampaignFormDrawer from "../campaigns/CampaignFormDrawer";
 import ArchivedCrops from "../crops/ArchivedCrops";
 import CropFormDrawer from "../crops/CropFormDrawer";
 import CustomerEditor from "../customers/CustomerEditor";
+import FieldFormDrawer from "../fields/FieldFormDrawer";
 import ArchivedFields from "../fields/ArchivedFields";
 import ArchivedLots from "../lots/ArchivedLots";
 import ArchivedProjects from "../projects/ArchivedProjects";
@@ -83,6 +84,12 @@ type ProjectEditorState = {
   customerId?: number | null;
   initialProjectId?: number | null;
   title: string;
+};
+
+type FieldEditorState = {
+  title: string;
+  projectId: number | null;
+  fieldId?: number | null;
 };
 
 type ActorEditorContext = {
@@ -286,6 +293,13 @@ function customerIdFromFilter(rows: GeneralEntityRow[], filters: GeneralEntityFi
   return row?.sourceId ?? null;
 }
 
+function fieldRowFromFilter(rows: GeneralEntityRow[], filters: GeneralEntityFilters) {
+  if (!filters.field) return null;
+  return rows.find(
+    (item) => item.entityKind === "field" && generalEntityValueMatches(item.name, filters.field),
+  ) ?? null;
+}
+
 export default function GeneralEntities() {
   const pagination = usePagination({ perPage: 10 });
   const { buildPagination, resetPage } = pagination;
@@ -369,7 +383,9 @@ export default function GeneralEntities() {
   const [actorEditorContext, setActorEditorContext] = useState<ActorEditorContext | null>(null);
   const [actorSubmitError, setActorSubmitError] = useState<string | null>(null);
   const [projectEditor, setProjectEditor] = useState<ProjectEditorState | null>(null);
+  const [fieldEditor, setFieldEditor] = useState<FieldEditorState | null>(null);
   const [editingLot, setEditingLot] = useState<LotsData | null>(null);
+  const [newLot, setNewLot] = useState<LotsDataUpdate | null>(null);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
 
@@ -838,18 +854,20 @@ export default function GeneralEntities() {
       }
 
       if (row.entityKind === "field") {
-        setProjectEditor({
+        setFieldEditor({
           title: "Editar Campo",
-          mode: "project",
-          customerId: row.customerId ?? null,
-          initialProjectId: row.projectId ?? null,
+          projectId: row.projectId ?? null,
+          fieldId: row.sourceId,
         });
         return;
       }
 
       if (row.entityKind === "lot") {
         const lot = lots.find((item) => item.id === row.sourceId) ?? null;
-        if (lot) setEditingLot(lot);
+        if (lot) {
+          setNewLot(null);
+          setEditingLot(lot);
+        }
       }
     },
     [activeView, campaignForm, campaigns, cropForm, crops, lots, openActorEditor],
@@ -890,8 +908,45 @@ export default function GeneralEntities() {
       return;
     }
 
+    if (createView === "field") {
+      if (!selectedProjectId) {
+        notify.error("Seleccioná un proyecto antes de crear un campo.");
+        return;
+      }
+      setFieldEditor({
+        title: "Nuevo Campo",
+        projectId: selectedProjectId,
+        fieldId: null,
+      });
+      return;
+    }
+
+    if (createView === "lot") {
+      const selectedFieldRow = fieldRowFromFilter(rows, filters);
+      if (!selectedFieldRow) {
+        notify.error("Seleccioná un campo antes de crear un lote.");
+        return;
+      }
+      setEditingLot(null);
+      setNewLot({
+        id: 0,
+        field_id: selectedFieldRow.sourceId,
+        project_name: selectedFieldRow.filterValues.project[0] ?? filters.project ?? "",
+        field_name: selectedFieldRow.name,
+        lot_name: "",
+        previous_crop_id: 0,
+        current_crop_id: 0,
+        variety: "",
+        sowed_area: "",
+        dates: [],
+        season: "",
+        updated_at: new Date().toISOString(),
+      });
+      return;
+    }
+
     setProjectEditor({
-      title: createView === "field" ? "Nuevo Campo" : "Nuevo Lote",
+      title: "Nuevo Lote",
       mode: "project",
       customerId: selectedCustomerId,
       initialProjectId: selectedProjectId,
@@ -1193,12 +1248,33 @@ export default function GeneralEntities() {
         ) : null}
       </DrawerShell>
 
-      <LotEditDrawer
-        open={editingLot !== null}
-        lot={editingLot}
-        selectedFieldName={editingLot?.field_name}
+      <FieldFormDrawer
+        open={fieldEditor !== null}
+        title={fieldEditor?.title ?? "Campo"}
+        projectId={fieldEditor?.projectId ?? null}
+        fieldId={fieldEditor?.fieldId ?? null}
+        project={
+          fieldEditor?.projectId
+            ? projectDetails[fieldEditor.projectId] ?? null
+            : null
+        }
+        actors={actors}
+        crops={crops}
         seasons={seasons}
-        onClose={() => setEditingLot(null)}
+        onClose={() => setFieldEditor(null)}
+        onSaved={refreshAfterMutation}
+      />
+
+      <LotEditDrawer
+        open={editingLot !== null || newLot !== null}
+        lot={editingLot}
+        initialLot={newLot}
+        selectedFieldName={editingLot?.field_name ?? newLot?.field_name}
+        seasons={seasons}
+        onClose={() => {
+          setEditingLot(null);
+          setNewLot(null);
+        }}
         onSaved={refreshAfterMutation}
       />
 

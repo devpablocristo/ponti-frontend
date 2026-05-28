@@ -48,8 +48,12 @@ Reglas:
 - Roles de actor (`Cliente`, `Inversor`, `Proveedor`, `Responsable`, `Arrendatario`) usan `ActorFormDrawer`.
 - `Campania` usa `CampaignFormDrawer`.
 - `Cultivo` usa `CropFormDrawer`.
-- `Proyecto`/`Campo` usan `CustomerEditor` embebido.
-- `Lote` usa el drawer real de lotes.
+- `Proyecto` usa `CustomerEditor` embebido.
+- `Campo` usa `FieldFormDrawer` dedicado y acotado a campo/arriendo/lotes.
+- `Lote` usa el drawer real de lotes (`LegacyLotDrawer` via wrapper), el mismo visual de `/admin/lots`.
+- La UX interna del drawer de lotes se rige por `src/pages/admin/lots/SPEC.md`.
+- Crear `Lote` requiere un `Campo` concreto seleccionado; `Todos los campos` no alcanza para saber dónde crear.
+- Crear `Lote` no debe abrir `CustomerEditor` ni el editor completo de proyecto/campo.
 
 ## Editar
 
@@ -59,8 +63,8 @@ Reglas:
 - `Inversor`, `Proveedor`, `Responsable` y `Arrendatario` abren `ActorFormDrawer`.
 - `Campania` abre `CampaignFormDrawer`.
 - `Cultivo` abre `CropFormDrawer`.
-- `Campo` abre el editor completo de proyecto/campo dentro del drawer de Administrar Entidades.
-- `Lote` abre el drawer real de lotes.
+- `Campo` abre `FieldFormDrawer`; no debe abrir el editor completo de proyecto.
+- `Lote` abre el drawer real de lotes, con fechas, hectáreas, cultivos, período y variedad.
 
 ## Archivado
 
@@ -86,4 +90,5 @@ Reglas:
 - Pantalla: editar cliente sincroniza actor y customer.
 - Pantalla: nuevo cliente crea actor y customer vinculado.
 - Pantalla: editar lote abre el drawer real de lotes.
+- Pantalla: nuevo lote abre el drawer real de lotes y no `CustomerEditor`.
 - Pantalla: archivar/eliminar una entidad seleccionada la quita de filtros y tabla sin requerir refresh manual.

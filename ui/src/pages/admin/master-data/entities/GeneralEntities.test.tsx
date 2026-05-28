@@ -218,9 +218,24 @@ vi.mock("../customers/CustomerEditor", () => ({
   default: () => <div data-testid="customer-editor">Customer editor</div>,
 }));
 
+vi.mock("../fields/FieldFormDrawer", () => ({
+  default: ({ open, title }: { open: boolean; title: string }) =>
+    open ? <div data-testid="field-form-drawer">{title}</div> : null,
+}));
+
 vi.mock("./LotEditDrawer", () => ({
-  default: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="lot-edit-drawer">Lot drawer</div> : null,
+  default: ({
+    open,
+    initialLot,
+  }: {
+    open: boolean;
+    initialLot?: { field_name?: string } | null;
+  }) =>
+    open ? (
+      <div data-testid="lot-edit-drawer">
+        {initialLot ? `Nuevo lote ${initialLot.field_name ?? ""}` : "Lot drawer"}
+      </div>
+    ) : null,
 }));
 
 vi.mock("../actors/ArchivedActorsByRole", () => ({
@@ -472,6 +487,45 @@ describe("GeneralEntities", () => {
     fireEvent.click(screen.getByRole("button", { name: "Editar" }));
 
     expect(screen.getByTestId("lot-edit-drawer")).toBeInTheDocument();
+  });
+
+  it("nuevo lote abre el editor correcto de lotes", async () => {
+    render(<GeneralEntities />);
+
+    for (const label of [
+      "Cliente",
+      "Proyecto",
+      "Inversor",
+      "Campaña",
+      "Proveedores",
+      "Responsable",
+      "Arrendatario",
+    ]) {
+      fireEvent.focus(screen.getByLabelText(label));
+      fireEvent.click(screen.getByText("Todos"));
+    }
+
+    fireEvent.focus(screen.getByLabelText("Campo"));
+    fireEvent.click(await screen.findByText("Campo Norte"));
+
+    fireEvent.click(screen.getByRole("button", { name: /Nuevo Lote/i }));
+
+    expect(screen.getByTestId("lot-edit-drawer")).toHaveTextContent("Nuevo lote Campo Norte");
+    expect(screen.queryByTestId("customer-editor")).not.toBeInTheDocument();
+  });
+
+  it("editar campo abre el editor acotado de campos", async () => {
+    render(<GeneralEntities />);
+
+    fireEvent.focus(screen.getByLabelText("Campo"));
+    fireEvent.click(screen.getByText("Todos"));
+
+    expect(await screen.findByText("Campo Norte")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Seleccionar Campo Norte"));
+    fireEvent.click(screen.getByRole("button", { name: "Editar" }));
+
+    expect(screen.getByTestId("field-form-drawer")).toBeInTheDocument();
+    expect(screen.queryByTestId("customer-editor")).not.toBeInTheDocument();
   });
 
   it("editar cliente sincroniza actor y customer legacy", async () => {
