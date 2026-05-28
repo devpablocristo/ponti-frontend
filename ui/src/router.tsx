@@ -18,6 +18,7 @@ import CurrentProjectsList from "./pages/admin/master-data/customers/CustomersLi
 import CurrentCustomerEditor from "./pages/admin/master-data/customers/CustomerEditor";
 import CurrentArchivedCustomers from "./pages/admin/master-data/customers/ArchivedCustomers";
 import CurrentArchivedProjects from "./pages/admin/master-data/projects/ArchivedProjects";
+import GeneralEntities from "./pages/admin/master-data/entities/GeneralEntities";
 import ArchivedInvestors from "./pages/admin/master-data/investors/ArchivedInvestors";
 import InvestorsList from "./pages/admin/master-data/investors/InvestorsList";
 import ArchivedLots from "./pages/admin/master-data/lots/ArchivedLots";
@@ -187,6 +188,10 @@ export default [
       {
         path: "master-data/customers",
         element: <Navigate to="/admin/master-data/customers/editor" replace />,
+      },
+      {
+        path: "master-data/entities",
+        element: <GeneralEntities />,
       },
       {
         path: "master-data/actors",

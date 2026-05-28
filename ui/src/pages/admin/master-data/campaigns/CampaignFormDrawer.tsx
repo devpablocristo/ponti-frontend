@@ -36,7 +36,7 @@ export default function CampaignFormDrawer({
     setValidation(null);
     const trimmed = name.trim();
     if (!trimmed) {
-      setValidation("El nombre es obligatorio.");
+      setValidation("El periodo es obligatorio.");
       return;
     }
     await onSubmit({ name: trimmed });
@@ -54,7 +54,7 @@ export default function CampaignFormDrawer({
       submitLabel={isEdit ? "Guardar cambios" : "Crear campaña"}
     >
       <InputField
-        label="Nombre"
+        label="Periodo"
         name="name"
         type="text"
         value={name}

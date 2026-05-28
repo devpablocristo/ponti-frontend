@@ -35,6 +35,9 @@ import {
   parseProjectFieldErrorMessage,
   validateActorIdentity,
   validateCustomerIdentity,
+  type ProjectNameOption,
+  validateProjectSelectionsForSave,
+  validateUniqueProjectName,
   validatePercentageGroup,
   validateProjectForSave,
 } from "./customerEditorValidation";
@@ -75,6 +78,13 @@ type CustomerEditorProps = {
   mode?: "customerOnly" | "project";
   customerId?: number | null;
   initialProjectId?: number | null;
+  createNewProject?: boolean;
+  selectionOnlyRelations?: boolean;
+  initialCustomer?: CustomerData | null;
+  initialCampaign?: EntityOption | null;
+  contextProject?: EntityOption | null;
+  projectNameScope?: ProjectNameOption[];
+  cancelPath?: string;
   onClose?: () => void;
   onSaved?: () => Promise<void> | void;
 };
@@ -85,6 +95,9 @@ type EmbeddedAdminDrawer =
   | { type: "lots"; fieldIndex: number }
   | { type: "crops"; fieldIndex: number }
   | null;
+
+type FieldOption = EntityOption & { project_id?: number };
+type LotOption = EntityOption & { field_id?: number };
 
 const freshProjectDetailUrl = (projectId: number) => `/projects/${projectId}?fresh=1`;
 
@@ -101,9 +114,7 @@ const readSavedCustomer = (response: unknown): CustomerData | null => {
   const root =
     response && typeof response === "object" ? (response as Record<string, unknown>) : null;
   const nested =
-    root?.data && typeof root.data === "object"
-      ? (root.data as Record<string, unknown>)
-      : null;
+    root?.data && typeof root.data === "object" ? (root.data as Record<string, unknown>) : null;
   const source = nested ?? root;
   const id = Number(source?.id);
   const name = typeof source?.name === "string" ? source.name : "";
@@ -124,7 +135,7 @@ const toActorOptions = (
     roles?: string[];
     archived_at?: string | null;
     deleted_at?: string | null;
-  }>,
+  }>
 ): ActorOption[] =>
   filterActive(actors).map((actor) => ({
     id: actor.id,
@@ -154,9 +165,7 @@ const cloneProjectField = (field: ProjectFieldDraft): ProjectFieldDraft => ({
 });
 
 const isEmptyProjectField = (field: ProjectFieldDraft) =>
-  !field.name.trim() &&
-  !field.id &&
-  (field.lots ?? []).every((lot) => !lot.name.trim() && !lot.id);
+  !field.name.trim() && !field.id && (field.lots ?? []).every((lot) => !lot.name.trim() && !lot.id);
 
 const isEmptyProjectLot = (lot: ProjectLotDraft) => !lot.name.trim() && !lot.id;
 
@@ -181,12 +190,26 @@ export default function CustomerEditor({
   mode = "project",
   customerId,
   initialProjectId,
+  createNewProject = false,
+  selectionOnlyRelations = false,
+  initialCustomer,
+  initialCampaign,
+  contextProject,
+  projectNameScope = [],
+  cancelPath = "/admin/master-data/customers/list",
   onClose,
   onSaved,
 }: CustomerEditorProps = {}) {
   const navigate = useNavigate();
   const { id } = useParams();
-  const initialCustomerId = customerId ?? (Number(id) || NEW_VALUE);
+  const directInitialProjectId =
+    !createNewProject && !customerId && initialProjectId ? initialProjectId : null;
+  const initialCustomerId =
+    createNewProject && initialCustomer?.id
+      ? initialCustomer.id
+      : directInitialProjectId
+        ? NEW_VALUE
+        : (customerId ?? (Number(id) || NEW_VALUE));
   const {
     setCustomer: contextSetCustomer,
     setProject: contextSetProject,
@@ -201,8 +224,8 @@ export default function CustomerEditor({
   const [actorOptions, setActorOptions] = useState<ActorOption[]>([]);
   const [projectOptions, setProjectOptions] = useState<EntityOption[]>([]);
   const [campaignOptions, setCampaignOptions] = useState<EntityOption[]>([]);
-  const [fieldOptions, setFieldOptions] = useState<EntityOption[]>([]);
-  const [lotOptions, setLotOptions] = useState<EntityOption[]>([]);
+  const [fieldOptions, setFieldOptions] = useState<FieldOption[]>([]);
+  const [lotOptions, setLotOptions] = useState<LotOption[]>([]);
   const [cropOptions, setCropOptions] = useState<EntityOption[]>([]);
   const [leaseTypeOptions, setLeaseTypeOptions] = useState<EntityOption[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<SelectionValue>(initialCustomerId);
@@ -216,6 +239,57 @@ export default function CustomerEditor({
   // Tracks the name of the project currently loaded into the draft so the
   // editor can refresh its baseline after save/select.
   const loadedProjectName = useRef<string>("");
+  const selectionReferenceCustomerId = selectionOnlyRelations
+    ? (initialCustomer?.id ?? (isExistingId(selectedCustomerId) ? selectedCustomerId : null))
+    : null;
+  const selectionReferenceProjectId = selectionOnlyRelations
+    ? (contextProject?.id ?? (isExistingId(selectedProjectId) ? selectedProjectId : null))
+    : null;
+  const selectionReferenceProjectName = selectionOnlyRelations
+    ? (contextProject?.name ?? (isExistingId(selectedProjectId) ? loadedProjectName.current : ""))
+    : "";
+  const referenceListUrls = useMemo(() => {
+    const campaignParams = new URLSearchParams({ limit: "1000" });
+    if (selectionOnlyRelations) {
+      if (selectionReferenceCustomerId) {
+        campaignParams.set("customer_id", String(selectionReferenceCustomerId));
+      }
+      if (selectionReferenceProjectName) {
+        campaignParams.set("project_name", selectionReferenceProjectName);
+      }
+    }
+
+    const fieldParams = new URLSearchParams({ per_page: "1000" });
+    const lotParams = new URLSearchParams({ per_page: "1000" });
+    if (selectionOnlyRelations && selectionReferenceProjectId) {
+      fieldParams.set("project_id", String(selectionReferenceProjectId));
+      lotParams.set("project_id", String(selectionReferenceProjectId));
+    }
+
+    return {
+      campaigns: `/campaigns?${campaignParams.toString()}`,
+      fields: `/fields?${fieldParams.toString()}`,
+      lots: `/lots?${lotParams.toString()}`,
+    };
+  }, [
+    selectionOnlyRelations,
+    selectionReferenceCustomerId,
+    selectionReferenceProjectId,
+    selectionReferenceProjectName,
+  ]);
+  const createInitialProjectDraft = useCallback(
+    (customer?: CustomerData | null): Project => {
+      const draft = createEmptyProject(customer ?? initialCustomer ?? null);
+      if (initialCampaign?.id && initialCampaign.name) {
+        draft.campaign = {
+          id: initialCampaign.id,
+          name: initialCampaign.name,
+        };
+      }
+      return draft;
+    },
+    [initialCampaign?.id, initialCampaign?.name, initialCustomer]
+  );
   useEffect(() => {
     let cancelled = false;
 
@@ -238,8 +312,9 @@ export default function CustomerEditor({
 
       const loadActors = async () => {
         try {
-          const actorsResponse =
-            await apiClient.get<ApiResponse<ActorPayload>>("/actors?page=1&per_page=1000");
+          const actorsResponse = await apiClient.get<ApiResponse<ActorPayload>>(
+            "/actors?page=1&per_page=1000"
+          );
           if (!cancelled) {
             // filterActive defensivo: el BFF debería devolver solo activos,
             // pero hasta que migremos el endpoint (Fase 8) garantizamos
@@ -257,12 +332,12 @@ export default function CustomerEditor({
       const loadReferenceLists = async () => {
         const [campaignsResult, fieldsResult, cropsResult, lotsResult, formOptionsResult] =
           await Promise.allSettled([
-          apiClient.get<ApiResponse<CampaignPayload>>("/campaigns?limit=1000"),
-          apiClient.get<ApiResponse<FieldPayload>>("/fields?limit=1000"),
-          apiClient.get<ApiResponse<unknown>>("/crops"),
-          apiClient.get<ApiResponse<LotListPayload>>("/lots?limit=1000"),
-          apiClient.get<ApiResponse<FormOptionsPayload>>("/form-options"),
-        ]);
+            apiClient.get<ApiResponse<CampaignPayload>>(referenceListUrls.campaigns),
+            apiClient.get<ApiResponse<FieldPayload>>(referenceListUrls.fields),
+            apiClient.get<ApiResponse<unknown>>("/crops"),
+            apiClient.get<ApiResponse<LotListPayload>>(referenceListUrls.lots),
+            apiClient.get<ApiResponse<FormOptionsPayload>>("/form-options"),
+          ]);
 
         if (cancelled) return;
 
@@ -282,14 +357,13 @@ export default function CustomerEditor({
               .map((lot) => ({
                 id: lot.id,
                 name: lot.lot_name ?? lot.name ?? "",
+                field_id: lot.field_id,
               }))
               .filter((lot) => lot.name.trim())
           );
         }
         if (formOptionsResult.status === "fulfilled") {
-          setLeaseTypeOptions(
-            extractEntityOptions(formOptionsResult.value.data?.rentTypes)
-          );
+          setLeaseTypeOptions(extractEntityOptions(formOptionsResult.value.data?.rentTypes));
         }
       };
 
@@ -314,28 +388,47 @@ export default function CustomerEditor({
     return () => {
       cancelled = true;
     };
-  }, [customerOnly]);
+  }, [customerOnly, referenceListUrls]);
 
   useEffect(() => {
     setSelectedCustomerId(initialCustomerId);
+    if (createNewProject) {
+      setSelectedProjectId(NEW_VALUE);
+      setProjectDraft(createInitialProjectDraft(initialCustomer ?? null));
+      loadedProjectName.current = "";
+      return;
+    }
     if (initialCustomerId === NEW_VALUE) {
       setSelectedProjectId(NEW_VALUE);
       setProjectDraft(createEmptyProject(null));
       loadedProjectName.current = "";
     }
-  }, [initialCustomerId]);
+  }, [createInitialProjectDraft, createNewProject, initialCustomer, initialCustomerId]);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadProjects = async () => {
+      if (createNewProject) {
+        const selectedCustomer =
+          initialCustomer ??
+          (isExistingId(selectedCustomerId)
+            ? (customerOptions.find((customer) => customer.id === selectedCustomerId) ?? null)
+            : null);
+        setSelectedProjectId(NEW_VALUE);
+        setProjectOptions([]);
+        setProjectDraft(createInitialProjectDraft(selectedCustomer));
+        loadedProjectName.current = "";
+        return;
+      }
+
       if (customerOnly) {
         setSelectedProjectId("");
         setProjectOptions([]);
         setProjectDraft(
           createEmptyProject(
             isExistingId(selectedCustomerId)
-              ? customerOptions.find((customer) => customer.id === selectedCustomerId) ?? null
+              ? (customerOptions.find((customer) => customer.id === selectedCustomerId) ?? null)
               : null
           )
         );
@@ -401,7 +494,50 @@ export default function CustomerEditor({
     return () => {
       cancelled = true;
     };
-  }, [customerOnly, customerOptions, preferredInitialProjectId, selectedCustomerId]);
+  }, [
+    createInitialProjectDraft,
+    createNewProject,
+    customerOnly,
+    customerOptions,
+    initialCustomer,
+    preferredInitialProjectId,
+    selectedCustomerId,
+  ]);
+
+  useEffect(() => {
+    if (!directInitialProjectId) return;
+    let cancelled = false;
+
+    const loadDirectProject = async () => {
+      setLoading(true);
+      try {
+        const detail = await apiClient.get<ProjectDetailResponse>(
+          freshProjectDetailUrl(directInitialProjectId)
+        );
+        if (cancelled) return;
+        const loaded = normalizeProject(detail.data);
+        setSelectedCustomerId(loaded.customer.id ?? NEW_VALUE);
+        setSelectedProjectId(directInitialProjectId);
+        setProjectOptions([{ id: directInitialProjectId, name: loaded.name }]);
+        setProjectDraft(loaded);
+        loadedProjectName.current = loaded.name;
+      } catch {
+        if (!cancelled) {
+          notify.error("No se pudo cargar el proyecto seleccionado.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadDirectProject();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [directInitialProjectId]);
 
   const customerByActorId = useMemo(() => {
     const map = new Map<number, CustomerData>();
@@ -432,45 +568,135 @@ export default function CustomerEditor({
     }));
   }, [actorOptions, customerByActorId, customerOptions]);
 
-  const customerMatchOptions = useMemo(
-    () => customerActorOptions,
-    [customerActorOptions]
+  const customerMatchOptions = useMemo(() => customerActorOptions, [customerActorOptions]);
+
+  const managerOptions = useMemo(() => {
+    const filtered = actorOptions.filter(
+      (actor) => !actor.roles?.length || actor.roles.includes("responsable")
+    );
+    return filtered.length > 0 ? filtered : actorOptions;
+  }, [actorOptions]);
+
+  const investorOptions = useMemo(() => {
+    const filtered = actorOptions.filter(
+      (actor) => !actor.roles?.length || actor.roles.includes("inversor")
+    );
+    return filtered.length > 0 ? filtered : actorOptions;
+  }, [actorOptions]);
+
+  const tenantOptions = useMemo(() => {
+    const filtered = actorOptions.filter(
+      (actor) => !actor.roles?.length || actor.roles.includes("arrendatario")
+    );
+    return filtered.length > 0 ? filtered : actorOptions;
+  }, [actorOptions]);
+
+  const selectableCustomerActorOptions = useMemo(() => {
+    if (!selectionOnlyRelations) return customerActorOptions;
+    const customerId =
+      projectDraft?.customer.id ??
+      initialCustomer?.id ??
+      (isExistingId(selectedCustomerId) ? selectedCustomerId : null);
+    const actorId = projectDraft?.customer.actor_id ?? initialCustomer?.actor_id ?? null;
+    if (!customerId && !actorId) return customerActorOptions;
+    return customerActorOptions.filter(
+      (option) =>
+        (customerId && option.customer_id === customerId) || (actorId && option.id === actorId)
+    );
+  }, [
+    customerActorOptions,
+    initialCustomer?.actor_id,
+    initialCustomer?.id,
+    projectDraft?.customer.actor_id,
+    projectDraft?.customer.id,
+    selectedCustomerId,
+    selectionOnlyRelations,
+  ]);
+
+  const selectableCampaignOptions = useMemo(() => {
+    if (!selectionOnlyRelations) return campaignOptions;
+    const selectedIds = new Set<number>();
+    if (initialCampaign?.id) selectedIds.add(initialCampaign.id);
+    if (projectDraft?.campaign.id) selectedIds.add(projectDraft.campaign.id);
+    if (selectedIds.size === 0) return campaignOptions;
+
+    const filtered = campaignOptions.filter((option) => selectedIds.has(option.id));
+    const currentCampaign =
+      projectDraft?.campaign.id && projectDraft.campaign.name
+        ? { id: projectDraft.campaign.id, name: projectDraft.campaign.name }
+        : null;
+    const initialCampaignOption =
+      initialCampaign?.id && initialCampaign.name
+        ? { id: initialCampaign.id, name: initialCampaign.name }
+        : null;
+    const seenIds = new Set<number>();
+
+    return [initialCampaignOption, currentCampaign, ...filtered].filter(
+      (option): option is EntityOption => {
+        if (!option || seenIds.has(option.id)) return false;
+        seenIds.add(option.id);
+        return true;
+      }
+    );
+  }, [
+    campaignOptions,
+    initialCampaign?.id,
+    initialCampaign?.name,
+    projectDraft?.campaign.id,
+    projectDraft?.campaign.name,
+    selectionOnlyRelations,
+  ]);
+
+  const selectableFieldOptions = useMemo(() => {
+    if (!selectionOnlyRelations || !selectionReferenceProjectId) return fieldOptions;
+    return fieldOptions.filter(
+      (option) => !option.project_id || option.project_id === selectionReferenceProjectId
+    );
+  }, [fieldOptions, selectionOnlyRelations, selectionReferenceProjectId]);
+
+  const getSelectableLotOptions = useCallback(
+    (fieldId: number) => {
+      if (!selectionOnlyRelations) return lotOptions;
+      if (!fieldId || fieldId <= 0) return [];
+      return lotOptions.filter((option) => !option.field_id || option.field_id === fieldId);
+    },
+    [lotOptions, selectionOnlyRelations]
   );
 
-  const managerOptions = useMemo(
-    () => {
-      const filtered = actorOptions.filter(
-        (actor) => !actor.roles?.length || actor.roles.includes("responsable")
-      );
-      return filtered.length > 0 ? filtered : actorOptions;
-    },
-    [actorOptions]
-  );
+  const selectableCropOptions = useMemo(() => {
+    if (!selectionOnlyRelations || !projectDraft) return cropOptions;
 
-  const investorOptions = useMemo(
-    () => {
-      const filtered = actorOptions.filter(
-        (actor) => !actor.roles?.length || actor.roles.includes("inversor")
-      );
-      return filtered.length > 0 ? filtered : actorOptions;
-    },
-    [actorOptions]
-  );
+    const cropKeys = new Map<number | string, EntityOption>();
+    const addCrop = (id: number, name?: string) => {
+      const trimmedName = name?.trim() ?? "";
+      if (id > 0) {
+        const existing = cropOptions.find((crop) => crop.id === id);
+        cropKeys.set(id, existing ?? { id, name: trimmedName });
+        return;
+      }
+      if (trimmedName) {
+        const existing = cropOptions.find(
+          (crop) => normalizeActorName(crop.name) === normalizeActorName(trimmedName)
+        );
+        if (existing) cropKeys.set(existing.id, existing);
+      }
+    };
 
-  const tenantOptions = useMemo(
-    () => {
-      const filtered = actorOptions.filter(
-        (actor) => !actor.roles?.length || actor.roles.includes("arrendatario")
-      );
-      return filtered.length > 0 ? filtered : actorOptions;
-    },
-    [actorOptions]
-  );
+    projectDraft.fields.forEach((field) => {
+      field.lots.forEach((lot) => {
+        addCrop(Number(lot.previous_crop_id), lot.previous_crop_name);
+        addCrop(Number(lot.current_crop_id), lot.current_crop_name);
+      });
+    });
+
+    return Array.from(cropKeys.values()).filter((crop) => crop.name.trim());
+  }, [cropOptions, projectDraft, selectionOnlyRelations]);
 
   const reloadActorOptions = useCallback(async () => {
     try {
-      const actorsResponse =
-        await apiClient.get<ApiResponse<ActorPayload>>("/actors?page=1&per_page=1000");
+      const actorsResponse = await apiClient.get<ApiResponse<ActorPayload>>(
+        "/actors?page=1&per_page=1000"
+      );
       setActorOptions(toActorOptions(actorsResponse.data?.data ?? []));
     } catch {
       notify.error("No se pudieron actualizar los actores.");
@@ -488,29 +714,32 @@ export default function CustomerEditor({
 
   const reloadFieldOptions = useCallback(async () => {
     try {
-      const fieldsResponse = await apiClient.get<ApiResponse<FieldPayload>>("/fields?limit=1000");
+      const fieldsResponse = await apiClient.get<ApiResponse<FieldPayload>>(
+        referenceListUrls.fields
+      );
       setFieldOptions(fieldsResponse.data?.data ?? []);
     } catch {
       notify.error("No se pudieron actualizar los campos.");
     }
-  }, []);
+  }, [referenceListUrls.fields]);
 
   const reloadLotOptions = useCallback(async () => {
     try {
-      const lotsResponse = await apiClient.get<ApiResponse<LotListPayload>>("/lots?limit=1000");
+      const lotsResponse = await apiClient.get<ApiResponse<LotListPayload>>(referenceListUrls.lots);
       const lots = lotsResponse.data?.data ?? lotsResponse.data?.items ?? [];
       setLotOptions(
         lots
           .map((lot) => ({
             id: lot.id,
             name: lot.lot_name ?? lot.name ?? "",
+            field_id: lot.field_id,
           }))
-          .filter((lot) => lot.name.trim()),
+          .filter((lot) => lot.name.trim())
       );
     } catch {
       notify.error("No se pudieron actualizar los lotes.");
     }
-  }, []);
+  }, [referenceListUrls.lots]);
 
   const seasonOptions = SEASON_OPTIONS;
 
@@ -579,9 +808,7 @@ export default function CustomerEditor({
     setSelectedProjectId(project.id);
     setLoading(true);
     try {
-      const detail = await apiClient.get<ProjectDetailResponse>(
-        freshProjectDetailUrl(project.id)
-      );
+      const detail = await apiClient.get<ProjectDetailResponse>(freshProjectDetailUrl(project.id));
       const loaded = normalizeProject(detail.data);
       loadedProjectName.current = loaded.name;
       setProjectDraft(loaded);
@@ -600,9 +827,7 @@ export default function CustomerEditor({
     // typed value as "lookup-by-name or create" instead of renaming the
     // currently-linked campaign at save time.
     setProjectDraft((prev) =>
-      prev
-        ? { ...prev, campaign: { ...prev.campaign, id: null, name: value } }
-        : prev
+      prev ? { ...prev, campaign: { ...prev.campaign, id: null, name: value } } : prev
     );
   };
 
@@ -637,9 +862,7 @@ export default function CustomerEditor({
         ? {
             ...prev,
             fields: prev.fields.map((field, idx) =>
-              idx === fieldIndex
-                ? { ...field, id: fieldOption.id, name: fieldOption.name }
-                : field
+              idx === fieldIndex ? { ...field, id: fieldOption.id, name: fieldOption.name } : field
             ),
           }
         : prev
@@ -756,35 +979,42 @@ export default function CustomerEditor({
   };
 
   const projectDraftManagers = projectDraft?.managers;
-  const draftManagers = useMemo(
-    () => projectDraftManagers ?? [],
-    [projectDraftManagers],
-  );
+  const draftManagers = useMemo(() => projectDraftManagers ?? [], [projectDraftManagers]);
 
   const selectedManagerActorIds = useMemo(
     () =>
       draftManagers
         .map((manager) => manager.actor_id)
         .filter((actorId): actorId is number => typeof actorId === "number" && actorId > 0),
-    [draftManagers],
+    [draftManagers]
   );
 
   const projectAdminContext = useMemo<ActorContextFilters | undefined>(() => {
     if (!projectDraft || customerOnly) return undefined;
     const customerId =
-      projectDraft.customer.id ??
-      (isExistingId(selectedCustomerId) ? selectedCustomerId : null);
-    const projectId = isExistingId(selectedProjectId) ? selectedProjectId : null;
+      projectDraft.customer.id ?? (isExistingId(selectedCustomerId) ? selectedCustomerId : null);
+    const projectId = isExistingId(selectedProjectId)
+      ? selectedProjectId
+      : (contextProject?.id ?? null);
 
     return {
       customerId,
       customerName: projectDraft.customer.name,
       projectId,
-      projectName: projectDraft.name,
+      projectName: isExistingId(selectedProjectId)
+        ? projectDraft.name
+        : (contextProject?.name ?? projectDraft.name),
       campaignId: projectDraft.campaign.id ?? null,
       campaignName: projectDraft.campaign.name,
     };
-  }, [customerOnly, projectDraft, selectedCustomerId, selectedProjectId]);
+  }, [
+    contextProject?.id,
+    contextProject?.name,
+    customerOnly,
+    projectDraft,
+    selectedCustomerId,
+    selectedProjectId,
+  ]);
 
   const buildFieldAdminContext = useCallback(
     (fieldIndex?: number): ActorContextFilters | undefined => {
@@ -798,7 +1028,7 @@ export default function CustomerEditor({
         fieldName: field?.name ?? "",
       };
     },
-    [projectAdminContext, projectDraft],
+    [projectAdminContext, projectDraft]
   );
 
   const selectedInvestorActorIds = useMemo(
@@ -806,7 +1036,7 @@ export default function CustomerEditor({
       (projectDraft?.investors ?? [])
         .map((investor) => investor.actor_id)
         .filter((actorId): actorId is number => typeof actorId === "number" && actorId > 0),
-    [projectDraft?.investors],
+    [projectDraft?.investors]
   );
 
   const selectedAdminCostInvestorActorIds = useMemo(
@@ -814,7 +1044,7 @@ export default function CustomerEditor({
       (projectDraft?.admin_cost_investors ?? [])
         .map((investor) => investor.actor_id)
         .filter((actorId): actorId is number => typeof actorId === "number" && actorId > 0),
-    [projectDraft?.admin_cost_investors],
+    [projectDraft?.admin_cost_investors]
   );
 
   const selectedFieldIds = useMemo(
@@ -822,7 +1052,7 @@ export default function CustomerEditor({
       (projectDraft?.fields ?? [])
         .map((field) => field.id)
         .filter((fieldId): fieldId is number => typeof fieldId === "number" && fieldId > 0),
-    [projectDraft?.fields],
+    [projectDraft?.fields]
   );
 
   const syncActorOptions = useCallback((actors: Actor[]) => {
@@ -863,7 +1093,7 @@ export default function CustomerEditor({
           acc.push({ id: 0, actor_id: actor.id, name: actor.display_name });
           return acc;
         },
-        [],
+        []
       );
 
       if (managersToAdd.length === 0) {
@@ -878,7 +1108,7 @@ export default function CustomerEditor({
         const nextManagers = [...prev.managers];
         managersToAdd.forEach((nextManager) => {
           const emptyIndex = nextManagers.findIndex(
-            (manager) => !manager.name.trim() && !manager.actor_id && !manager.id,
+            (manager) => !manager.name.trim() && !manager.actor_id && !manager.id
           );
           if (emptyIndex === -1) {
             nextManagers.push(nextManager);
@@ -893,7 +1123,7 @@ export default function CustomerEditor({
       });
       setEmbeddedAdminDrawer(null);
     },
-    [draftManagers, syncActorOptions],
+    [draftManagers, syncActorOptions]
   );
 
   const addInvestorsFromAdmin = useCallback(
@@ -929,7 +1159,7 @@ export default function CustomerEditor({
         const nextInvestors = [...prev[group]];
         investorsToAdd.forEach((nextInvestor) => {
           const emptyIndex = nextInvestors.findIndex(
-            (investor) => !investor.name.trim() && !investor.actor_id && !investor.id,
+            (investor) => !investor.name.trim() && !investor.actor_id && !investor.id
           );
           if (emptyIndex === -1) {
             nextInvestors.push(nextInvestor);
@@ -944,7 +1174,7 @@ export default function CustomerEditor({
       });
       setEmbeddedAdminDrawer(null);
     },
-    [projectDraft, syncActorOptions],
+    [projectDraft, syncActorOptions]
   );
 
   const updateInvestor = (
@@ -1157,7 +1387,7 @@ export default function CustomerEditor({
         if (!project) {
           try {
             const detail = await apiClient.get<ProjectDetailResponse>(
-              freshProjectDetailUrl(field.project_id),
+              freshProjectDetailUrl(field.project_id)
             );
             project = normalizeProject(detail.data);
             projectDetails.set(field.project_id, project);
@@ -1170,7 +1400,7 @@ export default function CustomerEditor({
         const fullField = project.fields.find(
           (candidate) =>
             candidate.id === field.id ||
-            normalizeActorName(candidate.name) === normalizeActorName(field.name),
+            normalizeActorName(candidate.name) === normalizeActorName(field.name)
         );
         if (!fullField) {
           notify.error(`No se pudo hidratar el campo "${field.name}" completo.`);
@@ -1206,7 +1436,7 @@ export default function CustomerEditor({
       await Promise.allSettled([reloadFieldOptions(), reloadLotOptions(), reloadCropOptions()]);
       setEmbeddedAdminDrawer(null);
     },
-    [projectDraft, reloadCropOptions, reloadFieldOptions, reloadLotOptions],
+    [projectDraft, reloadCropOptions, reloadFieldOptions, reloadLotOptions]
   );
 
   const updateFieldInvestorAt = (
@@ -1328,8 +1558,7 @@ export default function CustomerEditor({
       | "season",
     value: string
   ) => {
-    const hectaresValue =
-      key === "hectares" ? normalizeDecimalInputValue(value) : null;
+    const hectaresValue = key === "hectares" ? normalizeDecimalInputValue(value) : null;
     if (
       key === "hectares" &&
       (!HECTARES_INPUT_REGEX.test(value) || hectaresValue === null || hectaresValue < 0)
@@ -1354,7 +1583,7 @@ export default function CustomerEditor({
                               key === "previous_crop_id" ||
                               key === "current_crop_id"
                                 ? key === "hectares"
-                                  ? hectaresValue ?? 0
+                                  ? (hectaresValue ?? 0)
                                   : Number(value || 0)
                                 : value,
                           }
@@ -1488,7 +1717,7 @@ export default function CustomerEditor({
                 };
               }),
             }
-          : prev,
+          : prev
       );
       setLotOptions((prev) => {
         const next = [...prev];
@@ -1501,7 +1730,7 @@ export default function CustomerEditor({
       });
       setEmbeddedAdminDrawer(null);
     },
-    [projectDraft],
+    [projectDraft]
   );
 
   const removeLotAt = (fieldIndex: number, lotIndex: number) => {
@@ -1529,10 +1758,7 @@ export default function CustomerEditor({
       const error = validateActorIdentity("Inversores", investor, investorOptions);
       if (error) return error;
     }
-    const investorsPercentageError = validatePercentageGroup(
-      "Inversores",
-      draft.investors
-    );
+    const investorsPercentageError = validatePercentageGroup("Inversores", draft.investors);
     if (investorsPercentageError) return investorsPercentageError;
 
     for (const investor of draft.admin_cost_investors) {
@@ -1563,8 +1789,9 @@ export default function CustomerEditor({
 
   const reloadCustomerOptions = async (preferredCustomerId?: number | null) => {
     try {
-      const customersResponse =
-        await apiClient.get<ApiResponse<CustomerPayload>>("/customers?per_page=1000");
+      const customersResponse = await apiClient.get<ApiResponse<CustomerPayload>>(
+        "/customers?per_page=1000"
+      );
       const nextCustomers = customersResponse.data?.data ?? [];
       setCustomerOptions(nextCustomers);
       if (!preferredCustomerId) return null;
@@ -1624,8 +1851,19 @@ export default function CustomerEditor({
       projectDraft,
       { editing: selectedProjectId !== NEW_VALUE }
     );
+    const currentProjectId = isExistingId(selectedProjectId) ? selectedProjectId : null;
+    const duplicateProjectNameError = customerOnly
+      ? null
+      : validateUniqueProjectName(projectPayload.name, projectNameScope, currentProjectId);
+    const selectionErrors =
+      selectionOnlyRelations && !customerOnly ? validateProjectSelectionsForSave(projectDraft) : [];
     const validationErrors = validateProjectForSave(projectPayload, { customerOnly });
-    const preflightErrors = [...validationErrors, ...payloadErrors];
+    const preflightErrors = [
+      ...(duplicateProjectNameError ? [duplicateProjectNameError] : []),
+      ...selectionErrors,
+      ...validationErrors,
+      ...payloadErrors,
+    ];
     if (preflightErrors.length > 0) {
       notify.error(formatValidationErrors(preflightErrors));
       return;
@@ -1634,7 +1872,7 @@ export default function CustomerEditor({
     const customerId =
       customerOnly && isExistingId(selectedCustomerId)
         ? selectedCustomerId
-        : projectPayload.customer.id ?? null;
+        : (projectPayload.customer.id ?? null);
     const customerActorId = projectPayload.customer.actor_id ?? null;
 
     const customerError = validateCustomerIdentity(
@@ -1726,7 +1964,7 @@ export default function CustomerEditor({
       onClose?.();
       return;
     }
-    navigate("/admin/master-data/customers/list");
+    navigate(cancelPath);
   };
 
   const embeddedAdminTitle = (() => {
@@ -1752,9 +1990,7 @@ export default function CustomerEditor({
     if (embeddedAdminDrawer.type === "actors") {
       const isManagerGroup = embeddedAdminDrawer.group === "managers";
       const investorGroup =
-        embeddedAdminDrawer.group === "admin_cost_investors"
-          ? "admin_cost_investors"
-          : "investors";
+        embeddedAdminDrawer.group === "admin_cost_investors" ? "admin_cost_investors" : "investors";
       const selectedActorIds = isManagerGroup
         ? selectedManagerActorIds
         : embeddedAdminDrawer.group === "investors"
@@ -1766,6 +2002,8 @@ export default function CustomerEditor({
           embedded
           rolePreset={isManagerGroup ? "responsable" : "inversor"}
           contextFilters={projectAdminContext}
+          allowCreate={!selectionOnlyRelations}
+          allowArchived={!selectionOnlyRelations}
           selectionMode={{
             label: "Agregar",
             entityLabel: isManagerGroup ? "responsable" : "inversor",
@@ -1788,11 +2026,12 @@ export default function CustomerEditor({
         <FieldsList
           embedded
           contextFilters={projectAdminContext}
+          selectionOnly={selectionOnlyRelations}
           selectionMode={{
             label: "Agregar",
             selectedIds: selectedFieldIds,
             onAdd: addFieldsFromAdmin,
-            onCreateNew: addEmptyFieldFromAdmin,
+            onCreateNew: selectionOnlyRelations ? undefined : addEmptyFieldFromAdmin,
           }}
           onAfterChange={reloadFieldOptions}
         />
@@ -1809,11 +2048,14 @@ export default function CustomerEditor({
       return (
         <EmbeddedLotsList
           contextFilters={buildFieldAdminContext(embeddedAdminDrawer.fieldIndex)}
+          selectionOnly={selectionOnlyRelations}
           selectionMode={{
             label: "Agregar",
             selectedIds,
             onAdd: (lots) => addLotsFromAdmin(embeddedAdminDrawer.fieldIndex, lots),
-            onCreateNew: () => addEmptyLotFromAdmin(embeddedAdminDrawer.fieldIndex),
+            onCreateNew: selectionOnlyRelations
+              ? undefined
+              : () => addEmptyLotFromAdmin(embeddedAdminDrawer.fieldIndex),
           }}
           onAfterChange={reloadLotOptions}
         />
@@ -1824,6 +2066,7 @@ export default function CustomerEditor({
       <CropsList
         embedded
         contextFilters={buildFieldAdminContext(embeddedAdminDrawer.fieldIndex)}
+        selectionOnly={selectionOnlyRelations}
         onAfterChange={reloadCropOptions}
       />
     );
@@ -1833,9 +2076,7 @@ export default function CustomerEditor({
     <div className={embedded ? "space-y-2 pr-1" : "space-y-2"}>
       <LoadingOverlay show={(loading || saving) && Boolean(projectDraft)} />
 
-      {loading && !projectDraft ? (
-        <FormSkeleton fields={6} />
-      ) : null}
+      {loading && !projectDraft ? <FormSkeleton fields={6} /> : null}
 
       {projectDraft && (
         <div className="space-y-2">
@@ -1843,38 +2084,53 @@ export default function CustomerEditor({
             <div className="drawer-section-header">
               <h2 className="drawer-section-title">{customerOnly ? "Cliente" : "Proyecto"}</h2>
             </div>
-            <div className={`grid grid-cols-1 gap-2.5 ${customerOnly ? "max-w-xl" : "sm:grid-cols-2 lg:grid-cols-5"}`}>
+            <div
+              className={`grid grid-cols-1 gap-2.5 ${customerOnly ? "max-w-xl" : "sm:grid-cols-2 lg:grid-cols-5"}`}
+            >
               <SmartEntityInput<ActorOption>
                 label="Cliente / Sociedad"
                 name="project_customer"
                 value={projectDraft.customer.name}
-                options={customerActorOptions}
+                options={selectableCustomerActorOptions}
                 entityLabel="Cliente / Sociedad"
                 onChange={updateCustomerName}
                 onSelectExisting={selectExistingCustomer}
+                selectionOnly={selectionOnlyRelations}
                 size="sm"
               />
               {!customerOnly && (
                 <>
-                  <SmartEntityInput<EntityOption>
-                    label="Nombre del proyecto"
-                    name="project_name"
-                    value={projectDraft.name}
-                    options={projectOptions}
-                    entityLabel="Proyecto"
-                    onChange={(value) => updateProjectValue("name", value)}
-                    onSelectExisting={selectProjectOption}
-                    size="sm"
-                  />
+                  {createNewProject && selectionOnlyRelations ? (
+                    <InputField
+                      label="Nombre del proyecto"
+                      name="project_name"
+                      type="text"
+                      value={projectDraft.name}
+                      onChange={(event) => updateProjectValue("name", event.target.value)}
+                      size="sm"
+                    />
+                  ) : (
+                    <SmartEntityInput<EntityOption>
+                      label="Nombre del proyecto"
+                      name="project_name"
+                      value={projectDraft.name}
+                      options={projectOptions}
+                      entityLabel="Proyecto"
+                      onChange={(value) => updateProjectValue("name", value)}
+                      onSelectExisting={selectProjectOption}
+                      size="sm"
+                    />
+                  )}
                   <SmartEntityInput<EntityOption>
                     label="Campaña"
                     name="campaign_name"
                     value={projectDraft.campaign.name}
-                    options={campaignOptions}
+                    options={selectableCampaignOptions}
                     entityLabel="Campaña"
                     onChange={updateCampaignName}
                     onSelectExisting={selectCampaignOption}
                     formatDisplayValue={false}
+                    selectionOnly={selectionOnlyRelations}
                     size="sm"
                   />
                   <InputField
@@ -1904,408 +2160,406 @@ export default function CustomerEditor({
 
           {!customerOnly && (
             <>
-          <section className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3">
-            <EditableList
-              title="Responsables"
-              emptyLabel="Sin responsables"
-              onAdd={addManager}
-              hideAddAction
-              extraHeaderAction={
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => setEmbeddedAdminDrawer({ type: "actors", group: "managers" })}
-                >
-                  Administrar
-                </Button>
-              }
-              items={projectDraft.managers}
-              renderItem={(manager, index) => (
-                <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <SmartEntityInput<ActorOption>
-                    label={`Responsable ${index + 1}`}
-                    name={`manager_${index}`}
-                    value={manager.name}
-                    options={managerOptions}
-                    entityLabel="Responsable"
-                    onChange={(value) => updateManagerName(index, value)}
-                    onSelectExisting={(actor) => selectManager(index, actor)}
-                    size="sm"
-                  />
-                  <RemoveButton label="Quitar responsable" onClick={() => removeManager(index)} />
-                </div>
-              )}
-            />
-            <EditableList
-              title="Inversores"
-              emptyLabel="Sin inversores"
-              onAdd={() => addInvestor("investors")}
-              hideAddAction
-              extraHeaderAction={
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => setEmbeddedAdminDrawer({ type: "actors", group: "investors" })}
-                >
-                  Administrar
-                </Button>
-              }
-              items={projectDraft.investors}
-              renderItem={(investor, index) => (
-                <div className="grid grid-cols-[1fr_90px_auto] gap-2">
-                  <SmartEntityInput<ActorOption>
-                    label="Nombre"
-                    name={`investor_${index}`}
-                    value={investor.name}
-                    options={investorOptions}
-                    entityLabel="Inversor"
-                    onChange={(value) => updateInvestor("investors", index, "name", value)}
-                    onSelectExisting={(actor) => selectInvestor("investors", index, actor)}
-                    size="sm"
-                  />
-                  <InputField
-                    label="%"
-                    name={`investor_percentage_${index}`}
-                    type="number"
-                    min={1}
-                    max={100}
-                    step="0.01"
-                    value={String(investor.percentage ?? 0)}
-                    onChange={(event) =>
-                      updateInvestor("investors", index, "percentage", event.target.value)
-                    }
-                    size="sm"
-                  />
-                  <RemoveButton
-                    label="Quitar inversor"
-                    onClick={() => removeInvestor("investors", index)}
-                  />
-                </div>
-              )}
-            />
-            <EditableList
-              title="Costo administrativo"
-              emptyLabel="Sin inversores"
-              onAdd={() => addInvestor("admin_cost_investors")}
-              hideAddAction
-              extraHeaderAction={
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() =>
-                    setEmbeddedAdminDrawer({ type: "actors", group: "admin_cost_investors" })
+              <section className="grid grid-cols-1 gap-2 lg:grid-cols-2 xl:grid-cols-3">
+                <EditableList
+                  title="Responsables"
+                  emptyLabel="Sin responsables"
+                  onAdd={addManager}
+                  hideAddAction
+                  extraHeaderAction={
+                    <Button
+                      variant="primary"
+                      size="xs"
+                      onClick={() => setEmbeddedAdminDrawer({ type: "actors", group: "managers" })}
+                    >
+                      Administrar
+                    </Button>
                   }
-                >
-                  Administrar
-                </Button>
-              }
-              items={projectDraft.admin_cost_investors}
-              renderItem={(investor, index) => (
-                <div className="grid grid-cols-[1fr_90px_auto] gap-2">
-                  <SmartEntityInput<ActorOption>
-                    label="Nombre"
-                    name={`admin_investor_${index}`}
-                    value={investor.name}
-                    options={investorOptions}
-                    entityLabel="Inversor"
-                    onChange={(value) =>
-                      updateInvestor("admin_cost_investors", index, "name", value)
-                    }
-                    onSelectExisting={(actor) =>
-                      selectInvestor("admin_cost_investors", index, actor)
-                    }
-                    size="sm"
-                  />
-                  <InputField
-                    label="%"
-                    name={`admin_investor_percentage_${index}`}
-                    type="number"
-                    min={1}
-                    max={100}
-                    step="0.01"
-                    value={String(investor.percentage ?? 0)}
-                    onChange={(event) =>
-                      updateInvestor(
-                        "admin_cost_investors",
-                        index,
-                        "percentage",
-                        event.target.value
-                      )
-                    }
-                    size="sm"
-                  />
-                  <RemoveButton
-                    label="Quitar inversor administrativo"
-                    onClick={() => removeInvestor("admin_cost_investors", index)}
-                  />
-                </div>
-              )}
-            />
-          </section>
+                  items={projectDraft.managers}
+                  renderItem={(manager, index) => (
+                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                      <SmartEntityInput<ActorOption>
+                        label={`Responsable ${index + 1}`}
+                        name={`manager_${index}`}
+                        value={manager.name}
+                        options={managerOptions}
+                        entityLabel="Responsable"
+                        onChange={(value) => updateManagerName(index, value)}
+                        onSelectExisting={(actor) => selectManager(index, actor)}
+                        selectionOnly={selectionOnlyRelations}
+                        size="sm"
+                      />
+                      <RemoveButton
+                        label="Quitar responsable"
+                        onClick={() => removeManager(index)}
+                      />
+                    </div>
+                  )}
+                />
+                <EditableList
+                  title="Inversores"
+                  emptyLabel="Sin inversores"
+                  onAdd={() => addInvestor("investors")}
+                  hideAddAction
+                  extraHeaderAction={
+                    <Button
+                      variant="primary"
+                      size="xs"
+                      onClick={() => setEmbeddedAdminDrawer({ type: "actors", group: "investors" })}
+                    >
+                      Administrar
+                    </Button>
+                  }
+                  items={projectDraft.investors}
+                  renderItem={(investor, index) => (
+                    <div className="grid grid-cols-[1fr_90px_auto] gap-2">
+                      <SmartEntityInput<ActorOption>
+                        label="Nombre"
+                        name={`investor_${index}`}
+                        value={investor.name}
+                        options={investorOptions}
+                        entityLabel="Inversor"
+                        onChange={(value) => updateInvestor("investors", index, "name", value)}
+                        onSelectExisting={(actor) => selectInvestor("investors", index, actor)}
+                        selectionOnly={selectionOnlyRelations}
+                        size="sm"
+                      />
+                      <InputField
+                        label="%"
+                        name={`investor_percentage_${index}`}
+                        type="number"
+                        min={1}
+                        max={100}
+                        step="0.01"
+                        value={String(investor.percentage ?? 0)}
+                        onChange={(event) =>
+                          updateInvestor("investors", index, "percentage", event.target.value)
+                        }
+                        size="sm"
+                      />
+                      <RemoveButton
+                        label="Quitar inversor"
+                        onClick={() => removeInvestor("investors", index)}
+                      />
+                    </div>
+                  )}
+                />
+                <EditableList
+                  title="Costo administrativo"
+                  emptyLabel="Sin inversores"
+                  onAdd={() => addInvestor("admin_cost_investors")}
+                  hideAddAction
+                  extraHeaderAction={
+                    <Button
+                      variant="primary"
+                      size="xs"
+                      onClick={() =>
+                        setEmbeddedAdminDrawer({ type: "actors", group: "admin_cost_investors" })
+                      }
+                    >
+                      Administrar
+                    </Button>
+                  }
+                  items={projectDraft.admin_cost_investors}
+                  renderItem={(investor, index) => (
+                    <div className="grid grid-cols-[1fr_90px_auto] gap-2">
+                      <SmartEntityInput<ActorOption>
+                        label="Nombre"
+                        name={`admin_investor_${index}`}
+                        value={investor.name}
+                        options={investorOptions}
+                        entityLabel="Inversor"
+                        onChange={(value) =>
+                          updateInvestor("admin_cost_investors", index, "name", value)
+                        }
+                        onSelectExisting={(actor) =>
+                          selectInvestor("admin_cost_investors", index, actor)
+                        }
+                        selectionOnly={selectionOnlyRelations}
+                        size="sm"
+                      />
+                      <InputField
+                        label="%"
+                        name={`admin_investor_percentage_${index}`}
+                        type="number"
+                        min={1}
+                        max={100}
+                        step="0.01"
+                        value={String(investor.percentage ?? 0)}
+                        onChange={(event) =>
+                          updateInvestor(
+                            "admin_cost_investors",
+                            index,
+                            "percentage",
+                            event.target.value
+                          )
+                        }
+                        size="sm"
+                      />
+                      <RemoveButton
+                        label="Quitar inversor administrativo"
+                        onClick={() => removeInvestor("admin_cost_investors", index)}
+                      />
+                    </div>
+                  )}
+                />
+              </section>
 
-          <section className="drawer-section">
-            <div className="drawer-section-header">
-              <h2 className="drawer-section-title">Campos</h2>
-              <Button
-                variant="primary"
-                size="xs"
-                onClick={() => setEmbeddedAdminDrawer({ type: "fields" })}
-              >
-                Administrar
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              {projectDraft.fields.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-3 text-sm text-slate-500 dark:text-slate-400">
-                  Sin campos cargados.
-                </p>
-              ) : (
-                projectDraft.fields.map((field, fieldIndex) => (
-                  <div
-                    key={field.id || fieldIndex}
-                    className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-2.5"
+              <section className="drawer-section">
+                <div className="drawer-section-header">
+                  <h2 className="drawer-section-title">Campos</h2>
+                  <Button
+                    variant="primary"
+                    size="xs"
+                    onClick={() => setEmbeddedAdminDrawer({ type: "fields" })}
                   >
-                    <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1fr_180px_1.2fr]">
-                      <SmartEntityInput<EntityOption>
-                        label="Campo"
-                        name={`field_${fieldIndex}`}
-                        value={field.name}
-                        options={fieldOptions}
-                        entityLabel="Campo"
-                        onChange={(value) => updateFieldName(fieldIndex, value)}
-                        onSelectExisting={(fieldOption) =>
-                          selectFieldOption(fieldIndex, fieldOption)
-                        }
-                        size="sm"
-                      />
-                      <SmartEntityInput<EntityOption>
-                        label="Tipo de Arriendo"
-                        name={`field_lease_${fieldIndex}`}
-                        value={leaseTypeName(
-                          field.lease_type_id ?? 0,
-                          field.lease_type_name
-                        )}
-                        options={leaseTypeOptions}
-                        entityLabel="Tipo de Arriendo"
-                        onChange={(value) => updateFieldLeaseTypeName(fieldIndex, value)}
-                        onSelectExisting={(leaseType) =>
-                          selectLeaseTypeOption(fieldIndex, leaseType)
-                        }
-                        lockName
-                        size="sm"
-                      />
-                      {leaseTypeHasPercent(field.lease_type_id) && (
-                        <InputField
-                          label="Porcentaje (%)"
-                          name={`field_lease_percent_${fieldIndex}`}
-                          type="number"
-                          value={
-                            field.lease_type_percent === null ||
-                            field.lease_type_percent === undefined
-                              ? ""
-                              : String(field.lease_type_percent)
-                          }
-                          onChange={(e) =>
-                            updateFieldLeasePercent(fieldIndex, e.target.value)
-                          }
-                          size="sm"
-                        />
-                      )}
-                      {leaseTypeHasFixedValue(field.lease_type_id) && (
-                        <InputField
-                          label="Valor (USD)"
-                          name={`field_lease_value_${fieldIndex}`}
-                          type="number"
-                          value={
-                            field.lease_type_value === null ||
-                            field.lease_type_value === undefined
-                              ? ""
-                              : String(field.lease_type_value)
-                          }
-                          onChange={(e) =>
-                            updateFieldLeaseValue(fieldIndex, e.target.value)
-                          }
-                          size="sm"
-                        />
-                      )}
-                      <div className="space-y-2">
-                        {field.investors.map((investor, investorIndex) => (
-                          <div key={investorIndex} className="space-y-1.5">
-                            <SmartEntityInput<ActorOption>
-                              label={investorIndex === 0 ? "Arrendatario" : ""}
-                              name={`field_investor_${fieldIndex}_${investorIndex}`}
-                              value={investor.name}
-                              options={tenantOptions}
-                              entityLabel="Arrendatario"
-                              onChange={(value) =>
-                                updateFieldInvestorAt(
-                                  fieldIndex,
-                                  investorIndex,
-                                  "name",
-                                  value
-                                )
+                    Administrar
+                  </Button>
+                </div>
+
+                <div className="space-y-2">
+                  {projectDraft.fields.length === 0 ? (
+                    <p className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-3 text-sm text-slate-500 dark:text-slate-400">
+                      Sin campos cargados.
+                    </p>
+                  ) : (
+                    projectDraft.fields.map((field, fieldIndex) => (
+                      <div
+                        key={field.id || fieldIndex}
+                        className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-2.5"
+                      >
+                        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-[1fr_180px_1.2fr]">
+                          <SmartEntityInput<EntityOption>
+                            label="Campo"
+                            name={`field_${fieldIndex}`}
+                            value={field.name}
+                            options={selectableFieldOptions}
+                            entityLabel="Campo"
+                            onChange={(value) => updateFieldName(fieldIndex, value)}
+                            onSelectExisting={(fieldOption) =>
+                              selectFieldOption(fieldIndex, fieldOption)
+                            }
+                            selectionOnly={selectionOnlyRelations}
+                            size="sm"
+                          />
+                          <SmartEntityInput<EntityOption>
+                            label="Tipo de Arriendo"
+                            name={`field_lease_${fieldIndex}`}
+                            value={leaseTypeName(field.lease_type_id ?? 0, field.lease_type_name)}
+                            options={leaseTypeOptions}
+                            entityLabel="Tipo de Arriendo"
+                            onChange={(value) => updateFieldLeaseTypeName(fieldIndex, value)}
+                            onSelectExisting={(leaseType) =>
+                              selectLeaseTypeOption(fieldIndex, leaseType)
+                            }
+                            lockName
+                            size="sm"
+                          />
+                          {leaseTypeHasPercent(field.lease_type_id) && (
+                            <InputField
+                              label="Porcentaje (%)"
+                              name={`field_lease_percent_${fieldIndex}`}
+                              type="number"
+                              value={
+                                field.lease_type_percent === null ||
+                                field.lease_type_percent === undefined
+                                  ? ""
+                                  : String(field.lease_type_percent)
                               }
-                              onSelectExisting={(actor) =>
-                                selectFieldInvestorAt(fieldIndex, investorIndex, actor)
-                              }
+                              onChange={(e) => updateFieldLeasePercent(fieldIndex, e.target.value)}
                               size="sm"
                             />
+                          )}
+                          {leaseTypeHasFixedValue(field.lease_type_id) && (
+                            <InputField
+                              label="Valor (USD)"
+                              name={`field_lease_value_${fieldIndex}`}
+                              type="number"
+                              value={
+                                field.lease_type_value === null ||
+                                field.lease_type_value === undefined
+                                  ? ""
+                                  : String(field.lease_type_value)
+                              }
+                              onChange={(e) => updateFieldLeaseValue(fieldIndex, e.target.value)}
+                              size="sm"
+                            />
+                          )}
+                          <div className="space-y-2">
+                            {field.investors.map((investor, investorIndex) => (
+                              <div key={investorIndex} className="space-y-1.5">
+                                <SmartEntityInput<ActorOption>
+                                  label={investorIndex === 0 ? "Arrendatario" : ""}
+                                  name={`field_investor_${fieldIndex}_${investorIndex}`}
+                                  value={investor.name}
+                                  options={tenantOptions}
+                                  entityLabel="Arrendatario"
+                                  onChange={(value) =>
+                                    updateFieldInvestorAt(fieldIndex, investorIndex, "name", value)
+                                  }
+                                  onSelectExisting={(actor) =>
+                                    selectFieldInvestorAt(fieldIndex, investorIndex, actor)
+                                  }
+                                  selectionOnly={selectionOnlyRelations}
+                                  size="sm"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <InputField
+                                    label="%"
+                                    name={`field_investor_percentage_${fieldIndex}_${investorIndex}`}
+                                    type="number"
+                                    min={1}
+                                    max={100}
+                                    step="0.01"
+                                    value={String(investor.percentage ?? 0)}
+                                    onChange={(event) =>
+                                      updateFieldInvestorAt(
+                                        fieldIndex,
+                                        investorIndex,
+                                        "percentage",
+                                        event.target.value
+                                      )
+                                    }
+                                    size="xs"
+                                    className="max-w-24"
+                                  />
+                                  <RemoveButton
+                                    label="Quitar arrendatario"
+                                    onClick={() => removeFieldInvestorAt(fieldIndex, investorIndex)}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-primary-700"
+                              onClick={() => addFieldInvestorAt(fieldIndex)}
+                            >
+                              + Otro arrendatario
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-semibold text-slate-950">Lotes</h3>
                             <div className="flex items-center gap-2">
-                              <InputField
-                                label="%"
-                                name={`field_investor_percentage_${fieldIndex}_${investorIndex}`}
-                                type="number"
-                                min={1}
-                                max={100}
-                                step="0.01"
-                                value={String(investor.percentage ?? 0)}
-                                onChange={(event) =>
-                                  updateFieldInvestorAt(
-                                    fieldIndex,
-                                    investorIndex,
-                                    "percentage",
-                                    event.target.value
-                                  )
-                                }
+                              <Button
+                                variant="primary"
                                 size="xs"
-                                className="max-w-24"
-                              />
-                              <RemoveButton
-                                label="Quitar arrendatario"
-                                onClick={() => removeFieldInvestorAt(fieldIndex, investorIndex)}
-                              />
+                                onClick={() => setEmbeddedAdminDrawer({ type: "lots", fieldIndex })}
+                              >
+                                Administrar Lotes
+                              </Button>
+                              <Button
+                                variant="primary"
+                                size="xs"
+                                onClick={() =>
+                                  setEmbeddedAdminDrawer({ type: "crops", fieldIndex })
+                                }
+                              >
+                                Administrar Cultivos
+                              </Button>
                             </div>
                           </div>
-                        ))}
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-primary-700"
-                          onClick={() => addFieldInvestorAt(fieldIndex)}
-                        >
-                          + Otro arrendatario
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5">
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <h3 className="text-sm font-semibold text-slate-950">Lotes</h3>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="primary"
-                            size="xs"
-                            onClick={() =>
-                              setEmbeddedAdminDrawer({ type: "lots", fieldIndex })
-                            }
-                          >
-                            Administrar Lotes
-                          </Button>
-                          <Button
-                            variant="primary"
-                            size="xs"
-                            onClick={() =>
-                              setEmbeddedAdminDrawer({ type: "crops", fieldIndex })
-                            }
-                          >
-                            Administrar Cultivos
-                          </Button>
+                          <div className="space-y-2">
+                            {field.lots.map((lot, lotIndex) => (
+                              <div
+                                key={lot.id || lotIndex}
+                                className="grid grid-cols-1 gap-2 lg:grid-cols-[1fr_90px_1fr_1fr_120px_auto]"
+                              >
+                                <SmartEntityInput<EntityOption>
+                                  label="Lote"
+                                  name={`lot_${fieldIndex}_${lotIndex}`}
+                                  value={lot.name}
+                                  options={getSelectableLotOptions(field.id)}
+                                  entityLabel="Lote"
+                                  onChange={(value) => updateLotName(fieldIndex, lotIndex, value)}
+                                  onSelectExisting={(lotOption) =>
+                                    selectLotOption(fieldIndex, lotIndex, lotOption)
+                                  }
+                                  selectionOnly={selectionOnlyRelations}
+                                  size="sm"
+                                />
+                                <InputField
+                                  label="Hectáreas"
+                                  name={`lot_hectares_${fieldIndex}_${lotIndex}`}
+                                  type="number"
+                                  min={0}
+                                  step="0.001"
+                                  value={String(lot.hectares ?? 0)}
+                                  onChange={(event) =>
+                                    updateLotAt(
+                                      fieldIndex,
+                                      lotIndex,
+                                      "hectares",
+                                      event.target.value
+                                    )
+                                  }
+                                  size="sm"
+                                />
+                                <SmartEntityInput<EntityOption>
+                                  label="Cultivo Anterior"
+                                  name={`lot_previous_crop_${fieldIndex}_${lotIndex}`}
+                                  value={lot.previous_crop_name ?? ""}
+                                  options={selectableCropOptions}
+                                  entityLabel="Cultivo"
+                                  onChange={(value) =>
+                                    updateCropName(fieldIndex, lotIndex, "previous", value)
+                                  }
+                                  onSelectExisting={(crop) =>
+                                    selectCropOption(fieldIndex, lotIndex, "previous", crop)
+                                  }
+                                  lockName={!selectionOnlyRelations}
+                                  selectionOnly={selectionOnlyRelations}
+                                  size="sm"
+                                />
+                                <SmartEntityInput<EntityOption>
+                                  label="Cultivo Actual"
+                                  name={`lot_current_crop_${fieldIndex}_${lotIndex}`}
+                                  value={lot.current_crop_name ?? ""}
+                                  options={selectableCropOptions}
+                                  entityLabel="Cultivo"
+                                  lockName={!selectionOnlyRelations}
+                                  onChange={(value) =>
+                                    updateCropName(fieldIndex, lotIndex, "current", value)
+                                  }
+                                  onSelectExisting={(crop) =>
+                                    selectCropOption(fieldIndex, lotIndex, "current", crop)
+                                  }
+                                  selectionOnly={selectionOnlyRelations}
+                                  size="sm"
+                                />
+                                <SelectField
+                                  label="Periodo"
+                                  name={`lot_season_${fieldIndex}_${lotIndex}`}
+                                  value={lot.season}
+                                  onChange={(event) =>
+                                    changeLotSeason(fieldIndex, lotIndex, event.target.value)
+                                  }
+                                  options={seasonOptions}
+                                  size="sm"
+                                  fullWidth
+                                />
+                                <RemoveButton
+                                  label="Quitar lote"
+                                  onClick={() => removeLotAt(fieldIndex, lotIndex)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex justify-end pt-1">
+                          <RemoveButton
+                            label="Quitar campo"
+                            onClick={() => removeField(fieldIndex)}
+                          />
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        {field.lots.map((lot, lotIndex) => (
-                          <div
-                            key={lot.id || lotIndex}
-                            className="grid grid-cols-1 gap-2 lg:grid-cols-[1fr_90px_1fr_1fr_120px_auto]"
-                          >
-                            <SmartEntityInput<EntityOption>
-                              label="Lote"
-                              name={`lot_${fieldIndex}_${lotIndex}`}
-                              value={lot.name}
-                              options={lotOptions}
-                              entityLabel="Lote"
-                              onChange={(value) => updateLotName(fieldIndex, lotIndex, value)}
-                              onSelectExisting={(lotOption) =>
-                                selectLotOption(fieldIndex, lotIndex, lotOption)
-                              }
-                              size="sm"
-                            />
-                            <InputField
-                              label="Hectáreas"
-                              name={`lot_hectares_${fieldIndex}_${lotIndex}`}
-                              type="number"
-                              min={0}
-                              step="0.001"
-                              value={String(lot.hectares ?? 0)}
-                              onChange={(event) =>
-                                updateLotAt(fieldIndex, lotIndex, "hectares", event.target.value)
-                              }
-                              size="sm"
-                            />
-                            <SmartEntityInput<EntityOption>
-                              label="Cultivo Anterior"
-                              name={`lot_previous_crop_${fieldIndex}_${lotIndex}`}
-                              value={lot.previous_crop_name ?? ""}
-                              options={cropOptions}
-                              entityLabel="Cultivo"
-                              onChange={(value) =>
-                                updateCropName(fieldIndex, lotIndex, "previous", value)
-                              }
-                              onSelectExisting={(crop) =>
-                                selectCropOption(fieldIndex, lotIndex, "previous", crop)
-                              }
-                              lockName
-                              size="sm"
-                            />
-                            <SmartEntityInput<EntityOption>
-                              label="Cultivo Actual"
-                              name={`lot_current_crop_${fieldIndex}_${lotIndex}`}
-                              value={lot.current_crop_name ?? ""}
-                              options={cropOptions}
-                              entityLabel="Cultivo"
-                              lockName
-                              onChange={(value) =>
-                                updateCropName(fieldIndex, lotIndex, "current", value)
-                              }
-                              onSelectExisting={(crop) =>
-                                selectCropOption(fieldIndex, lotIndex, "current", crop)
-                              }
-                              size="sm"
-                            />
-                            <SelectField
-                              label="Periodo"
-                              name={`lot_season_${fieldIndex}_${lotIndex}`}
-                              value={lot.season}
-                              onChange={(event) =>
-                                changeLotSeason(
-                                  fieldIndex,
-                                  lotIndex,
-                                  event.target.value
-                                )
-                              }
-                              options={seasonOptions}
-                              size="sm"
-                              fullWidth
-                            />
-                            <RemoveButton
-                              label="Quitar lote"
-                              onClick={() => removeLotAt(fieldIndex, lotIndex)}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="flex justify-end pt-1">
-                      <RemoveButton
-                        label="Quitar campo"
-                        onClick={() => removeField(fieldIndex)}
-                      />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </section>
+                    ))
+                  )}
+                </div>
+              </section>
             </>
           )}
           <section className="flex justify-end gap-2 pb-2">
@@ -2333,7 +2587,7 @@ export default function CustomerEditor({
             >
               {renderEmbeddedAdmin()}
             </DrawerShell>,
-            document.body,
+            document.body
           )
         : null}
     </div>

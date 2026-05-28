@@ -2,10 +2,9 @@ import {
   BarChart3,
   Bell,
   Bot,
-  CalendarRange,
   ChevronDown,
+  Database,
   DollarSign,
-  MapPin,
   Monitor,
   Moon,
   Package,
@@ -36,9 +35,7 @@ type MenuItem = {
  */
 const lucideIcon =
   (Icon: typeof Users) =>
-  (color: string): ReactNode => (
-    <Icon size={20} strokeWidth={1.5} color={color} />
-  );
+  (color: string): ReactNode => <Icon size={20} strokeWidth={1.5} color={color} />;
 
 const menuReports: MenuItem[] = [
   {
@@ -65,29 +62,14 @@ const menuReports: MenuItem[] = [
 
 const menuDatabase: MenuItem[] = [
   {
+    name: "Administrar Entidades",
+    icon: lucideIcon(Database),
+    route: "/admin/master-data/entities",
+  },
+  {
     name: "Crear Clientes y Sociedades",
     icon: lucideIcon(Users),
     route: "/admin/database/customers",
-  },
-  {
-    name: "Administrar Actores",
-    icon: lucideIcon(Users),
-    route: "/admin/master-data/actors",
-  },
-  {
-    name: "Administrar Campañas",
-    icon: lucideIcon(CalendarRange),
-    route: "/admin/master-data/campaigns",
-  },
-  {
-    name: "Administrar Campos",
-    icon: lucideIcon(MapPin),
-    route: "/admin/master-data/fields",
-  },
-  {
-    name: "Administrar Cultivos",
-    icon: lucideIcon(Sprout),
-    route: "/admin/master-data/crops",
   },
   {
     name: "Crear Labores",
@@ -214,7 +196,7 @@ const menuItems: MenuItem[] = [
     route: "/admin/customers",
   },
   {
-    name: "Proyectos Nuevo",
+    name: "Nuevo Proyecto",
     icon: (color: string) => (
       <svg
         width="20"
@@ -464,9 +446,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebar
   //   desktop (≥md): inline flex-child, ancho expand/collapse via width.
   // El `md:` resetea las clases mobile (static, translate-x-0, w-64/w-0) para
   // que ambos comportamientos convivan sin JS condicional.
-  const baseClasses = "bg-sidebar transition-all duration-300 ease-in-out fixed inset-y-0 left-0 z-drawer w-64 md:static md:translate-x-0 md:flex-shrink-0";
+  const baseClasses =
+    "bg-sidebar transition-all duration-300 ease-in-out fixed inset-y-0 left-0 z-drawer w-64 md:static md:translate-x-0 md:flex-shrink-0";
   const mobileTransform = isSidebarOpen ? "translate-x-0" : "-translate-x-full";
-  const desktopWidth = isSidebarOpen ? "md:w-64 md:opacity-100" : "md:w-0 md:opacity-0 md:overflow-hidden";
+  const desktopWidth = isSidebarOpen
+    ? "md:w-64 md:opacity-100"
+    : "md:w-0 md:opacity-0 md:overflow-hidden";
 
   return (
     <aside
@@ -543,7 +528,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isSidebarOpen, setTitle, setIsSidebar
           </ul>
         </SidebarSection>
 
-        <SidebarSection name="Configuración" routes={menuDatabase.map((item) => item.route)}>
+        <SidebarSection name="Administración" routes={menuDatabase.map((item) => item.route)}>
           <ul className="flex flex-col gap-0.5 font-medium">
             {menuDatabase.map((item) => (
               <li key={item.name}>

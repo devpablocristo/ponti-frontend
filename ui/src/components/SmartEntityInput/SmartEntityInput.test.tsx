@@ -79,4 +79,34 @@ describe("SmartEntityInput", () => {
 
     expect(onChange).toHaveBeenCalledWith("Metan Norte");
   });
+
+  it("does not commit typed text in selection-only mode", () => {
+    const onChange = vi.fn();
+    const onSelectExisting = vi.fn();
+
+    render(
+      <SmartEntityInput
+        label="Cliente"
+        name="customer"
+        value="soalen"
+        options={[{ id: 7, name: "soalen srl" }]}
+        entityLabel="Cliente"
+        onChange={onChange}
+        onSelectExisting={onSelectExisting}
+        selectionOnly
+      />
+    );
+
+    fireEvent.focus(screen.getByLabelText("Cliente"));
+    fireEvent.change(screen.getByLabelText("Cliente"), {
+      target: { value: "soalen s" },
+    });
+
+    expect(screen.getByLabelText("Cliente")).toHaveValue("soalen s");
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText("Soalen SRL"));
+
+    expect(onSelectExisting).toHaveBeenCalledWith({ id: 7, name: "soalen srl" });
+  });
 });

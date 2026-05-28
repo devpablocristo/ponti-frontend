@@ -327,9 +327,9 @@
     box-shadow: var(--shadow-lg);
   }
 
-  /* Drawers — alineado con `tailwind.config.js` zIndex.drawer (920) */
+  /* Drawers — deben quedar por encima de filtros/dropdowns de la pantalla de fondo. */
   .drawer-root {
-    @apply fixed inset-0 flex z-drawer;
+    @apply fixed inset-0 flex z-tooltip;
   }
 
   .drawer-backdrop {

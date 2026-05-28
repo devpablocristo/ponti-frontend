@@ -39,6 +39,7 @@ type CropScope = {
 
 type CropsListProps = {
   embedded?: boolean;
+  selectionOnly?: boolean;
   contextFilters?: ActorContextFilters;
   onAfterChange?: () => void | Promise<void>;
 };
@@ -75,6 +76,7 @@ function collectProjectCrops(project: Project, fieldId?: number): CropScope {
 
 export default function CropsList({
   embedded = false,
+  selectionOnly = false,
   contextFilters,
   onAfterChange,
 }: CropsListProps = {}) {
@@ -226,8 +228,8 @@ export default function CropsList({
   const bulk = useBulkActions<Crop>({
     items: visibleCrops,
     entity: ENTITY,
-    archive: archiveCrop,
-    onEdit: drawer.openEdit,
+    archive: selectionOnly ? undefined : archiveCrop,
+    onEdit: selectionOnly ? undefined : drawer.openEdit,
     onAfter: refresh,
   });
 
@@ -326,12 +328,16 @@ export default function CropsList({
                   isPrimary: true,
                   onClick: () => setContextMode("current"),
                 },
-                {
-                  label: "Todos",
-                  variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
-                  isPrimary: true,
-                  onClick: () => setContextMode("all"),
-                },
+                ...(!selectionOnly
+                  ? [
+                      {
+                        label: "Todos",
+                        variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
+                        isPrimary: true,
+                        onClick: () => setContextMode("all"),
+                      },
+                    ]
+                  : []),
               ]
             : []),
           ...(!embedded
@@ -353,20 +359,24 @@ export default function CropsList({
                 },
               ]
             : []),
-          {
-            label: "Archivados",
-            icon: <Archive className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: () => setArchivedDrawerOpen(true),
-          },
-          {
-            label: "Nuevo",
-            icon: <Plus className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: drawer.openCreate,
-          },
+          ...(!selectionOnly
+            ? [
+                {
+                  label: "Archivados",
+                  icon: <Archive className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: () => setArchivedDrawerOpen(true),
+                },
+                {
+                  label: "Nuevo",
+                  icon: <Plus className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: drawer.openCreate,
+                },
+              ]
+            : []),
         ]}
       />
 
@@ -378,15 +388,21 @@ export default function CropsList({
           <EmptyState
             icon={Sprout}
             title="Aún No Hay Cultivos"
-            description="Creá el primero para usarlo en lotes y reportes."
+            description={
+              selectionOnly
+                ? "No hay cultivos disponibles para seleccionar."
+                : "Creá el primero para usarlo en lotes y reportes."
+            }
             cta={
-              <Button
-                variant="primary"
-                iconLeft={<Plus className="h-4 w-4" />}
-                onClick={drawer.openCreate}
-              >
-                Nuevo Cultivo
-              </Button>
+              selectionOnly ? undefined : (
+                <Button
+                  variant="primary"
+                  iconLeft={<Plus className="h-4 w-4" />}
+                  onClick={drawer.openCreate}
+                >
+                  Nuevo Cultivo
+                </Button>
+              )
             }
           />
         ) : visibleCrops.length === 0 ? (
@@ -418,14 +434,16 @@ export default function CropsList({
         )}
       </div>
 
-      <CropFormDrawer
-        open={drawer.open}
-        crop={drawer.editing}
-        processing={processing}
-        errorMessage={drawer.submitError}
-        onClose={drawer.close}
-        onSubmit={drawer.handleSubmit}
-      />
+      {!selectionOnly ? (
+        <CropFormDrawer
+          open={drawer.open}
+          crop={drawer.editing}
+          processing={processing}
+          errorMessage={drawer.submitError}
+          onClose={drawer.close}
+          onSubmit={drawer.handleSubmit}
+        />
+      ) : null}
       <ArchivedDrawer
         open={archivedDrawerOpen}
         title="Cultivos archivados"

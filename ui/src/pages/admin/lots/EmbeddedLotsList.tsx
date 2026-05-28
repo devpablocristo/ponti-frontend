@@ -24,6 +24,7 @@ import ArchivedLots from "../master-data/lots/ArchivedLots";
 
 type EmbeddedLotsListProps = {
   contextFilters?: ActorContextFilters;
+  selectionOnly?: boolean;
   selectionMode: {
     label?: string;
     selectedIds?: number[];
@@ -52,6 +53,7 @@ const lotColumns: Column<LotsData>[] = [
 
 export default function EmbeddedLotsList({
   contextFilters,
+  selectionOnly = false,
   selectionMode,
   onAfterChange,
 }: EmbeddedLotsListProps) {
@@ -60,7 +62,7 @@ export default function EmbeddedLotsList({
   const [contextMode, setContextMode] = useState<"current" | "all">(
     hasPositiveId(contextFilters?.fieldId) || hasPositiveId(contextFilters?.projectId)
       ? "current"
-      : "all",
+      : "all"
   );
   const { lots, processing, error, getLots, archiveLot } = useLots();
 
@@ -68,7 +70,7 @@ export default function EmbeddedLotsList({
     setContextMode(
       hasPositiveId(contextFilters?.fieldId) || hasPositiveId(contextFilters?.projectId)
         ? "current"
-        : "all",
+        : "all"
     );
   }, [contextFilters?.fieldId, contextFilters?.projectId]);
 
@@ -99,23 +101,23 @@ export default function EmbeddedLotsList({
 
   const selectedLotIds = useMemo(
     () => new Set(selectionMode.selectedIds ?? []),
-    [selectionMode.selectedIds],
+    [selectionMode.selectedIds]
   );
 
   const bulk = useBulkActions<LotsData>({
     items: lots,
     entity: ENTITY,
-    archive: archiveLot,
+    archive: selectionOnly ? undefined : archiveLot,
     onAfter: refresh,
   });
 
   const selectColumn = useMemo<Column<LotsData>>(
     () => makeSelectColumn<LotsData>(bulk, (lot) => lot.lot_name, ENTITY),
-    [bulk],
+    [bulk]
   );
   const tableColumns = useMemo<Column<LotsData>[]>(
     () => [selectColumn, ...lotColumns],
-    [selectColumn],
+    [selectColumn]
   );
 
   const addSelectedLots = () => {
@@ -145,12 +147,16 @@ export default function EmbeddedLotsList({
                   isPrimary: true,
                   onClick: () => setContextMode("current"),
                 },
-                {
-                  label: "Todos",
-                  variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
-                  isPrimary: true,
-                  onClick: () => setContextMode("all"),
-                },
+                ...(!selectionOnly
+                  ? [
+                      {
+                        label: "Todos",
+                        variant: contextMode === "all" ? ("light" as const) : ("primary" as const),
+                        isPrimary: true,
+                        onClick: () => setContextMode("all"),
+                      },
+                    ]
+                  : []),
               ]
             : []),
           {
@@ -161,13 +167,17 @@ export default function EmbeddedLotsList({
             disabled: bulk.selectedCount === 0,
             onClick: addSelectedLots,
           },
-          {
-            label: "Archivados",
-            icon: <Archive className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
-            onClick: () => setArchivedDrawerOpen(true),
-          },
+          ...(!selectionOnly
+            ? [
+                {
+                  label: "Archivados",
+                  icon: <Archive className="h-4 w-4" />,
+                  variant: "primary" as const,
+                  isPrimary: true,
+                  onClick: () => setArchivedDrawerOpen(true),
+                },
+              ]
+            : []),
           ...(selectionMode.onCreateNew
             ? [
                 {
@@ -190,7 +200,11 @@ export default function EmbeddedLotsList({
           <EmptyState
             icon={Rows3}
             title="No Hay Lotes Para Los Filtros"
-            description="Cambiá a Todos o creá un lote nuevo."
+            description={
+              selectionOnly
+                ? "No hay lotes disponibles para el contexto seleccionado."
+                : "Cambiá a Todos o creá un lote nuevo."
+            }
           />
         ) : (
           <>

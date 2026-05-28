@@ -27,6 +27,7 @@ export interface FilterItem {
   emptyMessage?: string;
   allowAll?: boolean;
   allLabel?: string;
+  clearOnClickOutside?: boolean;
   preserveAllSelection?: boolean;
   onChange: (value: string) => void;
   setData: (value: unknown) => void;
@@ -47,6 +48,7 @@ interface ActionButton {
 export type FilterBarProps = {
   filters: FilterItem[];
   actions?: ActionButton[];
+  actionsPlacement?: "inline" | "below";
   children?: ReactNode;
   className?: string;
   inputSize?: "sm" | "md";
@@ -229,6 +231,7 @@ function FilterSuggestions({
 export function AppFilterBar({
   filters,
   actions = [],
+  actionsPlacement = "inline",
   children,
   className = "",
   inputSize = "sm",
@@ -266,6 +269,12 @@ export function AppFilterBar({
     const handleClick = (event: MouseEvent) => {
       Object.entries(refs.current).forEach(([name, element]) => {
         if (suggestionsVisible[name] && element && !element.contains(event.target as Node)) {
+          const filter = filters.find((item) => item.name === name);
+          if (filter?.clearOnClickOutside) {
+            filter.setData(undefined);
+            filter.onChange("");
+            setSearchByFilter((prev) => ({ ...prev, [name]: "" }));
+          }
           hideSuggestions(name);
         }
       });
@@ -283,7 +292,7 @@ export function AppFilterBar({
       document.removeEventListener("mousedown", handleClick);
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [hideSuggestions, suggestionsVisible]);
+  }, [filters, hideSuggestions, suggestionsVisible]);
 
   const handleSuggestionClick = useCallback(
     (filter: FilterItem, option: FilterOption) => {
@@ -322,9 +331,15 @@ export function AppFilterBar({
     [handleSuggestionClick, hideSuggestions, highlightedIndex, optionsByFilter]
   );
 
+  const layerClass = /\bz-[\w-]+\b/.test(className) ? "" : "z-dropdown";
+
   return (
-    <div className={`relative z-dropdown w-full ${className}`.trim()}>
-      <div className="flex flex-col items-start justify-between gap-3 px-1 py-2 sm:flex-row sm:items-end sm:gap-4">
+    <div className={`relative ${layerClass} w-full ${className}`.trim()}>
+      <div
+        className={`flex flex-col items-start justify-between gap-3 px-1 py-2 sm:gap-4 ${
+          actionsPlacement === "below" ? "" : "sm:flex-row sm:items-end"
+        }`}
+      >
         <div className="flex w-full flex-col gap-4 sm:flex-1 sm:flex-row">
           {filters.map((filter) => {
             const filteredOptions = optionsByFilter[filter.name] ?? [];
@@ -383,7 +398,11 @@ export function AppFilterBar({
 
         {actions.length > 0 ? (
           <>
-            <div className="hidden items-center justify-end gap-2 sm:flex">
+            <div
+              className={`hidden items-center gap-2 sm:flex ${
+                actionsPlacement === "below" ? "w-full justify-end" : "justify-end"
+              }`}
+            >
               {actions.map((action) => (
                 <ActionButtonView key={`action-${action.label}`} action={action} size={inputSize} />
               ))}

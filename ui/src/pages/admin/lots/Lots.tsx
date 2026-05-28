@@ -13,12 +13,11 @@ import { LOT_ENTITY as ENTITY } from "../entities";
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { apiClient } from "@/api/client";
-import { DrawerShell } from "../../../components/Drawer/DrawerShell";
-import CustomerEditor from "../master-data/customers/CustomerEditor";
 import useLots from "../../../hooks/useLots";
-import { LotsData } from "../../../hooks/useLots/types";
+import { LotsData, LotsDataUpdate } from "../../../hooks/useLots/types";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { Column } from "../types";
+import { LegacyLotDrawer } from "./components/LegacyLotDrawer";
 import { LotsHeader } from "./components/LotsHeader";
 import { LotsIndicators } from "./components/LotsIndicators";
 import {
@@ -37,13 +36,38 @@ import { parseAndResolveLotsCsv, LotPreviewRow, ImportLotsResult } from "./impor
 import ImportLotsPreview from "./ImportLotsPreview";
 import { notify } from "@/lib/notify";
 
+function toEditableLot(item: LotsData): LotsDataUpdate {
+  return {
+    id: item.id,
+    field_id: item.field_id,
+    project_name: item.project_name,
+    field_name: item.field_name,
+    lot_name: item.lot_name,
+    previous_crop_id: item.previous_crop_id,
+    current_crop_id: item.current_crop_id,
+    variety: item.variety,
+    sowed_area: item.sowed_area ?? item.hectares ?? "",
+    dates: item.dates,
+    season: item.season,
+    updated_at: item.updated_at ?? new Date().toISOString(),
+  };
+}
+
+function hasPositiveDecimal(value: string | null | undefined) {
+  const parsed = Number(
+    String(value ?? "")
+      .trim()
+      .replace(",", ".")
+  );
+  return Number.isFinite(parsed) && parsed > 0;
+}
+
 function Lots() {
   const pagination = usePagination({ perPage: 10 });
   const resetPage = pagination.resetPage;
 
-  const [editorContext, setEditorContext] = useState<{
-    initialProjectId: number | null;
-  } | null>(null);
+  const [lot, setLot] = useState<LotsDataUpdate | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -84,20 +108,31 @@ function Lots() {
     processingKpis,
     errorKpis,
     archiveLot,
+    createLot,
+    updateLot,
+    updateLotError,
   } = useLots();
 
   useEffect(() => {
     if (error) notify.error(error);
   }, [error]);
 
+  useEffect(() => {
+    if (!updateLotError) return;
+    setErrorMessage(updateLotError);
+    setSuccessMessage("");
+  }, [updateLotError]);
+
   const {
     selectedCustomer,
+    selectedProject,
     projectId,
     selectedCampaignId,
     selectedField,
     fields,
     filters,
     hasWorkspaceSelection,
+    seasons,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const selectedFieldId = selectedField?.id;
 
@@ -198,6 +233,10 @@ function Lots() {
   useEffect(() => {
     if (!result) return;
     setSuccessMessage(result);
+    if (result.includes("creado")) {
+      setDrawerOpen(false);
+      setLot(null);
+    }
     reloadFromFirstPage();
   }, [reloadFromFirstPage, result]);
 
@@ -223,7 +262,8 @@ function Lots() {
   const openEditDrawer = useCallback((item: LotsData) => {
     setSuccessMessage("");
     setErrorMessage("");
-    setEditorContext({ initialProjectId: item.project_id });
+    setLot(toEditableLot(item));
+    setDrawerOpen(true);
   }, []);
 
   const bulk = useBulkActions<LotsData>({
@@ -262,7 +302,91 @@ function Lots() {
       return;
     }
 
-    setEditorContext({ initialProjectId: selectedField?.project_id ?? projectId ?? null });
+    setSuccessMessage("");
+    setErrorMessage("");
+    setLot({
+      id: 0,
+      field_id: selectedFieldId ?? 0,
+      project_name: selectedProject?.name ?? "",
+      field_name: selectedField?.name ?? "",
+      lot_name: "",
+      previous_crop_id: 0,
+      current_crop_id: 0,
+      variety: "",
+      sowed_area: "",
+      dates: [],
+      season: "",
+      updated_at: new Date().toISOString(),
+    });
+    setDrawerOpen(true);
+  };
+
+  function handleLotChange<K extends keyof LotsDataUpdate>(key: K, value: LotsDataUpdate[K]) {
+    setLot((previousLot) => ({
+      id: previousLot?.id ?? 0,
+      field_id: previousLot?.field_id ?? selectedFieldId ?? 0,
+      project_name: previousLot?.project_name ?? selectedProject?.name ?? "",
+      field_name: previousLot?.field_name ?? selectedField?.name ?? "",
+      lot_name: previousLot?.lot_name ?? "",
+      previous_crop_id: previousLot?.previous_crop_id ?? 0,
+      current_crop_id: previousLot?.current_crop_id ?? 0,
+      variety: previousLot?.variety ?? "",
+      sowed_area: previousLot?.sowed_area ?? "",
+      dates: previousLot?.dates ?? [],
+      season: previousLot?.season ?? "",
+      [key]: value,
+      updated_at: previousLot?.updated_at || new Date().toISOString(),
+    }));
+  }
+
+  const handleSaveLot = () => {
+    if (!lot) return;
+
+    const invalidDate = lot.dates?.find(
+      (date) => date?.harvest_date && (!date.sowing_date || date.sowing_date === "")
+    );
+    if (invalidDate) {
+      setErrorMessage("Si hay fecha de cosecha, debe cargar también la fecha de siembra.");
+      return;
+    }
+
+    if (!lot.lot_name.trim()) {
+      setErrorMessage("Nombre de lote obligatorio.");
+      return;
+    }
+
+    if (!lot.field_id) {
+      setErrorMessage("Seleccione un campo para guardar el lote.");
+      return;
+    }
+
+    if (!hasPositiveDecimal(lot.sowed_area)) {
+      setErrorMessage("Hectáreas obligatorias.");
+      return;
+    }
+
+    if (!lot.previous_crop_id) {
+      setErrorMessage("Cultivo anterior obligatorio.");
+      return;
+    }
+
+    if (!lot.current_crop_id) {
+      setErrorMessage("Cultivo actual obligatorio.");
+      return;
+    }
+
+    if (!lot.season) {
+      setErrorMessage("Periodo obligatorio.");
+      return;
+    }
+
+    setSuccessMessage("");
+    setErrorMessage("");
+    if (lot.id > 0) {
+      updateLot({ ...lot });
+      return;
+    }
+    createLot({ ...lot });
   };
 
   const handleExport = async () => {
@@ -390,24 +514,24 @@ function Lots() {
       <div className="relative mt-3">
         <LoadingOverlay show={processing && filteredLots.length > 0} />
 
-        <DrawerShell
-          open={editorContext !== null}
-          onClose={() => setEditorContext(null)}
-          title={editorContext?.initialProjectId ? "Editar Proyecto" : "Nuevo Proyecto"}
-        >
-          {editorContext && (
-            <CustomerEditor
-              embedded
-              mode="project"
-              customerId={selectedCustomer?.id ?? null}
-              initialProjectId={editorContext.initialProjectId}
-              onClose={() => {
-                setEditorContext(null);
-                loadCurrentLots();
-              }}
-            />
-          )}
-        </DrawerShell>
+        <LegacyLotDrawer
+          open={drawerOpen}
+          lot={lot}
+          selectedFieldName={selectedField?.name}
+          crops={crops}
+          seasons={seasons}
+          processing={processing}
+          errorMessage={errorMessage}
+          successMessage={successMessage}
+          onClose={() => {
+            setDrawerOpen(false);
+            setLot(null);
+          }}
+          onDismissError={() => setErrorMessage("")}
+          onDismissSuccess={() => setSuccessMessage("")}
+          onLotChange={handleLotChange}
+          onSave={handleSaveLot}
+        />
 
         <ArchivedDrawer
           open={archivedDrawerOpen}

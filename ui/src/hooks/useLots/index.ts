@@ -43,7 +43,7 @@ const useLots = () => {
         setProcessingKpis,
         setErrorKpis,
       }),
-    [dispatch],
+    [dispatch]
   );
 
   const mutations = useMemo(
@@ -58,7 +58,7 @@ const useLots = () => {
         setResultTons,
         setUpdateLotError,
       }),
-    [dispatch],
+    [dispatch]
   );
 
   return {
@@ -83,6 +83,7 @@ const useLots = () => {
     archiveLot: mutations.archiveLot,
     restoreLot: mutations.restoreLot,
     hardDeleteLot: mutations.hardDeleteLot,
+    createLot: mutations.createLot,
     updateLot: mutations.updateLot,
     updateTons: mutations.updateTons,
   };

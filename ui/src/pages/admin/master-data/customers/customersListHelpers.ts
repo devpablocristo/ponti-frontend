@@ -1,4 +1,5 @@
 import { apiClient } from "@/api/client";
+import { normalizeEntityName } from "../../../../lib/entityNameMatcher";
 
 /**
  * Tipos y helpers puros del CustomersList. Sin React/JSX. Encapsulan
@@ -29,16 +30,14 @@ export type RawProject = {
   campaign?: { id?: number | null; name?: string | null } | string | null;
   campaign_id?: number | null;
   campaign_name?: string | null;
-  fields?:
-    | Array<
-        | {
-            id?: number;
-            name?: string;
-            lots?: Array<{ hectares?: number | string | null }> | null;
-          }
-        | string
-      >
-    | null;
+  fields?: Array<
+    | {
+        id?: number;
+        name?: string;
+        lots?: Array<{ hectares?: number | string | null }> | null;
+      }
+    | string
+  > | null;
 };
 
 export type CustomerFilterTarget = {
@@ -70,11 +69,36 @@ export function campaignKey(project: RawProject) {
 }
 
 export function normalizeFilter(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .trim();
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+
+export function projectNameKey(value: unknown) {
+  return normalizeEntityName(value);
+}
+
+export function uniqueProjectOptionsByName<T extends { id?: number | null; name?: string | null }>(
+  options: T[]
+): T[] {
+  const seenNames = new Set<string>();
+  return options.filter((option) => {
+    const key = projectNameKey(option.name ?? "");
+    if (!key) return true;
+    if (seenNames.has(key)) return false;
+    seenNames.add(key);
+    return true;
+  });
+}
+
+export function uniqueProjectRowsByName(rows: CustomerProjectRow[]): CustomerProjectRow[] {
+  const seenNames = new Set<string>();
+  return rows.filter((row) => {
+    if (row.mode !== "project") return true;
+    const key = projectNameKey(row.projectName);
+    if (!key) return true;
+    if (seenNames.has(key)) return false;
+    seenNames.add(key);
+    return true;
+  });
 }
 
 export function campaignName(project: RawProject) {
@@ -105,7 +129,7 @@ export function countUniqueFields(projects: RawProject[]) {
 export function customerMatchesFilter(
   customer: { id: number; name: string },
   selectedCustomer: CustomerFilterTarget | undefined,
-  allCustomersSelected = false,
+  allCustomersSelected = false
 ) {
   if (allCustomersSelected || !selectedCustomer) return true;
 
@@ -116,16 +140,14 @@ export function customerMatchesFilter(
 
   if (selectedCustomerId) return customer.id === selectedCustomerId;
 
-  return normalizeFilter(customer.name).includes(
-    normalizeFilter(selectedCustomer.name ?? "")
-  );
+  return normalizeFilter(customer.name).includes(normalizeFilter(selectedCustomer.name ?? ""));
 }
 
 export function projectMatchesFilters(
   project: RawProject,
   selectedProject: { id?: number; name?: string } | undefined,
   selectedCampaign: { name?: string } | undefined,
-  selectedField: { id?: number; name?: string } | undefined,
+  selectedField: { id?: number; name?: string } | undefined
 ) {
   const campaignNeedle = normalizeFilter(selectedCampaign?.name ?? "");
   const fieldNeedle = normalizeFilter(selectedField?.name ?? "");
@@ -133,8 +155,7 @@ export function projectMatchesFilters(
     typeof selectedProject?.id === "number" && selectedProject.id > 0
       ? selectedProject.id
       : undefined;
-  const projectId =
-    typeof project.id === "number" && project.id > 0 ? project.id : undefined;
+  const projectId = typeof project.id === "number" && project.id > 0 ? project.id : undefined;
 
   const matchesProject = (() => {
     if (!selectedProject) return true;
@@ -150,8 +171,7 @@ export function projectMatchesFilters(
     (Array.isArray(project.fields) ? project.fields : []).some((field) => {
       if (typeof field === "string") return normalizeFilter(field).includes(fieldNeedle);
       return (
-        field.id === selectedField.id ||
-        normalizeFilter(field.name ?? "").includes(fieldNeedle)
+        field.id === selectedField.id || normalizeFilter(field.name ?? "").includes(fieldNeedle)
       );
     });
 
@@ -160,7 +180,7 @@ export function projectMatchesFilters(
 
 export function getProjectIdForEdit(
   row: Pick<CustomerProjectRow, "mode" | "projectId" | "projectIds">,
-  selectedProject: { id?: number | null } | undefined,
+  selectedProject: { id?: number | null } | undefined
 ) {
   if (row.projectId && row.projectId > 0) return row.projectId;
   if (selectedProject?.id && selectedProject.id > 0) return selectedProject.id;
@@ -170,7 +190,7 @@ export function getProjectIdForEdit(
 
 export function sumProjectHectares(
   project: RawProject,
-  selectedField: { id?: number; name?: string } | undefined,
+  selectedField: { id?: number; name?: string } | undefined
 ) {
   return (Array.isArray(project.fields) ? project.fields : []).reduce((total, field) => {
     if (typeof field === "string") return total;
@@ -199,12 +219,12 @@ export async function loadProjectDetails(projects: RawProject[]) {
       if (!project.id) return project;
       try {
         const response = await apiClient.get<ProjectDetailResponse>(
-          `/projects/${project.id}?fresh=1`,
+          `/projects/${project.id}?fresh=1`
         );
         return response.data ?? project;
       } catch {
         return project;
       }
-    }),
+    })
   );
 }
