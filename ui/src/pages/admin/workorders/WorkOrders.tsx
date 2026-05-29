@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { matchesSelectFilter } from "@/lib/tableFilters";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -316,13 +317,12 @@ export function WorkOrders() {
           }
 
           const orderValRaw = order[key as keyof OrdersData];
-          const orderVal = String(orderValRaw ?? "").toLowerCase();
 
           if (Array.isArray(value)) {
-            return value.some((v) => orderVal === String(v).toLowerCase());
+            return matchesSelectFilter(orderValRaw, value);
           }
 
-          return orderVal === String(value).toLowerCase();
+          return matchesSelectFilter(orderValRaw, [value]);
         });
       });
     },
@@ -998,11 +998,10 @@ export function WorkOrders() {
         }
 
         const orderValRaw = order[key as keyof OrdersData];
-        const orderVal = String(orderValRaw ?? "").toLowerCase();
         if (Array.isArray(value)) {
-          return value.some((v) => orderVal === String(v).toLowerCase());
+          return matchesSelectFilter(orderValRaw, value);
         }
-        return orderVal === String(value).toLowerCase();
+        return matchesSelectFilter(orderValRaw, [value]);
       });
     });
   }, [globalFilterSourceOrders, columnsFilters]);

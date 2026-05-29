@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 import { useNavigate } from "react-router-dom";
 import useStock from "../../../hooks/useStock";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -353,20 +354,13 @@ export function Stock() {
           return true;
         }
 
-        const itemValue = getStockFilterValue(
-  item,
-  key as keyof GetStockItems
-).toLowerCase();
+        const itemValue = getStockFilterValue(item, key as keyof GetStockItems);
 
-        // 🟢 MULTI SELECT
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(itemValue, value);
         }
 
-        // 🟢 SINGLE SELECT
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(itemValue, value);
       });
     });
   }, [stock, columnsFilters]);
@@ -408,18 +402,13 @@ export function Stock() {
       Object.entries(otherFilters).every(([k, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        const itemValue = getStockFilterValue(
-  item,
-  k as keyof GetStockItems
-).toLowerCase();
+        const itemValue = getStockFilterValue(item, k as keyof GetStockItems);
 
         if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
+          return matchesSelectFilter(itemValue, value);
         }
 
-        return itemValue.includes(String(value).toLowerCase());
+        return matchesTextFilter(itemValue, value);
       })
     );
 

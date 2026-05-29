@@ -30,7 +30,7 @@ export function LotsIndicators({
           {error}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
           <IndicatorCard
             title="Sup. sembrada"
             value={`${formatNumberAr(kpis.seeded_area)} Has`}
@@ -44,6 +44,11 @@ export function LotsIndicators({
           <IndicatorCard
             title="Tn / hectárea"
             value={`${formatNumberAr(kpis.yield_tn_per_ha)} Tn`}
+            color="green"
+          />
+          <IndicatorCard
+            title="Toneladas totales"
+            value={`${formatNumberAr(kpis.total_tons)} Tn`}
             color="green"
           />
           <IndicatorCard
