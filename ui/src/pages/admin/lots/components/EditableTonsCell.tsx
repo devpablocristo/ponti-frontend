@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 
 import useLots from "../../../../hooks/useLots";
 import { LotsData } from "../../../../hooks/useLots/types";
-import { notify } from "../../../../lib/notify";
 
 type EditableTonsCellProps = {
   item: LotsData;
@@ -31,11 +30,10 @@ export function EditableTonsCell({
 
   useEffect(() => {
     if (errorTons) {
-      notify.error(errorTons);
+      alert(errorTons);
       return;
     }
     if (resultTons) {
-      notify.success(resultTons);
       setEditing(false);
       onSuccessEdit();
     }
@@ -48,7 +46,7 @@ export function EditableTonsCell({
           type="number"
           min="0"
           step="any"
-          className="block w-full min-w-[80px] rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-900 p-2 text-sm text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500"
+          className="block w-full min-w-[80px] rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
           value={editValue}
           onChange={(event) => setEditValue(event.target.value)}
           disabled={processingTons}
@@ -80,7 +78,7 @@ export function EditableTonsCell({
       <span className="w-full truncate pr-2 text-right">{editValue}</span>
       <button
         type="button"
-        className="app-action-button-icon"
+        className="flex min-h-6 min-w-6 items-center p-1 text-blue-600 hover:text-blue-800"
         onClick={() => setEditing(true)}
         aria-label="Editar toneladas"
       >

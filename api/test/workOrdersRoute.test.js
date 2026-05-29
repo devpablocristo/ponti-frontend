@@ -56,7 +56,7 @@ test("buildWorkOrderScopeParams conserva el scope del proyecto seleccionado", ()
   );
 });
 
-test("buildWorkOrderScopeParams conserva proyecto y campo cuando ambos acotan el scope", () => {
+test("buildWorkOrderScopeParams prioriza campo sobre proyecto", () => {
   const params = buildWorkOrderScopeParams({
     fieldId: 39,
     projectId: 30,
@@ -65,7 +65,7 @@ test("buildWorkOrderScopeParams conserva proyecto y campo cuando ambos acotan el
     supplyId: 0,
   });
 
-  assert.equal(params.toString(), "project_id=30&customer_id=17&campaign_id=2&field_id=39");
+  assert.equal(params.toString(), "field_id=39&customer_id=17&campaign_id=2");
 });
 
 test("scope y cache key de filter rows no mezclan proyectos", () => {
@@ -73,7 +73,7 @@ test("scope y cache key de filter rows no mezclan proyectos", () => {
   const laguna = "?project_id=31&customer_id=17&campaign_id=2";
 
   assert.equal(hasWorkOrderScope(parseWorkOrderScope({ project_id: "30" })), true);
-  assert.equal(hasWorkOrderScope(parseWorkOrderScope({ customer_id: "17" })), true);
+  assert.equal(hasWorkOrderScope(parseWorkOrderScope({ customer_id: "17" })), false);
   assert.notEqual(
     buildWorkOrderFilterRowsCacheKey(jujuy),
     buildWorkOrderFilterRowsCacheKey(laguna)

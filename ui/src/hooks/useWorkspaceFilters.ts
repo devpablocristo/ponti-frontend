@@ -4,14 +4,10 @@ import useCustomers from "./useCustomers";
 import useProjects from "./useDatabase/projects";
 import useCampaigns from "./useCampaigns";
 import useFields from "./useFields";
-import { useTenant } from "../pages/login/context/useTenant";
-import { normalizeEntityName } from "../lib/entityNameMatcher";
-import { formatProperName } from "../lib/properName";
 
 export interface Customer {
   id: number;
   name: string;
-  actor_id?: number;
 }
 
 export interface Project {
@@ -31,24 +27,18 @@ export interface Field {
   project_id: number;
 }
 
-interface FilterBarFilter {
+export interface FilterBarFilter {
   type: "search" | "select";
   name: string;
   label: string;
   placeholder: string;
   ref?: string;
   total?: number;
-  options: Array<{ id: number; name: string; displayName?: string }>;
+  options: Array<{ id: number; name: string }>;
   value: string | number | null;
   onChange: (value: string) => void;
   setData: (data: unknown) => void;
   disabled?: boolean;
-  loading?: boolean;
-  error?: string | null;
-  emptyMessage?: string;
-  allowAll?: boolean;
-  allLabel?: string;
-  preserveAllSelection?: boolean;
 }
 
 export interface UseWorkspaceFiltersReturn {
@@ -62,7 +52,6 @@ export interface UseWorkspaceFiltersReturn {
   projectId: number | null;
   selectedCampaignId: number | undefined; // Or Campaign object if you prefer
   selectedField: Field | undefined;
-  hasWorkspaceSelection: boolean;
   workspaceReady: boolean;
   seasons: { name: string; id: number }[];
   filters: FilterBarFilter[];
@@ -82,55 +71,21 @@ export interface UseWorkspaceFiltersReturn {
 
 type FilterKey = "customer" | "project" | "campaign" | "field";
 
-type WorkspaceFilterOptions = {
-  requiredFilters?: FilterKey[];
-  allowAll?: boolean;
-  uniqueProjectNames?: boolean;
-};
-
-export function formatWorkspaceFilterName(value: string | undefined): string {
-  return formatProperName(value ?? "");
-}
-
-export function withWorkspaceFilterDisplayName<T extends { name: string }>(
-  options: T[] | undefined
-): Array<T & { displayName: string }> {
-  return (options ?? []).map((option) => ({
-    ...option,
-    displayName: formatWorkspaceFilterName(option.name),
-  }));
-}
-
-function uniqueByProjectName<T extends { name: string }>(options: T[]): T[] {
-  const seenNames = new Set<string>();
-  return options.filter((option) => {
-    const key = normalizeEntityName(option.name);
-    if (!key) return true;
-    if (seenNames.has(key)) return false;
-    seenNames.add(key);
-    return true;
-  });
-}
-
 export const useWorkspaceFilters = (
-  enabledFilters: FilterKey[] = ["customer", "project", "campaign", "field"],
-  options: WorkspaceFilterOptions = {}
+  enabledFilters: FilterKey[] = ["customer", "project", "campaign", "field"]
 ): UseWorkspaceFiltersReturn => {
   const enabledFiltersKey = Array.from(
     new Set<FilterKey>(["customer", "project", "campaign", ...enabledFilters])
   ).join("|");
   const enabledFilterSet = useMemo(
-    () => new Set(enabledFiltersKey ? (enabledFiltersKey.split("|") as FilterKey[]) : []),
+    () =>
+      new Set(
+        enabledFiltersKey
+          ? (enabledFiltersKey.split("|") as FilterKey[])
+          : []
+      ),
     [enabledFiltersKey]
   );
-  const requiredFiltersKey = (options.requiredFilters ?? []).join("|");
-  const requiredFilterSet = useMemo(
-    () => new Set(requiredFiltersKey ? (requiredFiltersKey.split("|") as FilterKey[]) : []),
-    [requiredFiltersKey]
-  );
-  const filterAllowAll = options.allowAll ?? true;
-  const { tenantId, loading: tenantLoading } = useTenant();
-  const tenantReady = Boolean(tenantId) && !tenantLoading;
 
   const {
     customer: contextCustomer,
@@ -143,8 +98,6 @@ export const useWorkspaceFilters = (
     setCampaign: contextSetCampaign,
     field: contextField,
     setField: contextSetField,
-    allSelection,
-    setAllSelection,
     seasons,
   } = useSelection();
 
@@ -154,53 +107,67 @@ export const useWorkspaceFilters = (
   const selectedCampaign = contextCampaign as Campaign | undefined;
   const selectedCampaignId = selectedCampaign?.id;
   const selectedField = contextField as Field | undefined;
-  const allCustomersSelected = allSelection.customer;
-  const allProjectsSelected = allSelection.project;
-  const allCampaignsSelected = allSelection.campaign;
-  const allFieldsSelected = allSelection.field;
-  const updateAllSelection = useCallback(
-    (patch: Partial<typeof allSelection>) => {
-      setAllSelection((current) => ({ ...current, ...patch }));
+
+  const setSelectedCustomer: React.Dispatch<
+    React.SetStateAction<Customer | undefined>
+  > = useCallback(
+    (value) => {
+      if (typeof value === "function") {
+        // Not supported for contextSetCustomer
+        return;
+      }
+      contextSetCustomer(value);
+      contextSetProject(undefined);
+      contextSetCampaign(undefined);
+      contextSetField(undefined);
+      contextSetProjectId(undefined);
     },
-    [setAllSelection]
+    [
+      contextSetCampaign,
+      contextSetCustomer,
+      contextSetField,
+      contextSetProject,
+      contextSetProjectId,
+    ]
   );
 
-  const setSelectedCustomer: React.Dispatch<React.SetStateAction<Customer | undefined>> =
-    useCallback(
-      (value) => {
-        if (typeof value === "function") {
-          // Not supported for contextSetCustomer
-          return;
-        }
-        contextSetCustomer(value);
-      },
-      [contextSetCustomer]
-    );
-
-  const setSelectedProject: React.Dispatch<React.SetStateAction<Project | undefined>> = useCallback(
+  const setSelectedProject: React.Dispatch<
+    React.SetStateAction<Project | undefined>
+  > = useCallback(
     (value) => {
       if (typeof value === "function") {
         return;
       }
       contextSetProject(value);
-      contextSetProjectId(value?.id);
+      contextSetCampaign(undefined);
+      contextSetField(undefined);
+      contextSetProjectId(undefined);
     },
-    [contextSetProject, contextSetProjectId]
+    [contextSetCampaign, contextSetField, contextSetProject, contextSetProjectId]
   );
 
   const setSelectedCampaign = useCallback(
     (campaign: Campaign | undefined) => {
-      if (!campaign || campaign.id === 0) {
+      if (!campaign) {
         contextSetCampaign(undefined);
+        contextSetField(undefined);
         return;
       }
 
+      if (selectedProject) {
+        const updatedProject = { ...selectedProject, id: campaign.project_id };
+        contextSetProject(updatedProject);
+      }
+      contextSetProjectId(campaign.project_id);
       contextSetCampaign(campaign);
+      contextSetField(undefined);
     },
-    [contextSetCampaign]
+    [contextSetCampaign, contextSetField, contextSetProject, contextSetProjectId, selectedProject]
   );
 
-  const setSelectedField: React.Dispatch<React.SetStateAction<Field | undefined>> = useCallback(
+  const setSelectedField: React.Dispatch<
+    React.SetStateAction<Field | undefined>
+  > = useCallback(
     (value) => {
       if (typeof value === "function") {
         return;
@@ -218,58 +185,23 @@ export const useWorkspaceFilters = (
     selectedProject && typeof selectedProject.id === "number" && selectedProject.id > 0
       ? selectedProject
       : undefined;
-  const selectedProjectId = typeof projectId === "number" && projectId > 0 ? projectId : undefined;
-  const normalizedProjectId = selectedProjectId;
+  const normalizedProjectId =
+    typeof projectId === "number" && projectId > 0 ? projectId : undefined;
   const normalizedSelectedField =
     selectedField && typeof selectedField.id === "number" && selectedField.id > 0
       ? selectedField
       : undefined;
-  const campaignRequiresProject = enabledFilterSet.has("project");
-  const projectScopeSelected =
-    Boolean(normalizedSelectedProject) || allProjectsSelected || allCustomersSelected;
-  const campaignScopeSelected =
-    Boolean(selectedCampaignId && selectedCampaignId > 0) ||
-    allCampaignsSelected ||
-    projectScopeSelected;
-  const campaignEnabled = !campaignRequiresProject || projectScopeSelected;
-  const fieldEnabled = campaignScopeSelected;
-  const defaultWorkspaceReady = Boolean(
+  const workspaceReady = Boolean(
     selectedCustomer &&
-    selectedCustomer.id > 0 &&
-    normalizedSelectedProject &&
-    normalizedSelectedProject.id > 0 &&
-    selectedCampaignId &&
-    selectedCampaignId > 0
-  );
-  const requiredWorkspaceReady =
-    requiredFilterSet.size === 0
-      ? defaultWorkspaceReady
-      : (!requiredFilterSet.has("customer") ||
-          Boolean(selectedCustomer?.id && selectedCustomer.id > 0)) &&
-        (!requiredFilterSet.has("project") ||
-          Boolean(normalizedSelectedProject?.id && normalizedSelectedProject.id > 0)) &&
-        (!requiredFilterSet.has("campaign") ||
-          Boolean(selectedCampaignId && selectedCampaignId > 0)) &&
-        (!requiredFilterSet.has("field") ||
-          Boolean(normalizedSelectedField?.id && normalizedSelectedField.id > 0));
-  const workspaceReady = Boolean(requiredWorkspaceReady);
-  const hasWorkspaceSelection = Boolean(
-    allCustomersSelected ||
-    allProjectsSelected ||
-    allCampaignsSelected ||
-    allFieldsSelected ||
-    (selectedCustomer && selectedCustomer.id > 0) ||
-    normalizedSelectedProject ||
-    normalizedProjectId ||
-    (selectedCampaignId && selectedCampaignId > 0) ||
-    normalizedSelectedField
+      selectedCustomer.id > 0 &&
+      normalizedSelectedProject &&
+      normalizedSelectedProject.id > 0 &&
+      selectedCampaignId &&
+      selectedCampaignId > 0
   );
 
   const [queryCustomer, setQueryCustomer] = useState<string>("");
   const [queryProject, setQueryProject] = useState<string>("");
-  const [queryCampaign, setQueryCampaign] = useState<string>("");
-  const [queryField, setQueryField] = useState<string>("");
-  const [refreshVersion, setRefreshVersion] = useState(0);
 
   const {
     customers,
@@ -280,8 +212,6 @@ export const useWorkspaceFilters = (
   } = useCustomers();
 
   const {
-    projects,
-    getProjects,
     projectsDropdown,
     getProjectsDropdown,
     projectsDropdownPagination: projectPageInfo,
@@ -305,170 +235,37 @@ export const useWorkspaceFilters = (
     error: loadingFieldsError,
   } = useFields();
 
-  const uniqueProjectNames = options.uniqueProjectNames ?? false;
-  const projectOptionsForSelection = useMemo(() => {
-    const source = selectedCustomer
-      ? projectsDropdown || []
-      : (projects || []).map((project) => ({
-          id: project.id,
-          name: project.name,
-        }));
-    return uniqueProjectNames ? uniqueByProjectName(source) : source;
-  }, [projects, projectsDropdown, selectedCustomer, uniqueProjectNames]);
-
   useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-
-    const handleWorkspaceDataUpdated = () => {
-      setRefreshVersion((current) => current + 1);
-    };
-
-    window.addEventListener("ponti:workspace-data-updated", handleWorkspaceDataUpdated);
-    return () => {
-      window.removeEventListener("ponti:workspace-data-updated", handleWorkspaceDataUpdated);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (allCustomersSelected) {
-      setQueryCustomer("Todos los clientes");
-    } else if (selectedCustomer) {
-      setQueryCustomer(formatWorkspaceFilterName(selectedCustomer.name));
-    } else {
-      setQueryCustomer("");
+    if (selectedCustomer) {
+      setQueryCustomer(selectedCustomer.name);
     }
-  }, [allCustomersSelected, selectedCustomer]);
+  }, [selectedCustomer]);
 
   useEffect(() => {
-    if (allProjectsSelected) {
+    if (selectedProject) {
+      setQueryProject(selectedProject.name);
+    } else {
       setQueryProject("Todos los proyectos");
-    } else if (selectedProject) {
-      setQueryProject(formatWorkspaceFilterName(selectedProject.name));
-    } else {
-      setQueryProject("");
     }
-  }, [allProjectsSelected, selectedProject]);
-
-  useEffect(() => {
-    if (allCampaignsSelected) {
-      setQueryCampaign("Todas las campañas");
-    } else if (selectedCampaign) {
-      setQueryCampaign(selectedCampaign.name);
-    } else {
-      setQueryCampaign("");
-    }
-  }, [allCampaignsSelected, selectedCampaign]);
-
-  useEffect(() => {
-    if (allFieldsSelected) {
-      setQueryField("Todos los campos");
-    } else if (normalizedSelectedField) {
-      setQueryField(formatWorkspaceFilterName(normalizedSelectedField.name));
-    } else {
-      setQueryField("");
-    }
-  }, [allFieldsSelected, normalizedSelectedField]);
-
-  useEffect(() => {
-    if (allCustomersSelected || !selectedCustomer?.id || loadingCustomers) return;
-
-    const refreshed = customers.find((customer) => customer.id === selectedCustomer.id);
-    if (!refreshed || refreshed.name === selectedCustomer.name) return;
-
-    contextSetCustomer({ id: refreshed.id, name: refreshed.name });
-  }, [allCustomersSelected, contextSetCustomer, customers, loadingCustomers, selectedCustomer]);
-
-  useEffect(() => {
-    if (allProjectsSelected || !normalizedSelectedProject?.id || loadingProjects) return;
-
-    const refreshed = projectOptionsForSelection.find(
-      (project) => project.id === normalizedSelectedProject.id
-    );
-    if (!refreshed || refreshed.name === normalizedSelectedProject.name) return;
-
-    contextSetProject({ id: refreshed.id, name: refreshed.name });
-    contextSetProjectId(refreshed.id);
-  }, [
-    allProjectsSelected,
-    contextSetProject,
-    contextSetProjectId,
-    loadingProjects,
-    normalizedSelectedProject,
-    projectOptionsForSelection,
-  ]);
+  }, [selectedProject]);
 
   const filters: FilterBarFilter[] = [];
 
   useEffect(() => {
-    if (!tenantReady) return;
     if (enabledFilterSet.has("customer")) {
-      getCustomers("per_page=1000");
+      //TODO: limit=1000, implement pagination
+      getCustomers("limit=1000");
     }
-  }, [enabledFilterSet, getCustomers, refreshVersion, tenantId, tenantReady]);
+  }, [enabledFilterSet, getCustomers]);
 
   const handleSetCustomer = useCallback(
     (customer: Customer | undefined) => {
-      if (customer?.id === 0) {
-        setAllSelection({
-          customer: true,
-          project: false,
-          campaign: false,
-          field: false,
-        });
-        setSelectedCustomer(undefined);
-        setSelectedProject(undefined);
-        setSelectedCampaign(undefined);
-        setSelectedField(undefined);
-        setQueryProject("");
-        setQueryCampaign("");
-        setQueryField("");
-        return;
-      }
-
-      if (!customer) {
-        setAllSelection({
-          customer: false,
-          project: false,
-          campaign: false,
-          field: false,
-        });
-        setSelectedCustomer(undefined);
-        setSelectedProject(undefined);
-        setSelectedCampaign(undefined);
-        setSelectedField(undefined);
-        setQueryProject("");
-        setQueryCampaign("");
-        setQueryField("");
-        return;
-      }
-
-      updateAllSelection({ customer: false });
-      const nextCustomerId = customer && customer.id > 0 ? customer.id : undefined;
-      const currentCustomerId =
-        selectedCustomer && selectedCustomer.id > 0 ? selectedCustomer.id : undefined;
-      const customerChanged = nextCustomerId !== currentCustomerId;
-
       setSelectedCustomer(customer);
-
-      if (customerChanged) {
-        setSelectedProject(undefined);
-        setSelectedCampaign(undefined);
-        setSelectedField(undefined);
-        updateAllSelection({ project: false, campaign: false, field: false });
-        setQueryProject("");
-        setQueryCampaign("");
-        setQueryField("");
-      }
+      setSelectedProject(undefined);
+      setQueryProject("Todos los proyectos");
+      setSelectedCampaign(undefined);
     },
-    [
-      selectedCustomer,
-      setAllSelection,
-      setSelectedCampaign,
-      setSelectedCustomer,
-      setSelectedField,
-      setSelectedProject,
-      updateAllSelection,
-    ]
+    [setSelectedCustomer, setSelectedProject, setSelectedCampaign]
   );
 
   const handleSetCustomerUnknown = useCallback(
@@ -484,93 +281,31 @@ export const useWorkspaceFilters = (
       name: "cliente",
       ref: "client",
       label: "Cliente",
-      placeholder: "Buscar",
-      options: withWorkspaceFilterDisplayName(customers),
+      placeholder: "Buscar cliente",
+      options: customers || [],
       total: totalCustomers,
       value: queryCustomer,
       onChange: setQueryCustomer,
       setData: handleSetCustomerUnknown,
       disabled: loadingCustomers,
-      loading: loadingCustomers,
-      error: loadingCustomersError,
-      emptyMessage: "Sin clientes",
-      allowAll: filterAllowAll,
-      allLabel: "Todos los clientes",
-      preserveAllSelection: true,
     });
   }
 
   useEffect(() => {
-    if (!tenantReady) return;
     if (enabledFilterSet.has("project")) {
-      if (!allCustomersSelected && selectedCustomer && selectedCustomer.id !== 0) {
+      if (selectedCustomer && selectedCustomer.id !== 0) {
         getProjectsDropdown(selectedCustomer.id);
-      } else {
-        getProjects("per_page=1000");
       }
     }
-  }, [
-    allCustomersSelected,
-    enabledFilterSet,
-    getProjects,
-    getProjectsDropdown,
-    refreshVersion,
-    selectedCustomer,
-    tenantId,
-    tenantReady,
-  ]);
+  }, [enabledFilterSet, selectedCustomer, getProjectsDropdown]);
 
   const handleSetProject = useCallback(
     (project: Project | undefined) => {
-      if (project?.id === 0) {
-        updateAllSelection({ project: true, campaign: false, field: false });
-        setSelectedProject(undefined);
-        contextSetProjectId(undefined);
-        setSelectedCampaign(undefined);
-        setSelectedField(undefined);
-        setQueryCampaign("");
-        setQueryField("");
-        return;
-      }
-
-      if (!project) {
-        updateAllSelection({ project: false, campaign: false, field: false });
-        setSelectedProject(undefined);
-        contextSetProjectId(undefined);
-        setSelectedCampaign(undefined);
-        setSelectedField(undefined);
-        setQueryCampaign("");
-        setQueryField("");
-        return;
-      }
-
-      updateAllSelection({ project: false });
-      const nextProjectId = project && project.id > 0 ? project.id : undefined;
-      const currentProjectId =
-        normalizedSelectedProject && normalizedSelectedProject.id > 0
-          ? normalizedSelectedProject.id
-          : undefined;
-      const projectChanged = nextProjectId !== currentProjectId;
-
       setSelectedProject(project);
-      contextSetProjectId(nextProjectId);
-
-      if (projectChanged) {
-        setSelectedCampaign(undefined);
-        setSelectedField(undefined);
-        updateAllSelection({ campaign: false, field: false });
-        setQueryCampaign("");
-        setQueryField("");
-      }
+      contextSetProjectId(project?.id);
+      setSelectedCampaign(undefined);
     },
-    [
-      contextSetProjectId,
-      normalizedSelectedProject,
-      setSelectedCampaign,
-      setSelectedField,
-      setSelectedProject,
-      updateAllSelection,
-    ]
+    [contextSetProjectId, setSelectedProject, setSelectedCampaign]
   );
 
   const handleSetProjectUnknown = useCallback(
@@ -586,190 +321,84 @@ export const useWorkspaceFilters = (
       name: "proyecto",
       ref: "project",
       label: "Proyecto",
-      placeholder: "Buscar",
-      options: withWorkspaceFilterDisplayName(projectOptionsForSelection),
+      placeholder: "Buscar proyecto",
+      options: selectedCustomer ? projectsDropdown || [] : [],
       total: projectPageInfo?.total || 0,
       value: queryProject,
       onChange: setQueryProject,
       setData: handleSetProjectUnknown,
-      disabled: loadingProjects,
-      loading: loadingProjects,
-      error: loadingProjectsError,
-      emptyMessage: "Sin proyectos",
-      allowAll: filterAllowAll,
-      allLabel: "Todos los proyectos",
-      preserveAllSelection: true,
+      disabled:
+        loadingProjects ||
+        !selectedCustomer ||
+        (selectedCustomer.id === 0 && !selectedCampaign),
     });
   }
 
   useEffect(() => {
-    if (!tenantReady) return;
-    if (!enabledFilterSet.has("campaign")) return;
-    if (!campaignEnabled) {
-      setSelectedCampaign(undefined);
-      setQueryCampaign("");
-      return;
+    if (
+      enabledFilterSet.has("campaign") &&
+      selectedCustomer &&
+      selectedCustomer.id !== 0 &&
+      selectedProject &&
+      selectedProject.id !== 0
+    ) {
+      getCampaigns(
+        `customer_id=${selectedCustomer.id}&project_name=${selectedProject.name}&limit=100`
+      );
     }
-
-    const params = new URLSearchParams();
-    if (!allCustomersSelected && selectedCustomer && selectedCustomer.id !== 0) {
-      params.set("customer_id", String(selectedCustomer.id));
-    }
-    if (!allProjectsSelected && selectedProject && selectedProject.id !== 0) {
-      params.set("project_name", selectedProject.name);
-    }
-    params.set("limit", "1000");
-    getCampaigns(params.toString());
-  }, [
-    campaignEnabled,
-    enabledFilterSet,
-    getCampaigns,
-    allCustomersSelected,
-    allProjectsSelected,
-    refreshVersion,
-    selectedCustomer,
-    selectedProject,
-    setSelectedCampaign,
-    tenantId,
-    tenantReady,
-  ]);
+  }, [enabledFilterSet, selectedCustomer, selectedProject, getCampaigns]);
 
   if (enabledFilterSet.has("campaign")) {
     filters.push({
-      type: "search",
+      type: "select",
       name: "campaña",
       label: "Campaña",
-      placeholder: "Buscar",
-      options: campaigns || [],
-      total: totalCampaigns,
-      value: queryCampaign,
-      onChange: setQueryCampaign,
+      placeholder: "Seleccione campaña",
+      options: selectedCustomer && selectedProject ? campaigns || [] : [],
+      total: selectedCustomer ? totalCampaigns : 0,
+      value: selectedCampaignId ?? null,
+      onChange: () => {},
       setData: (data: unknown) => {
-        const campaign = data as Campaign | undefined;
-        if (campaign?.id === 0) {
-          updateAllSelection({ campaign: true, field: false });
-          setSelectedCampaign(undefined);
-          contextSetProjectId(normalizedSelectedProject?.id);
-          setSelectedField(undefined);
-          setQueryField("");
-          return;
-        }
-
-        if (!campaign) {
-          updateAllSelection({ campaign: false, field: false });
-          setSelectedCampaign(undefined);
-          contextSetProjectId(normalizedSelectedProject?.id);
-          setSelectedField(undefined);
-          setQueryField("");
-          return;
-        }
-
-        updateAllSelection({ campaign: false });
-        const nextCampaignId = campaign && campaign.id > 0 ? campaign.id : undefined;
-        const currentCampaignId =
-          selectedCampaign && selectedCampaign.id > 0 ? selectedCampaign.id : undefined;
-        const campaignChanged = nextCampaignId !== currentCampaignId;
-
-        setSelectedCampaign(campaign);
-        contextSetProjectId(normalizedSelectedProject?.id);
-
-        if (campaignChanged) {
-          setSelectedField(undefined);
-          updateAllSelection({ field: false });
-          setQueryField("");
-        }
+        setSelectedCampaign(data as Campaign | undefined);
       },
-      disabled: loadingCampaigns || !campaignEnabled,
-      loading: loadingCampaigns,
-      error: loadingCampaignsError,
-      emptyMessage: campaignEnabled ? "Sin campañas" : "Seleccioná un proyecto",
-      allowAll: filterAllowAll,
-      allLabel: "Todas las campañas",
-      preserveAllSelection: true,
+      disabled:
+        !selectedCustomer ||
+        selectedCustomer.id === 0 ||
+        !selectedProject ||
+        selectedProject.id === 0 ||
+        loadingCampaigns,
     });
   }
 
   useEffect(() => {
-    if (!tenantReady) return;
-    if (!enabledFilterSet.has("field")) return;
-
-    if (fieldEnabled && normalizedProjectId) {
+    if (enabledFilterSet.has("field") && normalizedProjectId && selectedCampaignId) {
       getFields(`project_id=${normalizedProjectId}`);
-      return;
     }
-
-    if (fieldEnabled) {
-      getFields("per_page=1000");
-    }
-  }, [
-    enabledFilterSet,
-    fieldEnabled,
-    getFields,
-    normalizedProjectId,
-    refreshVersion,
-    tenantId,
-    tenantReady,
-  ]);
-
-  useEffect(() => {
-    if (!normalizedSelectedField || loadingFields) return;
-
-    if (!fieldEnabled) {
-      setSelectedField(undefined);
-      setQueryField("");
-      return;
-    }
-
-    if (Array.isArray(fields) && fields.length > 0) {
-      const fieldStillBelongsToProject = fields.some(
-        (field) => field.id === normalizedSelectedField.id
-      );
-      if (!fieldStillBelongsToProject) {
-        setSelectedField(undefined);
-        setQueryField("");
-      }
-    }
-  }, [
-    fields,
-    loadingFields,
-    fieldEnabled,
-    normalizedProjectId,
-    normalizedSelectedField,
-    setSelectedField,
-  ]);
+  }, [enabledFilterSet, getFields, normalizedProjectId, selectedCampaignId]);
 
   if (enabledFilterSet.has("field")) {
     filters.push({
-      type: "search",
+      type: "select",
       name: "campo",
       label: "Campo",
-      placeholder: "Buscar",
-      options: withWorkspaceFilterDisplayName(fieldEnabled && Array.isArray(fields) ? fields : []),
-      total: totalFields,
-      value: queryField,
-      onChange: setQueryField,
+      placeholder: "Seleccione campo",
+      options:
+        selectedCustomer && normalizedSelectedProject && selectedCampaignId
+          ? [{ id: 0, name: "Todos los campos" }, ...(Array.isArray(fields) ? fields : [])]
+          : [],
+      total: selectedCustomer ? totalFields : 0,
+      value: normalizedSelectedField?.id ?? 0,
+      onChange: () => {},
       setData: (data: unknown) => {
-        const field = data as Field | undefined;
-        if (field?.id === 0) {
-          updateAllSelection({ field: true });
-          setSelectedField(undefined);
-          return;
-        }
-        if (!field) {
-          updateAllSelection({ field: false });
-          setSelectedField(undefined);
-          return;
-        }
-        updateAllSelection({ field: false });
-        setSelectedField(field);
+        setSelectedField(data as Field | undefined);
       },
-      disabled: loadingFields || !fieldEnabled,
-      loading: loadingFields,
-      error: loadingFieldsError,
-      emptyMessage: fieldEnabled ? "Sin campos" : "Seleccioná una campaña",
-      allowAll: filterAllowAll,
-      allLabel: "Todos los campos",
-      preserveAllSelection: true,
+      disabled:
+        !selectedCustomer ||
+        selectedCustomer.id === 0 ||
+        !normalizedSelectedProject ||
+        normalizedSelectedProject.id === 0 ||
+        !selectedCampaignId ||
+        loadingFields,
     });
   }
 
@@ -781,10 +410,9 @@ export const useWorkspaceFilters = (
     projectPageInfo: projectPageInfo,
     selectedCustomer,
     selectedProject: normalizedSelectedProject,
-    projectId: normalizedProjectId ?? null,
+    projectId: workspaceReady ? (normalizedProjectId ?? null) : null,
     selectedCampaignId,
     selectedField: normalizedSelectedField,
-    hasWorkspaceSelection,
     workspaceReady,
     filters,
     seasons,

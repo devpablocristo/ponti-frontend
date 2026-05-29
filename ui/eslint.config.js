@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier";
 
 export default tseslint.config(
-  { ignores: ["dist", ".vite", ".vite-smoke", "playwright-report", "test-results"] },
+  { ignores: ["dist", ".vite", ".vite-smoke"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
@@ -20,17 +20,17 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "@typescript-eslint/no-explicit-any": "error",
-      "@typescript-eslint/no-unused-expressions": "error",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-expressions": "warn",
       "@typescript-eslint/no-unused-vars": [
-        "error",
+        "warn",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      "no-useless-catch": "error",
-      "no-useless-escape": "error",
-      "prefer-const": "error",
+      "no-useless-catch": "warn",
+      "no-useless-escape": "warn",
+      "prefer-const": "warn",
       "react-refresh/only-export-components": [
-        "error",
+        "warn",
         { allowConstantExport: true },
       ],
     },

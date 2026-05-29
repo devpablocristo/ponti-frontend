@@ -1,4 +1,4 @@
-name: Deploy PROD (promote STAGING artifact)
+name: Deploy Frontend PROD (promote STAGING artifact)
 
 on:
   workflow_dispatch:

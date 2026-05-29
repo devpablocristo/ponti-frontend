@@ -1,11 +1,8 @@
-import { getAccessToken } from "@/lib/authStorage";
-import {
-  fetchOrThrow,
-  wrapFetchNetworkError,
-  wrapFetchResponse,
-} from "@/api/fetchErrorAdapter";
+import { request } from "@devpablocristo/core-http/fetch";
+import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 import type {
   PontiChatRequest,
+  PontiChatResponse,
   PontiChatStreamSseEvent,
   PontiConversationDetail,
   PontiConversationSummary,
@@ -20,30 +17,29 @@ const getBaseUrl = (): string => {
   return url && url.length > 0 ? url : "/api/v1/ai";
 };
 
-const getTenantId = (): string => {
-  if (typeof window === "undefined") return "";
-  return (
-    window.localStorage.getItem("ponti:tenant_id") ||
-    window.localStorage.getItem("tenant_id") ||
-    ""
-  );
-};
-
 const buildHeaders = (projectId: string): Record<string, string> => {
   const token = getAccessToken();
-  const tenantId = getTenantId();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-PROJECT-ID": projectId,
   };
-  if (tenantId) {
-    headers["X-TENANT-ID"] = tenantId;
-  }
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
   return headers;
 };
+
+export async function pontiAssistantChat(
+  payload: PontiChatRequest,
+  headers: AskHeaders
+): Promise<PontiChatResponse> {
+  return request<PontiChatResponse>("/chat", {
+    method: "POST",
+    body: payload,
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
 
 function parseSseBlocks(buffer: string): { events: PontiChatStreamSseEvent[]; rest: string } {
   const events: PontiChatStreamSseEvent[] = [];
@@ -86,45 +82,28 @@ export async function pontiAssistantChatStream(
   signal?: AbortSignal
 ): Promise<void> {
   const token = getAccessToken();
-  const tenantId = getTenantId();
   const h: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "text/event-stream",
     "X-PROJECT-ID": headers.projectId,
   };
-  if (tenantId) {
-    h["X-TENANT-ID"] = tenantId;
-  }
   if (token) {
     h.Authorization = `Bearer ${token}`;
   }
   const base = getBaseUrl().replace(/\/$/, "");
-  let res: Response;
-  try {
-    res = await fetch(`${base}/chat/stream`, {
-      method: "POST",
-      headers: h,
-      body: JSON.stringify(payload),
-      signal,
-    });
-  } catch (err) {
-    // Re-lanzamos como FetchApiError (con userMessage en español) para que el
-    // caller pase por `formatError` y muestre toast unificado. Excepción:
-    // si el caller abortó (AbortSignal), `err.name === "AbortError"` y dejamos
-    // pasar tal cual — no es un error real, es cancelación.
-    if (err instanceof Error && err.name === "AbortError") throw err;
-    throw wrapFetchNetworkError(err);
-  }
+  const res = await fetch(`${base}/chat/stream`, {
+    method: "POST",
+    headers: h,
+    body: JSON.stringify(payload),
+    signal,
+  });
   if (!res.ok) {
-    throw await wrapFetchResponse(res);
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `chat stream failed: ${res.status}`);
   }
   const reader = res.body?.getReader();
   if (!reader) {
-    // Response sin body — caso muy raro, lo normalizamos también para que
-    // el caller reciba un FetchApiError con `userMessage` en español.
-    throw await wrapFetchResponse(
-      new Response("", { status: 502, headers: { "Content-Type": "text/plain" } }),
-    );
+    throw new Error("chat stream: no body");
   }
   const decoder = new TextDecoder();
   let buf = "";
@@ -150,26 +129,23 @@ export async function listPontiChatConversations(
   headers: AskHeaders,
   limit = 50
 ): Promise<{ items: PontiConversationSummary[] }> {
-  const res = await fetchOrThrow(
-    `${getBaseUrl().replace(/\/$/, "")}/chat/conversations?limit=${limit}`,
+  return request<{ items: PontiConversationSummary[] }>(
+    `/chat/conversations?limit=${limit}`,
     {
       method: "GET",
       headers: buildHeaders(headers.projectId),
-    },
+      baseURLs: [getBaseUrl()],
+    }
   );
-  return (await res.json()) as { items: PontiConversationSummary[] };
 }
 
 export async function getPontiChatConversation(
   conversationId: string,
   headers: AskHeaders
 ): Promise<PontiConversationDetail> {
-  const res = await fetchOrThrow(
-    `${getBaseUrl().replace(/\/$/, "")}/chat/conversations/${encodeURIComponent(conversationId)}`,
-    {
-      method: "GET",
-      headers: buildHeaders(headers.projectId),
-    },
-  );
-  return (await res.json()) as PontiConversationDetail;
+  return request<PontiConversationDetail>(`/chat/conversations/${conversationId}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
 }

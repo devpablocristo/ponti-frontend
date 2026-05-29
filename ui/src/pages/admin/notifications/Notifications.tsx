@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppFilterBar } from "../../../components/filters/AppFilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {
@@ -11,7 +11,6 @@ import {
   resolveInsight,
   type InsightItem,
 } from "@/api/insightsClient";
-import { notify } from "@/lib/notify";
 import { NOTIFICATION_CHAT_HANDOFF_KEY } from "@/lib/notificationChatHandoff";
 import type { NotificationChatHandoff } from "@/lib/notificationChatHandoff";
 
@@ -104,14 +103,6 @@ const Notifications = () => {
   const [insights, setInsights] = useState<InsightItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // Canaliza cualquier mensaje de error transitorio al toaster unificado.
-  // Después se limpia para no re-disparar en re-renders.
-  useEffect(() => {
-    if (error) {
-      notify.error(error);
-      setError("");
-    }
-  }, [error]);
   const [includeResolved, setIncludeResolved] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -132,13 +123,13 @@ const Notifications = () => {
     void fetchInsights();
   }, [fetchInsights]);
 
-  const isResolved = useCallback((i: InsightItem) => i.status === "resolved", []);
-  const isUnread = useCallback((i: InsightItem) => !i.read_at && !isResolved(i), [isResolved]);
+  const isResolved = (i: InsightItem) => i.status === "resolved";
+  const isUnread = (i: InsightItem) => !i.read_at && !isResolved(i);
 
-  const unreadCount = useMemo(() => insights.filter(isUnread).length, [insights, isUnread]);
+  const unreadCount = useMemo(() => insights.filter(isUnread).length, [insights]);
   const highSeverityCount = useMemo(
     () => insights.filter((i) => isUnread(i) && severityWeight(i.severity) >= 3).length,
-    [insights, isUnread],
+    [insights],
   );
 
   const optimistic = (id: string, patch: Partial<InsightItem>) => {
@@ -232,13 +223,13 @@ const Notifications = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <AppFilterBar filters={filters} />
+    <div className="flex flex-col gap-4 p-4">
+      <FilterBar filters={filters} />
 
       <div className="flex items-center justify-between">
         <div>
           {unreadCount > 0 && (
-            <p className="text-sm text-gray-600 dark:text-gray-300">
+            <p className="text-sm text-gray-600">
               <span className="font-medium">
                 {unreadCount} sin leer
                 {highSeverityCount > 0 && (
@@ -249,7 +240,7 @@ const Notifications = () => {
           )}
         </div>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 cursor-pointer">
+          <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
             <input
               type="checkbox"
               checked={includeResolved}
@@ -263,8 +254,10 @@ const Notifications = () => {
         </div>
       </div>
 
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
       {!loading && insights.length === 0 && !error && (
-        <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 p-8 text-center">
+        <div className="rounded-lg border border-gray-200 bg-white p-8 text-center">
           <p className="text-gray-500">No hay notificaciones por ahora.</p>
           <p className="mt-1 text-sm text-gray-400">
             Los insights se generan automáticamente cuando hay cambios en el proyecto.
@@ -281,10 +274,10 @@ const Notifications = () => {
               key={insight.id}
               className={`rounded-lg border p-4 transition-colors ${
                 resolved
-                  ? "bg-gray-50 dark:bg-slate-900 border-gray-200 dark:border-gray-700 opacity-70"
+                  ? "bg-gray-50 border-gray-200 opacity-70"
                   : unread
-                    ? "bg-blue-50/40 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600"
-                    : "bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600"
+                    ? "bg-blue-50/40 border-gray-200 hover:border-gray-300"
+                    : "bg-white border-gray-200 hover:border-gray-300"
               }`}
               style={{
                 borderLeftWidth: "4px",
@@ -314,7 +307,7 @@ const Notifications = () => {
                   <h3 className={`text-sm ${unread ? "font-semibold" : "font-medium"} text-gray-900`}>
                     {insight.title}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{insight.body}</p>
+                  <p className="mt-1 text-sm text-gray-600">{insight.body}</p>
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
                   <span className="text-[10px] text-gray-400">{statusLabel(insight.status)}</span>

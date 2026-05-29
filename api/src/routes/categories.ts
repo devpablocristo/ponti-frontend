@@ -45,7 +45,9 @@ router.get("", async (req: Request, res: Response) => {
       data: categories,
     };
 
-    cache.set(key, data, CACHE_TTL_SHORT);
+    setImmediate(() => {
+      cache.set(key, data, CACHE_TTL_SHORT);
+    });
 
     res.status(200).json(data);
   } catch (error: any) {

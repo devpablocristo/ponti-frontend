@@ -5,54 +5,109 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
 } from "react";
 import {
   Home,
   Layers,
+  LoaderCircle,
   Percent,
   SquareArrowOutUpRight,
   TrendingUp,
   Wallet,
   Wheat,
 } from "lucide-react";
-import { AppFilterBar } from "../../../components/filters/AppFilterBar";
-import { ScrollableTable } from "../../../components/crud/ScrollableTable";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { usePDF } from "react-to-pdf";
 
-import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
-import { notify } from "@/lib/notify";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useReporting from "../../../hooks/useReporting";
-import type { FieldCropReportData } from "../../../hooks/useReporting/types.ts";
+import type {
+  FieldCropReportData,
+  SummaryResultsReportData,
+} from "../../../hooks/useReporting/types.ts";
 import { formatNumberAr } from "../utils";
-import { formatProperName } from "../../../lib/properName";
 import { CropBadgeV2 } from "./reportV2/CropBadgeV2";
 import { IndicatorDot } from "./reportV2/IndicatorDot";
-import {
-  KPI_TYPOGRAPHY_DEFAULTS,
-  REPORT_FONT,
-  SORA,
-  cropIdFromUnknown,
-  getFieldCropValue,
-  integralMetricCellClass,
-  integralRows,
-  integralValueCellClass,
-  money,
-  n,
-  percent,
-} from "./summaryHelpers";
-import type {
-  ReportTab,
-  SummaryCrop,
-  SummaryTotals,
-} from "./summaryHelpers";
+
+type ReportTab = "executive" | "economic" | "integral";
+type SummaryTotals = SummaryResultsReportData["totals"];
+type SummaryCrop = SummaryResultsReportData["crops"][number];
+
+const REPORT_FONT = "Inter, ui-sans-serif, system-ui, sans-serif";
+const SORA = "Sora, ui-sans-serif, system-ui, sans-serif";
+const KPI_TYPOGRAPHY_DEFAULTS = {
+  "--summary-kpi-label-size": "7.5px",
+  "--summary-kpi-value-size": "16.64px",
+  "--summary-kpi-meta-size": "10.24px",
+} as CSSProperties;
 
 const tabs: { id: ReportTab; label: string; icon: ReactNode }[] = [
   { id: "executive", label: "Ejecutivo", icon: <Home className="h-4 w-4" /> },
   { id: "economic", label: "Económico", icon: <Wallet className="h-4 w-4" /> },
   { id: "integral", label: "Integral", icon: <Layers className="h-4 w-4" /> },
 ];
+
+const integralRows = [
+  { key: "surface", label: "Superficie", unit: "Ha" },
+  { key: "production", label: "Producción", unit: "Tn" },
+  { key: "yield", label: "Rendimiento", unit: "Tn/Ha", strong: true },
+  { key: "net_income", label: "Ingreso neto", unit: "u$s" },
+  { key: "total_direct_costs", label: "Costos directos", unit: "u$s/Ha" },
+  { key: "lease", label: "Arriendo", unit: "u$s/Ha" },
+  { key: "admin", label: "Estructura", unit: "u$s/Ha" },
+  { key: "total_invested", label: "Total activo", unit: "u$s/Ha", strong: true },
+  {
+    key: "operating_result",
+    label: "Resultado operativo",
+    unit: "u$s/Ha",
+    strong: true,
+    indicator: true,
+  },
+  { key: "return_pct", label: "Renta", unit: "%", strong: true, indicator: true },
+];
+
+type IntegralRow = (typeof integralRows)[number];
+
+function n(value: string | number | null | undefined): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function money(value: string | number | null | undefined): string {
+  return `u$s ${formatNumberAr(n(value))}`;
+}
+
+function percent(value: string | number | null | undefined): string {
+  return `${formatNumberAr(n(value))}%`;
+}
+
+function getFieldCropValue(data: FieldCropReportData, rowKey: string, columnId: string): number {
+  const row = data.rows.find((entry) => entry.key === rowKey);
+  return n(row?.values[columnId]?.number);
+}
+
+function cropIdFromUnknown(value: unknown): string {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "string") return value.trim() || "0";
+
+  if (value && typeof value === "object") {
+    const maybeOption = value as {
+      id?: unknown;
+      value?: unknown;
+      target?: { value?: unknown };
+    };
+
+    if (maybeOption.id !== undefined) return cropIdFromUnknown(maybeOption.id);
+    if (maybeOption.value !== undefined) return cropIdFromUnknown(maybeOption.value);
+    if (maybeOption.target?.value !== undefined) {
+      return cropIdFromUnknown(maybeOption.target.value);
+    }
+  }
+
+  return "0";
+}
 
 function useSharedKpiTypography(signature: string) {
   const ref = useRef<HTMLElement>(null);
@@ -165,13 +220,6 @@ export function SummaryResultsReport() {
     getFieldCropReportingData,
   } = useReporting();
 
-  useEffect(() => {
-    if (summaryError) notify.error(summaryError);
-  }, [summaryError]);
-  useEffect(() => {
-    if (fieldCropError) notify.error(fieldCropError);
-  }, [fieldCropError]);
-
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
 
@@ -234,24 +282,6 @@ export function SummaryResultsReport() {
     filename: `informe-resumen-resultados-${timestamp}.pdf`,
   });
 
-  const cropFilterOptions = useMemo(
-    () =>
-      data
-        ? data.crops.map((crop) => ({
-            id: crop.crop_id,
-            name: formatProperName(crop.crop_name),
-          }))
-        : [],
-    [data],
-  );
-
-  const selectedCropFilterValue = useMemo(() => {
-    if (selectedCrop === "0") return "Todos";
-    return (
-      cropFilterOptions.find((option) => String(option.id) === selectedCrop)?.name ?? "Todos"
-    );
-  }, [cropFilterOptions, selectedCrop]);
-
   const reportFilters = useMemo(
     () => [
       ...filters,
@@ -260,15 +290,22 @@ export function SummaryResultsReport() {
         name: "cultivo",
         label: "Cultivo",
         placeholder: "Todos",
-        options: cropFilterOptions,
-        value: selectedCropFilterValue,
-        onChange: () => undefined,
+        options: data
+          ? [
+              { id: 0, name: "Todos" },
+              ...data.crops.map((crop) => ({
+                id: crop.crop_id,
+                name: crop.crop_name,
+              })),
+            ]
+          : [{ id: 0, name: "Todos" }],
+        value: Number(selectedCrop),
+        onChange: (value: unknown) => setSelectedCrop(cropIdFromUnknown(value)),
         setData: (value: unknown) => setSelectedCrop(cropIdFromUnknown(value)),
-        allLabel: "Todos",
         disabled: !data || data.crops.length === 0,
       },
     ],
-    [cropFilterOptions, data, filters, selectedCropFilterValue]
+    [data, filters, selectedCrop]
   );
 
   const isLoading =
@@ -280,9 +317,13 @@ export function SummaryResultsReport() {
 
   return (
     <div className="relative">
-      <LoadingOverlay show={isLoading} />
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+          <LoaderCircle className="h-10 w-10 animate-spin text-emerald-700" />
+        </div>
+      )}
 
-      <AppFilterBar
+      <FilterBar
         filters={reportFilters}
         actions={[
           {
@@ -301,11 +342,16 @@ export function SummaryResultsReport() {
         ]}
       />
 
+      {summaryError && (
+        <div className="mb-4 rounded-lg bg-red-50 p-4 text-sm text-red-800" role="alert">
+          <span className="font-medium">{summaryError}</span>
+        </div>
+      )}
 
       {!summaryError && data && (
         <div
           ref={targetRef}
-          className="space-y-5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 text-slate-900 dark:text-slate-100 shadow-sm"
+          className="space-y-5 rounded-lg border border-slate-200 bg-white p-4 text-slate-900 shadow-sm"
           style={{ fontFamily: REPORT_FONT }}
         >
           <ReportHeader activeTab={activeTab} onTabChange={setActiveTab} />
@@ -323,7 +369,7 @@ export function SummaryResultsReport() {
       )}
 
       {!summaryError && !data && !summaryProcessing && (
-        <div className="rounded-lg bg-slate-50 dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
+        <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
           No hay datos disponibles
         </div>
       )}
@@ -342,13 +388,13 @@ function ReportHeader({
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
         <h2 className="text-[1.05rem] font-semibold text-slate-950">Resumen de Resultados</h2>
-        <p className="mt-0.5 text-[0.72rem] text-slate-500 dark:text-slate-400">
+        <p className="mt-0.5 text-[0.72rem] text-slate-500">
           Visión general del desempeño económico del proyecto.
         </p>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-[0.72rem] font-semibold text-slate-600 dark:text-slate-300">Vista</span>
-        <div className="grid grid-cols-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1 shadow-sm">
+        <span className="text-[0.72rem] font-semibold text-slate-600">Vista</span>
+        <div className="grid grid-cols-3 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
           {tabs.map((tab) => {
             const selected = activeTab === tab.id;
             return (
@@ -360,7 +406,7 @@ function ReportHeader({
                   "flex min-h-9 min-w-[132px] items-center justify-center gap-2 rounded-md px-4 text-[0.72rem] font-semibold transition-colors",
                   selected
                     ? "bg-[#174B78] text-white shadow-sm"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:bg-slate-900 hover:text-slate-900 dark:text-slate-100",
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
                 ].join(" ")}
               >
                 {tab.icon}
@@ -479,7 +525,7 @@ function KpiCard({
       className={
         isOperating
           ? "min-w-0 rounded-xl bg-[#174B78] px-3 py-4 text-white shadow-sm"
-          : "min-w-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-4 shadow-sm"
+          : "min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-4 shadow-sm"
       }
     >
       <div className="flex items-center gap-2">
@@ -495,7 +541,7 @@ function KpiCard({
               className={
                 isOperating
                   ? "block min-w-0 overflow-hidden whitespace-nowrap font-medium uppercase tracking-wide text-white/85"
-                  : "block min-w-0 overflow-hidden whitespace-nowrap font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400"
+                  : "block min-w-0 overflow-hidden whitespace-nowrap font-medium uppercase tracking-wide text-slate-500"
               }
               style={{ fontSize: "var(--summary-kpi-label-size)" }}
             >
@@ -529,7 +575,7 @@ function KpiCard({
               className={
                 isOperating
                   ? "mt-2 block min-w-0 overflow-hidden whitespace-nowrap font-semibold text-white/85"
-                  : "mt-2 block min-w-0 overflow-hidden whitespace-nowrap font-semibold text-slate-500 dark:text-slate-400"
+                  : "mt-2 block min-w-0 overflow-hidden whitespace-nowrap font-semibold text-slate-500"
               }
               style={{ fontSize: "var(--summary-kpi-meta-size)" }}
             >
@@ -546,7 +592,7 @@ function KpiCard({
 function CropResults({ crops }: { crops: SummaryCrop[] }) {
   if (crops.length === 0) {
     return (
-      <section className="rounded-lg bg-white dark:bg-slate-800 p-4 text-sm text-slate-600 dark:text-slate-300 shadow-sm">
+      <section className="rounded-lg bg-white p-4 text-sm text-slate-600 shadow-sm">
         No hay cultivos para el filtro seleccionado
       </section>
     );
@@ -569,7 +615,7 @@ function CropCard({ crop }: { crop: SummaryCrop }) {
   const returnPct = n(crop.crop_return_pct);
 
   return (
-    <article className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-sm">
+    <article className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
       <header className="mb-4 flex items-start justify-between gap-3">
         <div className="min-w-0 max-w-[65%]">
           <CropBadgeV2 cropName={crop.crop_name} />
@@ -578,7 +624,7 @@ function CropCard({ crop }: { crop: SummaryCrop }) {
           <p className="text-[0.78rem] font-semibold tabular-nums text-slate-950">
             {formatNumberAr(crop.surface_ha)} Has
           </p>
-          <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400">del total</p>
+          <p className="text-[9px] font-medium text-slate-500">del total</p>
         </div>
       </header>
 
@@ -622,7 +668,7 @@ function MetricLine({
           className={
             className?.includes("bg-slate")
               ? "text-[9px] font-medium text-white"
-              : "text-[9px] font-medium text-slate-600 dark:text-slate-300"
+              : "text-[9px] font-medium text-slate-600"
           }
         >
           {label}
@@ -646,10 +692,10 @@ function GeneralSummary({ totals }: { totals: SummaryTotals }) {
   const returnPct = n(totals.project_return_pct);
 
   return (
-    <section className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+    <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <h3 className="text-[1.05rem] font-semibold text-slate-950">
         Resumen General{" "}
-        <span className="text-[0.72rem] font-semibold text-slate-500 dark:text-slate-400">(Totales del proyecto)</span>
+        <span className="text-[0.72rem] font-semibold text-slate-500">(Totales del proyecto)</span>
       </h3>
       <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <SummaryItem
@@ -713,25 +759,25 @@ function SummaryItem({
   tone?: "neutral" | "pink";
 }) {
   return (
-    <article className="flex min-w-0 items-center gap-3 border-slate-200 dark:border-slate-700 xl:border-r xl:pr-4 xl:last:border-r-0">
+    <article className="flex min-w-0 items-center gap-3 border-slate-200 xl:border-r xl:pr-4 xl:last:border-r-0">
       <span
         className={
           tone === "pink"
             ? "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#FDE4EA] text-[#D43E5F]"
-            : "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+            : "flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600"
         }
       >
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="truncate text-[9px] font-medium text-slate-500 dark:text-slate-400">{label}</p>
+        <p className="truncate text-[9px] font-medium text-slate-500">{label}</p>
         <div className="mt-1 flex items-center gap-2">
           <p className="truncate text-[0.78rem] font-semibold leading-tight tabular-nums text-slate-950">
             {value}
           </p>
           {indicator !== undefined && <IndicatorDot value={indicator} size="sm" />}
         </div>
-        {meta && <p className="mt-1 text-[0.72rem] font-semibold text-slate-500 dark:text-slate-400">{meta}</p>}
+        {meta && <p className="mt-1 text-[0.72rem] font-semibold text-slate-500">{meta}</p>}
       </div>
     </article>
   );
@@ -748,7 +794,7 @@ function EconomicView({ totals, crops }: { totals: SummaryTotals; crops: Summary
   return (
     <div className="space-y-5">
       <section className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-        <article className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 shadow-sm">
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h3 className="mb-4 text-[1.05rem] font-semibold text-slate-950">
             Composición del Activo
           </h3>
@@ -758,14 +804,14 @@ function EconomicView({ totals, crops }: { totals: SummaryTotals; crops: Summary
               return (
                 <div key={item.label}>
                   <div className="mb-1.5 flex items-center justify-between gap-3">
-                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-500">
                       {item.label}
                     </span>
                     <span className="text-[0.78rem] font-semibold tabular-nums text-slate-950">
                       {money(item.value)}
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                  <div className="h-2 rounded-full bg-slate-100">
                     <div
                       className={`h-2 rounded-full ${item.tone}`}
                       style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
@@ -813,22 +859,22 @@ function EconomicMetric({ label, value }: { label: string; value: string }) {
 function CropEconomicsTable({ crops }: { crops: SummaryCrop[] }) {
   if (crops.length === 0) {
     return (
-      <section className="rounded-xl bg-white dark:bg-slate-800 p-4 text-sm text-slate-600 dark:text-slate-300 shadow-sm">
+      <section className="rounded-xl bg-white p-4 text-sm text-slate-600 shadow-sm">
         No hay cultivos para el filtro seleccionado
       </section>
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-      <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-3">
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 px-4 py-3">
         <h3 className="text-[1.05rem] font-semibold text-slate-950">
           Resultados Económicos por Cultivo
         </h3>
       </div>
-      <ScrollableTable>
+      <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] text-[0.78rem]">
-          <thead className="bg-slate-50 dark:bg-slate-900 text-[9px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+          <thead className="bg-slate-50 text-[9px] font-medium uppercase tracking-wide text-slate-500">
             <tr>
               <th className="px-4 py-3 text-left">Cultivo</th>
               <th className="px-4 py-3 text-right">Ingreso Neto</th>
@@ -872,22 +918,47 @@ function CropEconomicsTable({ crops }: { crops: SummaryCrop[] }) {
             ))}
           </tbody>
         </table>
-      </ScrollableTable>
+      </div>
     </section>
   );
 }
 
+function integralMetricCellClass(row: IntegralRow, index: number) {
+  const base = "sticky left-0 px-4 py-3 text-left text-[0.78rem]";
+
+  if (row.key === "operating_result") {
+    return `${base} bg-slate-950 font-semibold text-white`;
+  }
+
+  if (row.key === "total_invested") {
+    return `${base} bg-[#FBD5D5] font-semibold text-slate-950`;
+  }
+
+  if (row.key === "return_pct") {
+    return `${base} bg-[#FDE4EA] font-semibold text-slate-950`;
+  }
+
+  return `${base} ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} font-medium text-slate-600`;
+}
+
+function integralValueCellClass(row: IntegralRow, index: number) {
+  const base = "px-4 py-3 text-center";
+
+  if (row.key === "operating_result") return `${base} bg-slate-950 text-white`;
+  if (row.key === "total_invested") return `${base} bg-[#FBD5D5] text-slate-950`;
+  if (row.key === "return_pct") return `${base} bg-[#FDE4EA] text-slate-950`;
+
+  return `${base} ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`;
+}
 
 function IntegralView({ data, error }: { data: FieldCropReportData | null; error: string | null }) {
   if (error) {
-    // El error ya se publica al toast desde el parent; acá solo evitamos
-    // renderizar el árbol de datos.
-    return null;
+    return <section className="rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}</section>;
   }
 
   if (!data) {
     return (
-      <section className="rounded-xl bg-white dark:bg-slate-800 p-4 text-sm text-slate-600 dark:text-slate-300 shadow-sm">
+      <section className="rounded-xl bg-white p-4 text-sm text-slate-600 shadow-sm">
         No hay datos integrales disponibles
       </section>
     );
@@ -895,30 +966,28 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
 
   if (data.columns.length === 0) {
     return (
-      <section className="rounded-xl bg-white dark:bg-slate-800 p-4 text-sm text-slate-600 dark:text-slate-300 shadow-sm">
+      <section className="rounded-xl bg-white p-4 text-sm text-slate-600 shadow-sm">
         No hay combinaciones campo/cultivo para el filtro seleccionado
       </section>
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-      <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-3">
-        <h3 className="text-[1.05rem] font-semibold text-slate-950 dark:text-slate-100">
-          Vista Integral
-        </h3>
+    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 px-4 py-3">
+        <h3 className="text-[1.05rem] font-semibold text-slate-950">Vista Integral</h3>
       </div>
-      <ScrollableTable>
-        <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.86rem]">
-          <thead className="bg-slate-50 dark:bg-slate-900">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.78rem]">
+          <thead className="bg-slate-50">
             <tr>
-              <th className="sticky left-0 z-sticky w-[220px] bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <th className="sticky left-0 z-[1] w-[220px] bg-slate-50 px-4 py-3 text-left text-[9px] font-medium uppercase tracking-wide text-slate-500">
                 Métrica
               </th>
               {data.columns.map((column) => (
                 <th key={column.id} className="min-w-[180px] px-4 py-3 text-center">
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-600">
                       {column.field_name}
                     </span>
                     <CropBadgeV2 cropName={column.crop_name} />
@@ -942,7 +1011,7 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
                         className={
                           row.strong
                             ? "font-semibold tabular-nums"
-                            : "font-medium tabular-nums"
+                            : "font-medium tabular-nums text-slate-700"
                         }
                       >
                         {formatNumberAr(value)}
@@ -950,8 +1019,8 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
                       <span
                         className={
                           row.key === "operating_result"
-                            ? "ml-1 text-[0.7rem] text-white/60 dark:text-slate-600"
-                            : "ml-1 text-[0.7rem] text-slate-500 dark:text-slate-400"
+                            ? "ml-1 text-[9px] text-white/60"
+                            : "ml-1 text-[9px] text-slate-400"
                         }
                       >
                         {row.unit}
@@ -968,7 +1037,7 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
             ))}
           </tbody>
         </table>
-      </ScrollableTable>
+      </div>
     </section>
   );
 }

@@ -83,11 +83,11 @@ const ExpandedRow = ({ projectId }: { projectId: number }) => {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-4">
         {items.map(({ label }) => (
           <div
             key={label}
-            className="rounded-lg pt-1 pl-3 min-w-[160px] flex-1"
+            className="rounded-xl pt-1 pl-4 min-w-[180px] flex-1"
           >
             <div className="text-xs font-semibold text-gray-600 tracking-wide uppercase mb-1">
               {label}

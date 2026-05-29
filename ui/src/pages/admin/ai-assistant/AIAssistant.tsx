@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { AppFilterBar } from "../../../components/filters/AppFilterBar";
-import { Notification } from "../../../components/feedback/Notification";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import Button from "../../../components/Button/Button";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import {
@@ -10,8 +9,6 @@ import {
   listPontiChatConversations,
   pontiAssistantChatStream,
 } from "@/api/aiClient";
-import { formatError } from "@/lib/format/formatError";
-import { notify } from "@/lib/notify";
 import { NOTIFICATION_CHAT_HANDOFF_KEY } from "@/lib/notificationChatHandoff";
 import type { NotificationChatHandoff } from "@/lib/notificationChatHandoff";
 import type {
@@ -33,7 +30,7 @@ const ROUTE_OPTIONS: { value: PontiRouteHint | ""; label: string }[] = [
 ];
 
 const MARKDOWN_CLASS =
-  "prose prose-sm max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-code:rounded prose-code:bg-gray-200 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-table:text-xs prose-th:border prose-th:border-gray-300 dark:border-gray-600 prose-th:bg-gray-50 dark:bg-slate-900 prose-th:px-2 prose-th:py-1 prose-td:border prose-td:border-gray-300 dark:border-gray-600 prose-td:px-2 prose-td:py-1 prose-headings:mb-1 prose-headings:mt-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0";
+  "prose prose-sm max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-code:rounded prose-code:bg-gray-200 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-table:text-xs prose-th:border prose-th:border-gray-300 prose-th:bg-gray-50 prose-th:px-2 prose-th:py-1 prose-td:border prose-td:border-gray-300 prose-td:px-2 prose-td:py-1 prose-headings:mb-1 prose-headings:mt-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0";
 
 const AssistantMarkdown = ({ content }: { content: string }) => (
   <div className={MARKDOWN_CLASS}>
@@ -76,14 +73,6 @@ const AIAssistant = () => {
   const [routeHint, setRouteHint] = useState<PontiRouteHint | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  // Cualquier error transitorio del asistente se canaliza al toaster unificado
-  // (notify.error). Se resetea inmediatamente para no re-disparar al re-render.
-  useEffect(() => {
-    if (error) {
-      notify.error(error);
-      setError("");
-    }
-  }, [error]);
   /** Respuesta en curso (SSE); al llegar `done` se vuelca a `messages`. */
   const [streamDraft, setStreamDraft] = useState<{ text: string; activity: string[] } | null>(
     null
@@ -162,13 +151,7 @@ const AIAssistant = () => {
           return;
         }
         if (ev.event === "error") {
-          // Eventos SSE de error: el `ev.data.message` puede traer texto
-          // técnico del backend. Siempre mostramos copy en español; el detalle
-          // técnico queda en console para debug.
-          if (typeof ev.data.message === "string" && import.meta.env.DEV) {
-            console.warn("[AIAssistant handoff] backend error event:", ev.data.message);
-          }
-          setError("No se pudo procesar el contexto del asistente. Intentá nuevamente.");
+          setError(typeof ev.data.message === "string" ? ev.data.message : "Error en handoff");
           setStreamDraft(null);
           setLoading(false);
         }
@@ -178,7 +161,7 @@ const AIAssistant = () => {
       setStreamDraft(null);
       setLoading(false);
     });
-  }, [headers, workspace]);
+  }, [headers]);
 
   const refreshList = useCallback(async () => {
     if (!headers) return;
@@ -206,7 +189,8 @@ const AIAssistant = () => {
       setActiveId(d.id);
       setMessages(d.messages);
     } catch (err) {
-      setError(formatError(err, { fallback: "No se pudo cargar la conversación. Intentá nuevamente." }));
+      const message = err instanceof Error ? err.message : "No se pudo cargar la conversación";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -300,11 +284,11 @@ const AIAssistant = () => {
             return;
           }
           if (ev.event === "error") {
-            // Mismo trato que el handoff: NUNCA exponer texto crudo del BE.
-            if (typeof ev.data.message === "string" && import.meta.env.DEV) {
-              console.warn("[AIAssistant stream] backend error event:", ev.data.message);
-            }
-            setError("Ocurrió un problema procesando la respuesta del asistente. Intentá nuevamente.");
+            const msg =
+              typeof ev.data.message === "string"
+                ? ev.data.message
+                : "Error en el stream del asistente";
+            setError(msg);
             setStreamDraft(null);
           }
         },
@@ -322,7 +306,8 @@ const AIAssistant = () => {
         setStreamDraft(null);
         return;
       }
-      setError(formatError(err, { fallback: "No se pudo enviar el mensaje al asistente. Intentá nuevamente." }));
+      const message = err instanceof Error ? err.message : "Error al enviar el mensaje";
+      setError(message);
       setInput(prevInput);
       setMessages((prev) => prev.slice(0, -1));
       setStreamDraft(null);
@@ -332,20 +317,18 @@ const AIAssistant = () => {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <AppFilterBar filters={filters} />
+    <div className="flex flex-col gap-4 px-6 py-4">
+      <FilterBar filters={filters} />
 
       {!headers && (
-        <Notification
-          variant="info"
-          message="Seleccioná un proyecto para usar el asistente."
-          size="sm"
-        />
+        <p className="text-sm text-amber-700">Seleccioná un proyecto para usar el asistente.</p>
       )}
 
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-        <aside className="w-full shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800 lg:w-64">
-          <div className="flex h-12 items-center justify-between gap-2 border-b border-gray-100 px-3 text-sm font-medium text-gray-700 dark:text-gray-200">
+        <aside className="w-full shrink-0 rounded-lg border border-gray-200 bg-white lg:w-64">
+          <div className="flex h-12 items-center justify-between gap-2 border-b border-gray-100 px-3 text-sm font-medium text-gray-700">
             <span>Conversaciones</span>
             <Button
               size="sm"
@@ -361,8 +344,8 @@ const AIAssistant = () => {
               <li key={c.id}>
                 <button
                   type="button"
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:bg-slate-900 ${
-                    activeId === c.id ? "bg-primary-50 text-primary-900" : "text-gray-800 dark:text-gray-200"
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 ${
+                    activeId === c.id ? "bg-primary-50 text-primary-900" : "text-gray-800"
                   }`}
                   onClick={() => void loadConversation(c.id)}
                 >
@@ -379,9 +362,9 @@ const AIAssistant = () => {
           </ul>
         </aside>
 
-        <section className="flex h-[32rem] flex-1 flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-800">
+        <section className="flex h-[32rem] flex-1 flex-col rounded-lg border border-gray-200 bg-white">
           <div className="flex h-12 flex-wrap items-center gap-3 border-b border-gray-100 px-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+            <label className="flex items-center gap-2 text-sm text-gray-700">
               <span>Contexto</span>
               <select
                 className="rounded-md bg-primary-500 px-2 py-1 text-sm text-white"
@@ -410,7 +393,7 @@ const AIAssistant = () => {
                 className={`rounded-lg px-3 py-2 text-sm ${
                   m.role === "user"
                     ? "ml-auto max-w-[90%] bg-primary-700 text-white"
-                    : "w-full bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-gray-100"
+                    : "w-full bg-gray-100 text-gray-900"
                 }`}
               >
                 {m.role === "assistant" ? (
@@ -421,9 +404,9 @@ const AIAssistant = () => {
               </div>
             ))}
             {streamDraft && (
-              <div className="w-full rounded-lg border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-slate-900 px-3 py-2 text-sm text-gray-800 dark:text-gray-200">
+              <div className="w-full rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-800">
                 {streamDraft.activity.length > 0 && (
-                  <ul className="mb-2 list-inside list-disc text-xs text-gray-600 dark:text-gray-300">
+                  <ul className="mb-2 list-inside list-disc text-xs text-gray-600">
                     {streamDraft.activity.map((line, i) => (
                       <li key={`${i}-${line}`}>{line}</li>
                     ))}
@@ -442,7 +425,7 @@ const AIAssistant = () => {
 
           <div className="border-t border-gray-100 p-3">
             <textarea
-              className="mb-2 w-full rounded border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm"
+              className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
               rows={1}
               placeholder="Mensaje…"
               value={input}

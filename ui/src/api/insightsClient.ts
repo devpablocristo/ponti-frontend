@@ -1,5 +1,5 @@
-import { getAccessToken } from "@/lib/authStorage";
-import { fetchOrThrow } from "@/api/fetchErrorAdapter";
+import { request } from "@devpablocristo/core-http/fetch";
+import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 
 export type InsightItem = {
   id: string;
@@ -31,15 +31,6 @@ export type ListInsightsOptions = {
 
 const getBaseUrl = (): string => "/api/v1";
 
-const getTenantId = (): string => {
-  if (typeof window === "undefined") return "";
-  return (
-    window.localStorage.getItem("ponti:tenant_id") ||
-    window.localStorage.getItem("tenant_id") ||
-    ""
-  ).trim();
-};
-
 const buildHeaders = (projectId?: string): Record<string, string> => {
   const token = getAccessToken();
   const headers: Record<string, string> = {
@@ -47,8 +38,6 @@ const buildHeaders = (projectId?: string): Record<string, string> => {
   };
   if (projectId) headers["X-Project-Id"] = projectId;
   if (token) headers.Authorization = `Bearer ${token}`;
-  const tenantId = getTenantId();
-  if (tenantId) headers["X-Tenant-Id"] = tenantId;
   return headers;
 };
 
@@ -59,11 +48,11 @@ export const listInsights = async (
   const qs = new URLSearchParams();
   qs.set("limit", String(opts.limit ?? 100));
   if (opts.includeResolved) qs.set("include_resolved", "true");
-  const res = await fetchOrThrow(`${getBaseUrl()}/insights?${qs.toString()}`, {
+  return request<InsightsListResponse>(`/insights?${qs.toString()}`, {
     method: "GET",
     headers: buildHeaders(projectId),
+    baseURLs: [getBaseUrl()],
   });
-  return (await res.json()) as InsightsListResponse;
 };
 
 const callAction = async (
@@ -72,13 +61,11 @@ const callAction = async (
   method: "POST" | "DELETE",
   projectId?: string,
 ): Promise<void> => {
-  await fetchOrThrow(
-    `${getBaseUrl()}/insights/${encodeURIComponent(insightId)}/${action}`,
-    {
-      method,
-      headers: buildHeaders(projectId),
-    },
-  );
+  await request<void>(`/insights/${encodeURIComponent(insightId)}/${action}`, {
+    method,
+    headers: buildHeaders(projectId),
+    baseURLs: [getBaseUrl()],
+  });
 };
 
 export const markInsightRead = (id: string, projectId?: string) =>

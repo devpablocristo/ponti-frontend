@@ -17,7 +17,7 @@ type ProjectState = {
   result: string;
 };
 
-export type ProjectAction =
+type ProjectAction =
   | { type: typeof actions.SET_PROJECTS; payload: ProjectData[] }
   | { type: typeof actions.SET_PROJECTS_DROPDOWN; payload: ProjectDropdown[] }
   | { type: typeof actions.SET_PROJECTS_DROPDOWN_PAGINATION; payload: PageInfo }
@@ -52,13 +52,13 @@ const projectReducer = (state: ProjectState, action: ProjectAction) => {
     case actions.SET_PROJECTS:
       return {
         ...state,
-        projects: Array.isArray(action.payload) ? action.payload : [],
+        projects: action.payload,
       };
 
     case actions.SET_PROJECTS_DROPDOWN:
       return {
         ...state,
-        projectsDropdown: Array.isArray(action.payload) ? action.payload : [],
+        projectsDropdown: action.payload,
       };
 
     case actions.SET_PAGINATION:

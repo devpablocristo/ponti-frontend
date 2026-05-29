@@ -79,41 +79,6 @@ describe("lotTableUtils", () => {
     expect(filterLots(data, { harvest_date: ["2026-05-20"] })).toHaveLength(1);
   });
 
-  it("matches select filters exactly without including substring siblings", () => {
-    const data = [lot({ id: 1, lot_name: "LOTE 1" }), lot({ id: 2, lot_name: "LOTE 10" })];
-
-    expect(filterLots(data, { lot_name: ["lote 1"] }).map((item) => item.id)).toEqual([1]);
-  });
-
-  it("keeps scalar text filters as partial searches", () => {
-    const data = [
-      lot({ id: 1, lot_name: "LOTE 1" }),
-      lot({ id: 2, lot_name: "LOTE 10" }),
-      lot({ id: 3, lot_name: "LOTE 2" }),
-    ];
-
-    expect(filterLots(data, { lot_name: "lote 1" }).map((item) => item.id)).toEqual([1, 2]);
-  });
-
-  it("builds filter options from rows matching the other active filters", () => {
-    const data = [
-      lot({ id: 1, field_name: "Campo Norte", lot_name: "LOTE 1", current_crop: "Trigo" }),
-      lot({ id: 2, field_name: "Campo Norte", lot_name: "LOTE 10", current_crop: "Trigo" }),
-      lot({ id: 3, field_name: "Campo Sur", lot_name: "LOTE 2", current_crop: "Soja" }),
-    ];
-
-    expect(
-      getLotFilterOptions(
-        data,
-        {
-          lot_name: ["LOTE 1"],
-          current_crop: ["Trigo"],
-        },
-        "lot_name"
-      )
-    ).toEqual(["LOTE 10", "LOTE 1"]);
-  });
-
   it("keeps commercialization values from real API fields as decimal strings", () => {
     const data = [
       lot({

@@ -1,15 +1,10 @@
 import { useCallback, useEffect } from "react";
-import { ArrowUp, Hourglass, Upload, Wallet } from "lucide-react";
-import { InlineSpinner } from "../../../components/feedback/InlineSpinner";
-import { Notification } from "../../../components/feedback/Notification";
-import { EmptyState } from "../../../components/feedback/EmptyState";
+import { ArrowUp, Hourglass, LoaderCircle, Wallet } from "lucide-react";
 import { usePDF } from "react-to-pdf";
 
-import { AppFilterBar } from "../../../components/filters/AppFilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import Button from "../../../components/Button/Button";
-import { useIsMobile } from "../../../hooks/useBreakpoint";
-import { notify } from "../../../lib/notify";
 import ManagementBalanceTable from "./ManagementBalanceTable";
 import { CostByCropTable } from "./CostByCropTable";
 import OperationalIndicators from "./OperationalIndicators";
@@ -17,6 +12,7 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useDashboard from "../../../hooks/useDashboard";
 import { DashboardData } from "../../../hooks/useDashboard/types";
 import { formatNumberAr } from "../utils";
+import { clearLocalStorage } from "../../../pages/login/context/useLocalStorage";
 
 interface DashboardIndicatorsProps {
   dashboard: DashboardData | null;
@@ -30,8 +26,8 @@ interface DashboardFilterSummaryItem {
 function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
   if (!dashboard) {
     return (
-      <div>
-        <div className="p-4 text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-slate-900">
+      <div className="flex gap-4">
+        <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
           No hay datos de dashboard disponibles
         </div>
       </div>
@@ -39,12 +35,9 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
   }
 
   const { metrics } = dashboard;
-  const investorItems = metrics.investor_contributions.items ?? [];
 
-  // Grid responsive: 1 col mobile, 2 cols sm, 3 cols lg, 5 cols xl.
-  // El `flex gap-4` original overflowea horizontalmente con 5 KPIs en mobile.
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="flex gap-4">
       <IndicatorCard
         title="Avance de siembra"
         value={`${metrics.sowing.progress_pct}%`}
@@ -72,21 +65,21 @@ function DashboardIndicators({ dashboard }: DashboardIndicatorsProps) {
       <IndicatorCard
         title="Avance de aportes"
         value={
-          investorItems.length > 0
-            ? investorItems
-                .map((investor) => `${investor.contributions_progress_pct}%`)
-                .join(" - ")
-            : "0%"
+          metrics.investor_contributions.items
+            ? metrics.investor_contributions.items
+              .map((investor) => `${investor.contributions_progress_pct}%`)
+              .join(" - ")
+            : "N/A"
         }
         subtext={
-          investorItems.length > 0
-            ? investorItems
-                .map(
-                  (investor) =>
-                    `${investor.investor_name} ${investor.share_pct}%`
-                )
-                .join(" - ")
-            : "Sin aportes cargados"
+          metrics.investor_contributions.items
+            ? metrics.investor_contributions.items
+              .map(
+                (investor) =>
+                  `${investor.investor_name} ${investor.share_pct}%`
+              )
+              .join(" - ")
+            : "N/A"
         }
         color="rose"
       />
@@ -116,16 +109,16 @@ function DashboardContent({
   return (
     <div className={className}>
       {includeFilters && (
-        <div className="my-3 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 my-4 md:grid-cols-2 xl:grid-cols-4">
           {selectedFilters.map((filter) => (
             <div
               key={filter.label}
-              className="p-4 bg-white dark:bg-slate-800 border rounded-xl"
+              className="p-4 bg-white border rounded-xl"
             >
-              <div className="text-xs font-medium tracking-wide text-slate-500 dark:text-slate-400 uppercase">
+              <div className="text-xs font-medium tracking-wide text-slate-500 uppercase">
                 {filter.label}
               </div>
-              <div className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">
+              <div className="mt-1 text-sm font-semibold text-slate-900">
                 {filter.value}
               </div>
             </div>
@@ -133,11 +126,11 @@ function DashboardContent({
         </div>
       )}
 
-      <div className="my-3">
+      <div className="my-4">
         <DashboardIndicators dashboard={dashboard} />
       </div>
 
-      <div className="w-full py-3">
+      <div className="w-full py-4">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="w-full md:w-1/2">
             <ManagementBalanceTable dashboard={dashboard} />
@@ -162,10 +155,9 @@ export function Dashboard() {
     projectId,
     selectedCampaignId,
     selectedField,
-    hasWorkspaceSelection,
+    workspaceReady,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
 
-  const isMobile = useIsMobile();
   const { dashboard, processing, error, getDashboardInfo } = useDashboard();
   const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
   const { toPDF, targetRef } = usePDF({
@@ -173,7 +165,6 @@ export function Dashboard() {
   });
   const selectedCampaign =
     campaigns.find((campaign) => campaign.id === selectedCampaignId);
-  const hasActiveFilters = hasWorkspaceSelection;
   const selectedFilters = [
     {
       label: "Cliente",
@@ -193,9 +184,22 @@ export function Dashboard() {
     },
   ];
 
-  // El force-logout por sesión inválida vive ahora en el interceptor global
-  // de `api/client.ts` + el listener de `auth:force-logout` en AuthProvider.
-  // Acá no necesitamos heurística sobre el mensaje formateado.
+  // Ultra-robust fallback: if the dashboard endpoint returns "invalid token"
+  // (env switch / expired session), force a clean re-login.
+  useEffect(() => {
+    if (!error) return;
+    const msg = String(error).toLowerCase();
+    if (
+      msg.includes("invalid token") ||
+      msg.includes("sesión inválida") ||
+      msg.includes("sesion invalida") ||
+      msg.includes("jwt") ||
+      msg.includes("expired")
+    ) {
+      clearLocalStorage();
+      window.location.href = "/login";
+    }
+  }, [error]);
 
   const buildQueryParams = useCallback(() => {
     const params: Record<string, string> = {};
@@ -218,14 +222,19 @@ export function Dashboard() {
   }, [selectedCustomer, projectId, selectedCampaignId, selectedField]);
 
   useEffect(() => {
-    if (!hasActiveFilters) return;
-
+    const hasCustomer = Boolean(selectedCustomer && selectedCustomer.id !== 0);
+    const hasProject = Boolean(projectId && projectId > 0);
+    const hasCampaign = Boolean(selectedCampaignId && selectedCampaignId > 0);
+    if (!hasCustomer || !hasProject || !hasCampaign || !workspaceReady) {
+      getDashboardInfo("");
+      return;
+    }
     getDashboardInfo(buildQueryParams());
   }, [
-    hasActiveFilters,
     selectedCustomer,
     projectId,
     selectedCampaignId,
+    workspaceReady,
     selectedField,
     getDashboardInfo,
     buildQueryParams,
@@ -233,77 +242,56 @@ export function Dashboard() {
 
   return (
     <div>
-      <AppFilterBar
+      <FilterBar
         filters={filters}
         actions={[
           {
+            label: "Generar Informe",
+            variant: "primary",
+            disabled: processing || !workspaceReady,
+            onClick: () => getDashboardInfo(buildQueryParams()),
+          },
+          {
             label: "Exportar PDF",
-            icon: <Upload className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
-            disabled: processing || !dashboard || !hasActiveFilters,
-            // El PDF tiene un layout fijo de 1280px (target landscape desktop).
-            // En mobile genera un archivo cortado/ilegible — bloqueamos con un
-            // toast en vez de exportar mal. Decisión cerrada del plan responsive.
-            onClick: () => {
-              if (isMobile) {
-                notify.info("La exportación a PDF está disponible solo desde escritorio. El layout requiere al menos 1280px de ancho.");
-                return;
-              }
-              toPDF();
-            },
+            disabled: processing || !dashboard,
+            onClick: toPDF,
           },
         ]}
       />
 
-      {!hasActiveFilters && (
-        <EmptyState
-          className="mt-10 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800"
-          title="Seleccioná filtros para ver el dashboard"
-          description="El dashboard no carga datos globales automáticamente. Elegí cliente, proyecto, campaña o campo para consultar métricas."
-        />
+      {processing && (
+        <div className="flex items-center justify-center h-20">
+          <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
+        </div>
       )}
 
-      {hasActiveFilters && processing && (
-        <InlineSpinner size="lg" containerClassName="flex items-center justify-center h-20" />
+      {error && (
+        <div className="flex items-center justify-between gap-3 p-4 my-4 text-sm text-red-800 rounded-lg bg-red-50">
+          <div>Error al cargar datos del dashboard: {error}</div>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={!workspaceReady}
+            onClick={() => getDashboardInfo(buildQueryParams())}
+          >
+            Reintentar
+          </Button>
+        </div>
       )}
 
-      {hasActiveFilters && error && (
-        // `error` ya viene formateado por useDashboard (formatError →
-        // userMessage español). Lo mostramos en el banner inline porque acá
-        // queremos la acción "Reintentar" pegada al mensaje — eso es feature
-        // accionable que el toast no provee. NO concatenamos prefijos: el
-        // texto del módulo ya describe la situación.
-        <Notification variant="error" className="mt-4">
-          <div className="flex items-center justify-between gap-3">
-            <span>{error}</span>
-            <Button
-              variant="primary"
-              size="sm"
-              disabled={processing}
-              onClick={() => getDashboardInfo(buildQueryParams())}
-            >
-              Reintentar
-            </Button>
-          </div>
-        </Notification>
-      )}
+      <DashboardContent dashboard={dashboard} selectedFilters={selectedFilters} />
 
-      {hasActiveFilters && (
-        <DashboardContent dashboard={dashboard} selectedFilters={selectedFilters} />
-      )}
-
-      {hasActiveFilters && (
-        <div className="fixed left-[-10000px] top-0">
-        <div ref={targetRef} className="w-[1280px] p-6 bg-white dark:bg-slate-800">
+      <div className="fixed left-[-10000px] top-0">
+        <div ref={targetRef} className="w-[1280px] p-6 bg-white">
           <DashboardContent
             dashboard={dashboard}
             selectedFilters={selectedFilters}
             includeFilters
           />
         </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

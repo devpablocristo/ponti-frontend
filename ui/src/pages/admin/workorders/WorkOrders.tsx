@@ -1,19 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Archive, Briefcase, Download, Plus, Upload } from "lucide-react";
-import { LoadingOverlay } from "../../../components/feedback/LoadingOverlay";
-import { TableSkeleton } from "../../../components/feedback/Skeleton";
-import { EmptyState } from "../../../components/feedback/EmptyState";
-import { Notification } from "../../../components/feedback/Notification";
-import { usePagination } from "@/lib/dataDisplay";
-import { ResponsiveTable } from "../../../components/crud/ResponsiveTable";
-import { BulkSelectionPanel } from "../../../components/crud/BulkSelectionPanel";
-import { ArchivedDrawer } from "../../../components/crud/ArchivedDrawer";
-import { makeSelectColumn } from "../../../components/crud/makeSelectColumn";
+import { LoaderCircle } from "lucide-react";
+import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
-import { useBulkActions } from "../../../hooks/useBulkActions";
-import { AppFilterBar } from "../../../components/filters/AppFilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
+import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import CreateOrder from "./CreateOrder";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { BaseModal } from "../../../components/Modal/BaseModal";
@@ -21,33 +13,228 @@ import Button from "../../../components/Button/Button";
 import UpdateOrder from "./UpdateOrder";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
-import { WORKORDER_ENTITY } from "../entities";
 import { apiClient } from "@/api/client";
 import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
-import { formatError } from "@/lib/format";
-import { notify } from "@/lib/notify";
 import { formatNumberAr, normalizeDate, formatISODate } from "../utils";
-import { buildTimestampedFilename, downloadBlob, EXCEL_ACCEPT } from "../fileTransfer";
-import { buildWorkspaceQuery } from "@/lib/workspaceQuery";
-import { getGuardedWorkspaceActionWarning } from "@/lib/workspaceActionGuards";
-import { matchesSelectFilter } from "@/lib/tableFilters";
-import ArchivedWorkOrders from "../master-data/work-orders/ArchivedWorkOrders";
-import { parseAndResolveWorkOrdersCsv, WorkOrderPreviewRow } from "./importWorkOrders";
-import ImportWorkOrdersPreview from "./ImportWorkOrdersPreview";
-import { OrdersHeader } from "./_components/OrdersHeader";
-import { OrdersIndicators } from "./_components/OrdersIndicators";
-import {
-  FILTER_HIERARCHY,
-  classifyConsumptionUnit,
-  countUniqueOrderBaseNumbers,
-  getStatusBadgeClass,
-  getStatusLabel,
-  isDigitalOrder,
-  isPendingSupplyPublishError,
-  mapStatusFilterLabelToApi,
-  translatePendingSupplyPublishError,
-  type WorkOrdersListResponse,
-} from "./helpers";
+
+const FILTER_HIERARCHY: Record<string, string[]> = {
+  project_name: ["field_name", "lot_name"],
+  field_name: ["lot_name"],
+};
+
+type WorkOrdersListResponse = {
+  success: true;
+  data: {
+    rows?: OrdersData[];
+  };
+};
+
+/** Clasifica la unidad de consumo de una orden (litros, kilos, o null si no se puede determinar). */
+function classifyConsumptionUnit(order: OrdersData): "liter" | "kilo" | null {
+  const consumption = String(order.consumption || "").trim().toUpperCase();
+  const typeName = String(order.type_name || "").toUpperCase();
+  const categoryName = String(order.category_name || "").toUpperCase();
+  const supplyName = String(order.supply_name || "").toUpperCase();
+
+  if (consumption.includes("L") || consumption.includes("LT")) return "liter";
+  if (consumption.includes("KG") || consumption.includes("K")) return "kilo";
+
+  if (typeName.includes("AGROQUÍMICO") || typeName.includes("AGROQUIMICO")) return "liter";
+  if (typeName.includes("SEMILLA")) return "kilo";
+
+  const LITER_CATEGORIES = ["HERBICIDA", "COADYUVANTE", "CURASEMILLA", "INSECTICIDA", "FUNGICIDA"];
+  const KILO_CATEGORIES = ["SEMILLA", "FERTILIZANTE"];
+  if (LITER_CATEGORIES.some((k) => categoryName.includes(k))) return "liter";
+  if (KILO_CATEGORIES.some((k) => categoryName.includes(k))) return "kilo";
+
+  const LITER_SUPPLIES = ["HERBICIDA", "ACEITE", "INSECTICIDA", "FUNGICIDA", "LITRO"];
+  const KILO_SUPPLIES = ["SEMILLA", "FERTILIZANTE", "KILO"];
+  if (LITER_SUPPLIES.some((k) => supplyName.includes(k))) return "liter";
+  if (KILO_SUPPLIES.some((k) => supplyName.includes(k))) return "kilo";
+
+  return null;
+}
+
+function getStatusLabel(status: string) {
+  return status === "draft" ? "Abierta" : "Cerrada";
+}
+
+function isPendingSupplyPublishError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    (normalized.includes("insumo") ||
+      normalized.includes("supply") ||
+      normalized.includes("supplies")) &&
+    (normalized.includes("pendiente") ||
+      normalized.includes("pending") ||
+      normalized.includes("incompleto") ||
+      normalized.includes("complete"))
+  );
+}
+
+function translatePendingSupplyPublishError(message: string) {
+  const normalized = message.toLowerCase();
+  const englishPrefix = "cannot publish work order draft with pending supplies:";
+
+  if (normalized.startsWith(englishPrefix)) {
+    const pendingSupplies = message.slice(englishPrefix.length).trim();
+
+    return pendingSupplies
+      ? `No se puede publicar la orden porque tiene insumos pendientes de completar: ${pendingSupplies}`
+      : "No se puede publicar la orden porque tiene insumos pendientes de completar.";
+  }
+
+  return message;
+}
+
+function mapStatusFilterLabelToApi(value: string) {
+  if (value === "Abierta") return "draft";
+  if (value === "Cerrada") return "published";
+  return value;
+}
+
+function getStatusBadgeClass(status: string) {
+  return status === "draft"
+    ? "bg-amber-100 text-amber-800 border border-amber-200"
+    : "bg-emerald-100 text-emerald-800 border border-emerald-200";
+}
+
+function isDigitalOrder(order: OrdersData) {
+  return order.is_digital === true;
+}
+
+function getOrderBaseNumber(orderNumber: string | number) {
+  return String(orderNumber).trim().split(".")[0];
+}
+
+function OrdersHeader({
+  ordersAmount,
+  selectedColumns,
+  setSelectedColumns,
+  setVisibleColumns,
+  allColumns,
+}: {
+  ordersAmount: number;
+  selectedColumns: Array<keyof OrdersData>;
+  setSelectedColumns: (columns: Array<keyof OrdersData>) => void;
+  setVisibleColumns: (columns: Array<keyof OrdersData>) => void;
+  allColumns: Column<OrdersData>[];
+}) {
+  const [showColumnsModal, setShowColumnsModal] = useState(false);
+
+  return (
+    <div className="flex justify-between items-center p-4 bg-white rounded-t-xl border-b border-gray-100">
+      <div className="text-sm text-gray-900">
+        <span className="font-semibold">Cantidad de Órdenes Ingresadas:</span> {formatNumberAr(ordersAmount)}
+      </div>
+
+      <Button
+        variant="primary"
+        size="sm"
+        iconLeft={
+          <svg
+            className="w-4 h-4 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 4a1 1 0 011-1h2a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM17 4a1 1 0 011-1h2a1 1 0 011 1v16a1 1 0 01-1 1h-2a1 1 0 01-1-1V4zM10 10h4M10 14h4"
+            />
+          </svg>
+        }
+        onClick={() => setShowColumnsModal(true)}
+      >
+        Configurar columnas
+      </Button>
+      <BaseModal
+        isOpen={showColumnsModal}
+        onClose={() => setShowColumnsModal(false)}
+        title=""
+        primaryButtonText="Aplicar"
+        primaryButtonColor="bg-blue-600 hover:bg-blue-800 focus:ring-blue-300 dark:focus:ring-blue-800"
+        onPrimaryAction={() => {
+          setVisibleColumns(selectedColumns);
+          setShowColumnsModal(false);
+        }}
+        secondaryButtonText="Cancelar"
+        onSecondaryAction={() => setShowColumnsModal(false)}
+      >
+        <h3 className="text-lg font-semibold mb-4">Columnas</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-72 overflow-y-auto px-2 mt-4">
+          {allColumns.map((col) => (
+            <label
+              key={col.key}
+              className="flex items-center text-sm font-medium text-gray-700 gap-2"
+            >
+              <input
+                type="checkbox"
+                checked={selectedColumns.includes(col.key)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedColumns([...selectedColumns, col.key]);
+                  } else {
+                    setSelectedColumns(
+                      selectedColumns.filter((k) => k !== col.key)
+                    );
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              {col.header}
+            </label>
+          ))}
+        </div>
+      </BaseModal>
+    </div>
+  );
+}
+
+function OrdersIndicators({
+  metrics,
+  processing,
+}: {
+  metrics: Metrics;
+  processing: boolean;
+}) {
+  return (
+    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+      {processing ? (
+        <div className="flex items-center justify-center py-4">
+          <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
+          <span className="text-sm text-gray-500 font-medium">Cargando indicadores...</span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <IndicatorCard
+            title="Sup. ejecutada"
+            value={formatNumberAr(metrics.surface_ha) + " Has"}
+            color="amber"
+          />
+          <IndicatorCard
+            title="Consumo en litros"
+            value={formatNumberAr(metrics.liters) + " Lt"}
+            color="gray"
+          />
+          <IndicatorCard
+            title="Consumo en kilos"
+            value={formatNumberAr(metrics.kilograms) + " Kg"}
+            color="gray"
+          />
+          <IndicatorCard
+            title="Costos directos"
+            value={"u$ " + formatNumberAr(metrics.direct_cost)}
+            color="red"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function WorkOrders() {
   const navigate = useNavigate();
@@ -71,21 +258,14 @@ export function WorkOrders() {
   } | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [drawerUpdateOpen, setDrawerUpdateOpen] = useState(false);
-  const [orderToDuplicate, setOrderToDuplicate] = useState<WorkorderData | null>(null);
-
-  // Drawer del preview/editor del import. El flujo: clic Importar → parseamos
-  // el CSV y resolvemos nombres → abrimos este drawer con las filas detectadas
-  // → el usuario revisa/destilda/edita → clic "Importar X filas" → POST.
-  const [importDrawerOpen, setImportDrawerOpen] = useState(false);
-  const [importRows, setImportRows] = useState<WorkOrderPreviewRow[]>([]);
-  const [importGlobalErrors, setImportGlobalErrors] = useState<string[]>([]);
-  const [, setImportLoading] = useState(false);
+  const [orderToDuplicate, setOrderToDuplicate] =
+    useState<WorkorderData | null>(null);
 
   const {
     getOrders,
-    archiveOrder,
+    deleteOrder,
+    deleteDraftOrder,
     publishDraftOrder,
     getMetrics,
     metrics,
@@ -97,7 +277,6 @@ export function WorkOrders() {
     error,
   } = useOrders();
 
-  const safeOrders = useMemo(() => (Array.isArray(orders) ? orders : []), [orders]);
 
   // Filtros activos por columna
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
@@ -105,50 +284,59 @@ export function WorkOrders() {
   const [filterDatasetReady, setFilterDatasetReady] = useState(false);
   const [filterDatasetVersion, setFilterDatasetVersion] = useState(0);
   const globalFilterSourceOrders = useMemo(
-    () => (filterDatasetReady && Array.isArray(filterDatasetOrders) ? filterDatasetOrders : []),
+    () => (filterDatasetReady ? filterDatasetOrders : []),
     [filterDatasetOrders, filterDatasetReady]
   );
 
   // Helper: filtra las órdenes según todos los filtros activos
-  const filterOrders = useCallback((data: OrdersData[], filters: Record<string, unknown>) => {
-    return data.filter((order) => {
-      return Object.entries(filters).every(([key, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
+  const filterOrders = useCallback(
+    (data: OrdersData[], filters: Record<string, unknown>) => {
+      return data.filter((order) => {
+        return Object.entries(filters).every(([key, value]) => {
+          if (!value || (Array.isArray(value) && value.length === 0)) return true;
 
-        if (key === "date") {
-          const orderDate = normalizeDate(String(order.date));
-          if (Array.isArray(value)) {
-            return value.some((v) => orderDate === normalizeDate(String(v)));
-          }
-          return orderDate === normalizeDate(String(value));
-        }
-
-        if (key === "status") {
-          const normalizedStatus = mapStatusFilterLabelToApi(String(order.status));
-
-          if (Array.isArray(value)) {
-            return value.some((v) => normalizedStatus === mapStatusFilterLabelToApi(String(v)));
+          if (key === "date") {
+            const orderDate = normalizeDate(String(order.date));
+            if (Array.isArray(value)) {
+              return value.some((v) => orderDate === normalizeDate(String(v)));
+            }
+            return orderDate === normalizeDate(String(value));
           }
 
-          return normalizedStatus === mapStatusFilterLabelToApi(String(value));
-        }
+          if (key === "status") {
+            const normalizedStatus = mapStatusFilterLabelToApi(String(order.status));
 
-        const orderValRaw = order[key as keyof OrdersData];
+            if (Array.isArray(value)) {
+              return value.some(
+                (v) => normalizedStatus === mapStatusFilterLabelToApi(String(v))
+              );
+            }
 
-        if (Array.isArray(value)) {
-          return matchesSelectFilter(orderValRaw, value);
-        }
+            return normalizedStatus === mapStatusFilterLabelToApi(String(value));
+          }
 
-        return matchesSelectFilter(orderValRaw, [value]);
+          const orderValRaw = order[key as keyof OrdersData];
+          const orderVal = String(orderValRaw ?? "").toLowerCase();
+
+          if (Array.isArray(value)) {
+            return value.some((v) => orderVal === String(v).toLowerCase());
+          }
+
+          return orderVal === String(value).toLowerCase();
+        });
       });
-    });
-  }, []);
+    },
+    []
+  );
 
   // Helper: obtiene las opciones válidas para una columna
   const getFilterOptionsForColumn = useCallback(
     (
       key: keyof OrdersData,
-      customSort?: (a: OrdersData[keyof OrdersData], b: OrdersData[keyof OrdersData]) => number
+      customSort?: (
+        a: OrdersData[keyof OrdersData],
+        b: OrdersData[keyof OrdersData]
+      ) => number
     ) => {
       const filtersExceptCurrent = { ...columnsFilters };
       delete filtersExceptCurrent[key];
@@ -163,14 +351,6 @@ export function WorkOrders() {
     },
     [columnsFilters, filterOrders, globalFilterSourceOrders]
   );
-
-  const handleOpenOrder = useCallback((order: OrdersData) => {
-    setSelectedOrderRow({
-      id: order.id,
-      isDigital: isDigitalOrder(order),
-    });
-    setDrawerUpdateOpen(true);
-  }, []);
 
   const columns: Column<OrdersData>[] = React.useMemo(() => {
     return [
@@ -257,9 +437,8 @@ export function WorkOrders() {
           const cropName = String(crop);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${
-                cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-              }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+                }`}
             >
               {cropName}
             </span>
@@ -276,9 +455,8 @@ export function WorkOrders() {
           const laborName = String(labor);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${
-                laborColors[laborName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-              }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+                }`}
             >
               {laborName}
             </span>
@@ -306,10 +484,7 @@ export function WorkOrders() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("surface_ha"),
         render: (value) => (
-          <span className="font-semibold text-gray-900 dark:text-gray-100">
-            {formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)}{" "}
-            <span className="text-gray-900 dark:text-gray-100 font-normal text-xs">Has</span>
-          </span>
+          <span className="font-semibold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-normal text-xs">Has</span></span>
         ),
       },
       {
@@ -325,9 +500,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("consumption"),
-        render: (value) => (
-          <span className="font-bold text-gray-900 dark:text-gray-100">{String(value)}</span>
-        ),
+        render: (value) => <span className="font-bold text-gray-900">{String(value)}</span>,
       },
       {
         key: "category_name",
@@ -342,9 +515,7 @@ export function WorkOrders() {
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("dose"),
-        render: (value) => (
-          <span className="font-bold text-gray-900 dark:text-gray-100">{String(value)}</span>
-        ),
+        render: (value) => <span className="font-bold text-gray-900">{String(value)}</span>
       },
       {
         key: "cost_per_ha",
@@ -354,11 +525,7 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("cost_per_ha"),
         render: (value) => {
           const num = Number(value);
-          return (
-            <span className="font-bold text-gray-900 dark:text-gray-100">
-              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
-            </span>
-          );
+          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -369,11 +536,7 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("unit_price"),
         render: (value) => {
           const num = Number(value);
-          return (
-            <span className="font-bold text-gray-900 dark:text-gray-100">
-              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
-            </span>
-          );
+          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
       {
@@ -384,24 +547,28 @@ export function WorkOrders() {
         filterOptions: getFilterOptionsForColumn("total_cost"),
         render: (value) => {
           const num = Number(value);
-          return (
-            <span className="font-bold text-gray-900 dark:text-gray-100">
-              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
-            </span>
-          );
+          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
         },
       },
     ];
-  }, [getFilterOptionsForColumn, handleOpenOrder]);
+  }, [
+    getFilterOptionsForColumn,
+    handleOpenOrder,
+  ]);
 
   const allColumns = useMemo(
     () =>
       Array.from(
-        new Map<keyof OrdersData, Column<OrdersData>>(columns.map((col) => [col.key, col])).values()
+        new Map<keyof OrdersData, Column<OrdersData>>(
+          columns.map((col) => [col.key, col])
+        ).values()
       ),
     [columns]
   );
-  const allColumnKeys = useMemo(() => allColumns.map((col) => col.key), [allColumns]);
+  const allColumnKeys = useMemo(
+    () => allColumns.map((col) => col.key),
+    [allColumns]
+  );
   const latestAllColumnKeysRef = useRef(allColumnKeys);
 
   useEffect(() => {
@@ -420,7 +587,6 @@ export function WorkOrders() {
   );
 
   const pagination = usePagination({ perPage: 10 });
-  const resetPage = pagination.resetPage;
 
   const {
     projectId,
@@ -429,46 +595,48 @@ export function WorkOrders() {
     selectedCustomer,
     selectedCampaignId,
     filters,
-    hasWorkspaceSelection,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const effectiveProjectId = projectId ?? selectedProject?.id ?? routeProjectId;
-  const effectiveHasWorkspaceSelection = hasWorkspaceSelection || Boolean(routeProjectId);
+  const hasWorkOrderScope = Boolean(effectiveProjectId || selectedField);
 
-  const [warningMessage, setWarningMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-
-  // Convertimos el estado de mensaje en toast: cada vez que cambia y es
-  // non-empty, dispara notify con la severidad correspondiente. Los setters
-  // a "" no producen toast (es la forma de "limpiar" el slot).
-  useEffect(() => {
-    if (warningMessage) notify.warning(warningMessage);
-  }, [warningMessage]);
-  useEffect(() => {
-    if (successMessage) notify.success(successMessage);
-  }, [successMessage]);
-  useEffect(() => {
-    if (errorMessage) notify.error(errorMessage);
-  }, [errorMessage]);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const workOrdersBaseQuery = useMemo(() => {
-    return buildWorkspaceQuery({
-      customerId: selectedCustomer?.id,
-      projectId: effectiveProjectId,
-      campaignId: selectedCampaignId,
-      fieldId: selectedField?.id,
-      extra: { supply_id: selectedSupplyFilter.id },
+  function handleOpenOrder(order: OrdersData) {
+    setSelectedOrderRow({
+      id: order.id,
+      isDigital: isDigitalOrder(order),
     });
-  }, [
-    effectiveProjectId,
-    selectedCampaignId,
-    selectedCustomer,
-    selectedField,
-    selectedSupplyFilter.id,
-  ]);
+    setDrawerUpdateOpen(true);
+  }
+
+  const workOrdersBaseQuery = useMemo(() => {
+    const params: Record<string, string> = {};
+
+    if (selectedCustomer && selectedCustomer.id !== 0) {
+      params.customer_id = String(selectedCustomer.id);
+    }
+
+    if (effectiveProjectId) {
+      params.project_id = String(effectiveProjectId);
+    }
+
+    if (selectedCampaignId) {
+      params.campaign_id = String(selectedCampaignId);
+    }
+
+    if (selectedField && selectedField.id !== 0) {
+      params.field_id = String(selectedField.id);
+    }
+
+    if (selectedSupplyFilter.id) {
+      params.supply_id = String(selectedSupplyFilter.id);
+    }
+
+    return new URLSearchParams(params).toString();
+  }, [effectiveProjectId, selectedCampaignId, selectedCustomer, selectedField, selectedSupplyFilter.id]);
 
   const workOrdersQuery = useMemo(() => {
     const params = new URLSearchParams(workOrdersBaseQuery);
@@ -479,14 +647,14 @@ export function WorkOrders() {
 
   const workOrdersFilterDatasetQuery = workOrdersBaseQuery;
 
-  const handleOrderCreated = useCallback(() => {
-    if (!effectiveHasWorkspaceSelection) return;
 
-    resetPage();
+  const handleOrderCreated = useCallback(() => {
+    pagination.resetPage();
     getOrders(workOrdersQuery);
     getMetrics(workOrdersQuery);
     setFilterDatasetVersion((version) => version + 1);
-  }, [effectiveHasWorkspaceSelection, getOrders, getMetrics, resetPage, workOrdersQuery]);
+  }, [getOrders, getMetrics, workOrdersQuery]);
+
 
   async function handlePublishOrder(order: OrdersData) {
     if (!isDigitalOrder(order) || order.status !== "draft") return;
@@ -499,7 +667,10 @@ export function WorkOrders() {
       handleOrderCreated();
     } catch (error) {
       const status = extractErrorStatus(error);
-      const rawMessage = extractErrorMessage(error, "No se pudo publicar la orden digital.");
+      const rawMessage = extractErrorMessage(
+        error,
+        "No se pudo publicar la orden digital."
+      );
       const message = translatePendingSupplyPublishError(rawMessage);
 
       if (isPendingSupplyPublishError(message)) {
@@ -508,11 +679,11 @@ export function WorkOrders() {
           title: "Insumos pendientes",
           message:
             `${message}\n\n` +
-            "Dirigirse a Datos Maestros > Administrar Insumos > Pendientes para completar la información faltante.",
+            "Dirigirse a Base de Datos > Insumos > Pendientes para completar la información faltante.",
           primaryButtonText: "Ir a Insumos",
           secondaryButtonText: "Cerrar",
           onConfirm: () => {
-            navigate("/admin/master-data/supplies/list");
+            navigate("/admin/database/items/list");
           },
         });
         setIsModalOpen(true);
@@ -553,13 +724,51 @@ export function WorkOrders() {
   function handlePrePublish(order: OrdersData) {
     setModalConfig({
       title: "Confirmar publicación",
-      message:
+            message:
         `¿Está seguro que desea publicar la orden ${order.number}?\n\n` +
         "Si la orden contiene insumos pendientes de completar, la publicación será bloqueada.",
-      primaryButtonText: "Sí, Publicar",
+      primaryButtonText: "Sí, publicar",
       secondaryButtonText: "Cancelar",
       onConfirm: () => {
         void handlePublishOrder(order);
+      },
+    });
+    setIsModalOpen(true);
+  }
+
+  async function handleDeleteDraft(order: OrdersData) {
+    if (!isDigitalOrder(order) || order.status !== "draft") return;
+
+    setIsProcessing(true);
+    setErrorMessage("");
+
+    try {
+      await deleteDraftOrder(order.id);
+      handleOrderCreated();
+    } catch (error) {
+      const status = extractErrorStatus(error);
+
+      if (status === 404) {
+        setErrorMessage("No se encontró el borrador digital.");
+        return;
+      }
+
+      setErrorMessage(
+        extractErrorMessage(error, "No se pudo eliminar la orden digital.")
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  function handlePreDeleteDraft(order: OrdersData) {
+    setModalConfig({
+      title: "Confirmar eliminación",
+      message: `¿Está seguro que desea eliminar la orden ${order.number}?`,
+      primaryButtonText: "Sí, eliminar",
+      secondaryButtonText: "Cancelar",
+      onConfirm: () => {
+        void handleDeleteDraft(order);
       },
     });
     setIsModalOpen(true);
@@ -570,7 +779,7 @@ export function WorkOrders() {
     message: "",
     primaryButtonText: "",
     secondaryButtonText: "Cancelar",
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   useEffect(() => {
@@ -597,7 +806,9 @@ export function WorkOrders() {
       const validData = globalFilterSourceOrders.filter((o) => {
         const orderValue = String(o[parent as keyof OrdersData]).toLowerCase();
         if (Array.isArray(parentFilter)) {
-          return parentFilter.some((val) => String(val).toLowerCase() === orderValue);
+          return parentFilter.some(
+            (val) => String(val).toLowerCase() === orderValue
+          );
         } else {
           return orderValue === String(parentFilter).toLowerCase();
         }
@@ -611,7 +822,9 @@ export function WorkOrders() {
         const childFilter = columnsFilters[child];
         if (childFilter) {
           if (Array.isArray(childFilter)) {
-            const validChildValues = childFilter.filter((val) => validValues.has(val));
+            const validChildValues = childFilter.filter((val) =>
+              validValues.has(val)
+            );
             if (validChildValues.length !== childFilter.length) {
               setColumnsFilters((prev) => {
                 const updated = { ...prev };
@@ -637,48 +850,54 @@ export function WorkOrders() {
     });
   }, [columnsFilters, globalFilterSourceOrders]);
 
+
+
   useEffect(() => {
     setVisibleColumns(latestAllColumnKeysRef.current);
     setColumnsFilters({});
     setFilterDatasetOrders([]);
     setFilterDatasetReady(false);
-    resetPage();
+    pagination.resetPage();
+  }, [effectiveProjectId, selectedField, selectedCampaignId, selectedCustomer?.id, selectedSupplyFilter.id]);
+
+  useEffect(() => {
+    if (!hasWorkOrderScope) {
+      setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
+      return;
+    }
+
+    setErrorMessage("");
+    getOrders(workOrdersQuery);
+    getMetrics(workOrdersQuery);
   }, [
-    effectiveProjectId,
-    selectedField,
-    selectedCampaignId,
-    selectedCustomer?.id,
-    selectedSupplyFilter.id,
-    resetPage,
+    hasWorkOrderScope,
+    workOrdersQuery,
+    getOrders,
+    getMetrics,
   ]);
 
   useEffect(() => {
-    setWarningMessage("");
-    setErrorMessage("");
-    if (!effectiveHasWorkspaceSelection) return;
+    if (!hasWorkOrderScope) {
+      setFilterDatasetOrders([]);
+      setFilterDatasetReady(false);
+      return;
+    }
 
-    getOrders(workOrdersQuery);
-    getMetrics(workOrdersQuery);
-  }, [effectiveHasWorkspaceSelection, workOrdersQuery, getOrders, getMetrics]);
-
-  useEffect(() => {
     let active = true;
     setFilterDatasetOrders([]);
     setFilterDatasetReady(false);
 
-    if (!effectiveHasWorkspaceSelection) {
-      return () => {
-        active = false;
-      };
+    if (!workOrdersFilterDatasetQuery) {
+      setErrorMessage("Seleccione un proyecto o un campo para cargar filtros");
+      return;
     }
 
-    const querySuffix = workOrdersFilterDatasetQuery ? `?${workOrdersFilterDatasetQuery}` : "";
+    const querySuffix = `?${workOrdersFilterDatasetQuery}`;
 
-    apiClient
-      .get<WorkOrdersListResponse>(`/work-orders/filter-rows${querySuffix}`)
+    apiClient.get<WorkOrdersListResponse>(`/work-orders/filter-rows${querySuffix}`)
       .then((response) => {
         if (!active) return;
-        setFilterDatasetOrders(Array.isArray(response.data?.rows) ? response.data.rows : []);
+        setFilterDatasetOrders(response.data.rows ?? []);
         setFilterDatasetReady(true);
       })
       .catch((error) => {
@@ -686,16 +905,21 @@ export function WorkOrders() {
         setFilterDatasetOrders([]);
         setFilterDatasetReady(false);
         setErrorMessage(
-          formatError(error, {
-            fallback: "No se pudieron cargar las opciones de filtros.",
-          })
+          extractErrorMessage(
+            error,
+            "No se pudieron cargar las opciones globales de filtros."
+          )
         );
       });
 
     return () => {
       active = false;
     };
-  }, [effectiveHasWorkspaceSelection, workOrdersFilterDatasetQuery, filterDatasetVersion]);
+  }, [
+    hasWorkOrderScope,
+    workOrdersFilterDatasetQuery,
+    filterDatasetVersion,
+  ]);
 
   const handleOrderDuplicated = (order: WorkorderData) => {
     setSelectedOrderRow(null);
@@ -704,9 +928,53 @@ export function WorkOrders() {
     setOrderToDuplicate(order);
   };
 
-  const filteredOrders = useMemo(() => {
-    if (!effectiveHasWorkspaceSelection) return [];
+  const handlePreFinish = (id: number) => {
+    setModalConfig({
+      title: "Confirmar eliminación",
+      message: "¿Está seguro que desea eliminar la orden?",
+      primaryButtonText: "Sí, eliminar",
+      secondaryButtonText: "Cancelar",
+      onConfirm: () => handleFinishConfirmed(id),
+    });
+    setIsModalOpen(true);
+  };
 
+  const handleFinishConfirmed = async (id: number) => {
+    setIsProcessing(true);
+
+    try {
+      await deleteOrder(id);
+      setModalConfig({
+        title: "Confirmación",
+        message: "La orden ha sido eliminada.",
+        primaryButtonText: "Volver",
+        secondaryButtonText: "Volver",
+        onConfirm: () => {
+          navigate("/admin/work-orders");
+        },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error al eliminar la orden.";
+      setErrorMessage(message);
+      setModalConfig({
+        title: "Error",
+        message,
+        primaryButtonText: "Volver",
+        secondaryButtonText: "Volver",
+        onConfirm: () => {
+          setIsModalOpen(false);
+        },
+      });
+    } finally {
+      setIsModalOpen(true);
+      setIsProcessing(false);
+    }
+  };
+
+  const filteredOrders = useMemo(() => {
     return globalFilterSourceOrders.filter((order) => {
       return Object.entries(columnsFilters).every(([key, value]) => {
         if (!value || (Array.isArray(value) && value.length === 0)) return true;
@@ -722,28 +990,32 @@ export function WorkOrders() {
         if (key === "status") {
           const normalizedStatus = mapStatusFilterLabelToApi(String(order.status));
           if (Array.isArray(value)) {
-            return value.some((v) => normalizedStatus === mapStatusFilterLabelToApi(String(v)));
+            return value.some(
+              (v) => normalizedStatus === mapStatusFilterLabelToApi(String(v))
+            );
           }
           return normalizedStatus === mapStatusFilterLabelToApi(String(value));
         }
 
         const orderValRaw = order[key as keyof OrdersData];
+        const orderVal = String(orderValRaw ?? "").toLowerCase();
         if (Array.isArray(value)) {
-          return matchesSelectFilter(orderValRaw, value);
+          return value.some((v) => orderVal === String(v).toLowerCase());
         }
-        return matchesSelectFilter(orderValRaw, [value]);
+        return orderVal === String(value).toLowerCase();
       });
     });
-  }, [effectiveHasWorkspaceSelection, globalFilterSourceOrders, columnsFilters]);
+  }, [globalFilterSourceOrders, columnsFilters]);
 
   const derivedMetrics: Metrics = useMemo(() => {
     const toNum = (v: unknown) => Number(v) || 0;
-    let surface_ha = 0,
-      liters = 0,
-      kilograms = 0,
-      direct_cost = 0;
+    let surface_ha = 0, liters = 0, kilograms = 0, direct_cost = 0;
+    const orderBaseNumbers = new Set<string>();
 
     filteredOrders.forEach((order) => {
+      const baseNumber = getOrderBaseNumber(order.number);
+      if (baseNumber) orderBaseNumbers.add(baseNumber);
+
       surface_ha += toNum(order.surface_ha);
 
       const consumption = String(order.consumption || "").trim();
@@ -756,224 +1028,93 @@ export function WorkOrders() {
       direct_cost += toNum(order.total_cost);
     });
 
-    return {
-      surface_ha,
-      liters,
-      kilograms,
-      direct_cost,
-      orders_count: countUniqueOrderBaseNumbers(filteredOrders),
-    };
+    return { surface_ha, liters, kilograms, direct_cost, orders_count: orderBaseNumbers.size };
   }, [filteredOrders]);
 
   const hasColumnFilters = useMemo(
-    () => Object.values(columnsFilters).some((v) => (Array.isArray(v) ? v.length > 0 : !!v)),
+    () => Object.values(columnsFilters).some((v) => Array.isArray(v) ? v.length > 0 : !!v),
     [columnsFilters]
   );
 
-  const emptyMetrics: Metrics = {
-    surface_ha: 0,
-    liters: 0,
-    kilograms: 0,
-    direct_cost: 0,
-    orders_count: 0,
-  };
-  const displayedMetrics = !effectiveHasWorkspaceSelection
-    ? emptyMetrics
-    : hasColumnFilters
-      ? derivedMetrics
-      : metrics;
-  const displayedOrders = !effectiveHasWorkspaceSelection
-    ? []
-    : hasColumnFilters
-      ? filteredOrders
-      : safeOrders;
-  const displayedRowsTotal = !effectiveHasWorkspaceSelection
-    ? 0
-    : hasColumnFilters
-      ? filteredOrders.length
-      : (pageInfo?.total ?? safeOrders.length);
-  const displayedOrdersCount = !effectiveHasWorkspaceSelection
-    ? 0
-    : hasColumnFilters
-      ? derivedMetrics.orders_count
-      : Number(metrics.orders_count) ||
-        countUniqueOrderBaseNumbers(
-          filterDatasetReady && filterDatasetOrders.length > 0 ? filterDatasetOrders : safeOrders
-        );
-
-  // El bulk opera sobre TODAS las filas del workspace (post filtros por columna),
-  // no sobre la página visible. Así "Seleccionar todo" marca las 212 filas y no
-  // solo las 10 paginadas. La tabla sigue mostrando solo la página actual; los
-  // checkboxes por fila se renderizan a partir del set global de IDs seleccionados.
-  const bulk = useBulkActions<OrdersData>({
-    items: filteredOrders,
-    entity: WORKORDER_ENTITY,
-    archive: archiveOrder,
-    onEdit: handleOpenOrder,
-    onAfter: handleOrderCreated,
-  });
-
-  const selectColumn = useMemo<Column<OrdersData>>(
-    () => makeSelectColumn<OrdersData>(bulk, (order) => order.number, WORKORDER_ENTITY),
-    [bulk]
-  );
-
-  const visibleColumnsWithSelection = useMemo(
-    () => [selectColumn, ...columnsToShow],
-    [columnsToShow, selectColumn]
-  );
+  const displayedMetrics = hasColumnFilters ? derivedMetrics : metrics;
 
   const handleExport = async () => {
-    if (!effectiveProjectId) {
-      setWarningMessage("Para exportar órdenes, seleccioná un proyecto.");
-      return;
-    }
+    if (!projectId) return;
 
     try {
-      setWarningMessage("");
       const response = await apiClient.get<Blob>(
-        `/work-orders/export/${effectiveProjectId}`,
+        `/work-orders/export/${projectId}`,
         undefined,
         { responseType: "blob" }
       );
 
-      downloadBlob(response, buildTimestampedFilename("ordenes", "xlsx", effectiveProjectId));
+      const url = window.URL.createObjectURL(response);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ordenes_${projectId}_${new Date().toISOString()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch {
       setErrorMessage("No se pudo exportar el listado de órdenes.");
     }
   };
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    if (!effectiveProjectId) {
-      setWarningMessage("Para importar órdenes, seleccioná un proyecto.");
-      return;
-    }
-
-    setErrorMessage("");
-    setWarningMessage("");
-    setSuccessMessage("");
-    setImportLoading(true);
-
-    try {
-      const { rows, globalErrors } = await parseAndResolveWorkOrdersCsv({
-        file,
-        projectId: effectiveProjectId,
-        defaultFieldId: selectedField?.id,
-      });
-
-      if (rows.length === 0 && globalErrors.length > 0) {
-        setErrorMessage(globalErrors.join(" "));
-        return;
-      }
-
-      // Abrimos el drawer aunque haya globalErrors: el usuario los ve arriba
-      // y puede igual revisar las filas (algunos catálogos pueden estar OK).
-      setImportRows(rows);
-      setImportGlobalErrors(globalErrors);
-      setImportDrawerOpen(true);
-    } catch (error) {
-      setErrorMessage(
-        formatError(error, {
-          fallback:
-            "No se pudo procesar el Excel. Verificá que el archivo tenga el formato correcto.",
-        })
-      );
-    } finally {
-      setImportLoading(false);
-    }
-  };
-
-  const handleImportCompleted = (result: { imported: number; errors: string[] }) => {
-    setImportDrawerOpen(false);
-    setImportRows([]);
-    setImportGlobalErrors([]);
-
-    if (result.imported > 0) {
-      setSuccessMessage(
-        result.errors.length
-          ? `Se importaron ${result.imported} órdenes. Se omitieron ${result.errors.length} filas.`
-          : `Se importaron ${result.imported} órdenes correctamente.`
-      );
-      handleOrderCreated();
-    }
-    if (result.errors.length > 0) {
-      setErrorMessage(result.errors.slice(0, 5).join(" "));
-    }
-  };
-
   const handleFilterChange = (filters: Record<string, unknown>) => {
     setColumnsFilters(filters);
-    resetPage();
+    pagination.resetPage();
   };
 
   return (
     <div>
-      <AppFilterBar
+      <FilterBar
         filters={filters}
         actions={[
           {
-            label: "Importar",
-            icon: <Download className="h-4 w-4" />,
+            label: "Exportar Órdenes",
+            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            ,
             variant: "primary",
             isPrimary: true,
-            accept: EXCEL_ACCEPT,
-            onFileChange: handleImport,
-          },
-          {
-            label: "Exportar",
-            icon: <Upload className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
+            disabled: !projectId,
             onClick: () => handleExport(),
           },
           {
-            label: "Archivados",
-            icon: <Archive className="h-4 w-4" />,
+            label: "+ Nueva Orden",
             variant: "primary",
             isPrimary: true,
-            onClick: () => setArchivedDrawerOpen(true),
-          },
-          {
-            label: "Nuevo",
-            icon: <Plus className="h-4 w-4" />,
-            variant: "primary",
-            isPrimary: true,
+            disabled: !projectId,
             onClick: () => {
-              const warning = getGuardedWorkspaceActionWarning(
-                { projectId: effectiveProjectId },
-                ["project"],
-                "crear",
-                "una orden"
-              );
-              if (warning) {
-                setWarningMessage(warning);
-                return;
-              }
-              setWarningMessage("");
               setDrawerOpen(true);
               setOrderToDuplicate(null);
             },
           },
         ]}
       />
-      {effectiveHasWorkspaceSelection &&
-        !processing &&
-        !errorMetrics &&
-        displayedOrders.length > 0 && (
-          <div className="my-3">
-            <OrdersIndicators
-              metrics={displayedMetrics}
-              processing={processingMetrics}
-              ordersAmount={displayedOrdersCount}
-            />
+      {errorMessage && (
+        <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
+          <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
+          <div><span className="font-semibold">Error:</span> {errorMessage}</div>
+        </div>
+      )}
+      {!processing && !errorMetrics && orders.length > 0 && (
+        <div className="my-4">
+          <OrdersIndicators
+            metrics={displayedMetrics}
+            processing={processingMetrics}
+          />
+        </div>
+      )}
+      <div className="mt-4 relative">
+        {isProcessing && (
+          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
+            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
           </div>
         )}
-      <div className="mt-3 relative">
-        <LoadingOverlay show={isProcessing && displayedOrders.length > 0} />
         {selectedProject && (
           <CreateOrder
             drawerOpen={drawerOpen}
@@ -994,116 +1135,88 @@ export function WorkOrders() {
             onOrderDuplicated={handleOrderDuplicated}
           />
         )}
-        <ArchivedDrawer
-          open={archivedDrawerOpen}
-          title="Órdenes archivadas"
-          onClose={() => setArchivedDrawerOpen(false)}
-        >
-          <ArchivedWorkOrders onAfterRestore={handleOrderCreated} />
-        </ArchivedDrawer>
-        {effectiveProjectId ? (
-          <ImportWorkOrdersPreview
-            open={importDrawerOpen}
-            onClose={() => {
-              setImportDrawerOpen(false);
-              setImportRows([]);
-              setImportGlobalErrors([]);
-            }}
-            projectId={effectiveProjectId}
-            rows={importRows}
-            globalErrors={importGlobalErrors}
-            onCompleted={handleImportCompleted}
-          />
-        ) : null}
         {selectedSupplyFilter.id && (
-          <div className="mb-3">
-            <Notification variant="info">
-              <div className="flex items-center justify-between gap-3">
-                <span>
-                  Filtrando órdenes que consumen:{" "}
-                  <strong>
-                    {selectedSupplyFilter.name || `Insumo ${selectedSupplyFilter.id}`}
-                  </strong>
-                </span>
-                <button
-                  type="button"
-                  className="font-semibold text-blue-700 hover:text-blue-900 hover:underline"
-                  onClick={() => navigate("/admin/work-orders")}
-                >
-                  Quitar filtro
-                </button>
-              </div>
-            </Notification>
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
+            <span>
+              Filtrando órdenes que consumen: <strong>{selectedSupplyFilter.name || `Insumo ${selectedSupplyFilter.id}`}</strong>
+            </span>
+            <button
+              type="button"
+              className="font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+              onClick={() => navigate("/admin/work-orders")}
+            >
+              Quitar filtro
+            </button>
           </div>
         )}
-        {!effectiveHasWorkspaceSelection ? (
-          <EmptyState
-            icon={Briefcase}
-            title="Seleccioná filtros para ver órdenes de trabajo."
-            description="El listado no carga datos sin un workspace (cliente / proyecto / campaña / campo) seleccionado."
-          />
-        ) : isProcessing && displayedOrders.length === 0 ? (
-          <TableSkeleton rows={10} columns={visibleColumnsWithSelection.length} />
-        ) : (
-          <>
-            <BulkSelectionPanel
-              selectedCount={bulk.selectedCount}
-              totalCount={filteredOrders.length}
-              allSelected={bulk.allSelected}
-              onToggleAll={bulk.toggleAll}
-              onClear={bulk.clear}
-              actions={bulk.actions}
-              entity={WORKORDER_ENTITY}
+        <DataTable
+          key={`${projectId}-${selectedField?.id || 0}-${selectedSupplyFilter.id || 0}`}
+          data={hasColumnFilters ? filteredOrders : orders}
+          rowStyle="softZebra"
+          filters={columnsFilters}
+          onFilterChange={handleFilterChange}
+          columns={columnsToShow}
+          actionsHeader="Acciones"
+          renderActions={(item) => {
+            const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
+
+            if (isDigitalOrder(item) && !isDraftDigital) {
+              return null;
+            }
+
+            if (!isDraftDigital) {
+              return (
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => {
+                    handlePreFinish(item.id);
+                  }}
+                >
+                  Eliminar
+                </Button>
+              );
+            }
+
+            return (
+              <>
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => {
+                    handlePrePublish(item);
+                  }}
+                >
+                  Publicar
+                </Button>
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={() => {
+                    handlePreDeleteDraft(item);
+                  }}
+                >
+                  Eliminar
+                </Button>
+              </>
+            );
+          }}
+          enableFilters={true}
+          headerComponent={
+            <OrdersHeader
+              ordersAmount={Number(displayedMetrics.orders_count) || 0}
+              selectedColumns={selectedColumns}
+              setSelectedColumns={setSelectedColumns}
+              setVisibleColumns={setVisibleColumns}
+              allColumns={allColumns}
             />
-            <ResponsiveTable<OrdersData>
-              key={`${projectId}-${selectedField?.id || 0}-${selectedSupplyFilter.id || 0}`}
-              data={displayedOrders}
-              rowStyle="softZebra"
-              filters={columnsFilters}
-              onFilterChange={handleFilterChange}
-              columns={visibleColumnsWithSelection}
-              actionsHeader="Acciones"
-              rowKey={(o, i) => `${o.id ?? i}`}
-              emptyMessage="Todavía no hay órdenes de trabajo con los filtros actuales."
-              renderActions={(item: OrdersData) => {
-                const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
-
-                if (isDigitalOrder(item) && !isDraftDigital) {
-                  return null;
-                }
-
-                if (!isDraftDigital) {
-                  return null;
-                }
-
-                return (
-                  <Button
-                    variant="primary"
-                    size="xs"
-                    onClick={() => {
-                      handlePrePublish(item);
-                    }}
-                  >
-                    Publicar
-                  </Button>
-                );
-              }}
-              enableFilters={true}
-              headerComponent={
-                <OrdersHeader
-                  selectedColumns={selectedColumns}
-                  setSelectedColumns={setSelectedColumns}
-                  setVisibleColumns={setVisibleColumns}
-                  allColumns={allColumns}
-                />
-              }
-              message="Todavía no hay órdenes de trabajo con los filtros actuales."
-              pagination={pagination.buildPagination(displayedRowsTotal, {
-                serverSide: !hasColumnFilters,
-              })}
-            />
-          </>
-        )}
+          }
+          message="No hay ordenes disponibles"
+          pagination={pagination.buildPagination(
+            hasColumnFilters ? filteredOrders.length : pageInfo?.total ?? filteredOrders.length,
+            { serverSide: !hasColumnFilters }
+          )}
+        />
         <BaseModal
           isOpen={isModalOpen}
           isSaving={isProcessing}

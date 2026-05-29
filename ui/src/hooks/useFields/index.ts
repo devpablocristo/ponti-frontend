@@ -1,67 +1,65 @@
-import { useMemo } from "react";
+import React from "react";
 
+import * as actions from "./actions";
 import { apiClient } from "@/api/client";
+import { Payload } from "./types";
 import { SuccessResponse } from "@/api/types";
-import { Data as Field, FieldPayloadInput, Payload } from "./types";
-import {
-  CrudService,
-  useEntityCrud,
-} from "../useEntityCrud";
-
-const buildQuery = (queryString?: string) =>
-  queryString && queryString !== "" ? `?${queryString}` : "";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import useFieldsReducer from "./useFieldsReducer";
 
 const useFields = () => {
-  const service = useMemo<
-    CrudService<Field, FieldPayloadInput, FieldPayloadInput>
-  >(
-    () => ({
-      list: async (query) => {
-        const response = await apiClient.get<SuccessResponse<Payload>>(
-          "/fields" + buildQuery(query),
-        );
-        return { data: response.data.data, total: response.data.total };
-      },
-      listArchived: async (query) => {
-        const response = await apiClient.get<SuccessResponse<Payload>>(
-          "/fields/archived" + buildQuery(query),
-        );
-        return { data: response.data.data, total: response.data.total };
-      },
-      archive: async (id) => {
-        await apiClient.post<SuccessResponse<string>>(
-          `/fields/${id}/archive`,
-          {},
-        );
-      },
-      restore: async (id) => {
-        await apiClient.post<SuccessResponse<string>>(
-          `/fields/${id}/restore`,
-          {},
-        );
-      },
-      hardDelete: async (id) => {
-        await apiClient.delete<SuccessResponse<string>>(`/fields/${id}/hard`);
-      },
-    }),
-    [],
-  );
+  const [{ total, fields, processing, error }, dispatch] = useFieldsReducer();
 
-  const crud = useEntityCrud<Field, FieldPayloadInput, FieldPayloadInput>(
-    service,
+  const getFields = React.useCallback(
+    async (queryString: string): Promise<void> => {
+      dispatch({ type: actions.SET_ERROR, payload: "" });
+      dispatch({ type: actions.START_PROCESSING });
+
+      let queryParams = "";
+      if (queryString !== "") {
+        queryParams = `?${queryString}`;
+      }
+
+      try {
+        const response = await apiClient.get<SuccessResponse<Payload>>(
+          "/fields" + queryParams
+        );
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_FIELDS,
+            payload: response.data.data,
+          });
+
+          dispatch({
+            type: actions.SET_TOTAL,
+            payload: response.data.total,
+          });
+          return;
+        }
+
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: "Ocurrio un error en la busqueda de campos",
+        });
+      } catch (error) {
+        dispatch({
+          type: actions.SET_ERROR,
+          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
+        });
+      } finally {
+        dispatch({ type: actions.STOP_PROCESSING });
+      }
+    },
+    [dispatch]
   );
 
   return {
-    fields: crud.data,
-    archivedFields: crud.archivedData,
-    total: crud.total,
-    processing: crud.processing,
-    error: crud.error,
-    getFields: crud.list,
-    getArchivedFields: crud.listArchived,
-    archiveField: crud.archive,
-    restoreField: crud.restore,
-    hardDeleteField: crud.hardDelete,
+    getFields,
+    total,
+    fields,
+    processing,
+    error,
   };
 };
 

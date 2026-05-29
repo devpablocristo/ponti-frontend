@@ -1,6 +1,5 @@
 import { DashboardData } from "../../../hooks/useDashboard/types";
 import { formatNumberAr } from "../utils";
-import { ScrollableTable } from "../../../components/crud/ScrollableTable";
 
 interface ManagementBalanceTableProps {
   dashboard: DashboardData | null;
@@ -9,11 +8,11 @@ interface ManagementBalanceTableProps {
 export default function ManagementBalanceTable({ dashboard }: ManagementBalanceTableProps) {
   if (!dashboard || !dashboard.management_balance) {
     return (
-      <div className="bg-white dark:bg-slate-800 rounded-xl border p-4 w-full">
+      <div className="bg-white rounded-xl border p-4 w-full">
         <h3 className="font-medium text-[#020617] font-sans mb-4 text-xl">
           Balance de Gestión
         </h3>
-        <div className="p-4 text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-slate-900">
+        <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
           No hay datos disponibles
         </div>
       </div>
@@ -44,15 +43,10 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
     "h-[45px] w-full text-center flex items-center justify-center";
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl border p-4 w-full">
+    <div className="bg-white rounded-xl border p-4 w-full">
       <h3 className="font-medium text-[#020617] font-sans mb-4 text-xl">
         Balance de Gestión
       </h3>
-
-      {/* Scroll horizontal en mobile: 4 cols + chips de tamaño fijo no entran
-          en viewport <580px. El min-w mantiene legibilidad. */}
-      <ScrollableTable>
-        <div className="min-w-[560px]">
 
       <div
         className="grid gap-x-3 text-sm font-semibold mb-1 items-center"
@@ -81,7 +75,7 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
         .map((item, idx) => (
           <div
             key={idx}
-            className="grid gap-x-3 text-sm text-gray-800 dark:text-gray-200 min-h-[45px] border-b border-[#F3F4F6] items-center"
+            className="grid gap-x-3 text-sm text-gray-800 min-h-[45px] border-b border-[#F3F4F6] items-center"
             style={{ gridTemplateColumns: tableGridColumns }}
           >
             <div className="flex items-center min-w-0 pr-2">{item.label}</div>
@@ -98,7 +92,7 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
         ))}
 
       <div
-        className="grid gap-x-3 text-sm bg-gray-100 dark:bg-slate-800 font-semibold text-gray-900 dark:text-gray-100 min-h-[45px] rounded-lg mb-0.5 mt-2 items-center"
+        className="grid gap-x-3 text-sm bg-gray-100 font-semibold text-gray-900 min-h-[45px] rounded-lg mb-0.5 mt-2 items-center"
         style={{ gridTemplateColumns: tableGridColumns }}
       >
         <div className="flex items-center min-w-0 px-2">Costos directos</div>
@@ -124,7 +118,7 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
         .map((item, idx) => (
           <div
             key={idx}
-            className="grid gap-x-3 text-sm bg-gray-100 dark:bg-slate-800 font-semibold text-gray-900 dark:text-gray-100 min-h-[45px] rounded-lg mb-0.5 items-center"
+            className="grid gap-x-3 text-sm bg-gray-100 font-semibold text-gray-900 min-h-[45px] rounded-lg mb-0.5 items-center"
             style={{ gridTemplateColumns: tableGridColumns }}
           >
             <div className="flex items-center min-w-0 px-2">{item.label}</div>
@@ -141,7 +135,7 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
         ))}
 
       {/* Totals Row */}
-      {/*<div className="grid grid-cols-4 text-sm py-2 px-2 bg-gray-200 font-bold text-gray-900 dark:text-gray-100 border-t-2 border-gray-300 dark:border-gray-600 h-[45px]">*/}
+      {/*<div className="grid grid-cols-4 text-sm py-2 px-2 bg-gray-200 font-bold text-gray-900 border-t-2 border-gray-300 h-[45px]">*/}
       {/*  <div>Total</div>*/}
       {/*  <div className="text-red-500 text-center">*/}
       {/*    {formatCurrency(totals.executed_usd)}*/}
@@ -153,8 +147,6 @@ export default function ManagementBalanceTable({ dashboard }: ManagementBalanceT
       {/*    {formatCurrency(totals.stock_usd)}*/}
       {/*  </div>*/}
       {/*</div>*/}
-        </div>
-      </ScrollableTable>
     </div>
   );
 }

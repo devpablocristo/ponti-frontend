@@ -1,16 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-
+import { useEffect, useRef, useState } from "react";
+import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
+import SelectField from "../../../components/Input/SelectField";
 import useSupplies from "../../../hooks/useSupplies";
-import useStock from "../../../hooks/useStock";
+import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import useStockMovement from "../../../hooks/useStockMovement";
-import { notify } from "@/lib/notify";
-import { DrawerShell } from "../../../components/Drawer/DrawerShell";
-import { EntityFormDrawer } from "../../../components/crud/EntityFormDrawer";
-import SupplyItemsTable from "../../../components/crud/SupplyItemsTable";
-import CreateSupplyInline from "../../../components/crud/CreateSupplyInline";
-import { getUnitName } from "../../../constants/units";
+import Drawer from "../../../components/Drawer/Drawer";
 
 const emptyItems = [
   { item: "", quantity: "" },
@@ -32,39 +28,33 @@ export default function CreateStockItem({
   projectId: number;
   onStockCreated: () => void;
 }) {
-  const { resultCreation, errorCreation, processingCreation, saveStockMovement } =
-    useStockMovement();
+  const {
+    resultCreation,
+    errorCreation,
+    processingCreation,
+    saveStockMovement,
+  } = useStockMovement();
   const { getProject, selectedProject, processing } = useProjects();
-  const { getSupplies, supplies } = useSupplies();
-  const { getStock, stock } = useStock();
 
   const [error, setError] = useState<string | null>(null);
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Estado → toast.
-  useEffect(() => {
-    if (error) notify.error(error);
-  }, [error]);
-  useEffect(() => {
-    if (errorMessages.length > 0) notify.error(errorMessages.join("\n"));
-  }, [errorMessages]);
-  useEffect(() => {
-    if (successMessage) notify.success(successMessage);
-  }, [successMessage]);
+  const { getSupplies, supplies } = useSupplies();
 
   const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState("");
-  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(null);
-  const [investors, setInvestors] = useState<{ id: number; name: string }[]>([]);
+  const [investor, setInvestor] = useState<{ id: number; name: string } | null>(
+    null
+  );
+  const [investors, setInvestors] = useState<{ id: number; name: string }[]>(
+    []
+  );
   const latestOnStockCreatedRef = useRef(onStockCreated);
 
-  const [items, setItems] = useState<{ item: string; quantity: string }[]>(emptyItems);
-  const [itemErrors, setItemErrors] = useState<Record<number, string>>({});
-
-  const [openCreateSupply, setOpenCreateSupply] = useState(false);
-  const [itemIndexToUpdate, setItemIndexToUpdate] = useState<number | null>(null);
-  const [pendingCreatedSupplyName, setPendingCreatedSupplyName] = useState<string | null>(null);
+  const [items, setItems] = useState<
+    { item: string; quantity: string }[]
+  >(emptyItems);
 
   const clearForm = () => {
     setError(null);
@@ -73,7 +63,6 @@ export default function CreateStockItem({
     setItems(emptyItems);
     setOrderNumber("");
     setDate("");
-    setItemErrors({});
   };
 
   useEffect(() => {
@@ -95,16 +84,12 @@ export default function CreateStockItem({
 
   useEffect(() => {
     const handleCreatedMovement = async () => {
-      const createdMovements = Array.isArray(resultCreation.supply_movements)
-        ? resultCreation.supply_movements
-        : [];
-
-      if (createdMovements.length === 0) {
+      if (resultCreation.supply_movements.length === 0) {
         return;
       }
 
       const errors: string[] = [];
-      createdMovements.forEach((movement) => {
+      resultCreation.supply_movements.forEach((movement) => {
         if (movement.error_detail !== "") {
           errors.push(movement.error_detail.replace("VALIDATION_ERROR: ", ""));
         }
@@ -117,8 +102,8 @@ export default function CreateStockItem({
       }
 
       setSuccessMessage("Movimiento guardado correctamente");
-      latestOnStockCreatedRef.current();
-      clearForm();
+latestOnStockCreatedRef.current();
+clearForm();
     };
 
     void handleCreatedMovement();
@@ -128,17 +113,13 @@ export default function CreateStockItem({
     if (projectId) {
       getSupplies(projectId);
       getProject(projectId);
-      getStock(projectId, "");
     }
-  }, [projectId, getProject, getSupplies, getStock]);
+  }, [projectId, getProject, getSupplies]);
 
   useEffect(() => {
     if (!selectedProject) return;
-    const projectInvestors = Array.isArray(selectedProject.investors)
-      ? selectedProject.investors
-      : [];
     setInvestors(
-      projectInvestors
+      selectedProject.investors
         .filter((i) => i.id !== null)
         .map((i) => ({ id: i.id!, name: i.name }))
     );
@@ -150,39 +131,10 @@ export default function CreateStockItem({
     }
   }, [investor, investors]);
 
-  useEffect(() => {
-    if (!pendingCreatedSupplyName || itemIndexToUpdate === null) return;
-    const createdSupply = (Array.isArray(supplies) ? supplies : []).find(
-      (s) => s.name.trim().toUpperCase() === pendingCreatedSupplyName
-    );
-    if (!createdSupply) return;
-    handleItemChange(itemIndexToUpdate, "item", String(createdSupply.id));
-    setPendingCreatedSupplyName(null);
-    setItemIndexToUpdate(null);
-  }, [supplies, pendingCreatedSupplyName, itemIndexToUpdate]);
-
-  const availableSupplies = useMemo(() => {
-    const stockBySupply = new Map<string, number>();
-    for (const s of stock || []) {
-      const current = stockBySupply.get(s.supply_name) || 0;
-      stockBySupply.set(s.supply_name, current + Number(s.stock_units));
-    }
-    return (Array.isArray(supplies) ? supplies : []).map((s) => ({
-      id: s.id,
-      name: s.name,
-      availableQty: Number(stockBySupply.get(s.name) || 0),
-      unitName: getUnitName(s.unit_id),
-    }));
-  }, [supplies, stock]);
-
   const handleItemChange = (i: number, field: string, value: string) => {
-    setItemErrors((prev) => {
-      if (!(i in prev)) return prev;
-      const clone = { ...prev };
-      delete clone[i];
-      return clone;
-    });
-    setItems((prev) => prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item)));
+    setItems((prev) =>
+      prev.map((item, idx) => (idx === i ? { ...item, [field]: value } : item))
+    );
   };
 
   const handlePreSave = () => {
@@ -197,19 +149,21 @@ export default function CreateStockItem({
       errors.push("Debe seleccionar una fecha.");
     }
 
-    const itemsWithAnyValue = items.filter((item) => item.item || item.quantity);
+    const itemsWithAnyValue = items.filter(
+      (item) => item.item || item.quantity
+    );
 
     if (itemsWithAnyValue.length === 0) {
       errors.push("Debe cargar al menos un insumo");
-      setErrorMessages(errors);
       return;
     }
 
-    const hasPartial = itemsWithAnyValue.some((item) => !item.item || !item.quantity);
+    const hasPartial = itemsWithAnyValue.some(
+      (item) => !item.item || !item.quantity
+    );
 
     if (hasPartial) {
       errors.push("No se completaron todos los campos de los items cargados");
-      setErrorMessages(errors);
       return;
     }
 
@@ -247,126 +201,275 @@ export default function CreateStockItem({
   };
 
   return (
-    <>
-      <EntityFormDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title="Ingreso de Stock"
-        processing={processing || processingCreation}
-        onSubmit={handlePreSave}
-      >
-        <div className="grid grid-cols-3 gap-4">
-          <InputField
-            label="Tipo de ingreso"
-            name="movementType"
-            type="text"
-            value="Stock actual"
-            onChange={() => {}}
-            disabled
-            size="sm"
-          />
-          <InputField
-            label="Fecha"
-            name="date"
-            type="date"
-            value={date || ""}
-            onChange={(e) => {
-              const inputValue = e.target.value;
-              if (inputValue) {
-                const dateParts = inputValue.split("-");
-                if (dateParts[0] && dateParts[0].length > 4) {
-                  dateParts[0] = dateParts[0].slice(0, 4);
-                  setDate(dateParts.join("-"));
-                } else {
-                  setDate(inputValue);
-                }
-              } else {
-                setDate("");
-              }
-            }}
-            size="sm"
-          />
-          <InputField
-            label="Numero / Nombre"
-            placeholder="Numero / Nombre"
-            name="nroName"
-            type="text"
-            value={orderNumber || ""}
-            onChange={(e) => setOrderNumber(e.target.value)}
-            size="sm"
-          />
-        </div>
+    <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+      <div className="flex flex-col h-full">
+        <h2 className="text-lg font-semibold mb-2">Ingreso de Stock</h2>
+        {processing || processingCreation ? (
+          <div className="absolute inset-0 bg-white bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-10">
+            <LoaderCircle className="w-10 h-10 text-blue-600 animate-spin" />
+          </div>
+        ) : (
+          <>
+            <form className="space-y-4 flex-1">
+              <div className="grid grid-cols-3 gap-4">
+                <InputField
+                  label="Tipo de ingreso"
+                  name="movementType"
+                  type="text"
+                  value="Stock actual"
+                  onChange={() => {}}
+                  disabled
+                  size="sm"
+                />
+                <InputField
+                  label="Fecha"
+                  name="date"
+                  type="date"
+                  value={date || ""}
+                  onChange={(e) => {
+                    const inputValue = e.target.value;
+                    if (inputValue) {
+                      const dateParts = inputValue.split("-");
+                      if (dateParts[0] && dateParts[0].length > 4) {
+                        dateParts[0] = dateParts[0].slice(0, 4);
+                        setDate(dateParts.join("-"));
+                      } else {
+                        setDate(inputValue);
+                      }
+                    } else {
+                      setDate("");
+                    }
+                  }}
+                  size="sm"
+                />
+                <InputField
+                  label="Numero / Nombre"
+                  placeholder="Numero / Nombre"
+                  name="nroName"
+                  type="text"
+                  value={orderNumber || ""}
+                  onChange={(e) => setOrderNumber(e.target.value)}
+                  size="sm"
+                />
+              </div>
 
-        <div className="grid grid-cols-3 gap-4">
-          <InputField
-            label="Proyecto"
-            name="project"
-            type="text"
-            value={selectedProject?.name || ""}
-            onChange={() => {}}
-            disabled
-            size="sm"
-          />
-        </div>
+              <div className="grid grid-cols-3 gap-4">
+                <InputField
+                  label="Proyecto"
+                  name="project"
+                  type="text"
+                  value={selectedProject?.name || ""}
+                  onChange={() => {}}
+                  disabled
+                  size="sm"
+                />
+              </div>
+              <div>
+                <div className="hidden sm:grid grid-cols-[1.5fr_1fr_1.5fr] gap-4 mb-2">
+                  <span className="font-sm text-gray-900">Insumo</span>
+                  <span className="font-sm text-gray-900">Cantidad</span>
+                  <div></div>
+                </div>
 
-        <SupplyItemsTable
-          items={items.map(({ item, quantity }) => ({
-            supplyId: item ? Number(item) : null,
-            quantity,
-          }))}
-          options={availableSupplies}
-          itemErrors={itemErrors}
-          onItemChange={(rowIndex, field, value) => {
-            if (field === "supplyId") {
-              handleItemChange(
-                rowIndex,
-                "item",
-                value === null ? "" : String(value),
-              );
-            } else if (field === "quantity") {
-              handleItemChange(rowIndex, "quantity", String(value));
-            }
-          }}
-          onAddRow={() => setItems([...items, { item: "", quantity: "" }])}
-          onRemoveRow={(rowIndex) => {
-            const newItems = [...items];
-            newItems.splice(rowIndex, 1);
-            setItems(newItems);
-          }}
-          onRequestCreateSupply={(rowIndex) => {
-            setItemIndexToUpdate(rowIndex);
-            setOpenCreateSupply(true);
-          }}
-        />
-
-      </EntityFormDrawer>
-
-      <DrawerShell
-        open={openCreateSupply}
-        onClose={() => {
-          setOpenCreateSupply(false);
-          setItemIndexToUpdate(null);
-          setPendingCreatedSupplyName(null);
-        }}
-        title="Crear Nuevo Insumo"
-      >
-        <CreateSupplyInline
-          projectId={projectId}
-          onCreated={async (createdName) => {
-            setPendingCreatedSupplyName(createdName);
-            setOpenCreateSupply(false);
-            if (projectId) {
-              await getSupplies(projectId);
-              await getStock(projectId, "");
-            }
-          }}
-          onCancel={() => {
-            setOpenCreateSupply(false);
-            setItemIndexToUpdate(null);
-            setPendingCreatedSupplyName(null);
-          }}
-        />
-      </DrawerShell>
-    </>
+                <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr] gap-4">
+                  {items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
+                    >
+                      <div className="sm:col-span-1">
+                        <SelectField
+                          label=""
+                          name={`item-${i}`}
+                          options={supplies}
+                          value={item.item}
+                          onChange={(e) =>
+                            handleItemChange(i, "item", e.target.value)
+                          }
+                          size="sm"
+                        />
+                      </div>
+                      <div className="sm:col-span-1">
+                        <InputField
+                          label=""
+                          placeholder="Lt/Kg/Bolsas"
+                          name={`quantity${i}`}
+                          type="text"
+                          value={item.quantity}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/,/g, ".");
+                            if (/^\d*\.?\d{0,3}$/.test(value)) {
+                              handleItemChange(i, "quantity", value);
+                            }
+                          }}
+                          size="sm"
+                        />
+                      </div>
+                      <div>
+                        <Button
+                          variant="primary"
+                          size="xs"
+                          onClick={() => {
+                            const newItems = [...items];
+                            newItems.splice(i, 1);
+                            setItems(newItems);
+                          }}
+                          className="text-blue-500 hover:underline max-w-fit"
+                        >
+                          <Trash size={12} />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setItems([...items, { item: "", quantity: "" }]);
+                    }}
+                    className="max-w-fit"
+                  >
+                    Agregar insumo +
+                  </Button>
+                </div>
+              </div>
+              {errorMessages.length > 0 && (
+                <div
+                  id="alert-2"
+                  className="flex items-center p-4 mb-4 text-red-800 rounded-lg bg-red-50"
+                  role="alert"
+                >
+                  <div>
+                    <ul className="mt-1.5 list-disc list-inside">
+                      {errorMessages.map((msg, index) => (
+                        <li key={index}>{msg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button
+                    type="button"
+                    className="ms-auto -mx-1.5 -my-1.5 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
+                    data-dismiss-target="#alert-2"
+                    aria-label="Close"
+                    onClick={() => setErrorMessages([])}
+                  >
+                    <span className="sr-only">Close</span>
+                    <svg
+                      className="w-3 h-3"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 14 14"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              {error && error !== "" && (
+                <div
+                  className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+                  role="alert"
+                >
+                  <span className="font-medium">Error!</span> {error}
+                  <button
+                    type="button"
+                    className="ms-auto -mx-1 -my-1 bg-red-50 text-red-500 rounded-lg focus:ring-2 focus:ring-red-400 p-1.5 hover:bg-red-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-gray-700"
+                    aria-label="Close"
+                    onClick={() => setError("")}
+                  >
+                    <span className="sr-only">Close</span>
+                    <svg
+                      className="w-2 h-2"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 14 14"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              {successMessage && successMessage !== "" && (
+                <div
+                  className="flex items-center p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400"
+                  role="alert"
+                >
+                  <svg
+                    className="shrink-0 inline w-4 h-4 me-3"
+                    aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z" />
+                  </svg>
+                  <span className="sr-only">Info</span>
+                  <div>
+                    <span className="font-medium">{successMessage}</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="ms-auto -mx-1.5 -my-1.5 bg-green-50 text-green-500 rounded-lg focus:ring-2 focus:ring-green-400 p-1.5 hover:bg-green-200 inline-flex items-center justify-center h-8 w-8 dark:bg-gray-800 dark:text-green-400 dark:hover:bg-gray-700"
+                    data-dismiss-target="#alert-3"
+                    aria-label="Close"
+                    onClick={() => setSuccessMessage("")}
+                  >
+                    <span className="sr-only">Close</span>
+                    <svg
+                      className="w-3 h-3"
+                      aria-hidden="true"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 14 14"
+                    >
+                      <path
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </form>
+            <div className="flex justify-end gap-2 mt-auto pt-6 pb-2 bg-white">
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  className="text-base font-medium"
+                  onClick={() => setDrawerOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="primary"
+                  className="text-base font-medium"
+                  onClick={handlePreSave}
+                  disabled={processing || processingCreation}
+                >
+                  Guardar
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </Drawer>
   );
 }

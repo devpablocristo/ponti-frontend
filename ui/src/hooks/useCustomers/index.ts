@@ -2,21 +2,16 @@ import React, { useRef } from "react";
 
 import * as actions from "./actions";
 
-import customersReducer from "./customersReducer";
+import useCustomersReducer from "./useCustomersReducer";
 import { apiClient } from "@/api/client";
-import { CustomerData, CustomerPayload, CustomerPayloadInput } from "./types";
+import { CustomerPayload } from "./types";
 import { SuccessResponse } from "@/api/types";
-import { formatError } from "@/lib/format";
-import { canonicalizeName } from "@/lib/properName";
-
-function sanitizeInput(input: CustomerPayloadInput): CustomerPayloadInput {
-  return { ...input, name: canonicalizeName(input.name) };
-}
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
 const useCustomers = () => {
   const [{ total, customers, processing, error }, dispatch] =
-    customersReducer();
-  const lastQueryRef = useRef<string>("per_page=1000");
+    useCustomersReducer();
+  const lastQueryRef = useRef<string>("limit=1000");
 
   const getCustomers = React.useCallback(
     async (queryString: string): Promise<void> => {
@@ -49,12 +44,12 @@ const useCustomers = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "No se pudieron cargar los clientes.",
+          payload: "Ocurrio un error en la busqueda de clientes",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: formatError(error, { fallback: "No se pudieron cargar los clientes." }),
+          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
@@ -93,12 +88,12 @@ const useCustomers = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "No se pudieron cargar los clientes archivados.",
+          payload: "Ocurrió un error en la búsqueda de clientes archivados.",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: formatError(error, { fallback: "No se pudieron cargar los clientes archivados." }),
+          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });
@@ -107,90 +102,30 @@ const useCustomers = () => {
     [dispatch]
   );
 
-  const createCustomer = React.useCallback(
-    async (input: CustomerPayloadInput): Promise<CustomerData | null> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      try {
-        const response = await apiClient.post<SuccessResponse<CustomerData>>(
-          "/customers",
-          sanitizeInput(input),
-        );
-
-        if (response.success) {
-          await getCustomers(lastQueryRef.current || "per_page=1000");
-          return response.data ?? null;
-        }
-
-        const message = "No se pudo crear el cliente.";
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      } catch (error) {
-        const message = formatError(error, { fallback: "No se pudo crear el cliente." });
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch, getCustomers],
-  );
-
-  const updateCustomer = React.useCallback(
-    async (id: number, input: CustomerPayloadInput): Promise<void> => {
-      dispatch({ type: actions.SET_ERROR, payload: "" });
-      dispatch({ type: actions.START_PROCESSING });
-
-      try {
-        const response = await apiClient.put<SuccessResponse<string>>(
-          "/customers/" + id,
-          sanitizeInput(input),
-        );
-
-        if (response.success) {
-          await getCustomers(lastQueryRef.current || "per_page=1000");
-          return;
-        }
-
-        const message = "No se pudo actualizar el cliente.";
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      } catch (error) {
-        const message = formatError(error, { fallback: "No se pudo actualizar el cliente." });
-        dispatch({ type: actions.SET_ERROR, payload: message });
-        throw new Error(message);
-      } finally {
-        dispatch({ type: actions.STOP_PROCESSING });
-      }
-    },
-    [dispatch, getCustomers],
-  );
-
   const archiveCustomer = React.useCallback(
     async (id: number): Promise<void> => {
       dispatch({ type: actions.SET_ERROR, payload: "" });
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await apiClient.post<SuccessResponse<string>>(
+        const response = await apiClient.put<SuccessResponse<string>>(
           "/customers/" + id + "/archive",
           {}
         );
 
         if (response.success) {
-          await getCustomers(lastQueryRef.current || "per_page=1000");
+          await getCustomers(lastQueryRef.current || "limit=1000");
           return;
         }
 
-        const message = "No se pudo archivar el cliente.";
+        const message = "Ocurrió un error al intentar archivar el cliente.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = formatError(error, { fallback: "No se pudo archivar el cliente." });
+        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
@@ -209,24 +144,24 @@ const useCustomers = () => {
       dispatch({ type: actions.START_PROCESSING });
 
       try {
-        const response = await apiClient.post<SuccessResponse<string>>(
+        const response = await apiClient.put<SuccessResponse<string>>(
           "/customers/" + id + "/restore",
           {}
         );
 
         if (response.success) {
-          await getCustomers(lastQueryRef.current || "per_page=1000");
+          await getCustomers(lastQueryRef.current || "limit=1000");
           return;
         }
 
-        const message = "No se pudo restaurar el cliente.";
+        const message = "Ocurrió un error al intentar restaurar el cliente.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = formatError(error, { fallback: "No se pudo restaurar el cliente." });
+        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
@@ -250,18 +185,18 @@ const useCustomers = () => {
         );
 
         if (response.success) {
-          await getArchivedCustomers("per_page=1000");
+          await getArchivedCustomers("limit=1000");
           return;
         }
 
-        const message = "No se pudo eliminar el cliente.";
+        const message = "Ocurrió un error al intentar eliminar el cliente.";
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
         });
         throw new Error(message);
       } catch (error) {
-        const message = formatError(error, { fallback: "No se pudo eliminar el cliente." });
+        const message = extractErrorMessage(error, "Error en el servicio, inténtalo más tarde.");
         dispatch({
           type: actions.SET_ERROR,
           payload: message,
@@ -277,8 +212,6 @@ const useCustomers = () => {
   return {
     getCustomers,
     getArchivedCustomers,
-    createCustomer,
-    updateCustomer,
     archiveCustomer,
     restoreCustomer,
     hardDeleteCustomer,

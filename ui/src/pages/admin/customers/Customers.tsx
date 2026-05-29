@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Archive, LoaderCircle, Plus } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import { ProjectData } from "../../../hooks/useDatabase/projects/types";
-import { AppFilterBar as FilterBar } from "../../../components/filters/AppFilterBar";
+import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useNavigate } from "react-router-dom";
 import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import useProjects from "../../../hooks/useDatabase/projects";
@@ -250,36 +250,33 @@ export function Customers() {
         filters={filters}
         actions={[
           {
-            label: "Archivar",
+            label: "+ Nuevo Cliente",
             variant: "primary",
-            icon: <Archive className="h-4 w-4" />,
+            isPrimary: true,
+            href: "/admin/database/customers",
+          },
+          {
+            label: "Archivar Cliente",
+            variant: "primary",
             onClick: handlePreArchiveCustomer,
             disabled:
               !selectedCustomer || selectedCustomer.id === 0 || isProcessing,
           },
-          {
-            label: "Nuevo",
-            variant: "primary",
-            isPrimary: true,
-            icon: <Plus className="h-4 w-4" />,
-            href: "/admin/database/customers",
-          },
         ]}
-      />
-
-      <div className="my-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      >
         <IndicatorCard
           title="Superficie total de hectáreas"
           value={`${totalHectares} Has`}
           color="amber"
+          className="w-[220px] max-w-[220px] flex-none"
         />
-      </div>
+      </FilterBar>
 
       {errors.customers ||
         errors.projects ||
         (errors.campaigns && (
           <div
-            className="p-3 mb-2 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+            className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
             role="alert"
           >
             <span className="font-medium">Error!</span> {errors.customers}{" "}
@@ -287,7 +284,7 @@ export function Customers() {
           </div>
         ))}
 
-      <div className="mt-3 relative">
+      <div className="mt-2 relative">
         {processing ||
           loading.campaigns ||
           loading.customers ||
@@ -311,7 +308,7 @@ export function Customers() {
         />
         {error && (
           <div
-            className="p-3 mb-2 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
+            className="p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 dark:bg-gray-800 dark:text-red-400"
             role="alert"
           >
             <span className="font-medium">Error!</span> {error}

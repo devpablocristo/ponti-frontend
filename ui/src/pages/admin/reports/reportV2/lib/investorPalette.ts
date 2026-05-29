@@ -7,7 +7,7 @@ const PALETTE = [
   "#7DD3C0",
 ];
 
-function investorColor(index: number): string {
+export function investorColor(index: number): string {
   return PALETTE[index % PALETTE.length];
 }
 

@@ -15,14 +15,17 @@ Incluye dos piezas:
 
 Dependencias compartidas relevantes:
 
-- `@devpablocristo/platform-authn`
-- `@devpablocristo/platform-browser`
-- `@devpablocristo/platform-http`
-- `@devpablocristo/platform-ui-data-display`
+- `@devpablocristo/core-authn`
+- `@devpablocristo/core-browser`
+- `@devpablocristo/core-http`
+- `@devpablocristo/modules-ai-console`
+- `@devpablocristo/modules-ui-data-display`
+- `@devpablocristo/modules-ui-filters`
+- `@devpablocristo/modules-ui-forms`
 
-La UI mantiene el shape legacy `ponti-ai.*` para compatibilidad del BFF, aunque el backend Go ya traduce esas llamadas hacia Axis Companion:
+La UI consume contratos AI tipados desde OpenAPI generado:
 
-- schema legacy: `ui/src/generated/ponti-ai.openapi.json`
+- schema: `ui/src/generated/ponti-ai.openapi.json`
 - tipos generados: `ui/src/generated/ponti-ai.openapi.ts`
 - alias tipados para la app: `ui/src/types/ai.ts`
 

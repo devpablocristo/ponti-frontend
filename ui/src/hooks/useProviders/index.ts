@@ -5,12 +5,12 @@ import * as actions from "./actions";
 import { apiClient } from "@/api/client";
 import { Payload } from "./types";
 import { SuccessResponse } from "@/api/types";
-import { formatError } from "@/lib/format";
-import providersReducer from "./providersReducer";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import useProvidersReducer from "./useProvidersReducer";
 
 const useProviders = () => {
   const [{ total, providers, processing, error }, dispatch] =
-    providersReducer();
+    useProvidersReducer();
 
   const getProviders = React.useCallback(
     async (queryString: string): Promise<void> => {
@@ -42,12 +42,12 @@ const useProviders = () => {
 
         dispatch({
           type: actions.SET_ERROR,
-          payload: "No se pudieron cargar los proveedores.",
+          payload: "Ocurrio un error en la busqueda de proveedores",
         });
       } catch (error) {
         dispatch({
           type: actions.SET_ERROR,
-          payload: formatError(error, { fallback: "No se pudieron cargar los proveedores." }),
+          payload: extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."),
         });
       } finally {
         dispatch({ type: actions.STOP_PROCESSING });

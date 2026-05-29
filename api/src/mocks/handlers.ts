@@ -1,9 +1,33 @@
 import { http, HttpResponse } from "msw";
+import jwt from "jsonwebtoken";
 import { configService } from "../configService";
 
 // Helper para loguear y confirmar que el mock responde
 const logRequest = (method: string, url: string) => {
   console.log(`[MOCK] ✅ ${method} ${url} -> Respondiendo Objeto { data: ... }`);
+};
+
+interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+const ACCESS_TOKEN_EXPIRATION = 24 * 60 * 60; // 24 horas para desarrollo
+const REFRESH_TOKEN_EXPIRATION = 6 * 30 * 24 * 60 * 60;
+
+const MOCK_USER = {
+  id: 1,
+  rolId: 1,
+  username: "testuser",
+  password: "123456",
+  email: "testuser@example.com",
+  tokenHash: "randomhash123",
+};
+
+const generateToken = (claims: object): string => {
+  const secretKey = process.env.JWT_SECRET;
+  if (!secretKey) return "";
+  return jwt.sign(claims, secretKey, { algorithm: "HS256" });
 };
 
 // Mock data for workorders

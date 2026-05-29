@@ -1,6 +1,6 @@
 import { PageInfo } from "@/api/types";
 
-type DecimalString = string | null;
+export type DecimalString = string | null;
 
 export type LotsData = {
   id: number;

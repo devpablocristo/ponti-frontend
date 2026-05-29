@@ -6,51 +6,51 @@
 :root {
   /* Primary palette (steel blue) */
   --color-primary: #547792;
-  --color-primary-dark: #3d5a6e;
-  --color-primary-darker: #2b4a5f;
-  --color-primary-light: #7ba3bd;
-  --color-primary-50: #eef4f8;
-  --color-primary-100: #d6e4ed;
+  --color-primary-dark: #3D5A6E;
+  --color-primary-darker: #2B4A5F;
+  --color-primary-light: #7BA3BD;
+  --color-primary-50: #EEF4F8;
+  --color-primary-100: #D6E4ED;
 
   /* Accent (green) */
-  --color-accent: #0e9f6e;
-  --color-accent-dark: #0a7a54;
-  --color-accent-light: #34d399;
+  --color-accent: #0E9F6E;
+  --color-accent-dark: #0A7A54;
+  --color-accent-light: #34D399;
 
   /* Surfaces */
-  --color-bg: #f1f5f9;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f8fafc;
-  --color-surface-raised: #ffffff;
+  --color-bg: #F1F5F9;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8FAFC;
+  --color-surface-raised: #FFFFFF;
 
   /* Sidebar */
-  --color-sidebar: #0f172a;
-  --color-sidebar-hover: #1e293b;
+  --color-sidebar: #0F172A;
+  --color-sidebar-hover: #1E293B;
   --color-sidebar-active: #334155;
-  --color-sidebar-text: #94a3b8;
-  --color-sidebar-text-active: #f1f5f9;
-  --color-sidebar-border: #1e293b;
+  --color-sidebar-text: #94A3B8;
+  --color-sidebar-text-active: #F1F5F9;
+  --color-sidebar-border: #1E293B;
 
   /* Text */
-  --color-text: #0f172a;
-  --color-text-secondary: #64748b;
-  --color-text-muted: #94a3b8;
-  --color-text-inverse: #f8fafc;
+  --color-text: #0F172A;
+  --color-text-secondary: #64748B;
+  --color-text-muted: #94A3B8;
+  --color-text-inverse: #F8FAFC;
 
   /* Borders */
-  --color-border: #e2e8f0;
-  --color-border-light: #f1f5f9;
+  --color-border: #E2E8F0;
+  --color-border-light: #F1F5F9;
   --color-border-focus: #547792;
 
   /* Semantic */
-  --color-danger: #ef4444;
-  --color-danger-light: #fef2f2;
-  --color-warning: #f59e0b;
-  --color-warning-light: #fffbeb;
-  --color-success: #10b981;
-  --color-success-light: #ecfdf5;
-  --color-info: #3b82f6;
-  --color-info-light: #eff6ff;
+  --color-danger: #EF4444;
+  --color-danger-light: #FEF2F2;
+  --color-warning: #F59E0B;
+  --color-warning-light: #FFFBEB;
+  --color-success: #10B981;
+  --color-success-light: #ECFDF5;
+  --color-info: #3B82F6;
+  --color-info-light: #EFF6FF;
 
   /* Shadows */
   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -75,133 +75,6 @@
   --transition-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* ─── Dark mode tokens ─────────────────────────────────────────────────
-   ThemeProvider togglea `dark` en <html>. Acá redefinimos las CSS vars
-   para que TODOS los componentes que usan `var(--color-*)` cambien sin
-   tocar JSX. Las clases Tailwind hardcoded (bg-white, text-slate-700,
-   etc.) se cubren a nivel componente con `dark:`.
-   ──────────────────────────────────────────────────────────────────── */
-.dark {
-  /* Paleta slate (Tailwind oficial), 3 niveles de profundidad:
-   * - bg (página)        slate-900 #0F172A
-   * - surface (cards)    slate-800 #1E293B
-   * - surface-hover      slate-700 #334155
-   * El sidebar va a slate-950 (#020617) para tener más profundidad que el bg.
-   */
-  --color-bg: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-hover: #334155;
-  --color-surface-raised: #1e293b;
-
-  /* Sidebar más oscuro que el bg de la página para dar profundidad. */
-  --color-sidebar: #020617;
-  --color-sidebar-hover: #0f172a;
-  --color-sidebar-active: #1e293b;
-  --color-sidebar-border: #0f172a;
-}
-
-/* El sidebar usa la clase Tailwind hardcoded `bg-sidebar` (definida en
- * tailwind.config como #0F172A). En dark mode lo bajamos a slate-950 para
- * tener 3 niveles: sidebar (#020617) < bg página (#0F172A) < cards (#1E293B).
- */
-.dark .bg-sidebar {
-  background-color: #020617;
-}
-
-/* ────────────────────────────────────────────────────────────────────────
- * DataTable overrides (platform-ui-data-display lib externa)
- *
- * La lib tiene `bg-white`, `text-gray-700`, `bg-slate-50` hardcoded sin
- * variants dark:. Como no podemos modificar el platform package, envolvemos
- * el DataTable en `.data-table-host` (ver src/lib/dataDisplay.ts) y acá
- * reescribimos las clases SOLO dentro de ese wrapper para no afectar el
- * resto de la app.
- * ──────────────────────────────────────────────────────────────────────── */
-.dark .data-table-host .bg-white {
-  background-color: #1e293b;
-}
-.dark .data-table-host .bg-slate-50 {
-  background-color: #0f172a;
-}
-.dark .data-table-host .bg-slate-100 {
-  background-color: #334155;
-  color: #e2e8f0;
-}
-.dark .data-table-host .hover\:bg-slate-50:hover {
-  background-color: #334155;
-}
-.dark .data-table-host .hover\:bg-slate-200:hover {
-  background-color: #475569;
-}
-.dark .data-table-host .text-gray-700 {
-  color: #e2e8f0;
-}
-.dark .data-table-host .text-slate-500 {
-  color: #94a3b8;
-}
-.dark .data-table-host .text-slate-600 {
-  color: #cbd5e1;
-}
-.dark .data-table-host .text-slate-400 {
-  color: #64748b;
-}
-.dark .data-table-host .text-slate-300 {
-  color: #475569;
-}
-.dark .data-table-host .text-slate-800 {
-  color: #f1f5f9;
-}
-.dark .data-table-host .border-slate-200,
-.dark .data-table-host .border-slate-200\/80 {
-  border-color: #334155;
-}
-/* Zebra rows: la lib usa hex hardcoded `bg-[#f9f9f9b8]` para fila impar en
- * softZebra y `bg-slate-50/50` en default. Sobre fondo dark esos colores
- * mezclados con texto claro quedan ilegibles. Forzamos slate más oscuro. */
-.dark .data-table-host .bg-\[\#f9f9f9b8\] {
-  background-color: #172033;
-}
-.dark .data-table-host .bg-slate-50\/50 {
-  background-color: rgba(15, 23, 42, 0.5);
-}
-.dark .data-table-host .hover\:bg-slate-200:hover {
-  background-color: #475569;
-}
-.dark .data-table-host input,
-.dark .data-table-host select {
-  background-color: #0f172a;
-  color: #e2e8f0;
-}
-.dark .data-table-host input::placeholder {
-  color: #64748b;
-
-  --color-text: #f1f5f9;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
-  --color-text-inverse: #0f172a;
-
-  --color-border: #334155;
-  --color-border-light: #1e293b;
-
-  --color-primary: #6a9cb5;
-  --color-primary-dark: #547792;
-  --color-primary-darker: #3d5a6e;
-  --color-primary-light: #8ab4c9;
-  --color-primary-50: #0f2a3f;
-  --color-primary-100: #1e3a4f;
-
-  --color-danger-light: #2a1314;
-  --color-warning-light: #2a1f0a;
-  --color-success-light: #0b1f17;
-  --color-info-light: #0e1b2c;
-
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.45), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.55), 0 4px 6px -4px rgba(0, 0, 0, 0.35);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.35);
-}
-
 /* ─── Base layer ─── */
 @layer base {
   html {
@@ -216,20 +89,15 @@
     background-color: var(--color-bg);
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  h1, h2, h3, h4, h5, h6 {
     font-family: "Sora", ui-sans-serif, system-ui, sans-serif;
     font-weight: 700;
     letter-spacing: -0.02em;
   }
 
   input:-webkit-autofill {
-    background-color: var(--color-surface) !important;
-    -webkit-box-shadow: 0 0 0px 1000px var(--color-surface) inset !important;
+    background-color: white !important;
+    -webkit-box-shadow: 0 0 0px 1000px white inset !important;
     -webkit-text-fill-color: var(--color-text) !important;
   }
 
@@ -270,9 +138,7 @@
 @layer components {
   /* Unified input styling */
   .input-base {
-    @apply w-full rounded-lg border transition-all duration-200;
-    background-color: var(--color-surface);
-    color: var(--color-text);
+    @apply w-full rounded-lg border bg-white text-gray-900 transition-all duration-200;
     border-color: var(--color-border);
     box-shadow: var(--shadow-xs);
   }
@@ -288,33 +154,16 @@
   }
 
   .input-base:disabled {
-    @apply cursor-not-allowed;
-    background-color: var(--color-surface-hover);
-    color: var(--color-text-muted);
+    @apply bg-gray-50 text-gray-400 cursor-not-allowed;
     border-color: var(--color-border-light);
-  }
-
-  /* iOS Safari auto-zooms cuando un input tiene font-size < 16px. Forzamos
-     min 16px en mobile (<md=768) sin tocar las clases per-input — text-sm
-     (14px) y text-xs (12px) siguen siendo el default en desktop. Affecta
-     <input>, <select>, <textarea> nativos. */
-  @media (max-width: 767px) {
-    input,
-    select,
-    textarea {
-      font-size: 16px;
-    }
   }
 
   /* Card elevations */
   .card-base {
-    @apply rounded-xl border;
-    background-color: var(--color-surface);
+    @apply bg-white rounded-xl border;
     border-color: var(--color-border);
     box-shadow: var(--shadow-sm);
-    transition:
-      box-shadow var(--transition-base),
-      transform var(--transition-base);
+    transition: box-shadow var(--transition-base), transform var(--transition-base);
   }
 
   .card-base:hover {
@@ -322,213 +171,15 @@
   }
 
   .card-raised {
-    @apply rounded-xl;
-    background-color: var(--color-surface-raised);
+    @apply bg-white rounded-xl;
     box-shadow: var(--shadow-lg);
-  }
-
-  /* Drawers — deben quedar por encima de filtros/dropdowns de la pantalla de fondo. */
-  .drawer-root {
-    @apply fixed inset-0 flex z-tooltip;
-  }
-
-  .drawer-backdrop {
-    @apply fixed inset-0 transition-opacity backdrop-blur-sm;
-    background: rgba(15, 23, 42, 0.45);
-  }
-
-  /* Mobile (<md): full-width — el drawer toma la pantalla completa.
-     Desktop (md+): cap progresivo 30% mas ancho que los caps previos:
-     2xl=42rem -> 54.6rem, 3xl=48rem -> 62.4rem, 4xl=56rem -> 72.8rem. */
-  .drawer-panel {
-    @apply relative ml-auto flex h-full w-full flex-col overflow-hidden md:max-w-[54.6rem] lg:max-w-[62.4rem] 2xl:max-w-[72.8rem];
-    background-color: var(--color-surface);
-    box-shadow: var(--shadow-xl);
-    animation: drawer-slide-in var(--transition-slow) ease-out both;
-  }
-
-  .drawer-close-button {
-    @apply absolute right-4 top-4 z-10;
-  }
-
-  .drawer-close {
-    @apply absolute right-4 top-4 text-slate-400 transition-colors;
-  }
-
-  .drawer-shell {
-    @apply flex h-full flex-col;
-  }
-
-  .drawer-header {
-    @apply shrink-0 border-b px-6 py-6 pr-14;
-    border-color: var(--color-border);
-  }
-
-  .drawer-title {
-    @apply text-xl font-bold leading-7;
-    color: var(--color-text);
-  }
-
-  .drawer-subtitle {
-    @apply mt-1 text-sm leading-5;
-    color: var(--color-text-secondary);
-  }
-
-  .drawer-body {
-    @apply min-h-0 flex-1 overflow-y-auto px-6 py-6 text-sm;
-    color: var(--color-text);
-  }
-
-  .drawer-body-relative {
-    @apply relative;
-  }
-
-  .drawer-form {
-    @apply space-y-5;
-  }
-
-  .drawer-footer {
-    @apply mt-auto shrink-0 border-t px-6 py-4;
-    background-color: var(--color-surface);
-    border-color: var(--color-border);
-  }
-
-  .drawer-footer-actions {
-    @apply flex items-center gap-2;
-  }
-
-  .drawer-form-actions {
-    @apply flex w-full items-center justify-between gap-3;
-  }
-
-  .drawer-form-actions-extra,
-  .drawer-form-actions-main {
-    @apply flex items-center gap-2;
-  }
-
-  .drawer-form-actions-main {
-    @apply ml-auto;
-  }
-
-  .drawer-section {
-    @apply rounded-lg border p-4 shadow-sm;
-    border-color: var(--color-border);
-    background-color: var(--color-surface);
-  }
-
-  .drawer-section-header {
-    @apply mb-3 flex items-center justify-between gap-3;
-  }
-
-  .drawer-section-title {
-    @apply text-sm font-semibold;
-    color: var(--color-text);
-  }
-
-  .drawer-section-content {
-    @apply space-y-3;
-  }
-
-  /* En dark mode, los selects nativos del browser tienen un dropdown con fondo
-     blanco y texto negro por defecto. Forzamos color-scheme:dark para que el
-     OS pinte el menú con paleta oscura. Funciona en Chrome/Edge/Firefox/Safari. */
-  .dark select,
-  .dark input[type="date"],
-  .dark input[type="time"] {
-    color-scheme: dark;
-  }
-
-  /* Action buttons */
-  .app-action-button {
-    @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 active:scale-[0.97];
-  }
-
-  .app-action-button-icon-slot {
-    @apply flex shrink-0 items-center;
-  }
-
-  .app-action-button:disabled,
-  .app-action-button-disabled {
-    @apply cursor-not-allowed opacity-50 active:scale-100;
-  }
-
-  .app-action-button-xs {
-    @apply gap-1.5 px-2.5 py-1.5 text-xs;
-  }
-
-  .app-action-button-sm {
-    @apply gap-1.5 px-3.5 py-2 text-sm;
-  }
-
-  .app-action-button-md {
-    @apply gap-2 px-5 py-2.5 text-sm;
-  }
-
-  .app-action-button-lg {
-    @apply gap-2 px-6 py-3 text-base;
-  }
-
-  .app-action-button-primary {
-    @apply bg-primary-700 text-white shadow-sm hover:bg-primary-800 hover:shadow-md;
-  }
-
-  .app-action-button-secondary {
-    @apply bg-slate-100 text-slate-700 shadow-sm hover:bg-slate-200;
-  }
-
-  .app-action-button-danger {
-    @apply bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md;
-  }
-
-  .app-action-button-warning {
-    @apply bg-amber-500 text-white shadow-sm hover:bg-amber-600 hover:shadow-md;
-  }
-
-  .app-action-button-light {
-    @apply border border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-50;
-  }
-
-  .app-action-button-dark {
-    @apply bg-slate-800 text-white shadow-sm hover:bg-slate-900 hover:shadow-md;
-  }
-
-  .app-action-button-outline {
-    @apply border border-custom-btn bg-transparent text-custom-btn hover:bg-primary-50;
-  }
-
-  .app-action-button-icon {
-    @apply flex min-h-6 min-w-6 items-center justify-center rounded-md p-1 text-primary-700 transition-colors hover:bg-primary-50 hover:text-primary-800;
-  }
-
-  .icon-action-button {
-    @apply inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50;
-  }
-
-  .icon-action-button-neutral {
-    @apply text-slate-400 hover:bg-slate-100 hover:text-slate-700;
-  }
-
-  .icon-action-button-primary {
-    @apply text-primary-700 hover:bg-primary-50 hover:text-primary-800;
-  }
-
-  .icon-action-button-danger {
-    @apply text-slate-500 hover:bg-red-50 hover:text-red-700;
-  }
-
-  .icon-action-button-success {
-    @apply text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800;
   }
 }
 
 /* ─── Animations ─── */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes fade-in-up {
@@ -575,33 +226,14 @@
   }
 }
 
-@keyframes drawer-slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 @keyframes modal-backdrop {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes modal-content {
@@ -616,19 +248,12 @@
 }
 
 @keyframes pulse-subtle {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 @keyframes spinner {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 /* ─── Animation utilities ─── */
@@ -662,7 +287,7 @@
   }
 
   .animate-shimmer {
-    background: linear-gradient(90deg, var(--color-bg) 25%, var(--color-border-light) 50%, var(--color-bg) 75%);
+    background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
   }
@@ -672,28 +297,12 @@
   }
 
   /* Stagger delays for list animations */
-  .stagger-1 {
-    animation-delay: 50ms;
-  }
-  .stagger-2 {
-    animation-delay: 100ms;
-  }
-  .stagger-3 {
-    animation-delay: 150ms;
-  }
-  .stagger-4 {
-    animation-delay: 200ms;
-  }
-  .stagger-5 {
-    animation-delay: 250ms;
-  }
-  .stagger-6 {
-    animation-delay: 300ms;
-  }
-  .stagger-7 {
-    animation-delay: 350ms;
-  }
-  .stagger-8 {
-    animation-delay: 400ms;
-  }
+  .stagger-1 { animation-delay: 50ms; }
+  .stagger-2 { animation-delay: 100ms; }
+  .stagger-3 { animation-delay: 150ms; }
+  .stagger-4 { animation-delay: 200ms; }
+  .stagger-5 { animation-delay: 250ms; }
+  .stagger-6 { animation-delay: 300ms; }
+  .stagger-7 { animation-delay: 350ms; }
+  .stagger-8 { animation-delay: 400ms; }
 }

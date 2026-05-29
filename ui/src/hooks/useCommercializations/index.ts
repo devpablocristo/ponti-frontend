@@ -5,8 +5,7 @@ import * as actions from "./actions";
 import { CommercializationData, CommercializationInfoData } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
-import { extractErrorStatus } from "@/api/hooks/useApiCall";
-import { formatError } from "@/lib/format";
+import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
 type CommercializationMutationResponse = SuccessResponse<unknown>;
 
@@ -32,10 +31,8 @@ const useCommercializations = () => {
         return;
       }
 
-      setError("No se pudieron cargar los valores de comercialización.");
+      setError("Ocurrio un error en la busqueda de los valores");
     } catch (error) {
-      // 404 acá no es un error real: el proyecto puede no tener comercializaciones
-      // todavía. Se mapea a lista vacía sin mostrar toast.
       if (extractErrorStatus(error) === 404) {
         dispatch({
           type: actions.SET_COMMERCIALIZATIONS,
@@ -44,7 +41,7 @@ const useCommercializations = () => {
         return;
       }
 
-      setError(formatError(error, { fallback: "No se pudieron cargar los valores de comercialización." }));
+      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
     } finally {
       setProcessing(false);
     }
@@ -68,14 +65,19 @@ const useCommercializations = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Se guardaron los valores de comercialización.",
+            payload: "Se han creado los valores con éxito!",
           });
           return;
         }
 
-        setError("No se pudieron guardar los valores de comercialización.");
+        setError("Ocurrio un error en la creación de los valores");
       } catch (error) {
-        setError(formatError(error, { fallback: "No se pudieron guardar los valores de comercialización." }));
+        if (extractErrorStatus(error) === 409) {
+          setError("Ya existe un valor con el mismo nombre.");
+          return;
+        }
+
+        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
       } finally {
         setProcessing(false);
       }

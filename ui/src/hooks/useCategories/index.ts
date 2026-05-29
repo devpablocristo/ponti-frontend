@@ -4,14 +4,15 @@ import * as actions from "./actions";
 
 import { apiClient } from "@/api/client";
 import { TypeData, CategoryData } from "./types";
-import { formatError } from "@/lib/format";
-import categoriesReducer from "./categoriesReducer";
+import { SuccessResponse } from "@/api/types";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
+import useCategoriesReducer from "./useCategoriesReducer";
 
 const useCategories = () => {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [{ categories, types }, dispatch] = categoriesReducer();
+  const [{ categories, types }, dispatch] = useCategoriesReducer();
 
   const getCategories = React.useCallback(
     async (queryString: string): Promise<void> => {
@@ -24,25 +25,21 @@ const useCategories = () => {
       }
 
       try {
-        // El interceptor en `api/client.ts` envuelve la respuesta del BE en
-        // `{success: true, data: <body>}`, así que `response.data` es el body
-        // del BE: `{data: CategoryData[], page_info}`.
-        const response = await apiClient.get<{
-          success?: boolean;
-          data?: { data?: CategoryData[] };
-        }>("/categories" + queryParams);
+        const response = await apiClient.get<SuccessResponse<CategoryData[]>>(
+          "/categories" + queryParams
+        );
 
-        if (response.data?.data) {
+        if (response.success) {
           dispatch({
             type: actions.SET_CATEGORIES,
-            payload: response.data.data,
+            payload: response.data,
           });
           return;
         }
 
-        setError("No se pudieron cargar las categorías.");
+        setError("Ocurrio un error en la busqueda de categorías");
       } catch (error) {
-        setError(formatError(error, { fallback: "No se pudieron cargar las categorías." }));
+        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
       } finally {
         setProcessing(false);
       }
@@ -55,24 +52,19 @@ const useCategories = () => {
     setError(null);
 
     try {
-      // `response.data` viene envuelto por el interceptor: contiene el body
-      // del BE, que es `{data: TypeData[], page_info}`.
-      const response = await apiClient.get<{
-        success?: boolean;
-        data?: { data?: TypeData[] };
-      }>("/types");
+      const response = await apiClient.get<SuccessResponse<TypeData[]>>("/types");
 
-      if (response.data?.data) {
+      if (response.success) {
         dispatch({
           type: actions.SET_TYPES,
-          payload: response.data.data,
+          payload: response.data,
         });
         return;
       }
 
-      setError("No se pudieron cargar los tipos.");
+      setError("Ocurrio un error en la busqueda de tipos");
     } catch (error) {
-      setError(formatError(error, { fallback: "No se pudieron cargar los tipos." }));
+      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
     } finally {
       setProcessing(false);
     }

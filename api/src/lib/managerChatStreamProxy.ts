@@ -21,7 +21,6 @@ export type ManagerChatStreamParams = {
   path: string;
   apiKey: string;
   userId: string;
-  tenantId: string;
   projectId: string;
   jsonBody: unknown;
   authorization?: string;
@@ -43,7 +42,6 @@ export async function proxyManagerChatStreamPost(
   const headers: http.OutgoingHttpHeaders = {
     "X-API-KEY": p.apiKey,
     "X-User-Id": p.userId,
-    "X-Tenant-Id": p.tenantId,
     "X-Project-Id": p.projectId,
     "Content-Type": "application/json",
     "Content-Length": Buffer.byteLength(bodyStr, "utf8"),

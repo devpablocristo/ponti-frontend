@@ -6,13 +6,6 @@ import { cache } from ".";
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
 
-const normalizeOptionList = <T>(payload: any): T[] => {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.data)) return payload.data;
-  if (Array.isArray(payload?.items)) return payload.items;
-  return [];
-};
-
 router.get("", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -75,11 +68,13 @@ router.get("", async (req: Request, res: Response) => {
         investors: investors.data,
         campaigns: campaigns?.data ?? campaigns,
         crops: crops.data,
-        rentTypes: normalizeOptionList(leaseTypes),
+        rentTypes: leaseTypes?.data ?? leaseTypes,
       },
     };
 
-    cache.set("options", data, CACHE_TTL_SHORT);
+    setImmediate(() => {
+      cache.set("options", data, CACHE_TTL_SHORT);
+    });
 
     res.status(200).json(data);
   } catch (error: any) {

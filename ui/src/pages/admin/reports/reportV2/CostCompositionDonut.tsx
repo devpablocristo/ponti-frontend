@@ -33,12 +33,12 @@ export function CostCompositionDonut({ slices, total }: Props) {
   });
 
   return (
-    <div className="flex h-full flex-col rounded-xl border bg-white dark:bg-slate-800 p-3">
+    <div className="flex h-full flex-col rounded-xl border bg-white p-3">
       <header className="mb-3 flex items-center gap-2">
-        <PieChart className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+        <PieChart className="h-4 w-4 text-slate-500" />
         <div>
           <h3 className="text-[1.05rem] font-semibold text-[#020617]">Composición de los Aportes</h3>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">% sobre el total invertido</p>
+          <p className="text-[11px] text-slate-500">% sobre el total invertido</p>
         </div>
       </header>
 
@@ -74,8 +74,8 @@ export function CostCompositionDonut({ slices, total }: Props) {
             ))}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">u$s</span>
-            <span className="text-[1.6rem] font-semibold text-slate-900 dark:text-slate-100 tabular-nums">{formatNumberAr(total)}</span>
+            <span className="text-[10px] font-medium text-slate-500">u$s</span>
+            <span className="text-[1.6rem] font-semibold text-slate-900 tabular-nums">{formatNumberAr(total)}</span>
           </div>
         </div>
 
@@ -87,14 +87,14 @@ export function CostCompositionDonut({ slices, total }: Props) {
                 style={{ background: s.color }}
               />
               <div className="flex-1 min-w-0">
-                <div className="truncate text-[0.7rem] font-medium text-slate-600 dark:text-slate-300">
+                <div className="truncate text-[0.7rem] font-medium text-slate-600">
                   {s.label}
                 </div>
-                <div className="text-[0.78rem] font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                <div className="text-[0.78rem] font-semibold text-slate-900 tabular-nums">
                   u$s {formatNumberAr(s.value)}
                 </div>
               </div>
-              <span className="shrink-0 rounded-md bg-[#F3F4F6] px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
+              <span className="shrink-0 rounded-md bg-[#F3F4F6] px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 tabular-nums">
                 {(s.frac * 100).toFixed(1)}%
               </span>
             </li>

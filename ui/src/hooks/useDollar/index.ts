@@ -5,7 +5,7 @@ import * as actions from "./actions";
 import { DollarData } from "./types";
 import { SuccessResponse } from "@/api/types";
 import { apiClient } from "@/api/client";
-import { formatError } from "@/lib/format";
+import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall";
 
 type DollarMutationResponse = SuccessResponse<unknown>;
 
@@ -35,9 +35,9 @@ const useDollar = () => {
         return;
       }
 
-      setError("No se pudieron cargar los valores de cotización.");
+      setError("Ocurrio un error en la busqueda de lotes");
     } catch (error) {
-      setError(formatError(error, { fallback: "No se pudieron cargar los valores de cotización." }));
+      setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
     } finally {
       setProcessing(false);
     }
@@ -61,14 +61,19 @@ const useDollar = () => {
         if (response.success) {
           dispatch({
             type: actions.SET_RESULT,
-            payload: "Se guardaron los valores de cotización.",
+            payload: "Se han creado los valores con éxito!",
           });
           return;
         }
 
-        setError("No se pudieron guardar los valores de cotización.");
+        setError("Ocurrio un error en la creación de los valores");
       } catch (error) {
-        setError(formatError(error, { fallback: "No se pudieron guardar los valores de cotización." }));
+        if (extractErrorStatus(error) === 409) {
+          setError("Ya existe un valor con el mismo nombre.");
+          return;
+        }
+
+        setError(extractErrorMessage(error, "Error en el servicio, inténtalo más tarde."));
       } finally {
         setProcessing(false);
       }

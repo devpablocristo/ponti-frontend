@@ -1,4 +1,14 @@
-type WorkOrderStatus = "draft" | "published";
+export interface OrderInputDetail {
+  input: string;
+  consumption: string;
+  category: string;
+  dose: number;
+  cost: number;
+  unitPrice: number;
+  total: number;
+}
+
+export type WorkOrderStatus = "draft" | "published";
 
 export interface OrdersData {
   id: number;
@@ -24,12 +34,12 @@ export interface OrdersData {
   status: WorkOrderStatus;
 }
 
-interface InvestorSplit {
+export interface InvestorSplit {
   investor_id: number;
   percentage: number;
 }
 
-type WorkorderItem = {
+export type WorkorderItem = {
   supply_id: number;
   total_used: number | string;
   final_dose: number | string;

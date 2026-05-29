@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { UserData } from "./types";
 import { RequestError } from "@/api/types";
 import Cover from "./Cover";
-import { Notification } from "../../components/feedback/Notification";
 
 function Login() {
   const { login, isAuthenticated, loading } = useAuth();
@@ -19,7 +18,7 @@ function Login() {
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
-      navigate("/admin/dashboard");
+      navigate("/workspace");
     }
   }, [isAuthenticated, loading, navigate]);
 
@@ -38,44 +37,37 @@ function Login() {
       await login(loginUserData);
     } catch (error) {
       setIsLogin(false);
-      // El `RequestError` del SDK de auth trae `.message` con copy ya curada
-      // (ej. "Email o contraseña incorrectos") en español, así que es uno de los
-      // pocos lugares donde mostrar `.message` directo no expone jerga técnica.
-      // De todos modos lo pasamos por una guarda: si arranca con código HTTP
-      // crudo (ej. "Request failed with status 400"), caemos al fallback.
       if (error instanceof RequestError) {
-        const msg = error.message ?? "";
-        const looksTechnical = /^request failed|status\s+\d{3}|^\{/i.test(msg);
-        setError(looksTechnical ? "Email o contraseña incorrectos. Verificá los datos e intentá nuevamente." : msg);
+        setError(error.message);
         return;
       }
-      setError("No pudimos iniciar tu sesión. Intentá nuevamente en unos segundos.");
+      setError("Error en el inicio de sesión. Intenta nuevamente.");
     }
   };
 
   return (
     <div className="flex flex-col md:flex-row h-screen">
       <Cover />
-      <div className="w-full md:w-2/5 flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900 p-6">
+      <div className="w-full md:w-2/5 flex-1 flex items-center justify-center bg-slate-50 p-6">
         <div className="w-full max-w-sm animate-fade-in-up">
           {/* Mobile logo */}
           <div className="md:hidden flex items-center justify-center gap-2 mb-8">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-custom-btn to-emerald-500 flex items-center justify-center">
               <span className="text-white font-bold text-lg font-display">P</span>
             </div>
-            <span className="text-2xl font-bold text-slate-800 dark:text-slate-200 font-display tracking-tight">Ponti</span>
+            <span className="text-2xl font-bold text-slate-800 font-display tracking-tight">Ponti</span>
           </div>
 
-          <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-200 mb-2 font-display tracking-tight">
+          <h2 className="text-3xl font-bold text-slate-800 mb-2 font-display tracking-tight">
             Bienvenido
           </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
+          <p className="text-sm text-slate-500 mb-8 leading-relaxed">
             Ingresá con tu email o usuario y contraseña para acceder al sistema de gestión.
           </p>
 
           <form className="space-y-5" onSubmit={handleLogin}>
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
                 Email o usuario
               </label>
               <div className="relative">
@@ -96,7 +88,7 @@ function Login() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-600 dark:text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
                 Contraseña
               </label>
               <div className="relative">
@@ -116,7 +108,7 @@ function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:text-slate-300 transition-colors duration-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showPassword ? (
@@ -155,10 +147,17 @@ function Login() {
             </button>
           </form>
 
-          <Notification variant="error"
-            message={error || null}
-            className="mt-5 animate-fade-in-up"
-          />
+          {error !== "" && (
+            <div
+              className="flex items-start gap-3 p-4 mt-5 text-sm text-red-700 rounded-xl bg-red-50 border border-red-100 animate-fade-in-up"
+              role="alert"
+            >
+              <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+              </svg>
+              <p>{error}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

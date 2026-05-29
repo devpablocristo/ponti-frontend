@@ -1,8 +1,32 @@
 import { describe, it, expect } from "vitest";
 import {
+  trimTrailingZeros,
   replaceSupplyIdsWithNames,
   DEFAULT_ITEM_ROW_COUNT,
 } from "./utils";
+
+describe("trimTrailingZeros", () => {
+  it("removes trailing zeros after decimal point", () => {
+    expect(trimTrailingZeros("1.200")).toBe("1.2");
+    expect(trimTrailingZeros("3.000")).toBe("3");
+    expect(trimTrailingZeros("2.100")).toBe("2.1");
+  });
+
+  it("keeps non-zero decimals", () => {
+    expect(trimTrailingZeros("1.23")).toBe("1.23");
+    expect(trimTrailingZeros("0.5")).toBe("0.5");
+  });
+
+  it("removes dot when all decimals are zero", () => {
+    expect(trimTrailingZeros("10.0")).toBe("10");
+    expect(trimTrailingZeros("7.00")).toBe("7");
+  });
+
+  it("handles integers", () => {
+    expect(trimTrailingZeros("42")).toBe("42");
+    expect(trimTrailingZeros("0")).toBe("");
+  });
+});
 
 describe("replaceSupplyIdsWithNames", () => {
   const supplies = [

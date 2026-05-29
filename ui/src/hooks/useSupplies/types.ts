@@ -1,3 +1,17 @@
+export interface SupplyData {
+  ingreso: string;
+  remito: string;
+  fecha: string;
+  inversor: string;
+  insumo: string;
+  cantidad: string;
+  rubro: string;
+  tipoClase: string;
+  proveedor: string;
+  precioUnidad: number;
+  totalNeto: number;
+}
+
 export type SupplyCreatePayload = {
   name: string;
   unit: number;

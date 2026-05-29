@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 
 import { LotsData } from "../../../hooks/useLots/types";
-import { formatProperName } from "../../../lib/properName";
 import { cropColors } from "../colors";
 import { Column } from "../types";
 import { formatISODate, formatNumberAr } from "../utils";
@@ -48,8 +47,8 @@ export function useLotColumns({
         filterOptions: getFilterOptionsForColumn("project_name"),
         render: (value, data) => (
           <strong className="text-blue-700">
-            <a href={`/admin/master-data/customers/${data.project_id}`}>
-              {formatProperName(value)}
+            <a href={`/admin/database/customers/${data.project_id}`}>
+              {String(value ?? "")}
             </a>
           </strong>
         ),
@@ -60,7 +59,6 @@ export function useLotColumns({
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("field_name"),
-        render: (value) => formatProperName(value),
       },
       {
         key: "lot_name",
@@ -68,7 +66,6 @@ export function useLotColumns({
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("lot_name"),
-        render: (value) => formatProperName(value),
       },
       {
         key: "previous_crop",
@@ -77,7 +74,7 @@ export function useLotColumns({
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("previous_crop"),
         render: (crop) => (
-          <span className="text-gray-900 dark:text-gray-100">{formatProperName(crop)}</span>
+          <span className="text-gray-900">{String(crop ?? "")}</span>
         ),
       },
       {
@@ -87,7 +84,7 @@ export function useLotColumns({
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("current_crop"),
         render: (crop) => {
-          const cropName = formatProperName(crop);
+          const cropName = String(crop ?? "");
           return (
             <span
               className={`rounded-md px-2 py-1 text-[14px] ${
@@ -106,7 +103,7 @@ export function useLotColumns({
         filterable: true,
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("variety"),
-        render: (value) => <b>{formatProperName(value)}</b>,
+        render: (value) => <b>{String(value ?? "")}</b>,
       },
       {
         key: "hectares",
@@ -188,9 +185,9 @@ export function useLotColumns({
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("yield_tn_per_ha"),
         render: (value) => (
-          <span className="font-bold text-gray-900 dark:text-gray-100">
+          <span className="font-bold text-gray-900">
             {formatNumericValue(value)}{" "}
-            <span className="text-xs font-normal text-gray-900 dark:text-gray-100">Tn/Has</span>
+            <span className="text-xs font-normal text-gray-900">Tn/Has</span>
           </span>
         ),
       },
@@ -205,7 +202,7 @@ export function useLotColumns({
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("income_net_per_ha"),
         render: (value) => (
-          <span className="font-semibold text-gray-900 dark:text-gray-100">
+          <span className="font-semibold text-gray-900">
             u$ {formatNumericValue(value)}
           </span>
         ),
@@ -217,7 +214,7 @@ export function useLotColumns({
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("rent_per_ha"),
         render: (value) => (
-          <span className="font-medium text-gray-900 dark:text-gray-100">
+          <span className="font-medium text-gray-900">
             u$ {formatNumericValue(value)}
           </span>
         ),
@@ -229,7 +226,7 @@ export function useLotColumns({
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("admin_cost"),
         render: (value) => (
-          <span className="font-medium text-gray-900 dark:text-gray-100">
+          <span className="font-medium text-gray-900">
             u$ {formatNumericValue(value)}
           </span>
         ),
@@ -241,7 +238,7 @@ export function useLotColumns({
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("active_total_per_ha"),
         render: (value) => (
-          <span className="font-semibold text-gray-900 dark:text-gray-100">
+          <span className="font-semibold text-gray-900">
             u$ {formatNumericValue(value)}
           </span>
         ),
@@ -253,7 +250,7 @@ export function useLotColumns({
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("operating_result_per_ha"),
         render: (value) => (
-          <span className="font-bold text-gray-900 dark:text-gray-100">
+          <span className="font-bold text-gray-900">
             u$ {formatNumericValue(value)}
           </span>
         ),

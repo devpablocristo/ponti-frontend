@@ -13,7 +13,6 @@ import {
   buildLotsQueryParams,
   isLotsCacheKey,
 } from "../utils/lotsRoute";
-import { buildForwardQuery } from "../utils/forwardQuery";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -108,8 +107,14 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const lotIds = getLotQueryFilters(req);
+    const { fieldId, projectId } = getLotQueryFilters(req);
+    if (fieldId === 0 && projectId === 0) {
+      res.status(400).json({ message: "Campo o proyecto obligatorio" });
+      return;
+    }
+
     const { page, perPage } = parsePaginationQueryParams(req.query);
+    const lotIds = { fieldId, projectId };
     const key = buildLotsListCacheKey(lotIds, { page, perPage });
 
     const cachedLots = cache.get<LotListPayload>(key);
@@ -123,8 +128,10 @@ router.get("", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const query = buildLotsQueryParams(lotIds, { page, perPage });
-    const { data: lots } = await apiClient.get<LotListResponse>(`/lots?${query}`, headers);
+    const { data: lots } = await apiClient.get<LotListResponse>(
+      `/lots?${buildLotsQueryParams(lotIds, { page, perPage })}`,
+      headers
+    );
 
     if (!lots) {
       throw new Error("Respuesta vacía del servicio de lotes");
@@ -138,7 +145,7 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    cache.set(key, data);
+    setImmediate(() => cache.set(key, data));
 
     res.status(200).json(data);
   } catch (error: unknown) {
@@ -165,7 +172,13 @@ router.get("/metrics", async (req: Request, res: Response) => {
       return;
     }
 
-    const lotIds = getLotQueryFilters(req);
+    const { fieldId, projectId } = getLotQueryFilters(req);
+    if (fieldId === 0 && projectId === 0) {
+      res.status(400).json({ message: "Campo o proyecto obligatorio" });
+      return;
+    }
+
+    const lotIds = { fieldId, projectId };
     const key = buildLotsMetricsCacheKey(lotIds);
 
     const cachedLots = cache.get<LotMetricsPayload>(key);
@@ -179,9 +192,8 @@ router.get("/metrics", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const query = buildLotsQueryParams(lotIds);
     const { data: metrics } = await apiClient.get<LotMetricsResponse>(
-      query ? `/lots/metrics?${query}` : "/lots/metrics",
+      `/lots/metrics?${buildLotsQueryParams(lotIds)}`,
       headers
     );
 
@@ -194,58 +206,9 @@ router.get("/metrics", async (req: Request, res: Response) => {
       data: metrics,
     };
 
-    cache.set(key, data);
+    setImmediate(() => cache.set(key, data));
 
     res.status(200).json(data);
-  } catch (error: unknown) {
-    const err = error as ApiResponse<null>;
-
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.post("", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-
-    const requestData = {
-      name: req.body.lot_name,
-      field_id: Number(req.body.field_id),
-      hectares: parseFloat(req.body.sowed_area),
-      season: req.body.season,
-      current_crop_id: req.body.current_crop_id,
-      previous_crop_id: req.body.previous_crop_id,
-      variety: req.body.variety,
-      dates: req.body.dates,
-    };
-
-    const { data } = await apiClient.post<unknown>("/lots", requestData, headers);
-
-    invalidateLotsCache();
-
-    res.status(201).json({
-      success: true,
-      data,
-      message: "Lote creado exitosamente",
-    });
   } catch (error: unknown) {
     const err = error as ApiResponse<null>;
 
@@ -335,7 +298,7 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     await apiClient.put<unknown>(`/lots/${req.params.id}`, requestData, headers);
 
-    invalidateLotsCache();
+    setImmediate(invalidateLotsCache);
 
     const data = {
       success: true,
@@ -351,129 +314,6 @@ router.put("/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.get("/archived", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-
-    const { data: lots } = await apiClient.get<any>(
-      `/lots/archived${buildForwardQuery(req)}`,
-      headers
-    );
-    const items = Array.isArray(lots?.data) ? lots.data : [];
-    const total =
-      typeof lots?.page_info?.total === "number" ? lots.page_info.total : items.length;
-
-    res.status(200).json({
-      success: true,
-      data: { data: items, total },
-    });
-  } catch (error: unknown) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.post("/:id/archive", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-    await apiClient.post<any>(`/lots/${req.params.id}/archive`, {}, headers);
-    invalidateLotsCache();
-    res.status(200).json({ success: true, message: "Operación exitosa" });
-  } catch (error: unknown) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.post("/:id/restore", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-    await apiClient.post<any>(`/lots/${req.params.id}/restore`, {}, headers);
-    invalidateLotsCache();
-    res.status(200).json({ success: true, message: "Operación exitosa" });
-  } catch (error: unknown) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.delete("/:id/hard", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-    await apiClient.delete<any>(`/lots/${req.params.id}/hard`, headers);
-    invalidateLotsCache();
-    res.status(200).json({ success: true, message: "Operación exitosa" });
-  } catch (error: unknown) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
     res.status(500).json({
       success: false,
       message: "Error inesperado",
@@ -503,7 +343,7 @@ router.put("/:id/tons", async (req: Request, res: Response) => {
       headers
     );
 
-    invalidateLotsCache();
+    setImmediate(invalidateLotsCache);
 
     const data = {
       success: true,

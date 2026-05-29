@@ -30,7 +30,7 @@ const initialState: OrdersState = {
   pageInfo: null,
 };
 
-export type Action =
+type Action =
   | { type: typeof actions.SET_ORDERS; payload: OrdersData[] }
   | { type: typeof actions.SET_RESULT_CREATION; payload: string }
   | { type: typeof actions.SET_PAGE_INFO; payload: PageInfo }
@@ -42,7 +42,7 @@ const ordersReducer = (state: typeof initialState, action: Action) => {
     case actions.SET_ORDERS:
       return {
         ...state,
-        orders: Array.isArray(action.payload) ? action.payload : [],
+        orders: action.payload,
       };
     case actions.SET_RESULT_CREATION:
       return {

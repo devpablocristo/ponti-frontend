@@ -15,7 +15,7 @@ services:
     image: node:20.19.0
     user: "${UID:-1000}:${GID:-1000}"
     working_dir: /app
-    command: sh -c "yarn install --frozen-lockfile --check-files --network-timeout 600000 --network-concurrency 1 && yarn dev --host 0.0.0.0"
+    command: sh -c "if [ ! -f node_modules/.yarn-integrity ] || [ ! -d node_modules/@devpablocristo/core-authn ] || [ ! -d node_modules/@devpablocristo/core-browser ] || [ ! -d node_modules/@devpablocristo/core-http ] || [ ! -d node_modules/@devpablocristo/modules-ai-console ] || [ ! -d node_modules/@devpablocristo/modules-ui-data-display ] || [ ! -d node_modules/@devpablocristo/modules-ui-filters ] || [ ! -d node_modules/@devpablocristo/modules-ui-forms ] || [ ! -d node_modules/xlsx ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev --host 0.0.0.0"
     ports:
       - "5173:5173"
     volumes:
@@ -27,12 +27,6 @@ services:
       # Cross-platform: la UI habla con el BFF por red interna de Docker.
       - BFF_URL=http://ponti-bff:3000
       - YARN_CACHE_FOLDER=/yarn-cache
-      # Force chokidar polling so Vite's file watcher no satura el
-      # `fs.inotify.max_user_watches` del host (defualt 65536 en Linux
-      # crashea con ENOSPC cuando se mira todo `src/`). Polling no usa
-      # inotify; cuesta un poco más de CPU en idle pero arranca siempre.
-      - CHOKIDAR_USEPOLLING=true
-      - CHOKIDAR_INTERVAL=1000
     depends_on:
       ponti-frontend-volumes:
         condition: service_completed_successfully
@@ -48,7 +42,7 @@ services:
     working_dir: /app
     command: sh -c "if [ ! -f node_modules/.yarn-integrity ]; then yarn install --frozen-lockfile --network-timeout 600000 --network-concurrency 1; fi && yarn dev"
     ports:
-      - "3001:3000"
+      - "3000:3000"
     volumes:
       - ./api:/app
       - bff_node_modules:/app/node_modules

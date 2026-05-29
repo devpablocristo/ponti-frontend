@@ -1,8 +1,6 @@
 type FieldProjectQuery = {
-  customer_id?: unknown;
   field_id?: unknown;
   project_id?: unknown;
-  campaign_id?: unknown;
 };
 
 type PaginationQuery = {
@@ -16,10 +14,8 @@ export const parsePositiveIntParam = (value: unknown, fallback: number) => {
 };
 
 export const parseFieldProjectQueryParams = (query: FieldProjectQuery) => ({
-  customerId: parsePositiveIntParam(query.customer_id, 0),
   fieldId: parsePositiveIntParam(query.field_id, 0),
   projectId: parsePositiveIntParam(query.project_id, 0),
-  campaignId: parsePositiveIntParam(query.campaign_id, 0),
 });
 
 export const parsePaginationQueryParams = (

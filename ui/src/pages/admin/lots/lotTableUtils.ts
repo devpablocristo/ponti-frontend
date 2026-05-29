@@ -1,8 +1,4 @@
 import { LotKPIs, LotsData } from "../../../hooks/useLots/types";
-import {
-  matchesSelectFilter,
-  matchesTextFilter,
-} from "@/lib/tableFilters";
 
 export type LotIndicatorValues = {
   seeded_area: number;
@@ -20,7 +16,7 @@ const emptyIndicators: LotIndicatorValues = {
   superficie_total: 0,
 };
 
-function toFiniteNumber(value: unknown): number {
+export function toFiniteNumber(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -54,14 +50,20 @@ function valuesForFilter(lot: LotsData, key: string): string[] {
 }
 
 function matchesFilterValue(cellValues: string[], filterValue: unknown): boolean {
+  const normalizedCellValues = cellValues.map((value) => value.toLowerCase());
+
   if (Array.isArray(filterValue)) {
-    return cellValues.some((value) => matchesSelectFilter(value, filterValue));
+    return filterValue.some((option) => {
+      const normalizedOption = String(option).toLowerCase();
+      return normalizedCellValues.some((value) => value === normalizedOption);
+    });
   }
 
-  return cellValues.some((value) => matchesTextFilter(value, filterValue));
+  const normalizedFilter = String(filterValue).toLowerCase();
+  return normalizedCellValues.some((value) => value.includes(normalizedFilter));
 }
 
-function lotMatchesFilters(
+export function lotMatchesFilters(
   lot: LotsData,
   filters: Record<string, unknown>,
   ignoredKey?: keyof LotsData

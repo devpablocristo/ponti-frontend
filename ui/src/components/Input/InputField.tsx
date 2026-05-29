@@ -1,7 +1,6 @@
 import React from "react";
 
 type InputFieldProps = {
-  id?: string;
   label: string;
   type?: "text" | "number" | "password" | "date";
   name: string;
@@ -26,7 +25,6 @@ type InputFieldProps = {
 const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
   (
     {
-      id,
       label = "",
       type = "text",
       name,
@@ -49,27 +47,24 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
     },
     ref
   ) => {
-    const inputId = id ?? name;
     const sizeClasses =
       size === "sm"
         ? "text-sm py-2 px-3.5"
         : size === "lg"
-          ? "text-base py-3 px-4"
-          : "text-sm py-2.5 px-3.5";
+        ? "text-base py-3 px-4"
+        : "text-sm py-2.5 px-3.5";
 
     return (
       <div className={`${fullWidth ? "w-full" : ""} ${className}`}>
         {label !== "" && (
           <label
-            className="block mb-1.5 text-xs font-medium text-slate-600 dark:text-slate-300"
-            htmlFor={inputId}
+            className="block mb-1.5 text-xs font-medium text-slate-600"
           >
             {label}
           </label>
         )}
         <input
           ref={ref}
-          id={inputId}
           autoComplete="off"
           type={type}
           name={name}
@@ -85,7 +80,7 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
           max={max}
           className={`input-base block ${
             disabled
-              ? "bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 dark:text-slate-400 cursor-not-allowed border-slate-200 dark:border-slate-700"
+              ? "bg-slate-50 text-slate-400 cursor-not-allowed border-slate-200"
               : ""
           } ${sizeClasses} ${inputClassName}`}
           required={required}

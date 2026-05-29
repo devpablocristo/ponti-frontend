@@ -28,11 +28,11 @@ export default function FieldDetails({ field }: Props) {
   ];
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-4">
       {items.map(({ label, value }) => (
         <div
           key={label}
-          className="bg-gray-100 rounded-lg p-3 min-w-[160px] flex-1 my-0.5"
+          className="bg-gray-100 rounded-xl p-4 min-w-[180px] flex-1 my-1"
         >
           <div className="font-medium text-[14px] leading-[150%] text-black">
             {label === "crops" && Array.isArray(value) ? (

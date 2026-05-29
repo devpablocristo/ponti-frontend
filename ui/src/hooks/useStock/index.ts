@@ -1,17 +1,16 @@
 import React, { useState } from "react";
 import { apiClient } from "@/api/client";
 
-import stockReducer from "./stockReducer";
+import useStockReducer from "./useStockReducer";
 import * as actions from "./actions";
 import { SuccessResponse } from "@/api/types";
 import { GetStocksResponse } from "./types";
-import { formatError } from "@/lib/format";
-import { withQuery } from "@/lib/workspaceQuery";
+import { extractErrorMessage } from "@/api/hooks/useApiCall";
 
 type StockMutationResponse = SuccessResponse<unknown>;
 
 const useStock = () => {
-  const [{ currentPage, stock, summary }, dispatch] = stockReducer();
+  const [{ currentPage, stock, summary }, dispatch] = useStockReducer();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,20 +27,13 @@ const useStock = () => {
   const [periods, setPeriods] = useState<string[] | null>(null);
 
   const getStock = React.useCallback(
-    async (queryOrProjectId: string | number, cutOffDate: string): Promise<void> => {
+    async (projectId: number, cutOffDate: string): Promise<void> => {
       setProcessing(true);
       setError(null);
 
       try {
-        const params =
-          typeof queryOrProjectId === "number"
-            ? new URLSearchParams({ project_id: String(queryOrProjectId) })
-            : new URLSearchParams(queryOrProjectId);
-        if (cutOffDate) {
-          params.set("cutoff_date", cutOffDate);
-        }
         const response = await apiClient.get<SuccessResponse<GetStocksResponse>>(
-          withQuery("/stock", params.toString())
+          `/stock/${projectId}?cutoff_date=${cutOffDate}`
         );
 
         if (response.success) {
@@ -60,9 +52,11 @@ const useStock = () => {
           });
           return;
         }
-        setError("No se pudo cargar el stock.");
+        setError("Ocurrio un error en la busqueda de STOCK");
       } catch (error) {
-        setError(formatError(error, { fallback: "No se pudo cargar el stock." }));
+        setError(
+          extractErrorMessage(error, "Error desconocido en la busqueda de stock.")
+        );
       } finally {
         setProcessing(false);
       }
@@ -84,9 +78,11 @@ const useStock = () => {
           setPeriods(response.data);
           return;
         }
-        setErrorPeriods("No se pudieron cargar los períodos del stock.");
+        setErrorPeriods("Ocurrio un error en la busqueda de PERIODOS");
       } catch (error) {
-        setErrorPeriods(formatError(error, { fallback: "No se pudieron cargar los períodos del stock." }));
+        setErrorPeriods(
+          extractErrorMessage(error, "Error desconocido en la busqueda de periodos.")
+        );
       } finally {
         setProcessingPeriods(false);
       }
@@ -117,13 +113,18 @@ const useStock = () => {
         );
 
         if (response.success) {
-          setResultStock("Se actualizó el stock.");
+          setResultStock("Se han actualizado el stock con éxito");
           return;
         }
 
-        setErrorStock("No se pudo actualizar el stock.");
+        setErrorStock("Ocurrio un error en la modificacion del stock");
       } catch (error) {
-        setErrorStock(formatError(error, { fallback: "No se pudo actualizar el stock." }));
+        setErrorStock(
+          extractErrorMessage(
+            error,
+            "Error desconocido en la modificacion del stock."
+          )
+        );
       } finally {
         setProcessingStock(false);
       }
@@ -144,13 +145,15 @@ const useStock = () => {
         );
 
         if (response.success) {
-          setResultCloseStock("Se cerró el stock.");
+          setResultCloseStock("Se ha cerrado el stock con éxito");
           return;
         }
 
-        setErrorCloseStock("No se pudo cerrar el stock.");
+        setErrorCloseStock("Ocurrio un error en el cierre del stock");
       } catch (error) {
-        setErrorCloseStock(formatError(error, { fallback: "No se pudo cerrar el stock." }));
+        setErrorCloseStock(
+          extractErrorMessage(error, "Error desconocido en el cierre del stock.")
+        );
       } finally {
         setProcessingCloseStock(false);
       }

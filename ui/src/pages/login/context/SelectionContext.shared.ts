@@ -2,13 +2,6 @@ import { createContext } from "react";
 import { Entity } from "../../../hooks/useDatabase/options/types";
 import { Data } from "../../../hooks/useFields/types";
 
-export type WorkspaceAllSelection = {
-  customer: boolean;
-  project: boolean;
-  campaign: boolean;
-  field: boolean;
-};
-
 export type SelectionContextType = {
   customer: Entity | undefined;
   setCustomer: (c: Entity | undefined) => void;
@@ -20,12 +13,6 @@ export type SelectionContextType = {
   setCampaign: (c: Entity | undefined) => void;
   field: Data | undefined;
   setField: (f: Data | undefined) => void;
-  allSelection: WorkspaceAllSelection;
-  setAllSelection: (
-    value:
-      | WorkspaceAllSelection
-      | ((current: WorkspaceAllSelection) => WorkspaceAllSelection)
-  ) => void;
   seasons: { name: string; id: number }[];
 };
 

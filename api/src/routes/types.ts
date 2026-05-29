@@ -32,7 +32,9 @@ router.get("", async (req: Request, res: Response) => {
       data: raw.data ?? raw,
     };
 
-    cache.set("types", data, CACHE_TTL_SHORT);
+    setImmediate(() => {
+      cache.set("types", data, CACHE_TTL_SHORT);
+    });
 
     res.status(200).json(data);
   } catch (error: any) {

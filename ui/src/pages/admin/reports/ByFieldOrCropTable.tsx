@@ -1,8 +1,7 @@
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import { FieldCropReportData, RowToRender } from "../../../hooks/useReporting/types.ts";
 import { cropColors } from "../colors";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { ScrollableTable } from "../../../components/crud/ScrollableTable";
 
 const CropBadge = ({ cropName }: { cropName: string }) => (
   <span
@@ -74,7 +73,7 @@ export const ByFieldOrCropTable = ({
 
   if (!data || !data.columns) {
     return (
-      <div className="p-4 text-sm text-gray-600 dark:text-gray-300 rounded-lg bg-gray-50 dark:bg-slate-900">
+      <div className="p-4 text-sm text-gray-600 rounded-lg bg-gray-50">
         No hay datos disponibles
       </div>
     );
@@ -100,35 +99,32 @@ export const ByFieldOrCropTable = ({
   };
 
   return (
-    <ScrollableTable>
+    <div className="overflow-x-auto">
       <div
         style={{
           width: `${data.columns.length * 360}px`,
         }}
       >
-        <table className="text-sm bg-white dark:bg-slate-800 border-separate border-spacing-y-1">
+        <table className="text-sm bg-white border-separate border-spacing-y-1">
         <thead>
           <tr className="h-14">
             <th></th>
             {data.columns &&
-              // Cada columna agrupa field+crop; el par es único por columna.
-              // Usamos Fragment con key explícita para que React no warnee
-              // ni colapse columnas con field_id o crop_id repetidos.
               data.columns.map((row) => (
-                <Fragment key={`${row.field_id}-${row.crop_id}`}>
+                <>
                   <th className="w-2"></th>
                   {/* --- MODIFICACIÓN DEL ENCABEZADO --- */}
                   <th className="p-2 align-middle w-[165px]">
                     <div
                       className={`flex flex-col gap-1 `}
                     >
-                      <span className="uppercase font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                      <span className="uppercase font-medium text-gray-700 whitespace-nowrap">
                         {row.field_name}
                       </span>
                       <CropBadge cropName={row.crop_name} />
                     </div>
                   </th>
-                </Fragment>
+                </>
               ))}
           </tr>
         </thead>
@@ -146,7 +142,7 @@ export const ByFieldOrCropTable = ({
         </tbody>
         </table>
       </div>
-    </ScrollableTable>
+    </div>
   );
 
   function renderRow(
@@ -170,14 +166,14 @@ export const ByFieldOrCropTable = ({
         <th
           className={
             [
-              !classNameHeader.includes("text-") && "text-gray-600 dark:text-gray-300",
+              !classNameHeader.includes("text-") && "text-gray-600",
               !classNameHeader.includes("font-") && "font-light",
               classNameHeader,
             ]
               .filter(Boolean)
               .join(" ") +
             " p-1 text-left w-[210px] " +
-            (isToggleRow ? "cursor-pointer hover:bg-gray-50 dark:bg-slate-900" : "")
+            (isToggleRow ? "cursor-pointer hover:bg-gray-50" : "")
           }
           onClick={
             isToggleRow ? () => setIsEconomicsOpen(!isEconomicsOpen) : undefined
@@ -200,8 +196,8 @@ export const ByFieldOrCropTable = ({
         {/* Columnas de datos */}
         {data!.columns.map((column, index) => {
           const finalRowClasses = [
-            !classNameRows.includes("text-") && "text-gray-600 dark:text-gray-300",
-            !classNameRows.includes("bg-") && "bg-white dark:bg-slate-800",
+            !classNameRows.includes("text-") && "text-gray-600",
+            !classNameRows.includes("bg-") && "bg-white",
             !classNameRows.includes("font-") && "font-light",
             classNameRows,
             shouldRoundRow && "rounded-xl overflow-hidden",
@@ -213,10 +209,11 @@ export const ByFieldOrCropTable = ({
           const formattedValue = valueFormat.crop(rowValue);
 
           return (
-            <Fragment key={`${column.id}-${index}`}>
-              <td className="w-2 bg-white dark:bg-slate-800"></td>
+            <>
+              <td className="w-2 bg-white"></td>
               {showIndicator ? (
                 <td
+                  key={index}
                   className={`${finalRowClasses} p-0`}
                 >
                   <div className="flex items-center justify-center h-full w-full gap-1">
@@ -239,6 +236,7 @@ export const ByFieldOrCropTable = ({
                 </td>
               ) : (
                 <td
+                  key={index}
                   className={`${finalRowClasses} p-0`}
                 >
                   <div className="flex items-center justify-center h-full w-full">
@@ -246,7 +244,7 @@ export const ByFieldOrCropTable = ({
                   </div>
                 </td>
               )}
-            </Fragment>
+            </>
           );
         })}
       </tr>
@@ -256,17 +254,13 @@ export const ByFieldOrCropTable = ({
       return rowContent;
     }
 
-    // Cuando hay spacer, renderRow devuelve dos `<tr>` envueltos. El
-    // Fragment necesita key explícita porque renderRow es el ítem del
-    // `rows?.map(...)` en <tbody>. La key del `<tr>` interno se preserva
-    // como identidad fina del rowContent.
     return (
-      <Fragment key={key}>
+      <>
         <tr aria-hidden="true">
           <td colSpan={data!.columns.length * 2 + 1} className={`${spacerBeforeHeight} bg-white`}></td>
         </tr>
         {rowContent}
-      </Fragment>
+      </>
     );
   }
 };

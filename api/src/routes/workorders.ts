@@ -5,9 +5,10 @@ import { cache } from ".";
 import {
   buildWorkOrderFilterRowsCacheKey,
   buildWorkOrderScopeParams,
+  hasWorkOrderScope,
   parseWorkOrderScope,
 } from "../utils/workOrdersRoute";
-import { buildForwardQuery } from "../utils/forwardQuery";
+import type { WorkOrderQueryScope } from "../utils/workOrdersRoute";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -75,6 +76,15 @@ type WorkOrderFilterRowsPayload = {
   };
 };
 
+const requireWorkOrderScope = (scope: WorkOrderQueryScope, res: Response) => {
+  if (hasWorkOrderScope(scope)) {
+    return true;
+  }
+
+  res.status(400).json({ message: "Campo o proyecto obligatorio" });
+  return false;
+};
+
 router.post("", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -101,7 +111,7 @@ router.post("", async (req: Request, res: Response) => {
       data: workorder,
     };
 
-    cache.flushAll();
+    setImmediate(() => cache.flushAll());
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -130,6 +140,10 @@ router.get("", async (req: Request, res: Response) => {
     const scope = parseWorkOrderScope(req.query);
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 1000;
+
+    if (!requireWorkOrderScope(scope, res)) {
+      return;
+    }
 
     const params = buildWorkOrderScopeParams(scope);
     params.set("page", String(page));
@@ -162,7 +176,7 @@ router.get("", async (req: Request, res: Response) => {
       },
     };
 
-    cache.set(`workorders:query:${query}`, data);
+    setImmediate(() => cache.set(`workorders:query:${query}`, data));
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -189,9 +203,11 @@ router.get("/filter-rows", async (req: Request, res: Response) => {
     }
 
     const scope = parseWorkOrderScope(req.query);
-    const params = buildWorkOrderScopeParams(scope);
-    const queryString = params.toString();
-    const query = queryString ? `?${queryString}` : "";
+    if (!requireWorkOrderScope(scope, res)) {
+      return;
+    }
+
+    const query = `?${buildWorkOrderScopeParams(scope).toString()}`;
     const cacheKey = buildWorkOrderFilterRowsCacheKey(query);
     const cachedRows = cache.get<WorkOrderFilterRowsPayload>(cacheKey);
     if (cachedRows) {
@@ -217,7 +233,7 @@ router.get("/filter-rows", async (req: Request, res: Response) => {
       },
     };
 
-    cache.set(cacheKey, data);
+    setImmediate(() => cache.set(cacheKey, data));
 
     res.status(200).json(data);
   } catch (error: unknown) {
@@ -245,7 +261,35 @@ router.get("/metrics", async (req: Request, res: Response) => {
 
     const headers = getAuthHeaders(userId);
 
-    const params = buildWorkOrderScopeParams(parseWorkOrderScope(req.query));
+    const field_id = parseInt(req.query.field_id as string) || 0;
+    const project_id = parseInt(req.query.project_id as string) || 0;
+    const customer_id = parseInt(req.query.customer_id as string) || 0;
+    const campaign_id = parseInt(req.query.campaign_id as string) || 0;
+    const supply_id = parseInt(req.query.supply_id as string) || 0;
+
+    if (field_id === 0 && project_id === 0) {
+      res.status(400).json({ message: "Campo o proyecto obligatorio" });
+      return;
+    }
+
+    const params = new URLSearchParams();
+    if (field_id > 0) {
+      params.set("field_id", String(field_id));
+    } else if (project_id > 0) {
+      params.set("project_id", String(project_id));
+    }
+
+    if (customer_id > 0) {
+      params.set("customer_id", String(customer_id));
+    }
+
+    if (campaign_id > 0) {
+      params.set("campaign_id", String(campaign_id));
+    }
+
+    if (supply_id > 0) {
+      params.set("supply_id", String(supply_id));
+    }
 
     const query = params.size > 0 ? `?${params.toString()}` : "";
 
@@ -376,7 +420,7 @@ router.put("/drafts/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    cache.flushAll();
+    setImmediate(() => cache.flushAll());
 
     res.status(204).send();
   } catch (error: any) {
@@ -411,7 +455,7 @@ router.post("/drafts/:id/publish", async (req: Request, res: Response) => {
       headers
     );
 
-    cache.flushAll();
+    setImmediate(() => cache.flushAll());
 
     res.status(200).json({
       success: true,
@@ -448,7 +492,7 @@ router.delete("/drafts/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    cache.flushAll();
+    setImmediate(() => cache.flushAll());
 
     res.status(200).json({
       success: true,
@@ -531,7 +575,7 @@ router.put("/:id", async (req: Request, res: Response) => {
       message: "Orden actualizada exitosamente",
     };
 
-    cache.flushAll();
+    setImmediate(() => cache.flushAll());
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -569,7 +613,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
       message: "Orden eliminada exitosamente",
     };
 
-    cache.flushAll();
+    setImmediate(() => cache.flushAll());
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -579,116 +623,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.get("/archived", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-    const headers = getAuthHeaders(userId);
-    const { data: workOrders } = await apiClient.get<any>(
-      `/work-orders/archived${buildForwardQuery(req)}`,
-      headers
-    );
-    const items = Array.isArray(workOrders?.data) ? workOrders.data : [];
-    const total =
-      typeof workOrders?.page_info?.total === "number"
-        ? workOrders.page_info.total
-        : items.length;
-    res.status(200).json({
-      success: true,
-      data: { data: items, total },
-    });
-  } catch (error: any) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.post("/:id/archive", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-    const headers = getAuthHeaders(userId);
-    await apiClient.post<any>(`/work-orders/${req.params.id}/archive`, {}, headers);
-    cache.flushAll();
-    res.status(200).json({ success: true, message: "Orden archivada exitosamente" });
-  } catch (error: any) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.post("/:id/restore", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-    const headers = getAuthHeaders(userId);
-    await apiClient.post<any>(`/work-orders/${req.params.id}/restore`, {}, headers);
-    cache.flushAll();
-    res.status(200).json({ success: true, message: "Orden restaurada exitosamente" });
-  } catch (error: any) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
-    res.status(500).json({
-      success: false,
-      message: "Error inesperado",
-      error: { status: 500, details: "No se pudo procesar la solicitud" },
-    });
-  }
-});
-
-router.delete("/:id/hard", async (req: Request, res: Response) => {
-  try {
-    const userId = req.user?.userID;
-    if (!userId) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-    const headers = getAuthHeaders(userId);
-    await apiClient.delete<any>(`/work-orders/${req.params.id}/hard`, headers);
-    cache.flushAll();
-    res.status(200).json({ success: true, message: "Orden eliminada definitivamente" });
-  } catch (error: any) {
-    const err = error as ApiResponse<null>;
-    if ("error" in err) {
-      res.status(err.error?.status || 500).json(err);
-      return;
-    }
     res.status(500).json({
       success: false,
       message: "Error inesperado",

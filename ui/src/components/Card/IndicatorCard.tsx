@@ -16,6 +16,8 @@ interface IndicatorCardProps {
   icon?: React.ReactNode;
   color?: ColorOption;
   subtextColor?: ColorOption;
+  height?: string;
+  width?: string;
   className?: string;
 }
 
@@ -26,25 +28,25 @@ export function IndicatorCard({
   icon,
   color = "default",
   subtextColor,
+  height = "auto",
+  width = "auto",
   className = "",
 }: IndicatorCardProps) {
   const resolvedSubtextColor = subtextColor ?? color;
-  // `w-full` para que herede el ancho del contenedor (grid/flex parent).
-  // `min-w-0` evita overflow horizontal cuando el container no tiene espacio.
   return (
     <div
-      className={`w-full min-w-0 bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700/60 overflow-hidden transition-all duration-200 hover:shadow-md ${className}`}
-      style={{ boxShadow: "var(--shadow-sm)" }}
+      className={`bg-white rounded-xl border border-slate-200/80 overflow-hidden flex-1 min-w-0 transition-all duration-200 hover:shadow-md ${className}`}
+      style={{ minHeight: height, minWidth: width, boxShadow: "var(--shadow-sm)" }}
     >
       <div
         className="h-1 w-full"
         style={{ background: barGradients[color] ?? barGradients.default }}
       />
       <div className="px-3.5 py-2.5 flex flex-col gap-0.5">
-        <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider leading-tight">
+        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider leading-tight">
           {title}
         </span>
-        <span className="text-base font-bold text-slate-800 dark:text-slate-100 leading-snug tracking-tight font-display">
+        <span className="text-base font-bold text-slate-800 leading-snug tracking-tight font-display">
           {value}
         </span>
         {subtext && (
