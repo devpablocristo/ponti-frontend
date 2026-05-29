@@ -1,4 +1,5 @@
 import { LotKPIs, LotsData } from "../../../hooks/useLots/types";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 
 export type LotIndicatorValues = {
   seeded_area: number;
@@ -6,6 +7,7 @@ export type LotIndicatorValues = {
   yield_tn_per_ha: number;
   cost_per_hectare: number;
   superficie_total: number;
+  total_tons: number;
 };
 
 const emptyIndicators: LotIndicatorValues = {
@@ -14,6 +16,7 @@ const emptyIndicators: LotIndicatorValues = {
   yield_tn_per_ha: 0,
   cost_per_hectare: 0,
   superficie_total: 0,
+  total_tons: 0,
 };
 
 export function toFiniteNumber(value: unknown): number {
@@ -50,17 +53,11 @@ function valuesForFilter(lot: LotsData, key: string): string[] {
 }
 
 function matchesFilterValue(cellValues: string[], filterValue: unknown): boolean {
-  const normalizedCellValues = cellValues.map((value) => value.toLowerCase());
-
   if (Array.isArray(filterValue)) {
-    return filterValue.some((option) => {
-      const normalizedOption = String(option).toLowerCase();
-      return normalizedCellValues.some((value) => value === normalizedOption);
-    });
+    return cellValues.some((value) => matchesSelectFilter(value, filterValue));
   }
 
-  const normalizedFilter = String(filterValue).toLowerCase();
-  return normalizedCellValues.some((value) => value.includes(normalizedFilter));
+  return cellValues.some((value) => matchesTextFilter(value, filterValue));
 }
 
 export function lotMatchesFilters(
@@ -108,6 +105,7 @@ export function calculateLotIndicators(lots: LotsData[]): LotIndicatorValues {
     yield_tn_per_ha: totalSeededArea > 0 ? totalTons / totalSeededArea : 0,
     cost_per_hectare: totalSurfaceArea > 0 ? weightedCost / totalSurfaceArea : 0,
     superficie_total: totalSurfaceArea,
+    total_tons: totalTons,
   };
 }
 
@@ -118,5 +116,6 @@ export function mapApiLotIndicators(kpis: LotKPIs): LotIndicatorValues {
     yield_tn_per_ha: toFiniteNumber(kpis.yield_tn_per_ha),
     cost_per_hectare: toFiniteNumber(kpis.cost_per_hectare),
     superficie_total: toFiniteNumber(kpis.superficie_total),
+    total_tons: toFiniteNumber(kpis.total_tons),
   };
 }
