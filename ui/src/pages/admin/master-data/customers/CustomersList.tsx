@@ -33,6 +33,7 @@ import { formatNumberAr } from "../../utils";
 import ArchivedCustomers from "./ArchivedCustomers";
 import ArchivedProjects from "../projects/ArchivedProjects";
 import CustomerEditor from "./CustomerEditor";
+import ProjectEditor from "../../projects/ProjectEditor";
 
 import {
   type CustomerProjectMode,
@@ -111,7 +112,7 @@ export default function CustomersList({
   );
   const canLoadList = restrictedProjectFlow ? workspaceReady : hasWorkspaceSelection;
   const canCreateProject = restrictedProjectFlow
-    ? Boolean(selectedCustomer?.id && selectedCampaign?.id)
+    ? Boolean(selectedCustomer?.id && selectedProject?.id && selectedCampaign?.id)
     : true;
   const hasProjectScope = Boolean(
     selectedProject?.id ||
@@ -513,14 +514,16 @@ export default function CustomersList({
             onClick: () => setArchivedDrawerOpen(true),
           },
           {
-            label: projectsOnly ? "Nuevo Proyecto" : "Nuevo",
+            label: projectsOnly ? "Configurar Proyecto" : "Nuevo",
             icon: <Plus className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             disabled: !canCreateProject,
             onClick: () => {
               if (!canCreateProject) {
-                notify.warning("Seleccioná cliente y campaña para crear un proyecto.");
+                notify.warning(
+                  "Seleccioná cliente, proyecto y campaña para configurar el proyecto."
+                );
                 return;
               }
               setCreateDrawerOpen(true);
@@ -532,22 +535,37 @@ export default function CustomersList({
       <DrawerShell
         open={createDrawerOpen}
         onClose={() => setCreateDrawerOpen(false)}
-        title={projectsOnly ? "Nuevo Proyecto" : "Nuevo Cliente"}
+        title={projectsOnly ? "Configurar Proyecto" : "Nuevo Cliente"}
       >
-        <CustomerEditor
-          embedded
-          mode={projectsOnly ? "project" : undefined}
-          createNewProject={projectsOnly}
-          selectionOnlyRelations={restrictedProjectFlow}
-          initialCustomer={selectedCustomer ?? null}
-          initialCampaign={
-            selectedCampaign ? { id: selectedCampaign.id, name: selectedCampaign.name } : null
-          }
-          contextProject={selectedProject ?? null}
-          projectNameScope={visibleProjectNameOptions}
-          onSaved={refreshAfterArchivedRestore}
-          onClose={() => setCreateDrawerOpen(false)}
-        />
+        {projectsOnly ? (
+          <ProjectEditor
+            embedded
+            customerId={selectedCustomer?.id ?? null}
+            initialProjectId={selectedProject?.id ?? null}
+            selectionOnlyRelations={restrictedProjectFlow}
+            initialCustomer={selectedCustomer ?? null}
+            initialCampaign={
+              selectedCampaign ? { id: selectedCampaign.id, name: selectedCampaign.name } : null
+            }
+            contextProject={selectedProject ?? null}
+            projectNameScope={visibleProjectNameOptions}
+            onSaved={refreshAfterArchivedRestore}
+            onClose={() => setCreateDrawerOpen(false)}
+          />
+        ) : (
+          <CustomerEditor
+            embedded
+            selectionOnlyRelations={restrictedProjectFlow}
+            initialCustomer={selectedCustomer ?? null}
+            initialCampaign={
+              selectedCampaign ? { id: selectedCampaign.id, name: selectedCampaign.name } : null
+            }
+            contextProject={selectedProject ?? null}
+            projectNameScope={visibleProjectNameOptions}
+            onSaved={refreshAfterArchivedRestore}
+            onClose={() => setCreateDrawerOpen(false)}
+          />
+        )}
       </DrawerShell>
 
       <DrawerShell
@@ -558,24 +576,42 @@ export default function CustomersList({
         }}
         title={editingProjectId ? "Editar Proyecto" : "Editar Cliente"}
       >
-        <CustomerEditor
-          embedded
-          mode={editingProjectId ? "project" : "customerOnly"}
-          customerId={editingCustomerId}
-          initialProjectId={editingProjectId}
-          selectionOnlyRelations={restrictedProjectFlow}
-          initialCustomer={selectedCustomer ?? null}
-          initialCampaign={
-            selectedCampaign ? { id: selectedCampaign.id, name: selectedCampaign.name } : null
-          }
-          contextProject={selectedProject ?? null}
-          projectNameScope={visibleProjectNameOptions}
-          onSaved={refreshAfterArchivedRestore}
-          onClose={() => {
-            setEditingCustomerId(null);
-            setEditingProjectId(null);
-          }}
-        />
+        {editingProjectId ? (
+          <ProjectEditor
+            embedded
+            customerId={editingCustomerId}
+            initialProjectId={editingProjectId}
+            selectionOnlyRelations={restrictedProjectFlow}
+            initialCustomer={selectedCustomer ?? null}
+            initialCampaign={
+              selectedCampaign ? { id: selectedCampaign.id, name: selectedCampaign.name } : null
+            }
+            contextProject={selectedProject ?? null}
+            projectNameScope={visibleProjectNameOptions}
+            onSaved={refreshAfterArchivedRestore}
+            onClose={() => {
+              setEditingCustomerId(null);
+              setEditingProjectId(null);
+            }}
+          />
+        ) : (
+          <CustomerEditor
+            embedded
+            customerId={editingCustomerId}
+            selectionOnlyRelations={restrictedProjectFlow}
+            initialCustomer={selectedCustomer ?? null}
+            initialCampaign={
+              selectedCampaign ? { id: selectedCampaign.id, name: selectedCampaign.name } : null
+            }
+            contextProject={selectedProject ?? null}
+            projectNameScope={visibleProjectNameOptions}
+            onSaved={refreshAfterArchivedRestore}
+            onClose={() => {
+              setEditingCustomerId(null);
+              setEditingProjectId(null);
+            }}
+          />
+        )}
       </DrawerShell>
 
       <ArchivedDrawer
@@ -636,7 +672,7 @@ export default function CustomersList({
                   setCreateDrawerOpen(true);
                 }}
               >
-                {projectsOnly ? "Nuevo Proyecto" : "Nuevo Cliente"}
+                {projectsOnly ? "Configurar Proyecto" : "Nuevo Cliente"}
               </Button>
             }
           />

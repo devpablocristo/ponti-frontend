@@ -1,6 +1,7 @@
 import React from "react";
 
 type InputFieldProps = {
+  id?: string;
   label: string;
   type?: "text" | "number" | "password" | "date";
   name: string;
@@ -25,6 +26,7 @@ type InputFieldProps = {
 const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
   (
     {
+      id,
       label = "",
       type = "text",
       name,
@@ -47,24 +49,27 @@ const InputField = React.forwardRef<HTMLInputElement, InputFieldProps>(
     },
     ref
   ) => {
+    const inputId = id ?? name;
     const sizeClasses =
       size === "sm"
         ? "text-sm py-2 px-3.5"
         : size === "lg"
-        ? "text-base py-3 px-4"
-        : "text-sm py-2.5 px-3.5";
+          ? "text-base py-3 px-4"
+          : "text-sm py-2.5 px-3.5";
 
     return (
       <div className={`${fullWidth ? "w-full" : ""} ${className}`}>
         {label !== "" && (
           <label
             className="block mb-1.5 text-xs font-medium text-slate-600 dark:text-slate-300"
+            htmlFor={inputId}
           >
             {label}
           </label>
         )}
         <input
           ref={ref}
+          id={inputId}
           autoComplete="off"
           type={type}
           name={name}

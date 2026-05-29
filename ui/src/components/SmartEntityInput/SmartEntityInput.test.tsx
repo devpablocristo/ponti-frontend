@@ -58,6 +58,46 @@ describe("SmartEntityInput", () => {
     expect(onSelectExisting).toHaveBeenCalledWith({ id: 7, name: "soalen srl 2" });
   });
 
+  it("keeps dropdown catalog codes untouched when display formatting is disabled", () => {
+    render(
+      <SmartEntityInput
+        label="Campaña"
+        name="campaign"
+        value=""
+        options={[{ id: 1, name: "2025-2026" }]}
+        entityLabel="Campaña"
+        onChange={vi.fn()}
+        onSelectExisting={vi.fn()}
+        formatDisplayValue={false}
+      />
+    );
+
+    fireEvent.focus(screen.getByLabelText("Campaña"));
+
+    expect(screen.getByText("2025-2026")).toBeInTheDocument();
+  });
+
+  it("renders dropdown above drawers", () => {
+    render(
+      <SmartEntityInput
+        label="Proyecto"
+        name="project"
+        value="Jujuy Mealla Acheral"
+        options={[{ id: 10, name: "Jujuy Mealla Acheral" }]}
+        entityLabel="Proyecto"
+        onChange={vi.fn()}
+        onSelectExisting={vi.fn()}
+        selectionOnly
+      />
+    );
+
+    fireEvent.focus(screen.getByLabelText("Proyecto"));
+
+    expect(screen.getByTestId("project-smart-entity-dropdown")).toHaveStyle({
+      zIndex: "1025",
+    });
+  });
+
   it("still sends typed text to onChange", () => {
     const onChange = vi.fn();
 
@@ -108,5 +148,35 @@ describe("SmartEntityInput", () => {
     fireEvent.click(screen.getByText("Soalen SRL"));
 
     expect(onSelectExisting).toHaveBeenCalledWith({ id: 7, name: "soalen srl" });
+  });
+
+  it("shows all options when a selection-only input is opened, then narrows while typing", () => {
+    render(
+      <SmartEntityInput
+        label="Cliente"
+        name="customer"
+        value="Agro Lajitas"
+        options={[
+          { id: 1, name: "Agro Lajitas" },
+          { id: 2, name: "Olega SA" },
+        ]}
+        entityLabel="Cliente"
+        onChange={vi.fn()}
+        onSelectExisting={vi.fn()}
+        selectionOnly
+      />
+    );
+
+    const input = screen.getByLabelText("Cliente");
+    fireEvent.focus(input);
+
+    expect(input).toHaveValue("");
+    expect(screen.getByText("Agro Lajitas")).toBeInTheDocument();
+    expect(screen.getByText("Olega SA")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "ole" } });
+
+    expect(screen.queryByText("Agro Lajitas")).not.toBeInTheDocument();
+    expect(screen.getByText("Olega SA")).toBeInTheDocument();
   });
 });

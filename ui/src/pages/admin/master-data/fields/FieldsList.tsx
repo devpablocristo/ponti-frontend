@@ -21,7 +21,7 @@ import useFields from "../../../../hooks/useFields";
 import { Data as Field } from "../../../../hooks/useFields/types";
 import { Column } from "../../types";
 import { FIELD_ENTITY as ENTITY } from "../../entities";
-import CustomerEditor from "../customers/CustomerEditor";
+import ProjectEditor from "../../projects/ProjectEditor";
 import ArchivedFields from "./ArchivedFields";
 import type { ActorContextFilters } from "../actors/actorContextFilters";
 
@@ -298,9 +298,8 @@ export default function FieldsList({
         title="Editar Proyecto"
       >
         {editorContext && (
-          <CustomerEditor
+          <ProjectEditor
             embedded
-            mode="project"
             customerId={selectedCustomer?.id ?? null}
             initialProjectId={editorContext.initialProjectId}
             onClose={() => {

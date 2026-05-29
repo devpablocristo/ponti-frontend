@@ -20,6 +20,8 @@ type DropdownPosition = {
   width: number;
 };
 
+const SMART_ENTITY_DROPDOWN_Z_INDEX = 1025;
+
 type SmartEntityInputProps<T extends EntityNameOption> = {
   label: string;
   name: string;
@@ -94,7 +96,7 @@ export function SmartEntityInput<T extends EntityNameOption>({
         top: dropdownPosition.top,
         left: dropdownPosition.left,
         width: dropdownPosition.width,
-        zIndex: 980,
+        zIndex: SMART_ENTITY_DROPDOWN_Z_INDEX,
       }
     : undefined;
 
@@ -171,7 +173,9 @@ export function SmartEntityInput<T extends EntityNameOption>({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => handleSelectExisting(match)}
             >
-              <span className="min-w-0 truncate">{formatProperName(match.name)}</span>
+              <span className="min-w-0 truncate">
+                {formatDisplayValue ? formatProperName(match.name) : match.name}
+              </span>
             </button>
           ))}
         </div>
