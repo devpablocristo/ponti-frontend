@@ -317,7 +317,7 @@ export function DataTable<T>({
           <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-semibold uppercase text-slate-500">
             <tr>
               {expandableRowRender ? <th className="w-8 p-2" /> : null}
-              {columns.map((column, index) => {
+              {columns.map((column) => {
                 const filterValue = filters?.[String(column.key)];
                 const isFilterActive = Array.isArray(filterValue)
                   ? filterValue.length > 0
