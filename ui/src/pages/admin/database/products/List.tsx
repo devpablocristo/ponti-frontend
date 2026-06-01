@@ -12,6 +12,7 @@ import SelectField from "../../../../components/Input/SelectField";
 import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 
 const renderPriceCell = (value: unknown, row: Supply) => (
   <div className="flex items-center gap-2">
@@ -45,7 +46,11 @@ export default function ListItems() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: number;
+    name: string;
+    count: number;
+  } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
   const pagination = usePagination({ perPage: 10 });
   const [suppliesMode, setSuppliesMode] = useState<SuppliesMode>("all");
@@ -54,11 +59,7 @@ export default function ListItems() {
   const lastHandledResultUpdateRef = useRef<string>("");
   const closeModalOnNextUpdateRef = useRef(false);
 
-  const { filters, projectId } = useWorkspaceFilters([
-    "customer",
-    "project",
-    "campaign",
-  ]);
+  const { filters, projectId } = useWorkspaceFilters(["customer", "project", "campaign"]);
 
   useEffect(() => {
     if (projectId) {
@@ -121,17 +122,17 @@ export default function ListItems() {
           const status = supply.is_partial_price ? "Parcial" : "Final";
           if (Array.isArray(value)) {
             if (value.length === 0) return true;
-            return value.includes(status);
+            return matchesSelectFilter(status, value);
           }
-          return status.toLowerCase().includes(String(value).toLowerCase());
+          return matchesTextFilter(status, value);
         }
 
-        const currentValue = String(supply[key as keyof Supply] ?? "");
+        const currentValue = supply[key as keyof Supply];
         if (Array.isArray(value)) {
           if (value.length === 0) return true;
-          return value.includes(currentValue);
+          return matchesSelectFilter(currentValue, value);
         }
-        return currentValue.toLowerCase().includes(String(value).toLowerCase());
+        return matchesTextFilter(currentValue, value);
       })
     );
   };
@@ -294,19 +295,35 @@ export default function ListItems() {
 
   return (
     <div className="w-full mx-auto">
-      <FilterBar filters={filters} actions={[
-        {
-          label: "Exportar Insumos",
-          icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          ,
-          variant: "primary",
-          isPrimary: true,
-          disabled: !projectId,
-          onClick: () => handleExport(),
-        }
-      ]} />
+      <FilterBar
+        filters={filters}
+        actions={[
+          {
+            label: "Exportar Insumos",
+            icon: (
+              <svg
+                width="14"
+                height="13"
+                viewBox="0 0 14 13"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ),
+            variant: "primary",
+            isPrimary: true,
+            disabled: !projectId,
+            onClick: () => handleExport(),
+          },
+        ]}
+      />
       <div className="p-6 w-full mt-4 mx-auto bg-white rounded-lg shadow-md">
         {errorMessage && (
           <div
@@ -430,16 +447,16 @@ export default function ListItems() {
                 ? `Completar insumo pendiente ${item?.name || ""}`
                 : `Edicion de insumo ${item?.name || ""}`
             }
-            primaryButtonText={
-              suppliesMode === "pending" ? "Completar" : "Guardar"
-            }
+            primaryButtonText={suppliesMode === "pending" ? "Completar" : "Guardar"}
             onPrimaryAction={handleSave}
-          >              {suppliesMode === "pending" && (
-            <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Este insumo fue creado desde la app con información incompleta.
-              Para que pueda usarse al publicar órdenes, completá los datos faltantes.
-            </div>
-          )}
+          >
+            {" "}
+            {suppliesMode === "pending" && (
+              <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                Este insumo fue creado desde la app con información incompleta. Para que pueda
+                usarse al publicar órdenes, completá los datos faltantes.
+              </div>
+            )}
             <div className="flex flex-col gap-1">
               <InputField
                 label="Nombre del insumo"
@@ -497,11 +514,7 @@ export default function ListItems() {
               <SelectField
                 label="Rubro"
                 name={`category-${item?.name || ""}`}
-                value={
-                  item?.category_id && item.category_id > 0
-                    ? item.category_id.toString()
-                    : ""
-                }
+                value={item?.category_id && item.category_id > 0 ? item.category_id.toString() : ""}
                 onChange={(e) => {
                   if (!item) return;
                   const category = parseInt(e.target.value);
@@ -526,7 +539,6 @@ export default function ListItems() {
                 }}
                 options={types}
               />
-
             </div>
           </BaseModal>
           <BaseModal

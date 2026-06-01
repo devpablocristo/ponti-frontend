@@ -17,6 +17,7 @@ import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 
 const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
@@ -275,7 +276,7 @@ export function Tasks() {
   });
   const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [resultInvoiceMessage, setResultInvoiceMessage] = useState<string | null>(null);
-    const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
+  const [errorInvoiceMessage, setErrorInvoiceMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
 
   const { filters, projectId, selectedField } = useWorkspaceFilters([
@@ -324,13 +325,11 @@ export function Tasks() {
             return normalize(String(value)) === normalize(String(task.date));
           }
 
-          const val = String(task[k as keyof LaborGroupData] ?? "").toLowerCase();
-
+          const taskValue = task[k as keyof LaborGroupData];
           if (Array.isArray(value)) {
-            return value.some((v) => val.includes(String(v).toLowerCase()));
+            return matchesSelectFilter(taskValue, value);
           }
-
-          return val.includes(String(value).toLowerCase());
+          return matchesTextFilter(taskValue, value);
         })
       );
 
@@ -393,8 +392,9 @@ export function Tasks() {
           const cropName = String(crop);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-                }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${
+                cropColors[cropName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
+              }`}
             >
               {cropName}
             </span>
@@ -418,8 +418,9 @@ export function Tasks() {
           const laborName = String(crop);
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-green-200 text-green-800"
-                }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${
+                laborColors[laborName] || "bg-green-200 text-green-800"
+              }`}
             >
               {laborName}
             </span>
@@ -592,11 +593,7 @@ export function Tasks() {
         },
       },
     ],
-    [
-      laborGroups,
-      taskFilters,
-      getFilterOptionsForColumn,
-    ]
+    [laborGroups, taskFilters, getFilterOptionsForColumn]
   );
 
   const allColumns = useMemo(() => {
@@ -650,14 +647,13 @@ export function Tasks() {
           if (Array.isArray(value)) return value.includes(taskStatus);
           return taskStatus === value;
         }
-        const taskValRaw = task[key as keyof LaborGroupData];
-        const taskVal = String(taskValRaw ?? "").toLowerCase();
+        const taskValue = task[key as keyof LaborGroupData];
 
         if (Array.isArray(value)) {
-          return value.some((v) => taskVal === String(v).toLowerCase());
+          return matchesSelectFilter(taskValue, value);
         }
 
-        return taskVal === String(value).toLowerCase();
+        return matchesSelectFilter(taskValue, [value]);
       });
     });
   }, [laborGroups, taskFilters]);
@@ -928,7 +924,7 @@ export function Tasks() {
             setResultInvoiceMessage(null);
             setErrorInvoiceMessage(null);
 
-                        if (item.invoice_id === 0) {
+            if (item.invoice_id === 0) {
               setInvoice({
                 workorder_id: item.workorder_id,
                 investor_id: item.investor_id,
@@ -946,7 +942,7 @@ export function Tasks() {
               (opt) => opt.name === item.invoice_status
             );
 
-                        setInvoice({
+            setInvoice({
               workorder_id: item.workorder_id,
               investor_id: item.investor_id,
               invoice_id: item.invoice_id,
@@ -966,11 +962,7 @@ export function Tasks() {
               allColumns={allColumns}
             />
           }
-          pagination={
-            pageInfo
-              ? pagination.buildPagination(filteredTasks.length)
-              : undefined
-          }
+          pagination={pageInfo ? pagination.buildPagination(filteredTasks.length) : undefined}
         />
         <BaseModal
           isOpen={showInvoiceModal}
