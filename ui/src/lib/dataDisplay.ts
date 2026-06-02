@@ -1,16 +1,10 @@
-import {
-  createElement,
-  useCallback,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createElement, useCallback, useMemo, useState, type ReactNode } from "react";
+import { SubTable } from "@devpablocristo/modules-ui-data-display";
 import {
   DataTable as BaseDataTable,
-  SubTable,
   type DataTableColumn,
   type DataTableProps,
-} from "@devpablocristo/modules-ui-data-display";
+} from "./LocalDataTable";
 import { matchesSelectFilter, matchesTextFilter } from "./tableFilters";
 
 export { SubTable };
@@ -91,10 +85,7 @@ export function usePagination({ perPage }: { perPage: number }) {
   };
 }
 
-function rowMatchesFilters<T extends object>(
-  row: T,
-  filters: Record<string, unknown>
-) {
+function rowMatchesFilters<T extends object>(row: T, filters: Record<string, unknown>) {
   const record = row as Record<string, unknown>;
 
   return Object.entries(filters).every(([key, value]) => {
