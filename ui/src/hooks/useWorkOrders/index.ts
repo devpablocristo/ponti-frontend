@@ -34,8 +34,11 @@ const useOrders = () => {
   const [processingDetail, setProcessingDetail] = useState(false);
 
   const getOrders = React.useCallback(
-    async (queryString: string): Promise<void> => {
-      setProcessing(true);
+    async (queryString: string, options?: { silent?: boolean }): Promise<void> => {
+      // `silent` evita togglear el estado de carga (para refrescos de fondo sin parpadeo).
+      if (!options?.silent) {
+        setProcessing(true);
+      }
       setError(null);
 
       let queryParams = "";
@@ -72,15 +75,20 @@ const useOrders = () => {
           extractErrorMessage(error, "Error desconocido en la busqueda de ordenes.")
         );
       } finally {
-        setProcessing(false);
+        if (!options?.silent) {
+          setProcessing(false);
+        }
       }
     },
     [dispatch]
   );
 
   const getMetrics = React.useCallback(
-    async (queryString: string) => {
-      setProcessingMetrics(true);
+    async (queryString: string, options?: { silent?: boolean }) => {
+      // `silent` evita togglear el estado de carga (para refrescos de fondo sin parpadeo).
+      if (!options?.silent) {
+        setProcessingMetrics(true);
+      }
       setErrorMetrics(null);
 
       let queryParams = "";
@@ -107,7 +115,9 @@ const useOrders = () => {
           extractErrorMessage(error, "Error desconocido en la busqueda de metricas.")
         );
       } finally {
-        setProcessingMetrics(false);
+        if (!options?.silent) {
+          setProcessingMetrics(false);
+        }
       }
     },
     [dispatch]
