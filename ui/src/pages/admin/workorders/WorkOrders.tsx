@@ -23,6 +23,11 @@ const FILTER_HIERARCHY: Record<string, string[]> = {
   field_name: ["lot_name"],
 };
 
+/** Cada cuánto se re-consulta el listado de órdenes para reflejar cambios externos
+ * (ej.: órdenes creadas desde la app mobile) sin que el usuario recargue la página.
+ * El refresco de fondo es silencioso (no muestra spinner), así que el intervalo corto no molesta. */
+const WORK_ORDERS_REFRESH_INTERVAL_MS = 20_000;
+
 type WorkOrdersListResponse = {
   success: true;
   data: {
@@ -875,6 +880,46 @@ export function WorkOrders() {
     getOrders,
     getMetrics,
   ]);
+
+  // Mantiene la última query disponible para los refrescos por foco/intervalo sin
+  // re-suscribir los listeners en cada cambio de página o filtro.
+  const workOrdersQueryRef = useRef(workOrdersQuery);
+  workOrdersQueryRef.current = workOrdersQuery;
+
+  // Re-consulta el listado cuando la pestaña recupera foco/visibilidad y con un poll
+  // suave, para reflejar órdenes creadas desde otros sistemas (ej.: la app mobile) sin
+  // que el usuario tenga que recargar la página manualmente.
+  useEffect(() => {
+    if (!hasWorkOrderScope) {
+      return;
+    }
+
+    const refresh = () => {
+      getOrders(workOrdersQueryRef.current, { silent: true });
+      getMetrics(workOrdersQueryRef.current, { silent: true });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    };
+
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    }, WORK_ORDERS_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [hasWorkOrderScope, getOrders, getMetrics]);
 
   useEffect(() => {
     if (!hasWorkOrderScope) {
