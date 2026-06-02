@@ -12,6 +12,7 @@ import { Summary } from "@/api/types";
 import { Column } from "../types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
+import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 
 function ItemsIndicators({ summary }: { summary?: Summary }) {
   const safeSummary = summary ?? {
@@ -42,6 +43,46 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
   );
 }
 
+// Predicado único de filtrado de movimientos. Lo usan tanto el filtrado de filas
+// (filteredMovements) como el cálculo de opciones por columna (excludeKey), para que
+// ambos caminos no puedan divergir (p.ej. fecha con sufijo de hora o campos numéricos).
+function movementMatchesFilters(
+  item: SupplyMovement,
+  activeFilters: Record<string, unknown>,
+  excludeKey?: keyof SupplyMovement
+) {
+  return Object.entries(activeFilters).every(([key, value]) => {
+    if (key === excludeKey) return true;
+    if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+    const rawValue = item[key as keyof SupplyMovement];
+
+    // 🟢 FECHA: el valor crudo trae sufijo de hora ("...T00:00:00Z"); normalizar ambos lados
+    if (key === "entry_date") {
+      const itemDate = normalizeDate(String(rawValue));
+      if (Array.isArray(value)) {
+        return value.some((v) => normalizeDate(String(v)) === itemDate);
+      }
+      return normalizeDate(String(value)) === itemDate;
+    }
+
+    // 🟢 NUMÉRICOS (solo campos realmente numéricos)
+    if (key === "price_usd" || key === "total_usd") {
+      const num = Number(rawValue);
+      if (Array.isArray(value)) {
+        return value.some((v) => Number(v) === num);
+      }
+      return Number(value) === num;
+    }
+
+    if (Array.isArray(value)) {
+      return matchesSelectFilter(rawValue, value);
+    }
+
+    return matchesTextFilter(rawValue, value);
+  });
+}
+
 export function Products() {
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
@@ -61,12 +102,8 @@ export function Products() {
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
   const [editingMovement, setEditingMovement] = useState<SupplyMovement | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(
-    null
-  );
-  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(
-    null
-  );
+  const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
+  const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
 
   const isInternalMovementEditionBlocked = (entryType?: string) => {
     const normalized = String(entryType ?? "")
@@ -97,62 +134,15 @@ export function Products() {
     data: SupplyMovement[],
     filters: Record<string, unknown>
   ) {
-    const otherFilters = { ...filters };
-    delete otherFilters[key];
-
-    const filtered = data.filter((item) =>
-      Object.entries(otherFilters).every(([k, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
-
-        const itemValue = String(
-          item[k as keyof SupplyMovement] ?? ""
-        ).toLowerCase();
-
-        if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
-        }
-
-        return itemValue.includes(String(value).toLowerCase());
-      })
-    );
+    const filtered = data.filter((item) => movementMatchesFilters(item, filters, key));
 
     return [...new Set(filtered.map((i) => String(i[key] ?? "")))].filter(Boolean);
   }
 
-  function getDateFilterOptions(
-    data: SupplyMovement[],
-    filters: Record<string, unknown>
-  ) {
-    const otherFilters = { ...filters };
-    delete otherFilters.entry_date;
+  function getDateFilterOptions(data: SupplyMovement[], filters: Record<string, unknown>) {
+    const filtered = data.filter((item) => movementMatchesFilters(item, filters, "entry_date"));
 
-    const filtered = data.filter((item) =>
-      Object.entries(otherFilters).every(([k, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
-
-        const rawValue = item[k as keyof SupplyMovement];
-
-        if (Array.isArray(value)) {
-          return value.some((v) =>
-            String(rawValue ?? "")
-              .toLowerCase()
-              .includes(String(v).toLowerCase())
-          );
-        }
-
-        return String(rawValue ?? "")
-          .toLowerCase()
-          .includes(String(value).toLowerCase());
-      })
-    );
-
-    return [
-      ...new Set(
-        filtered.map((m) => normalizeDate(String(m.entry_date)))
-      ),
-    ];
+    return [...new Set(filtered.map((m) => normalizeDate(String(m.entry_date))))];
   }
 
   const columns: Column<SupplyMovement>[] = useMemo(
@@ -162,11 +152,7 @@ export function Products() {
         header: "Ingreso",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "entry_type",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("entry_type", supplyMovements, columnsFilters),
       },
       {
         key: "reference_number",
@@ -203,10 +189,7 @@ export function Products() {
         header: "Fecha",
         filterable: true,
         filterType: "select",
-        filterOptions: getDateFilterOptions(
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getDateFilterOptions(supplyMovements, columnsFilters),
         render: (dateString) => {
           if (!dateString) return "";
           const datePart = normalizeDate(String(dateString));
@@ -219,22 +202,14 @@ export function Products() {
         header: "Inversor",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "investor_name",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("investor_name", supplyMovements, columnsFilters),
       },
       {
         key: "supply_name",
         header: "Insumo",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "supply_name",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("supply_name", supplyMovements, columnsFilters),
         render: (value) => <strong>{String(value ?? "")}</strong>,
       },
       {
@@ -242,61 +217,43 @@ export function Products() {
         header: "Cantidad",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "quantity",
-          supplyMovements,
-          columnsFilters
-        ),
-        render: (value) => (
-          <span className="font-bold text-gray-900">{String(value ?? "")}</span>
-        ),
+        filterOptions: getFilterOptionsForColumn("quantity", supplyMovements, columnsFilters),
+        render: (value) => <span className="font-bold text-gray-900">{String(value ?? "")}</span>,
       },
       {
         key: "category",
         header: "Rubro",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "category",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("category", supplyMovements, columnsFilters),
       },
       {
         key: "type",
         header: "Tipo/Clase",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "type",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("type", supplyMovements, columnsFilters),
       },
       {
         key: "provider_name",
         header: "Proveedor",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "provider_name",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("provider_name", supplyMovements, columnsFilters),
       },
       {
         key: "price_usd",
         header: "Precio u$",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "price_usd",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("price_usd", supplyMovements, columnsFilters),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return (
+            <span className="font-bold text-gray-900">
+              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
+            </span>
+          );
         },
       },
       {
@@ -304,14 +261,14 @@ export function Products() {
         header: "Total u$",
         filterable: true,
         filterType: "select",
-        filterOptions: getFilterOptionsForColumn(
-          "total_usd",
-          supplyMovements,
-          columnsFilters
-        ),
+        filterOptions: getFilterOptionsForColumn("total_usd", supplyMovements, columnsFilters),
         render: (value) => {
           const num = Number(value);
-          return <span className="font-bold text-gray-900">{isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}</span>;
+          return (
+            <span className="font-bold text-gray-900">
+              {isNaN(num) ? "—" : `u$ ${formatNumberAr(num)}`}
+            </span>
+          );
         },
       },
     ],
@@ -328,7 +285,6 @@ export function Products() {
   useEffect(() => {
     if (!projectId) return;
     getSupplyMovements(projectId);
-
   }, [getSupplyMovements, projectId]);
 
   useEffect(() => {
@@ -352,7 +308,6 @@ export function Products() {
       setSuccessMessage(null);
     }
   }, [errorCreation]);
-
 
   const handleDelete = async (p: SupplyMovement) => {
     if (!projectId || !p.id) return;
@@ -388,48 +343,7 @@ export function Products() {
   };
 
   const filteredMovements = useMemo(() => {
-    return supplyMovements.filter((item) => {
-      return Object.entries(columnsFilters).every(([key, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) {
-          return true;
-        }
-
-        const rawValue = item[key as keyof SupplyMovement];
-
-        // 🟢 FECHA
-        if (key === "entry_date") {
-          const itemDate = normalizeDate(String(rawValue));
-          if (Array.isArray(value)) {
-            return value.some(
-              (v) => normalizeDate(String(v)) === itemDate
-            );
-          }
-          return normalizeDate(String(value)) === itemDate;
-        }
-
-        // 🟢 NUMÉRICOS
-        // 🟢 NUMÉRICOS (solo campos realmente numéricos)
-        if (["price_usd", "total_usd"].includes(key)) {
-          const num = Number(rawValue);
-          if (Array.isArray(value)) {
-            return value.some((v) => Number(v) === num);
-          }
-          return Number(value) === num;
-        }
-
-
-        // 🟢 STRING (multi + single)
-        const itemValue = String(rawValue ?? "").toLowerCase();
-
-        if (Array.isArray(value)) {
-          return value.some((v) =>
-            itemValue.includes(String(v).toLowerCase())
-          );
-        }
-
-        return itemValue.includes(String(value).toLowerCase());
-      });
-    });
+    return supplyMovements.filter((item) => movementMatchesFilters(item, columnsFilters));
   }, [supplyMovements, columnsFilters]);
 
   const derivedSummary = useMemo(() => {
@@ -464,8 +378,6 @@ export function Products() {
     };
   }, [filteredMovements]);
 
-
-
   const handleExport = async () => {
     if (!projectId) return;
 
@@ -496,8 +408,6 @@ export function Products() {
     pagination.resetPage();
   };
 
-
-
   return (
     <div>
       <FilterBar
@@ -505,10 +415,23 @@ export function Products() {
         actions={[
           {
             label: "Exportar Insumos",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            ,
+            icon: (
+              <svg
+                width="14"
+                height="13"
+                viewBox="0 0 14 13"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ),
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
@@ -516,9 +439,23 @@ export function Products() {
           },
           {
             label: "Importar Insumos",
-            icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 1.1665V7.83317M7 7.83317L4.33333 5.1665M7 7.83317L9.66667 5.1665M1.66675 9.1665V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H11.0001C11.3537 11.8332 11.6928 11.6927 11.9429 11.4426C12.1929 11.1926 12.3334 10.8535 12.3334 10.4998V9.1665" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>,
+            icon: (
+              <svg
+                width="14"
+                height="13"
+                viewBox="0 0 14 13"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M7 1.1665V7.83317M7 7.83317L4.33333 5.1665M7 7.83317L9.66667 5.1665M1.66675 9.1665V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H11.0001C11.3537 11.8332 11.6928 11.6927 11.9429 11.4426C12.1929 11.1926 12.3334 10.8535 12.3334 10.4998V9.1665"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ),
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
@@ -535,14 +472,28 @@ export function Products() {
               setEditingMovement(null);
               setDrawerOpen(true);
             },
-
           },
         ]}
       />
       {successMessage && (
-        <div className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200" role="alert">
-          <svg className="w-5 h-5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" /></svg>
-          <div><span className="font-semibold">{successMessage}</span></div>
+        <div
+          className="flex items-center gap-3 p-4 mb-4 text-sm text-emerald-800 rounded-xl bg-emerald-50 border border-emerald-200"
+          role="alert"
+        >
+          <svg
+            className="w-5 h-5 text-emerald-500 flex-shrink-0"
+            fill="currentColor"
+            viewBox="0 0 20 20"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <div>
+            <span className="font-semibold">{successMessage}</span>
+          </div>
         </div>
       )}
       {!error && (
@@ -558,9 +509,25 @@ export function Products() {
         )}
 
         {(error || exportErrorMessage || actionErrorMessage) && (
-          <div className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200" role="alert">
-            <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" /></svg>
-            <div><span className="font-semibold">Error:</span> {actionErrorMessage || exportErrorMessage || error}</div>
+          <div
+            className="flex items-center gap-3 p-4 mb-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"
+            role="alert"
+          >
+            <svg
+              className="w-5 h-5 text-red-500 flex-shrink-0"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z"
+                clipRule="evenodd"
+              />
+            </svg>
+            <div>
+              <span className="font-semibold">Error:</span>{" "}
+              {actionErrorMessage || exportErrorMessage || error}
+            </div>
           </div>
         )}
         {projectId && (

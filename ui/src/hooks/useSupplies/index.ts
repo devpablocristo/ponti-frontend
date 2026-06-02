@@ -23,6 +23,11 @@ const useSupplies = () => {
   const [errorUpdate, setErrorUpdate] = useState<string | null>(null);
   const [resultUpdate, setResultUpdate] = useState<string | null>(null);
 
+  const notifyWorkspaceDataUpdated = () => {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(new CustomEvent("ponti:workspace-data-updated"));
+  };
+
   const getSupplies = React.useCallback(
     async (projectId: number, mode: SuppliesMode = "all") => {
       setProcessing(true);
@@ -255,6 +260,7 @@ const useSupplies = () => {
 
         if (response.success) {
           setResultUpdate("Se completó el insumo pendiente con éxito!");
+          notifyWorkspaceDataUpdated();
           return;
         }
 

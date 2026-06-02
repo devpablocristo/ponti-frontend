@@ -69,4 +69,5 @@ export type LotKPIs = {
   yield_tn_per_ha: string;
   cost_per_hectare: string;
   superficie_total: string;
+  total_tons: string;
 };

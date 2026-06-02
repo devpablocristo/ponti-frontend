@@ -924,31 +924,49 @@ function CropEconomicsTable({ crops }: { crops: SummaryCrop[] }) {
 }
 
 function integralMetricCellClass(row: IntegralRow, index: number) {
-  const base = "sticky left-0 px-4 py-3 text-left text-[0.78rem]";
-
-  if (row.key === "operating_result") {
-    return `${base} bg-slate-950 font-semibold text-white`;
-  }
-
-  if (row.key === "total_invested") {
-    return `${base} bg-[#FBD5D5] font-semibold text-slate-950`;
-  }
-
-  if (row.key === "return_pct") {
-    return `${base} bg-[#FDE4EA] font-semibold text-slate-950`;
-  }
-
-  return `${base} ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} font-medium text-slate-600`;
+  const base = "sticky left-0 px-4 py-3 text-left text-[0.82rem] font-medium";
+  const zebra =
+    index % 2 === 1 ? "bg-slate-50/60 dark:bg-slate-900/40" : "bg-white dark:bg-slate-800";
+  const highlighted =
+    row.key === "total_invested" || row.key === "operating_result" || row.key === "return_pct";
+  const highlight =
+    row.key === "total_invested"
+      ? "bg-rose-100 text-slate-950 dark:bg-rose-950/40 dark:text-rose-100"
+      : row.key === "operating_result"
+        ? "bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950"
+        : row.key === "return_pct"
+          ? "bg-rose-50 text-slate-950 dark:bg-rose-950/30 dark:text-rose-100"
+          : zebra;
+  const strong = row.strong ? "font-semibold" : "";
+  const text = highlighted
+    ? ""
+    : row.strong
+      ? "text-slate-900 dark:text-slate-100"
+      : "text-slate-600 dark:text-slate-300";
+  return `${base} ${highlight} ${strong} ${text}`;
 }
 
 function integralValueCellClass(row: IntegralRow, index: number) {
-  const base = "px-4 py-3 text-center";
-
-  if (row.key === "operating_result") return `${base} bg-slate-950 text-white`;
-  if (row.key === "total_invested") return `${base} bg-[#FBD5D5] text-slate-950`;
-  if (row.key === "return_pct") return `${base} bg-[#FDE4EA] text-slate-950`;
-
-  return `${base} ${index % 2 === 0 ? "bg-white" : "bg-slate-50/50"}`;
+  const base = "px-4 py-3 text-center text-[0.82rem] tabular-nums";
+  const zebra =
+    index % 2 === 1 ? "bg-slate-50/60 dark:bg-slate-900/40" : "bg-white dark:bg-slate-800";
+  const highlighted =
+    row.key === "total_invested" || row.key === "operating_result" || row.key === "return_pct";
+  const highlight =
+    row.key === "total_invested"
+      ? "bg-rose-100 text-slate-950 dark:bg-rose-950/40 dark:text-rose-100"
+      : row.key === "operating_result"
+        ? "bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950"
+        : row.key === "return_pct"
+          ? "bg-rose-50 text-slate-950 dark:bg-rose-950/30 dark:text-rose-100"
+          : zebra;
+  const strong = row.strong ? "font-semibold" : "";
+  const text = highlighted
+    ? ""
+    : row.strong
+      ? "text-slate-900 dark:text-slate-100"
+      : "text-slate-700 dark:text-slate-200";
+  return `${base} ${highlight} ${strong} ${text}`;
 }
 
 function IntegralView({ data, error }: { data: FieldCropReportData | null; error: string | null }) {
@@ -973,21 +991,21 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-200 px-4 py-3">
-        <h3 className="text-[1.05rem] font-semibold text-slate-950">Vista Integral</h3>
+    <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
+      <div className="border-b border-slate-200 dark:border-slate-700 px-4 py-3">
+        <h3 className="text-[1.05rem] font-semibold text-slate-950 dark:text-slate-100">Vista Integral</h3>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.78rem]">
-          <thead className="bg-slate-50">
+        <table className="w-full min-w-[880px] border-separate border-spacing-0 text-[0.86rem]">
+          <thead className="bg-slate-50 dark:bg-slate-900">
             <tr>
-              <th className="sticky left-0 z-[1] w-[220px] bg-slate-50 px-4 py-3 text-left text-[9px] font-medium uppercase tracking-wide text-slate-500">
+              <th className="sticky left-0 z-[1] w-[220px] bg-slate-50 dark:bg-slate-900 px-4 py-3 text-left text-[0.7rem] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 Métrica
               </th>
               {data.columns.map((column) => (
                 <th key={column.id} className="min-w-[180px] px-4 py-3 text-center">
                   <div className="flex flex-col items-center gap-1">
-                    <span className="text-[9px] font-medium uppercase tracking-wide text-slate-600">
+                    <span className="text-[0.7rem] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300">
                       {column.field_name}
                     </span>
                     <CropBadgeV2 cropName={column.crop_name} />
@@ -1011,7 +1029,7 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
                         className={
                           row.strong
                             ? "font-semibold tabular-nums"
-                            : "font-medium tabular-nums text-slate-700"
+                            : "font-medium tabular-nums"
                         }
                       >
                         {formatNumberAr(value)}
@@ -1019,8 +1037,8 @@ function IntegralView({ data, error }: { data: FieldCropReportData | null; error
                       <span
                         className={
                           row.key === "operating_result"
-                            ? "ml-1 text-[9px] text-white/60"
-                            : "ml-1 text-[9px] text-slate-400"
+                            ? "ml-1 text-[0.7rem] text-white/60 dark:text-slate-600"
+                            : "ml-1 text-[0.7rem] text-slate-500 dark:text-slate-400"
                         }
                       >
                         {row.unit}

@@ -1,6 +1,7 @@
 import React from "react";
 
 import Menu from "./Menu";
+import { TentativePricesChip } from "./TentativePricesChip";
 
 interface NavbarProps {
   username: string;
@@ -59,10 +60,13 @@ const Navbar: React.FC<NavbarProps> = ({
             {title}
           </h1>
         </div>
-        <Menu
-          setIsLogoutModalOpen={setIsLogoutModalOpen}
-          username={username}
-        />
+        <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
+          <TentativePricesChip />
+          <Menu
+            setIsLogoutModalOpen={setIsLogoutModalOpen}
+            username={username}
+          />
+        </div>
       </div>
     </nav>
   );

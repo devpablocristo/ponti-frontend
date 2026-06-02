@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
+import { matchesSelectFilter } from "@/lib/tableFilters";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
 import useOrders from "../../../hooks/useWorkOrders";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
@@ -21,6 +22,11 @@ const FILTER_HIERARCHY: Record<string, string[]> = {
   project_name: ["field_name", "lot_name"],
   field_name: ["lot_name"],
 };
+
+/** Cada cuánto se re-consulta el listado de órdenes para reflejar cambios externos
+ * (ej.: órdenes creadas desde la app mobile) sin que el usuario recargue la página.
+ * El refresco de fondo es silencioso (no muestra spinner), así que el intervalo corto no molesta. */
+const WORK_ORDERS_REFRESH_INTERVAL_MS = 20_000;
 
 type WorkOrdersListResponse = {
   success: true;
@@ -99,12 +105,8 @@ function getStatusBadgeClass(status: string) {
     : "bg-emerald-100 text-emerald-800 border border-emerald-200";
 }
 
-function isDigitalByNumber(order: OrdersData) {
-  return String(order.number).trim().toUpperCase().startsWith("D");
-}
-
 function isDigitalOrder(order: OrdersData) {
-  return order.is_digital || isDigitalByNumber(order);
+  return order.is_digital === true;
 }
 
 function getOrderBaseNumber(orderNumber: string | number) {
@@ -320,13 +322,12 @@ export function WorkOrders() {
           }
 
           const orderValRaw = order[key as keyof OrdersData];
-          const orderVal = String(orderValRaw ?? "").toLowerCase();
 
           if (Array.isArray(value)) {
-            return value.some((v) => orderVal === String(v).toLowerCase());
+            return matchesSelectFilter(orderValRaw, value);
           }
 
-          return orderVal === String(value).toLowerCase();
+          return matchesSelectFilter(orderValRaw, [value]);
         });
       });
     },
@@ -880,6 +881,46 @@ export function WorkOrders() {
     getMetrics,
   ]);
 
+  // Mantiene la última query disponible para los refrescos por foco/intervalo sin
+  // re-suscribir los listeners en cada cambio de página o filtro.
+  const workOrdersQueryRef = useRef(workOrdersQuery);
+  workOrdersQueryRef.current = workOrdersQuery;
+
+  // Re-consulta el listado cuando la pestaña recupera foco/visibilidad y con un poll
+  // suave, para reflejar órdenes creadas desde otros sistemas (ej.: la app mobile) sin
+  // que el usuario tenga que recargar la página manualmente.
+  useEffect(() => {
+    if (!hasWorkOrderScope) {
+      return;
+    }
+
+    const refresh = () => {
+      getOrders(workOrdersQueryRef.current, { silent: true });
+      getMetrics(workOrdersQueryRef.current, { silent: true });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    };
+
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    }, WORK_ORDERS_REFRESH_INTERVAL_MS);
+
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.clearInterval(intervalId);
+    };
+  }, [hasWorkOrderScope, getOrders, getMetrics]);
+
   useEffect(() => {
     if (!hasWorkOrderScope) {
       setFilterDatasetOrders([]);
@@ -1002,11 +1043,10 @@ export function WorkOrders() {
         }
 
         const orderValRaw = order[key as keyof OrdersData];
-        const orderVal = String(orderValRaw ?? "").toLowerCase();
         if (Array.isArray(value)) {
-          return value.some((v) => orderVal === String(v).toLowerCase());
+          return matchesSelectFilter(orderValRaw, value);
         }
-        return orderVal === String(value).toLowerCase();
+        return matchesSelectFilter(orderValRaw, [value]);
       });
     });
   }, [globalFilterSourceOrders, columnsFilters]);
