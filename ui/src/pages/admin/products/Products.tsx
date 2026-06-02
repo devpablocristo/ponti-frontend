@@ -43,6 +43,46 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
   );
 }
 
+// Predicado único de filtrado de movimientos. Lo usan tanto el filtrado de filas
+// (filteredMovements) como el cálculo de opciones por columna (excludeKey), para que
+// ambos caminos no puedan divergir (p.ej. fecha con sufijo de hora o campos numéricos).
+function movementMatchesFilters(
+  item: SupplyMovement,
+  activeFilters: Record<string, unknown>,
+  excludeKey?: keyof SupplyMovement
+) {
+  return Object.entries(activeFilters).every(([key, value]) => {
+    if (key === excludeKey) return true;
+    if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+    const rawValue = item[key as keyof SupplyMovement];
+
+    // 🟢 FECHA: el valor crudo trae sufijo de hora ("...T00:00:00Z"); normalizar ambos lados
+    if (key === "entry_date") {
+      const itemDate = normalizeDate(String(rawValue));
+      if (Array.isArray(value)) {
+        return value.some((v) => normalizeDate(String(v)) === itemDate);
+      }
+      return normalizeDate(String(value)) === itemDate;
+    }
+
+    // 🟢 NUMÉRICOS (solo campos realmente numéricos)
+    if (key === "price_usd" || key === "total_usd") {
+      const num = Number(rawValue);
+      if (Array.isArray(value)) {
+        return value.some((v) => Number(v) === num);
+      }
+      return Number(value) === num;
+    }
+
+    if (Array.isArray(value)) {
+      return matchesSelectFilter(rawValue, value);
+    }
+
+    return matchesTextFilter(rawValue, value);
+  });
+}
+
 export function Products() {
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [importDrawerOpen, setImportDrawerOpen] = useState(false);
@@ -94,41 +134,13 @@ export function Products() {
     data: SupplyMovement[],
     filters: Record<string, unknown>
   ) {
-    const otherFilters = { ...filters };
-    delete otherFilters[key];
-
-    const filtered = data.filter((item) =>
-      Object.entries(otherFilters).every(([k, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
-
-        if (Array.isArray(value)) {
-          return matchesSelectFilter(item[k as keyof SupplyMovement], value);
-        }
-
-        return matchesTextFilter(item[k as keyof SupplyMovement], value);
-      })
-    );
+    const filtered = data.filter((item) => movementMatchesFilters(item, filters, key));
 
     return [...new Set(filtered.map((i) => String(i[key] ?? "")))].filter(Boolean);
   }
 
   function getDateFilterOptions(data: SupplyMovement[], filters: Record<string, unknown>) {
-    const otherFilters = { ...filters };
-    delete otherFilters.entry_date;
-
-    const filtered = data.filter((item) =>
-      Object.entries(otherFilters).every(([k, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
-
-        const rawValue = item[k as keyof SupplyMovement];
-
-        if (Array.isArray(value)) {
-          return matchesSelectFilter(rawValue, value);
-        }
-
-        return matchesTextFilter(rawValue, value);
-      })
-    );
+    const filtered = data.filter((item) => movementMatchesFilters(item, filters, "entry_date"));
 
     return [...new Set(filtered.map((m) => normalizeDate(String(m.entry_date))))];
   }
@@ -331,40 +343,7 @@ export function Products() {
   };
 
   const filteredMovements = useMemo(() => {
-    return supplyMovements.filter((item) => {
-      return Object.entries(columnsFilters).every(([key, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) {
-          return true;
-        }
-
-        const rawValue = item[key as keyof SupplyMovement];
-
-        // 🟢 FECHA
-        if (key === "entry_date") {
-          const itemDate = normalizeDate(String(rawValue));
-          if (Array.isArray(value)) {
-            return value.some((v) => normalizeDate(String(v)) === itemDate);
-          }
-          return normalizeDate(String(value)) === itemDate;
-        }
-
-        // 🟢 NUMÉRICOS
-        // 🟢 NUMÉRICOS (solo campos realmente numéricos)
-        if (["price_usd", "total_usd"].includes(key)) {
-          const num = Number(rawValue);
-          if (Array.isArray(value)) {
-            return value.some((v) => Number(v) === num);
-          }
-          return Number(value) === num;
-        }
-
-        if (Array.isArray(value)) {
-          return matchesSelectFilter(rawValue, value);
-        }
-
-        return matchesTextFilter(rawValue, value);
-      });
-    });
+    return supplyMovements.filter((item) => movementMatchesFilters(item, columnsFilters));
   }, [supplyMovements, columnsFilters]);
 
   const derivedSummary = useMemo(() => {

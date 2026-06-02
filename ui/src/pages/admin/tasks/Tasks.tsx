@@ -17,7 +17,7 @@ import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
 import { formatNumberAr, normalizeDate } from "../utils";
-import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
+import { matchesSelectFilter } from "@/lib/tableFilters";
 
 const LABOR_HEADER_ALIASES = {
   name: ["labor", "nombre", "name"],
@@ -241,6 +241,40 @@ function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing
   );
 }
 
+// Predicado único de filtrado de tareas. Lo usan tanto el filtrado de filas
+// (filteredTasks) como el cálculo de opciones por columna (excludeKey), para que
+// ambos caminos no diverjan (fecha normalizada, estado de factura vacío, escalar exacto).
+function taskMatchesFilters(
+  task: LaborGroupData,
+  activeFilters: Record<string, unknown>,
+  excludeKey?: keyof LaborGroupData
+) {
+  return Object.entries(activeFilters).every(([key, value]) => {
+    if (key === excludeKey) return true;
+    if (!value || (Array.isArray(value) && value.length === 0)) return true;
+
+    if (key === "date") {
+      const taskDate = normalizeDate(String(task.date));
+      if (Array.isArray(value)) {
+        return value.some((v) => normalizeDate(String(v)) === taskDate);
+      }
+      return normalizeDate(String(value)) === taskDate;
+    }
+
+    if (key === "invoice_status") {
+      const taskStatus = task.invoice_status || invoiceEmptyStatus;
+      if (Array.isArray(value)) return value.includes(taskStatus);
+      return taskStatus === value;
+    }
+
+    const taskValue = task[key as keyof LaborGroupData];
+    if (Array.isArray(value)) {
+      return matchesSelectFilter(taskValue, value);
+    }
+    return matchesSelectFilter(taskValue, [value]);
+  });
+}
+
 export function Tasks() {
   const {
     getLaborGroups,
@@ -309,29 +343,7 @@ export function Tasks() {
 
   const getFilterOptionsForColumn = useCallback(
     (key: keyof LaborGroupData, data: LaborGroupData[], filters: Record<string, unknown>) => {
-      const otherFilters = { ...filters };
-      delete otherFilters[key];
-
-      const filtered = data.filter((task) =>
-        Object.entries(otherFilters).every(([k, value]) => {
-          if (!value || (Array.isArray(value) && value.length === 0)) return true;
-
-          if (k === "date") {
-            const normalize = (d: string) =>
-              d.includes("/") ? d.split("/").reverse().join("-") : d.split("T")[0];
-            if (Array.isArray(value)) {
-              return value.some((v) => normalize(String(v)) === normalize(String(task.date)));
-            }
-            return normalize(String(value)) === normalize(String(task.date));
-          }
-
-          const taskValue = task[k as keyof LaborGroupData];
-          if (Array.isArray(value)) {
-            return matchesSelectFilter(taskValue, value);
-          }
-          return matchesTextFilter(taskValue, value);
-        })
-      );
+      const filtered = data.filter((task) => taskMatchesFilters(task, filters, key));
 
       return [...new Set(filtered.map((t) => String(t[key] ?? "")))].filter(Boolean).sort();
     },
@@ -630,32 +642,7 @@ export function Tasks() {
   }, [projectId, buildFieldQuery, getLaborGroups, getMetrics, getCategories]);
 
   const filteredTasks = useMemo(() => {
-    return laborGroups.filter((task) => {
-      return Object.entries(taskFilters).every(([key, value]) => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return true;
-
-        if (key === "date") {
-          const taskDate = normalizeDate(String(task.date));
-          if (Array.isArray(value)) {
-            return value.some((v) => normalizeDate(String(v)) === taskDate);
-          }
-          return normalizeDate(String(value)) === taskDate;
-        }
-
-        if (key === "invoice_status") {
-          const taskStatus = task.invoice_status || invoiceEmptyStatus;
-          if (Array.isArray(value)) return value.includes(taskStatus);
-          return taskStatus === value;
-        }
-        const taskValue = task[key as keyof LaborGroupData];
-
-        if (Array.isArray(value)) {
-          return matchesSelectFilter(taskValue, value);
-        }
-
-        return matchesSelectFilter(taskValue, [value]);
-      });
-    });
+    return laborGroups.filter((task) => taskMatchesFilters(task, taskFilters));
   }, [laborGroups, taskFilters]);
 
   const derivedMetrics: Metrics = useMemo(() => {

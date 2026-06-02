@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PaginationBar } from "@devpablocristo/modules-ui-data-display";
+import { normalizeFilterText } from "./tableFilters";
 
 type FilterType = "text" | "number" | "select" | "date";
 
@@ -133,10 +134,10 @@ function compareFilterOptions(a: string, b: string): number {
 }
 
 function getVisibleFilterOptions(options: string[], search: string): string[] {
-  const query = search.trim().toLowerCase();
+  const query = normalizeFilterText(search);
 
   return [...options].sort(compareFilterOptions).filter((option) => {
-    const normalizedOption = option.trim().toLowerCase();
+    const normalizedOption = normalizeFilterText(option);
     if (!query) return true;
     if (isNumericSearch(query)) return normalizedOption.startsWith(query);
     return normalizedOption.includes(query);
