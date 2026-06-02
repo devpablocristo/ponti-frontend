@@ -1087,7 +1087,7 @@ export function WorkOrders() {
 
     try {
       const response = await apiClient.get<Blob>(
-        `/work-orders/export/${projectId}`,
+        `/work-orders/export?${workOrdersBaseQuery}`,
         undefined,
         { responseType: "blob" }
       );

@@ -47,10 +47,14 @@ export const hasWorkOrderScope = (scope: WorkOrderQueryScope) =>
 export const buildWorkOrderScopeParams = (scope: WorkOrderQueryScope) => {
   const params = new URLSearchParams();
 
+  // project_id es obligatorio para el backend; field_id lo acota a un campo
+  // (ausente = todos los campos del proyecto). Se envían juntos, no excluyentes.
+  if (scope.projectId > 0) {
+    params.set("project_id", String(scope.projectId));
+  }
+
   if (scope.fieldId > 0) {
     params.set("field_id", String(scope.fieldId));
-  } else if (scope.projectId > 0) {
-    params.set("project_id", String(scope.projectId));
   }
 
   if (scope.customerId > 0) {

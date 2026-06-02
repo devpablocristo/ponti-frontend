@@ -259,39 +259,13 @@ router.get("/metrics", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = getAuthHeaders(userId);
-
-    const field_id = parseInt(req.query.field_id as string) || 0;
-    const project_id = parseInt(req.query.project_id as string) || 0;
-    const customer_id = parseInt(req.query.customer_id as string) || 0;
-    const campaign_id = parseInt(req.query.campaign_id as string) || 0;
-    const supply_id = parseInt(req.query.supply_id as string) || 0;
-
-    if (field_id === 0 && project_id === 0) {
-      res.status(400).json({ message: "Campo o proyecto obligatorio" });
+    const scope = parseWorkOrderScope(req.query);
+    if (!requireWorkOrderScope(scope, res)) {
       return;
     }
 
-    const params = new URLSearchParams();
-    if (field_id > 0) {
-      params.set("field_id", String(field_id));
-    } else if (project_id > 0) {
-      params.set("project_id", String(project_id));
-    }
-
-    if (customer_id > 0) {
-      params.set("customer_id", String(customer_id));
-    }
-
-    if (campaign_id > 0) {
-      params.set("campaign_id", String(campaign_id));
-    }
-
-    if (supply_id > 0) {
-      params.set("supply_id", String(supply_id));
-    }
-
-    const query = params.size > 0 ? `?${params.toString()}` : "";
+    const headers = getAuthHeaders(userId);
+    const query = `?${buildWorkOrderScopeParams(scope).toString()}`;
 
     const { data: metrics } = await apiClient.get<any>(
       `/work-orders/metrics${query}`,
@@ -319,7 +293,7 @@ router.get("/metrics", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/export/:id", async (req, res) => {
+router.get("/export", async (req, res) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
@@ -327,16 +301,15 @@ router.get("/export/:id", async (req, res) => {
       return;
     }
 
-    const project_id = parseInt(req.params.id as string) || 0;
-    if (project_id === 0) {
-      res.status(400).json({ message: "Proyecto obligatorio" });
+    const scope = parseWorkOrderScope(req.query);
+    if (!requireWorkOrderScope(scope, res)) {
       return;
     }
 
     const headers = getAuthHeaders(userId);
 
     const response = await apiClient.get<any>(
-      `/work-orders/export?project_id=${project_id}`,
+      `/work-orders/export?${buildWorkOrderScopeParams(scope).toString()}`,
       { headers, responseType: "arraybuffer" }
     );
 

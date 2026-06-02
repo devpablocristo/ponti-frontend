@@ -56,7 +56,7 @@ test("buildWorkOrderScopeParams conserva el scope del proyecto seleccionado", ()
   );
 });
 
-test("buildWorkOrderScopeParams prioriza campo sobre proyecto", () => {
+test("buildWorkOrderScopeParams envía proyecto y campo juntos", () => {
   const params = buildWorkOrderScopeParams({
     fieldId: 39,
     projectId: 30,
@@ -65,7 +65,10 @@ test("buildWorkOrderScopeParams prioriza campo sobre proyecto", () => {
     supplyId: 0,
   });
 
-  assert.equal(params.toString(), "field_id=39&customer_id=17&campaign_id=2");
+  assert.equal(
+    params.toString(),
+    "project_id=30&field_id=39&customer_id=17&campaign_id=2"
+  );
 });
 
 test("scope y cache key de filter rows no mezclan proyectos", () => {
