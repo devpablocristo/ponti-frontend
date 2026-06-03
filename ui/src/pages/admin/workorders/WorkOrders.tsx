@@ -271,6 +271,7 @@ export function WorkOrders() {
   const {
     getOrders,
     deleteOrder,
+    archiveOrder,
     deleteDraftOrder,
     publishDraftOrder,
     getMetrics,
@@ -333,6 +334,53 @@ export function WorkOrders() {
     },
     []
   );
+
+  const handleArchiveConfirmed = async (id: number) => {
+    setIsProcessing(true);
+
+    try {
+      await archiveOrder(id);
+      handleOrderCreated();
+      setModalConfig({
+        title: "Confirmación",
+        message: "La orden ha sido archivada.",
+        primaryButtonText: "Volver",
+        secondaryButtonText: "Volver",
+        onConfirm: () => {
+          setIsModalOpen(false);
+        },
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Error al archivar la orden.";
+      setErrorMessage(message);
+      setModalConfig({
+        title: "Error",
+        message,
+        primaryButtonText: "Volver",
+        secondaryButtonText: "Volver",
+        onConfirm: () => {
+          setIsModalOpen(false);
+        },
+      });
+    } finally {
+      setIsModalOpen(true);
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePreArchive = (id: number) => {
+    setModalConfig({
+      title: "Confirmar eliminación",
+      message: "¿Está seguro que desea eliminar la orden?",
+      primaryButtonText: "Sí, eliminar",
+      secondaryButtonText: "Cancelar",
+      onConfirm: () => handleArchiveConfirmed(id),
+    });
+    setIsModalOpen(true);
+  };
 
   // Helper: obtiene las opciones válidas para una columna
   const getFilterOptionsForColumn = useCallback(
@@ -729,7 +777,7 @@ export function WorkOrders() {
   function handlePrePublish(order: OrdersData) {
     setModalConfig({
       title: "Confirmar publicación",
-            message:
+      message:
         `¿Está seguro que desea publicar la orden ${order.number}?\n\n` +
         "Si la orden contiene insumos pendientes de completar, la publicación será bloqueada.",
       primaryButtonText: "Sí, publicar",
@@ -1204,45 +1252,40 @@ export function WorkOrders() {
           renderActions={(item) => {
             const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
 
-            if (isDigitalOrder(item) && !isDraftDigital) {
-              return null;
-            }
-
-            if (!isDraftDigital) {
+            if (isDraftDigital) {
               return (
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePreFinish(item.id);
-                  }}
-                >
-                  Eliminar
-                </Button>
+                <>
+                  <Button
+                    variant="primary"
+                    size="xs"
+                    onClick={() => {
+                      handlePrePublish(item);
+                    }}
+                  >
+                    Publicar
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="xs"
+                    onClick={() => {
+                      handlePreDeleteDraft(item);
+                    }}
+                  >
+                    Eliminar
+                  </Button>
+                </>
               );
             }
-
             return (
-              <>
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePrePublish(item);
-                  }}
-                >
-                  Publicar
-                </Button>
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePreDeleteDraft(item);
-                  }}
-                >
-                  Eliminar
-                </Button>
-              </>
+              <Button
+                variant="primary"
+                size="xs"
+                onClick={() => {
+                  handlePreFinish(item.id);
+                }}
+              >
+                Eliminar
+              </Button>
             );
           }}
           enableFilters={true}

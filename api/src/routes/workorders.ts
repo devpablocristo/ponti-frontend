@@ -593,6 +593,80 @@ router.put("/:id", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/:id/archive", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = getAuthHeaders(userId);
+
+    await apiClient.post<any>(
+      `/work-orders/${req.params.id}/archive`,
+      {},
+      headers
+    );
+
+    setImmediate(() => cache.flushAll());
+
+    res.status(200).json({
+      success: true,
+      message: "Orden archivada exitosamente",
+    });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.post("/:id/restore", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = getAuthHeaders(userId);
+
+    await apiClient.post<any>(
+      `/work-orders/${req.params.id}/restore`,
+      {},
+      headers
+    );
+
+    setImmediate(() => cache.flushAll());
+
+    res.status(200).json({
+      success: true,
+      message: "Orden restaurada exitosamente",
+    });
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;

@@ -448,6 +448,34 @@ const useOrders = () => {
     }
   }, []);
 
+  const archiveOrder = React.useCallback(async (id: number): Promise<void> => {
+  setProcessing(true);
+  setError(null);
+
+  try {
+    const response = await apiClient.post<SuccessResponse<string>>(
+      `/work-orders/${id}/archive`
+    );
+
+    if (response.success) {
+      return;
+    }
+
+    const message = "Ocurrio un error al intentar archivar una orden.";
+    setError(message);
+    throw new Error(message);
+  } catch (error) {
+    const message = extractErrorMessage(
+      error,
+      "Error desconocido al intentar archivar una orden."
+    );
+    setError(message);
+    throw new Error(message);
+  } finally {
+    setProcessing(false);
+  }
+}, []);
+
   return {
     orders,
     metrics,
@@ -463,6 +491,7 @@ const useOrders = () => {
     publishDraftOrder,
     deleteDraftOrder,
     deleteOrder,
+    archiveOrder,
     selectedOrder,
     resultCreation,
     processing,
