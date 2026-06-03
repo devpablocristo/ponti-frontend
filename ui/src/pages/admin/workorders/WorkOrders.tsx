@@ -650,7 +650,11 @@ export function WorkOrders() {
     filters,
   } = useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const effectiveProjectId = projectId ?? selectedProject?.id ?? routeProjectId;
-  const hasWorkOrderScope = Boolean(effectiveProjectId || selectedField);
+  // El backend exige cliente + proyecto + campaña (campo opcional). El guard debe pedir los tres,
+  // si no una selección incompleta (p. ej. project_id por URL sin cliente/campaña) dispara un 400.
+  const hasWorkOrderScope = Boolean(
+    selectedCustomer?.id && effectiveProjectId && selectedCampaignId
+  );
 
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -840,6 +844,13 @@ export function WorkOrders() {
     setErrorMessage(error);
   }, [error]);
 
+  // Si /metrics falla, el bloque de KPIs se oculta; sin esto el error quedaba mudo
+  // (a diferencia del listado, que sí muestra `error`). Lo surfaceamos igual que el listado.
+  useEffect(() => {
+    if (!errorMetrics) return;
+    setErrorMessage(errorMetrics);
+  }, [errorMetrics]);
+
   useEffect(() => {
     if (location.pathname === "/admin/work-orders") return;
 
@@ -915,7 +926,7 @@ export function WorkOrders() {
 
   useEffect(() => {
     if (!hasWorkOrderScope) {
-      setErrorMessage("Seleccione un proyecto o un campo para ver las ordenes");
+      setErrorMessage("Seleccione cliente, proyecto y campaña para ver las órdenes");
       return;
     }
 
@@ -981,7 +992,7 @@ export function WorkOrders() {
     setFilterDatasetReady(false);
 
     if (!workOrdersFilterDatasetQuery) {
-      setErrorMessage("Seleccione un proyecto o un campo para cargar filtros");
+      setErrorMessage("Seleccione cliente, proyecto y campaña para cargar filtros");
       return;
     }
 
@@ -1135,7 +1146,7 @@ export function WorkOrders() {
 
     try {
       const response = await apiClient.get<Blob>(
-        `/work-orders/export/${projectId}`,
+        `/work-orders/export?${workOrdersBaseQuery}`,
         undefined,
         { responseType: "blob" }
       );

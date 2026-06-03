@@ -3,7 +3,6 @@ import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
 import { cache } from ".";
 import {
-  buildWorkOrderFilterRowsCacheKey,
   buildWorkOrderScopeParams,
   hasWorkOrderScope,
   parseWorkOrderScope,
@@ -81,7 +80,9 @@ const requireWorkOrderScope = (scope: WorkOrderQueryScope, res: Response) => {
     return true;
   }
 
-  res.status(400).json({ message: "Campo o proyecto obligatorio" });
+  res
+    .status(400)
+    .json({ message: "Cliente, proyecto y campaña son obligatorios" });
   return false;
 };
 
@@ -151,12 +152,10 @@ router.get("", async (req: Request, res: Response) => {
 
     const query = `?${params.toString()}`;
 
-    const cachedWorkorders = cache.get<WorkOrderListPayload>(`workorders:query:${query}`);
-    if (cachedWorkorders) {
-      res.status(200).json(cachedWorkorders);
-      return;
-    }
-
+    // Sin caché a propósito: el listado se muta desde OTROS servicios (el BFF del mobile crea órdenes
+    // contra el mismo backend). El NodeCache es en memoria por servicio y solo se invalida con escrituras
+    // de ESTE servicio, así que cachear acá dejaba el listado stale hasta 30 min tras una creación hecha
+    // desde el mobile. Es un proxy directo a la BDD: se lee siempre fresco para que aparezca al instante.
     const headers = getAuthHeaders(userId);
 
     const { data: workorders } = await apiClient.get<WorkOrderListResponse>(
@@ -175,8 +174,6 @@ router.get("", async (req: Request, res: Response) => {
         page_info: workorders.page_info,
       },
     };
-
-    setImmediate(() => cache.set(`workorders:query:${query}`, data));
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -208,13 +205,9 @@ router.get("/filter-rows", async (req: Request, res: Response) => {
     }
 
     const query = `?${buildWorkOrderScopeParams(scope).toString()}`;
-    const cacheKey = buildWorkOrderFilterRowsCacheKey(query);
-    const cachedRows = cache.get<WorkOrderFilterRowsPayload>(cacheKey);
-    if (cachedRows) {
-      res.status(200).json(cachedRows);
-      return;
-    }
 
+    // Sin caché, mismo motivo que el listado: el dataset de filtros también refleja órdenes creadas
+    // desde otros servicios y debe estar siempre fresco.
     const headers = getAuthHeaders(userId);
 
     const { data: filterRows } = await apiClient.get<WorkOrderFilterRowsResponse>(
@@ -232,8 +225,6 @@ router.get("/filter-rows", async (req: Request, res: Response) => {
         rows: filterRows.rows,
       },
     };
-
-    setImmediate(() => cache.set(cacheKey, data));
 
     res.status(200).json(data);
   } catch (error: unknown) {
@@ -259,39 +250,13 @@ router.get("/metrics", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = getAuthHeaders(userId);
-
-    const field_id = parseInt(req.query.field_id as string) || 0;
-    const project_id = parseInt(req.query.project_id as string) || 0;
-    const customer_id = parseInt(req.query.customer_id as string) || 0;
-    const campaign_id = parseInt(req.query.campaign_id as string) || 0;
-    const supply_id = parseInt(req.query.supply_id as string) || 0;
-
-    if (field_id === 0 && project_id === 0) {
-      res.status(400).json({ message: "Campo o proyecto obligatorio" });
+    const scope = parseWorkOrderScope(req.query);
+    if (!requireWorkOrderScope(scope, res)) {
       return;
     }
 
-    const params = new URLSearchParams();
-    if (field_id > 0) {
-      params.set("field_id", String(field_id));
-    } else if (project_id > 0) {
-      params.set("project_id", String(project_id));
-    }
-
-    if (customer_id > 0) {
-      params.set("customer_id", String(customer_id));
-    }
-
-    if (campaign_id > 0) {
-      params.set("campaign_id", String(campaign_id));
-    }
-
-    if (supply_id > 0) {
-      params.set("supply_id", String(supply_id));
-    }
-
-    const query = params.size > 0 ? `?${params.toString()}` : "";
+    const headers = getAuthHeaders(userId);
+    const query = `?${buildWorkOrderScopeParams(scope).toString()}`;
 
     const { data: metrics } = await apiClient.get<any>(
       `/work-orders/metrics${query}`,
@@ -319,7 +284,7 @@ router.get("/metrics", async (req: Request, res: Response) => {
   }
 });
 
-router.get("/export/:id", async (req, res) => {
+router.get("/export", async (req, res) => {
   try {
     const userId = req.user?.userID;
     if (!userId) {
@@ -327,16 +292,15 @@ router.get("/export/:id", async (req, res) => {
       return;
     }
 
-    const project_id = parseInt(req.params.id as string) || 0;
-    if (project_id === 0) {
-      res.status(400).json({ message: "Proyecto obligatorio" });
+    const scope = parseWorkOrderScope(req.query);
+    if (!requireWorkOrderScope(scope, res)) {
       return;
     }
 
     const headers = getAuthHeaders(userId);
 
     const response = await apiClient.get<any>(
-      `/work-orders/export?project_id=${project_id}`,
+      `/work-orders/export?${buildWorkOrderScopeParams(scope).toString()}`,
       { headers, responseType: "arraybuffer" }
     );
 
