@@ -271,7 +271,6 @@ export function WorkOrders() {
   const {
     getOrders,
     deleteOrder,
-    archiveOrder,
     deleteDraftOrder,
     publishDraftOrder,
     getMetrics,
@@ -334,53 +333,6 @@ export function WorkOrders() {
     },
     []
   );
-
-  const handleArchiveConfirmed = async (id: number) => {
-    setIsProcessing(true);
-
-    try {
-      await archiveOrder(id);
-      handleOrderCreated();
-      setModalConfig({
-        title: "Confirmación",
-        message: "La orden ha sido archivada.",
-        primaryButtonText: "Volver",
-        secondaryButtonText: "Volver",
-        onConfirm: () => {
-          setIsModalOpen(false);
-        },
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Error al archivar la orden.";
-      setErrorMessage(message);
-      setModalConfig({
-        title: "Error",
-        message,
-        primaryButtonText: "Volver",
-        secondaryButtonText: "Volver",
-        onConfirm: () => {
-          setIsModalOpen(false);
-        },
-      });
-    } finally {
-      setIsModalOpen(true);
-      setIsProcessing(false);
-    }
-  };
-
-  const handlePreArchive = (id: number) => {
-    setModalConfig({
-      title: "Confirmar eliminación",
-      message: "¿Está seguro que desea eliminar la orden?",
-      primaryButtonText: "Sí, eliminar",
-      secondaryButtonText: "Cancelar",
-      onConfirm: () => handleArchiveConfirmed(id),
-    });
-    setIsModalOpen(true);
-  };
 
   // Helper: obtiene las opciones válidas para una columna
   const getFilterOptionsForColumn = useCallback(
