@@ -56,7 +56,7 @@ test("buildWorkOrderScopeParams conserva el scope del proyecto seleccionado", ()
   );
 });
 
-test("buildWorkOrderScopeParams prioriza campo sobre proyecto", () => {
+test("buildWorkOrderScopeParams envía proyecto y campo juntos", () => {
   const params = buildWorkOrderScopeParams({
     fieldId: 39,
     projectId: 30,
@@ -65,15 +65,45 @@ test("buildWorkOrderScopeParams prioriza campo sobre proyecto", () => {
     supplyId: 0,
   });
 
-  assert.equal(params.toString(), "field_id=39&customer_id=17&campaign_id=2");
+  assert.equal(
+    params.toString(),
+    "project_id=30&field_id=39&customer_id=17&campaign_id=2"
+  );
 });
 
-test("scope y cache key de filter rows no mezclan proyectos", () => {
+test("hasWorkOrderScope exige cliente + proyecto + campaña (campo opcional)", () => {
+  // Contrato del backend: customer_id + project_id + campaign_id obligatorios; field_id opcional.
+  assert.equal(
+    hasWorkOrderScope(
+      parseWorkOrderScope({ customer_id: "17", project_id: "30", campaign_id: "2" })
+    ),
+    true
+  );
+  // El campo no es obligatorio: con los tres + campo sigue siendo válido.
+  assert.equal(
+    hasWorkOrderScope(
+      parseWorkOrderScope({
+        customer_id: "17",
+        project_id: "30",
+        campaign_id: "2",
+        field_id: "39",
+      })
+    ),
+    true
+  );
+  // Scopes incompletos que el backend rechazaría con 400 -> el guard también los corta.
+  assert.equal(hasWorkOrderScope(parseWorkOrderScope({ project_id: "30" })), false);
+  assert.equal(hasWorkOrderScope(parseWorkOrderScope({ field_id: "39" })), false);
+  assert.equal(
+    hasWorkOrderScope(parseWorkOrderScope({ customer_id: "17", project_id: "30" })),
+    false
+  );
+});
+
+test("cache key de filter rows no mezcla proyectos", () => {
   const jujuy = "?project_id=30&customer_id=17&campaign_id=2";
   const laguna = "?project_id=31&customer_id=17&campaign_id=2";
 
-  assert.equal(hasWorkOrderScope(parseWorkOrderScope({ project_id: "30" })), true);
-  assert.equal(hasWorkOrderScope(parseWorkOrderScope({ customer_id: "17" })), false);
   assert.notEqual(
     buildWorkOrderFilterRowsCacheKey(jujuy),
     buildWorkOrderFilterRowsCacheKey(laguna)
