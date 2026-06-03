@@ -261,6 +261,7 @@ export function WorkOrders() {
   const [selectedOrderRow, setSelectedOrderRow] = useState<{
     id: number;
     isDigital: boolean;
+    status: OrdersData["status"];
   } | null>(null);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -617,6 +618,7 @@ export function WorkOrders() {
     setSelectedOrderRow({
       id: order.id,
       isDigital: isDigitalOrder(order),
+      status: order.status,
     });
     setDrawerUpdateOpen(true);
   }
@@ -1184,6 +1186,8 @@ export function WorkOrders() {
           <UpdateOrder
             orderId={selectedOrderRow.id}
             isDigital={selectedOrderRow.isDigital}
+            orderStatus={selectedOrderRow.status}
+            customerId={selectedCustomer?.id ?? null}
             drawerOpen={drawerUpdateOpen}
             setDrawerOpen={setDrawerUpdateOpen}
             onOrderUpdated={handleOrderCreated}
