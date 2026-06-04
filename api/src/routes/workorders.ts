@@ -191,6 +191,59 @@ router.get("", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/archived", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const page = parseInt(req.query.page as string) || 1;
+    const perPage = parseInt(req.query.per_page as string) || 1000;
+
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("per_page", String(perPage));
+
+    const query = `?${params.toString()}`;
+
+    // Sin caché, igual que el listado activo: el backend se muta desde otros servicios.
+    const headers = getAuthHeaders(userId);
+
+    const { data: workorders } = await apiClient.get<WorkOrderListResponse>(
+      `/work-orders/archived${query}`,
+      headers
+    );
+
+    if (!workorders) {
+      throw new Error("Respuesta vacía del servicio de órdenes");
+    }
+
+    const data: WorkOrderListPayload = {
+      success: true,
+      data: {
+        data: workorders.items,
+        page_info: workorders.page_info,
+      },
+    };
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 router.get("/filter-rows", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;

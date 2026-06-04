@@ -5,7 +5,7 @@ import SelectField from "../../../components/Input/SelectField";
 import useLabors from "../../../hooks/useLabors";
 import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import { ChevronDown, LoaderCircle } from "lucide-react";
+import { ChevronDown, LoaderCircle, Send, Trash2, Archive } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import { WorkorderData } from "../../../hooks/useWorkOrders/types";
@@ -38,6 +38,9 @@ export default function UpdateOrder({
   setDrawerOpen,
   onOrderUpdated,
   onOrderDuplicated,
+  onPublishOrder,
+  onDeleteDraft,
+  onArchiveOrder,
 }: {
   orderId: number;
   isDigital: boolean;
@@ -45,6 +48,9 @@ export default function UpdateOrder({
   setDrawerOpen: (open: boolean) => void;
   onOrderUpdated: () => void;
   onOrderDuplicated: (order: WorkorderData) => void;
+  onPublishOrder?: () => void;
+  onDeleteDraft?: () => void;
+  onArchiveOrder?: () => void;
 }) {
   const {
     updateOrder,
@@ -297,13 +303,17 @@ export default function UpdateOrder({
   useEffect(() => {
     if (!orderId) return;
 
-    if (isDigital) {
+    // Un borrador digital sin publicar vive en work_order_drafts y la vista del
+    // listado le asigna id NEGATIVO. Una orden ya publicada (digital o analógica)
+    // vive en workorders con id positivo. Por eso elegimos el endpoint por el signo
+    // del id, no por isDigital: una digital PUBLICADA no está en drafts (daba 404).
+    if (orderId < 0) {
       getDraftWorkorder(orderId);
       return;
     }
 
     getWorkorder(orderId);
-  }, [orderId, isDigital, getDraftWorkorder, getWorkorder]);
+  }, [orderId, getDraftWorkorder, getWorkorder]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -590,7 +600,9 @@ export default function UpdateOrder({
   const handleSaveOrder = () => {
     setError(null);
     setSuccessMessage(null);
-        if (isDigital && selectedOrder?.status === "published") {
+    // Una orden digital con id positivo ya está publicada (vive en workorders, no en
+    // drafts): no se edita desde acá, solo se archiva.
+    if (isDigital && orderId >= 0) {
       setError("El borrador ya fue publicado y no se puede editar.");
       return;
     }
@@ -648,7 +660,7 @@ export default function UpdateOrder({
         investor_id: investor!.id,
       };
 
-      if (isDigital) {
+      if (orderId < 0) {
         updateDraftOrder(orderId, payload);
       } else {
         updateOrder(orderId, payload);
@@ -668,7 +680,7 @@ export default function UpdateOrder({
         investor_id: splits[0].investorId,
       };
 
-      if (isDigital) {
+      if (orderId < 0) {
         updateDraftOrder(orderId, payload);
       } else {
         updateOrder(orderId, payload);
@@ -680,9 +692,10 @@ export default function UpdateOrder({
       try {
         setProcessingSplit(true);
 
-        const endpoint = isDigital
-          ? `/work-orders/drafts/${Math.abs(orderId)}`
-          : `/work-orders/${orderId}`;
+        const endpoint =
+          orderId < 0
+            ? `/work-orders/drafts/${Math.abs(orderId)}`
+            : `/work-orders/${orderId}`;
 
         await apiClient.put(endpoint, {
           ...baseOrder,
@@ -718,7 +731,7 @@ export default function UpdateOrder({
   return (
     <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">
+        <h2 className="text-lg font-semibold mb-3 pr-8">
           {isDigital ? "Edición de Borrador Digital:" : "Edición de Orden de Trabajo:"}{" "}
           <span className="text-gray-700">{selectedProject?.name}</span>
         </h2>
@@ -762,6 +775,45 @@ export default function UpdateOrder({
                   }}
                   size="sm"
                 />
+                {selectedOrder && (
+                  <div className="col-span-2 flex flex-wrap items-end justify-end gap-2">
+                    {orderId < 0 ? (
+                      <>
+                        {onPublishOrder && (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            iconLeft={<Send className="h-4 w-4" />}
+                            onClick={onPublishOrder}
+                          >
+                            Publicar
+                          </Button>
+                        )}
+                        {onDeleteDraft && (
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            iconLeft={<Trash2 className="h-4 w-4" />}
+                            onClick={onDeleteDraft}
+                          >
+                            Eliminar
+                          </Button>
+                        )}
+                      </>
+                    ) : (
+                      onArchiveOrder && (
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          iconLeft={<Archive className="h-4 w-4" />}
+                          onClick={onArchiveOrder}
+                        >
+                          Archivar
+                        </Button>
+                      )
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -1398,7 +1450,7 @@ export default function UpdateOrder({
                 </div>
               )}
             </form>
-            <div className="flex justify-between gap-2 mt-auto pt-6 pb-2 bg-white">
+            <div className="flex gap-2 mt-auto pt-6 pb-2 bg-white">
               {selectedOrder && !isDigital && (
                 <Button
                   onClick={() => onOrderDuplicated(selectedOrder)}
@@ -1408,7 +1460,7 @@ export default function UpdateOrder({
                   Duplicar orden
                 </Button>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 ml-auto">
                 <Button
                   variant="primary"
                   className="text-base font-medium"
