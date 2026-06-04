@@ -1460,7 +1460,7 @@ export default function UpdateOrder({
                   variant="primary"
                   className="text-base font-medium"
                 >
-                  Duplicar orden
+                  Duplicar Orden
                 </Button>
               )}
               <div className="flex gap-2 ml-auto">
