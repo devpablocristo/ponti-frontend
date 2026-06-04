@@ -8,7 +8,10 @@ import useWorkOrders from "../../../hooks/useWorkOrders";
 import { ChevronDown, LoaderCircle, Send, Trash2, Archive } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
-import { WorkorderData } from "../../../hooks/useWorkOrders/types";
+import {
+  WorkorderData,
+  WorkOrderStatus,
+} from "../../../hooks/useWorkOrders/types";
 import useSupplies from "../../../hooks/useSupplies";
 import useCategories from "../../../hooks/useCategories";
 import useStock from "../../../hooks/useStock";
@@ -34,7 +37,9 @@ type InvestorSplit = {
 export default function UpdateOrder({
   orderId,
   isDigital,
+  orderStatus,
   drawerOpen,
+  customerId,
   setDrawerOpen,
   onOrderUpdated,
   onOrderDuplicated,
@@ -44,7 +49,9 @@ export default function UpdateOrder({
 }: {
   orderId: number;
   isDigital: boolean;
+  orderStatus: WorkOrderStatus;
   drawerOpen: boolean;
+  customerId: number | null;
   setDrawerOpen: (open: boolean) => void;
   onOrderUpdated: () => void;
   onOrderDuplicated: (order: WorkorderData) => void;
@@ -62,6 +69,7 @@ export default function UpdateOrder({
     errorCreation,
     processingCreation,
   } = useWorkOrders();
+  const isDigitalDraft = isDigital && orderStatus === "draft";
 
   const { getProject, selectedProject, processing } = useProjects();
 
@@ -303,17 +311,13 @@ export default function UpdateOrder({
   useEffect(() => {
     if (!orderId) return;
 
-    // Un borrador digital sin publicar vive en work_order_drafts y la vista del
-    // listado le asigna id NEGATIVO. Una orden ya publicada (digital o analógica)
-    // vive en workorders con id positivo. Por eso elegimos el endpoint por el signo
-    // del id, no por isDigital: una digital PUBLICADA no está en drafts (daba 404).
-    if (orderId < 0) {
+    if (isDigitalDraft) {
       getDraftWorkorder(orderId);
       return;
     }
 
     getWorkorder(orderId);
-  }, [orderId, getDraftWorkorder, getWorkorder]);
+  }, [orderId, isDigitalDraft, getDraftWorkorder, getWorkorder]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -600,12 +604,6 @@ export default function UpdateOrder({
   const handleSaveOrder = () => {
     setError(null);
     setSuccessMessage(null);
-    // Una orden digital con id positivo ya está publicada (vive en workorders, no en
-    // drafts): no se edita desde acá, solo se archiva.
-    if (isDigital && orderId >= 0) {
-      setError("El borrador ya fue publicado y no se puede editar.");
-      return;
-    }
     if (
       !selectedOrder ||
       !lot ||
@@ -618,6 +616,11 @@ export default function UpdateOrder({
       processing
     ) {
       setError("Campos obligatorios incompletos");
+      return;
+    }
+
+    if (isDigitalDraft && !customerId) {
+      setError("No se pudo identificar el cliente de la orden.");
       return;
     }
 
@@ -639,6 +642,7 @@ export default function UpdateOrder({
     const baseOrder = {
       number: orderNumber,
       date,
+      ...(isDigitalDraft ? { customer_id: customerId } : {}),
       project_id: selectedOrder.project_id,
       field_id: selectedOrder.field_id,
       lot_id: lot.id,
@@ -660,7 +664,7 @@ export default function UpdateOrder({
         investor_id: investor!.id,
       };
 
-      if (orderId < 0) {
+      if (isDigitalDraft) {
         updateDraftOrder(orderId, payload);
       } else {
         updateOrder(orderId, payload);
@@ -680,7 +684,7 @@ export default function UpdateOrder({
         investor_id: splits[0].investorId,
       };
 
-      if (orderId < 0) {
+      if (isDigitalDraft) {
         updateDraftOrder(orderId, payload);
       } else {
         updateOrder(orderId, payload);
@@ -692,10 +696,9 @@ export default function UpdateOrder({
       try {
         setProcessingSplit(true);
 
-        const endpoint =
-          orderId < 0
-            ? `/work-orders/drafts/${Math.abs(orderId)}`
-            : `/work-orders/${orderId}`;
+        const endpoint = isDigitalDraft
+          ? `/work-orders/drafts/${Math.abs(orderId)}`
+          : `/work-orders/${orderId}`;
 
         await apiClient.put(endpoint, {
           ...baseOrder,
@@ -707,7 +710,7 @@ export default function UpdateOrder({
         });
 
         setSuccessMessage(
-          isDigital
+          isDigitalDraft
             ? "Borrador actualizado con división por inversor."
             : "Orden actualizada con división por inversor."
         );
@@ -717,7 +720,7 @@ export default function UpdateOrder({
         setError(
           extractErrorMessage(
             err,
-            isDigital
+            isDigitalDraft
               ? "Error al dividir el borrador por inversor."
               : "Error al dividir la orden por inversor."
           )
@@ -732,7 +735,7 @@ export default function UpdateOrder({
     <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <div className="flex flex-col h-full">
         <h2 className="text-lg font-semibold mb-3 pr-8">
-          {isDigital ? "Edición de Borrador Digital:" : "Edición de Orden de Trabajo:"}{" "}
+          {isDigitalDraft ? "Edición de Borrador Digital:" : "Edición de Orden de Trabajo:"}{" "}
           <span className="text-gray-700">{selectedProject?.name}</span>
         </h2>
         {processing || processingCreation || processingSplit ? (
@@ -777,7 +780,7 @@ export default function UpdateOrder({
                 />
                 {selectedOrder && (
                   <div className="col-span-2 flex flex-wrap items-end justify-end gap-2">
-                    {orderId < 0 ? (
+                    {isDigitalDraft ? (
                       <>
                         {onPublishOrder && (
                           <Button
