@@ -1113,7 +1113,7 @@ export function WorkOrders() {
             onClick: () => handleExport(),
           },
           {
-            label: "Archivados",
+            label: "Archivadas",
             icon: <Archive className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
