@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LoaderCircle } from "lucide-react";
+import { LoaderCircle, Archive, Plus } from "lucide-react";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { matchesSelectFilter } from "@/lib/tableFilters";
 import { Metrics, OrdersData, WorkorderData } from "../../../hooks/useWorkOrders/types";
@@ -12,6 +12,7 @@ import { useWorkspaceFilters } from "../../../hooks/useWorkspaceFilters";
 import { BaseModal } from "../../../components/Modal/BaseModal";
 import Button from "../../../components/Button/Button";
 import UpdateOrder from "./UpdateOrder";
+import ArchivedWorkOrdersDrawer from "./ArchivedWorkOrdersDrawer";
 import { cropColors, laborColors } from "../../../pages/admin/colors";
 import { Column } from "../../../pages/admin/types";
 import { apiClient } from "@/api/client";
@@ -208,7 +209,7 @@ function OrdersIndicators({
   processing: boolean;
 }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <div className="my-3">
       {processing ? (
         <div className="flex items-center justify-center py-4">
           <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
@@ -266,12 +267,13 @@ export function WorkOrders() {
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerUpdateOpen, setDrawerUpdateOpen] = useState(false);
+  const [archivedDrawerOpen, setArchivedDrawerOpen] = useState(false);
   const [orderToDuplicate, setOrderToDuplicate] =
     useState<WorkorderData | null>(null);
 
   const {
     getOrders,
-    deleteOrder,
+    archiveOrder,
     deleteDraftOrder,
     publishDraftOrder,
     getMetrics,
@@ -676,6 +678,7 @@ export function WorkOrders() {
     try {
       await publishDraftOrder(order.id);
       handleOrderCreated();
+      setDrawerUpdateOpen(false);
     } catch (error) {
       const status = extractErrorStatus(error);
       const rawMessage = extractErrorMessage(
@@ -735,51 +738,13 @@ export function WorkOrders() {
   function handlePrePublish(order: OrdersData) {
     setModalConfig({
       title: "Confirmar publicación",
-            message:
+      message:
         `¿Está seguro que desea publicar la orden ${order.number}?\n\n` +
         "Si la orden contiene insumos pendientes de completar, la publicación será bloqueada.",
       primaryButtonText: "Sí, publicar",
       secondaryButtonText: "Cancelar",
       onConfirm: () => {
         void handlePublishOrder(order);
-      },
-    });
-    setIsModalOpen(true);
-  }
-
-  async function handleDeleteDraft(order: OrdersData) {
-    if (!isDigitalOrder(order) || order.status !== "draft") return;
-
-    setIsProcessing(true);
-    setErrorMessage("");
-
-    try {
-      await deleteDraftOrder(order.id);
-      handleOrderCreated();
-    } catch (error) {
-      const status = extractErrorStatus(error);
-
-      if (status === 404) {
-        setErrorMessage("No se encontró el borrador digital.");
-        return;
-      }
-
-      setErrorMessage(
-        extractErrorMessage(error, "No se pudo eliminar la orden digital.")
-      );
-    } finally {
-      setIsProcessing(false);
-    }
-  }
-
-  function handlePreDeleteDraft(order: OrdersData) {
-    setModalConfig({
-      title: "Confirmar eliminación",
-      message: `¿Está seguro que desea eliminar la orden ${order.number}?`,
-      primaryButtonText: "Sí, eliminar",
-      secondaryButtonText: "Cancelar",
-      onConfirm: () => {
-        void handleDeleteDraft(order);
       },
     });
     setIsModalOpen(true);
@@ -986,52 +951,6 @@ export function WorkOrders() {
     setOrderToDuplicate(order);
   };
 
-  const handlePreFinish = (id: number) => {
-    setModalConfig({
-      title: "Confirmar eliminación",
-      message: "¿Está seguro que desea eliminar la orden?",
-      primaryButtonText: "Sí, eliminar",
-      secondaryButtonText: "Cancelar",
-      onConfirm: () => handleFinishConfirmed(id),
-    });
-    setIsModalOpen(true);
-  };
-
-  const handleFinishConfirmed = async (id: number) => {
-    setIsProcessing(true);
-
-    try {
-      await deleteOrder(id);
-      setModalConfig({
-        title: "Confirmación",
-        message: "La orden ha sido eliminada.",
-        primaryButtonText: "Volver",
-        secondaryButtonText: "Volver",
-        onConfirm: () => {
-          navigate("/admin/work-orders");
-        },
-      });
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Error al eliminar la orden.";
-      setErrorMessage(message);
-      setModalConfig({
-        title: "Error",
-        message,
-        primaryButtonText: "Volver",
-        secondaryButtonText: "Volver",
-        onConfirm: () => {
-          setIsModalOpen(false);
-        },
-      });
-    } finally {
-      setIsModalOpen(true);
-      setIsProcessing(false);
-    }
-  };
-
   const filteredOrders = useMemo(() => {
     return globalFilterSourceOrders.filter((order) => {
       return Object.entries(columnsFilters).every(([key, value]) => {
@@ -1124,13 +1043,95 @@ export function WorkOrders() {
     pagination.resetPage();
   };
 
+  // Orden actualmente abierta en el drawer (para las acciones del drawer).
+  const openOrder = orders.find((o) => o.id === selectedOrderRow?.id);
+
+  // Archivar una orden publicada (soft delete, restaurable desde Archivados).
+  const handlePreArchive = (order: OrdersData) => {
+    setModalConfig({
+      title: "Confirmar archivado",
+      message: `¿Archivar la orden ${order.number}?`,
+      primaryButtonText: "Sí, archivar",
+      secondaryButtonText: "Cancelar",
+      onConfirm: async () => {
+        setIsProcessing(true);
+        setErrorMessage("");
+        try {
+          await archiveOrder(order.id);
+          handleOrderCreated();
+          setDrawerUpdateOpen(false);
+        } catch (error) {
+          setErrorMessage(extractErrorMessage(error, "No se pudo archivar la orden."));
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+    });
+    setIsModalOpen(true);
+  };
+
+  // Eliminar definitivamente un borrador digital (no es archivable).
+  const handlePreDeleteDraft = (order: OrdersData) => {
+    setModalConfig({
+      title: "Eliminar borrador",
+      message: `¿Eliminar definitivamente el borrador ${order.number}? Esta acción no se puede deshacer.`,
+      primaryButtonText: "Sí, eliminar",
+      secondaryButtonText: "Cancelar",
+      onConfirm: async () => {
+        setIsProcessing(true);
+        setErrorMessage("");
+        try {
+          await deleteDraftOrder(order.id);
+          handleOrderCreated();
+          setDrawerUpdateOpen(false);
+        } catch (error) {
+          setErrorMessage(
+            extractErrorMessage(error, "No se pudo eliminar el borrador.")
+          );
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+    });
+    setIsModalOpen(true);
+  };
+
+  const actionsColumn: Column<OrdersData> = {
+    key: "id",
+    header: "Acciones",
+    align: "center",
+    headerAlign: "center",
+    render: (_, order) => {
+      if (!isDigitalOrder(order)) return null;
+
+      if (order.status === "draft") {
+        return (
+          <div className="flex gap-1 justify-center">
+            <Button variant="primary" size="xs" onClick={() => handlePrePublish(order)}>
+              Publicar
+            </Button>
+            <Button variant="danger" size="xs" onClick={() => handlePreDeleteDraft(order)}>
+              Eliminar
+            </Button>
+          </div>
+        );
+      }
+
+      return (
+        <Button variant="primary" size="xs" onClick={() => handlePreArchive(order)}>
+          Archivar
+        </Button>
+      );
+    },
+  };
+
   return (
     <div>
       <FilterBar
         filters={filters}
         actions={[
           {
-            label: "Exportar Órdenes",
+            label: "Exportar",
             icon: <svg width="14" height="13" viewBox="0 0 14 13" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M5.66675 2.49984H3.00008C2.64646 2.49984 2.30732 2.64031 2.05727 2.89036C1.80722 3.14041 1.66675 3.47955 1.66675 3.83317V10.4998C1.66675 10.8535 1.80722 11.1926 2.05727 11.4426C2.30732 11.6927 2.64646 11.8332 3.00008 11.8332H9.66675C10.0204 11.8332 10.3595 11.6927 10.6096 11.4426C10.8596 11.1926 11.0001 10.8535 11.0001 10.4998V7.83317M8.33341 1.1665H12.3334M12.3334 1.1665V5.1665M12.3334 1.1665L5.66675 7.83317" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -1141,7 +1142,15 @@ export function WorkOrders() {
             onClick: () => handleExport(),
           },
           {
-            label: "+ Nueva Orden",
+            label: "Archivadas",
+            icon: <Archive className="h-4 w-4" />,
+            variant: "primary",
+            isPrimary: true,
+            onClick: () => setArchivedDrawerOpen(true),
+          },
+          {
+            label: "Nueva",
+            icon: <Plus className="h-4 w-4" />,
             variant: "primary",
             isPrimary: true,
             disabled: !projectId,
@@ -1159,12 +1168,10 @@ export function WorkOrders() {
         </div>
       )}
       {!processing && !errorMetrics && orders.length > 0 && (
-        <div className="my-4">
-          <OrdersIndicators
-            metrics={displayedMetrics}
-            processing={processingMetrics}
-          />
-        </div>
+        <OrdersIndicators
+          metrics={displayedMetrics}
+          processing={processingMetrics}
+        />
       )}
       <div className="mt-4 relative">
         {isProcessing && (
@@ -1192,8 +1199,15 @@ export function WorkOrders() {
             setDrawerOpen={setDrawerUpdateOpen}
             onOrderUpdated={handleOrderCreated}
             onOrderDuplicated={handleOrderDuplicated}
+            onPublishOrder={openOrder ? () => handlePrePublish(openOrder) : undefined}
+            onDeleteDraft={openOrder ? () => handlePreDeleteDraft(openOrder) : undefined}
+            onArchiveOrder={openOrder ? () => handlePreArchive(openOrder) : undefined}
           />
         )}
+        <ArchivedWorkOrdersDrawer
+          open={archivedDrawerOpen}
+          onClose={() => setArchivedDrawerOpen(false)}
+        />
         {selectedSupplyFilter.id && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
             <span>
@@ -1214,52 +1228,7 @@ export function WorkOrders() {
           rowStyle="softZebra"
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
-          columns={columnsToShow}
-          actionsHeader="Acciones"
-          renderActions={(item) => {
-            const isDraftDigital = isDigitalOrder(item) && item.status === "draft";
-
-            if (isDigitalOrder(item) && !isDraftDigital) {
-              return null;
-            }
-
-            if (!isDraftDigital) {
-              return (
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePreFinish(item.id);
-                  }}
-                >
-                  Eliminar
-                </Button>
-              );
-            }
-
-            return (
-              <>
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePrePublish(item);
-                  }}
-                >
-                  Publicar
-                </Button>
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={() => {
-                    handlePreDeleteDraft(item);
-                  }}
-                >
-                  Eliminar
-                </Button>
-              </>
-            );
-          }}
+          columns={[...columnsToShow, actionsColumn]}
           enableFilters={true}
           headerComponent={
             <OrdersHeader
