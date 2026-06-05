@@ -43,9 +43,6 @@ export default function UpdateOrder({
   setDrawerOpen,
   onOrderUpdated,
   onOrderDuplicated,
-  onPublishOrder,
-  onDeleteDraft,
-  onArchiveOrder,
 }: {
   orderId: number;
   isDigital: boolean;
