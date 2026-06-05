@@ -1096,6 +1096,35 @@ export function WorkOrders() {
     setIsModalOpen(true);
   };
 
+  const actionsColumn: Column<OrdersData> = {
+    key: "id",
+    header: "Acciones",
+    align: "center",
+    headerAlign: "center",
+    render: (_, order) => {
+      if (!isDigitalOrder(order)) return null;
+
+      if (order.status === "draft") {
+        return (
+          <div className="flex gap-1 justify-center">
+            <Button variant="primary" size="xs" onClick={() => handlePrePublish(order)}>
+              Publicar
+            </Button>
+            <Button variant="danger" size="xs" onClick={() => handlePreDeleteDraft(order)}>
+              Eliminar
+            </Button>
+          </div>
+        );
+      }
+
+      return (
+        <Button variant="primary" size="xs" onClick={() => handlePreArchive(order)}>
+          Archivar
+        </Button>
+      );
+    },
+  };
+
   return (
     <div>
       <FilterBar
@@ -1199,7 +1228,7 @@ export function WorkOrders() {
           rowStyle="softZebra"
           filters={columnsFilters}
           onFilterChange={handleFilterChange}
-          columns={columnsToShow}
+          columns={[...columnsToShow, actionsColumn]}
           enableFilters={true}
           headerComponent={
             <OrdersHeader
