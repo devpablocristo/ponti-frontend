@@ -5,7 +5,7 @@ import SelectField from "../../../components/Input/SelectField";
 import useLabors from "../../../hooks/useLabors";
 import { LaborInfo } from "../../../hooks/useLabors/types";
 import useWorkOrders from "../../../hooks/useWorkOrders";
-import { ChevronDown, LoaderCircle, Send, Trash2, Archive } from "lucide-react";
+import { ChevronDown, LoaderCircle } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
 import {
@@ -43,9 +43,6 @@ export default function UpdateOrder({
   setDrawerOpen,
   onOrderUpdated,
   onOrderDuplicated,
-  onPublishOrder,
-  onDeleteDraft,
-  onArchiveOrder,
 }: {
   orderId: number;
   isDigital: boolean;
@@ -745,7 +742,7 @@ export default function UpdateOrder({
         ) : (
           <>
             <form className="space-y-4 flex-1">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <InputField
                   label="Nro. Orden"
                   placeholder="000-001"
@@ -778,45 +775,6 @@ export default function UpdateOrder({
                   }}
                   size="sm"
                 />
-                {selectedOrder && (
-                  <div className="col-span-2 flex flex-wrap items-end justify-end gap-2">
-                    {isDigitalDraft ? (
-                      <>
-                        {onPublishOrder && (
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            iconLeft={<Send className="h-4 w-4" />}
-                            onClick={onPublishOrder}
-                          >
-                            Publicar
-                          </Button>
-                        )}
-                        {onDeleteDraft && (
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            iconLeft={<Trash2 className="h-4 w-4" />}
-                            onClick={onDeleteDraft}
-                          >
-                            Eliminar
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      onArchiveOrder && (
-                        <Button
-                          variant="primary"
-                          size="sm"
-                          iconLeft={<Archive className="h-4 w-4" />}
-                          onClick={onArchiveOrder}
-                        >
-                          Archivar
-                        </Button>
-                      )
-                    )}
-                  </div>
-                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">

@@ -1102,9 +1102,7 @@ export function WorkOrders() {
     align: "center",
     headerAlign: "center",
     render: (_, order) => {
-      if (!isDigitalOrder(order)) return null;
-
-      if (order.status === "draft") {
+      if (isDigitalOrder(order) && order.status === "draft") {
         return (
           <div className="flex gap-1 justify-center">
             <Button variant="primary" size="xs" onClick={() => handlePrePublish(order)}>
@@ -1117,11 +1115,15 @@ export function WorkOrders() {
         );
       }
 
-      return (
-        <Button variant="primary" size="xs" onClick={() => handlePreArchive(order)}>
-          Archivar
-        </Button>
-      );
+      if (order.status !== "draft") {
+        return (
+          <Button variant="primary" size="xs" onClick={() => handlePreArchive(order)}>
+            Archivar
+          </Button>
+        );
+      }
+
+      return null;
     },
   };
 
