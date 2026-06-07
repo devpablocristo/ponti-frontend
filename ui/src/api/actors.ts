@@ -46,14 +46,21 @@ export interface ResolveActorInput {
   tax_id?: string | null;
   role: ActorRole;
   allow_create?: boolean;
+  // reject_existing: alta estricta — si ya existe (nombre o CUIT) devuelve 409 en vez de reusar.
+  reject_existing?: boolean;
 }
 
-// searchActors: coincidencias exactas + similares (advisory) por nombre.
-export async function searchActors(q: string, limit = 20): Promise<ActorSearchResult> {
+// searchActors: coincidencias exactas + similares (trigram). field "name" (default) o
+// "tax_id" para buscar por CUIT.
+export async function searchActors(
+  q: string,
+  field: "name" | "tax_id" = "name",
+  limit = 20,
+): Promise<ActorSearchResult> {
   const term = q.trim();
   if (term === "") return { exact: [], similar: [] };
   const res = await apiClient.get<SuccessResponse<ActorSearchResult>>(
-    `/actors/search?q=${encodeURIComponent(term)}&limit=${limit}`,
+    `/actors/search?q=${encodeURIComponent(term)}&field=${field}&limit=${limit}`,
   );
   return res.data ?? { exact: [], similar: [] };
 }
@@ -117,4 +124,15 @@ export async function restoreActor(id: number): Promise<void> {
 
 export async function deleteActor(id: number): Promise<void> {
   await apiClient.delete(`/actors/${id}`);
+}
+
+// setActorRoles reemplaza el conjunto de roles del actor.
+export async function setActorRoles(id: number, roles: string[]): Promise<void> {
+  await apiClient.put(`/actors/${id}/roles`, { roles });
+}
+
+// setActorTaxID corrige la clave fiscal (CUIT/DNI) de un actor existente, sin re-crearlo
+// (el actor_id no cambia → lo colgado sigue igual). 409 si otra identidad activa ya la usa.
+export async function setActorTaxID(id: number, taxId: string): Promise<void> {
+  await apiClient.put(`/actors/${id}/tax-id`, { tax_id: taxId });
 }

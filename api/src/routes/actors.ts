@@ -37,6 +37,7 @@ router.get("/search", async (req: Request, res: Response) => {
   try {
     const qs = new URLSearchParams();
     if (req.query.q) qs.set("q", String(req.query.q));
+    if (req.query.field) qs.set("field", String(req.query.field));
     if (req.query.limit) qs.set("limit", String(req.query.limit));
     const { data } = await apiClient.get<unknown>(`/actors/search?${qs.toString()}`, headers);
     res.status(200).json({ success: true, data });
@@ -155,6 +156,34 @@ router.get("/:id", async (req: Request, res: Response) => {
   try {
     const { data } = await apiClient.get<unknown>(`/actors/${req.params.id}`, headers);
     res.status(200).json({ success: true, data });
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.put("/:id/roles", async (req: Request, res: Response) => {
+  const headers = authHeaders(req);
+  if (!headers) {
+    res.status(401).json({ message: "Usuario no autenticado" });
+    return;
+  }
+  try {
+    await apiClient.put<unknown>(`/actors/${req.params.id}/roles`, req.body, headers);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    fail(res, error);
+  }
+});
+
+router.put("/:id/tax-id", async (req: Request, res: Response) => {
+  const headers = authHeaders(req);
+  if (!headers) {
+    res.status(401).json({ message: "Usuario no autenticado" });
+    return;
+  }
+  try {
+    await apiClient.put<unknown>(`/actors/${req.params.id}/tax-id`, req.body, headers);
+    res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
   }

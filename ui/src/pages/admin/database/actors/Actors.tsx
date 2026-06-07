@@ -117,7 +117,7 @@ export default function Actors() {
   const taxId = (a: Actor) => a.keys?.find((k) => k.type === "TAX_ID")?.value ?? "—";
 
   return (
-    <div className="p-6 max-w-5xl">
+    <div className="max-w-5xl">
       <h1 className="text-2xl font-semibold mb-1">Actores (Identity Gate)</h1>
       <p className="text-sm text-gray-500 mb-5">
         Crear (search-first, deduplica por CUIT y nombre legal), listar, editar, archivar y

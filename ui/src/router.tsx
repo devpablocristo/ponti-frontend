@@ -14,6 +14,8 @@ import Customers from "./pages/admin/customers/Customers";
 import Access from "./pages/admin/access/Access";
 import DatabaseCustomers from "./pages/admin/database/customers/Customers";
 import Actors from "./pages/admin/database/actors/Actors";
+import Actors2 from "./pages/admin/database/actors/Actors2";
+import Catalogs from "./pages/admin/database/catalogs/Catalogs";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
 import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
 import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
@@ -119,6 +121,14 @@ export default [
       {
         path: "database/actors",
         element: <Actors />,
+      },
+      {
+        path: "database/actors2",
+        element: <Actors2 />,
+      },
+      {
+        path: "database/catalogs",
+        element: <Catalogs />,
       },
       {
         path: "database/customers/archived",
