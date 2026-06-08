@@ -34,6 +34,10 @@ export type PontiChatTextBlock = { type: "text"; text: string };
 
 export type PontiChatBlock = PontiChatTextBlock | Record<string, unknown>;
 
+export type PontiChatToolCall = string | Record<string, unknown>;
+
+export type PontiChatPendingConfirmation = string | Record<string, unknown>;
+
 export type PontiChatResponse = {
   request_id: string;
   output_kind: string;
@@ -41,11 +45,16 @@ export type PontiChatResponse = {
   chat_id: string;
   reply: string;
   tokens_used: number;
-  tool_calls: string[];
-  pending_confirmations: string[];
+  tool_calls: PontiChatToolCall[];
+  pending_confirmations: PontiChatPendingConfirmation[];
   blocks: PontiChatBlock[];
   routed_agent: string;
   routing_source: string;
+  axis_run_id?: string;
+  axis_task_id?: string;
+  run_id?: string;
+  task_id?: string;
+  agent_id?: string;
 };
 
 export type PontiConversationSummary = {
@@ -60,7 +69,7 @@ export type PontiConversationMessage = {
   role: string;
   content: string;
   ts?: string | null;
-  tool_calls?: string[];
+  tool_calls?: PontiChatToolCall[];
 };
 
 export type PontiConversationDetail = {
