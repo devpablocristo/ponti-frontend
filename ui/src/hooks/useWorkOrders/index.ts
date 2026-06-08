@@ -17,6 +17,8 @@ type PublishDraftResponse = SuccessResponse<{
 }>;
 
 const normalizeDraftId = (id: number) => Math.abs(id);
+const draftEndpoint = (id: number, options?: { group?: boolean }) =>
+  `/work-orders/drafts/${normalizeDraftId(id)}${options?.group ? "/group" : ""}`;
 
 const useOrders = () => {
   const [
@@ -207,7 +209,7 @@ const useOrders = () => {
   );
 
   const updateDraftOrder = React.useCallback(
-    async (id: number, order: Workorder) => {
+    async (id: number, order: Workorder, options?: { group?: boolean }) => {
       setProcessingCreation(true);
       setErrorCreation(null);
       dispatch({
@@ -216,10 +218,7 @@ const useOrders = () => {
       });
 
       try {
-        await apiClient.put(
-          `/work-orders/drafts/${normalizeDraftId(id)}`,
-          order
-        );
+        await apiClient.put(draftEndpoint(id, options), order);
 
         dispatch({
           type: actions.SET_RESULT_CREATION,
@@ -290,13 +289,13 @@ const useOrders = () => {
   );
 
   const getDraftWorkorder = React.useCallback(
-    async (id: number) => {
+    async (id: number, options?: { group?: boolean }) => {
       setProcessingDetail(true);
       setErrorCreation(null);
 
       try {
         const response = await apiClient.get<SuccessResponse<WorkorderData>>(
-          `/work-orders/drafts/${normalizeDraftId(id)}`
+          draftEndpoint(id, options)
         );
 
         if (response.success) {

@@ -32,6 +32,9 @@ export interface OrdersData {
   total_cost: number | string;
   is_digital: boolean;
   status: WorkOrderStatus;
+  base_number?: string;
+  is_grouped_digital?: boolean;
+  lots_count?: number;
 }
 
 export interface InvestorSplit {
@@ -64,6 +67,14 @@ export interface WorkorderData {
   status?: WorkOrderStatus;
   published_work_order_id?: number | null;
   review_notes?: string;
+  lots?: {
+    draft_id: number;
+    number: string;
+    lot_id: number;
+    lot_name: string;
+    effective_area: number | string;
+    status: WorkOrderStatus;
+  }[];
 }
 
 export type Workorder = {

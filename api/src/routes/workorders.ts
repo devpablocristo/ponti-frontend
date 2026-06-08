@@ -49,6 +49,9 @@ type WorkOrderListItem = {
   total_cost: string;
   is_digital: boolean;
   status: string;
+  base_number?: string;
+  is_grouped_digital?: boolean;
+  lots_count?: number;
 };
 
 type WorkOrderListResponse = {
@@ -415,6 +418,43 @@ router.get("/drafts/:id", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/drafts/:id/group", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = getAuthHeaders(userId);
+    const draftId = normalizeDraftId(req.params.id);
+
+    const { data: workorderDraftGroup } = await apiClient.get<any>(
+      `/work-order-drafts/${draftId}/group`,
+      headers
+    );
+
+    const data = {
+      success: true,
+      data: workorderDraftGroup,
+    };
+
+    res.status(200).json(data);
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
 router.put("/drafts/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -433,6 +473,46 @@ router.put("/drafts/:id", async (req: Request, res: Response) => {
 
     await apiClient.put<any>(
       `/work-order-drafts/${draftId}`,
+      requestData,
+      headers
+    );
+
+    setImmediate(() => cache.flushAll());
+
+    res.status(204).send();
+  } catch (error: any) {
+    const err = error as ApiResponse<null>;
+    if ("error" in err) {
+      res.status(err.error?.status || 500).json(err);
+      return;
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Error inesperado",
+      error: { status: 500, details: "No se pudo procesar la solicitud" },
+    });
+  }
+});
+
+router.put("/drafts/:id/group", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.userID;
+    if (!userId) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const headers = getAuthHeaders(userId);
+    const draftId = normalizeDraftId(req.params.id);
+
+    const requestData = {
+      ...req.body,
+      date: req.body.date,
+    };
+
+    await apiClient.put<any>(
+      `/work-order-drafts/${draftId}/group`,
       requestData,
       headers
     );

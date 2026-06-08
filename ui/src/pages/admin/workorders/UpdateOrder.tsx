@@ -37,6 +37,7 @@ type InvestorSplit = {
 export default function UpdateOrder({
   orderId,
   isDigital,
+  isGroupedDigital = false,
   orderStatus,
   drawerOpen,
   customerId,
@@ -46,6 +47,7 @@ export default function UpdateOrder({
 }: {
   orderId: number;
   isDigital: boolean;
+  isGroupedDigital?: boolean;
   orderStatus: WorkOrderStatus;
   drawerOpen: boolean;
   customerId: number | null;
@@ -309,12 +311,12 @@ export default function UpdateOrder({
     if (!orderId) return;
 
     if (isDigitalDraft) {
-      getDraftWorkorder(orderId);
+      getDraftWorkorder(orderId, { group: isGroupedDigital });
       return;
     }
 
     getWorkorder(orderId);
-  }, [orderId, isDigitalDraft, getDraftWorkorder, getWorkorder]);
+  }, [orderId, isDigitalDraft, isGroupedDigital, getDraftWorkorder, getWorkorder]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -421,7 +423,8 @@ export default function UpdateOrder({
     const laborObj = labors.find((l) => l.id === selectedOrder.labor_id);
     setLabor(laborObj || null);
 
-    const lotObj = lots.find((l) => l.id === selectedOrder.lot_id);
+    const selectedLotID = selectedOrder.lot_id ?? selectedOrder.lots?.[0]?.lot_id;
+    const lotObj = lots.find((l) => l.id === selectedLotID);
     setLot(lotObj || null);
 
     setContractor(selectedOrder.contractor);
@@ -643,7 +646,7 @@ export default function UpdateOrder({
       project_id: selectedOrder.project_id,
       field_id: selectedOrder.field_id,
       lot_id: lot.id,
-      crop_id: lot.current_crop_id,
+      crop_id: selectedOrder.crop_id || lot.current_crop_id,
       labor_id: labor.id,
       contractor,
       effective_area: Number(surface),
@@ -662,7 +665,7 @@ export default function UpdateOrder({
       };
 
       if (isDigitalDraft) {
-        updateDraftOrder(orderId, payload);
+        updateDraftOrder(orderId, payload, { group: isGroupedDigital });
       } else {
         updateOrder(orderId, payload);
       }
@@ -682,7 +685,7 @@ export default function UpdateOrder({
       };
 
       if (isDigitalDraft) {
-        updateDraftOrder(orderId, payload);
+        updateDraftOrder(orderId, payload, { group: isGroupedDigital });
       } else {
         updateOrder(orderId, payload);
       }
@@ -694,7 +697,7 @@ export default function UpdateOrder({
         setProcessingSplit(true);
 
         const endpoint = isDigitalDraft
-          ? `/work-orders/drafts/${Math.abs(orderId)}`
+          ? `/work-orders/drafts/${Math.abs(orderId)}${isGroupedDigital ? "/group" : ""}`
           : `/work-orders/${orderId}`;
 
         await apiClient.put(endpoint, {
