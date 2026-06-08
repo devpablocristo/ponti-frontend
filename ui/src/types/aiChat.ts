@@ -1,4 +1,4 @@
-/** Contratos del asistente conversacional Ponti (POST /v1/chat en ponti-ai vía BFF). */
+/** Contratos del asistente conversacional Ponti (legacy ponti-ai o Axis via BFF). */
 
 export type PontiRouteHint =
   | "general"
@@ -70,6 +70,14 @@ export type PontiConversationMessage = {
   content: string;
   ts?: string | null;
   tool_calls?: PontiChatToolCall[];
+  pending_confirmations?: PontiChatPendingConfirmation[];
+  blocks?: PontiChatBlock[];
+  routed_agent?: string | null;
+  routing_source?: string | null;
+  axis_run_id?: string | null;
+  axis_task_id?: string | null;
+  run_id?: string | null;
+  task_id?: string | null;
 };
 
 export type PontiConversationDetail = {
