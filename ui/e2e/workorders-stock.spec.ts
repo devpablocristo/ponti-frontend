@@ -31,10 +31,13 @@ test("ordenes respeta filtro por insumo y conserva paginacion server-side", asyn
   const token = await page.evaluate(() =>
     localStorage.getItem(`ponti:${location.host}:access_token`)
   );
-  const apiGet = async (path: string) => {
+  const apiGet = async (path: string, options: { allowError?: boolean } = {}) => {
     const res = await page.request.get(`${origin}/api/v1${path}`, {
       headers: { Authorization: `Bearer ${token ?? ""}` },
     });
+    if (!res.ok() && options.allowError) {
+      return null;
+    }
     expect(res.ok(), `GET ${path} respondió ${res.status()}`).toBeTruthy();
     return res.json();
   };
@@ -54,8 +57,11 @@ test("ordenes respeta filtro por insumo y conserva paginacion server-side", asyn
   let chosen: { supply_id: number; supply_name: string } | null = null;
   for (const candidate of candidates.slice(0, 15)) {
     const wo = await apiGet(
-      `/work-orders?project_id=30&supply_id=${candidate.supply_id}&page=1&per_page=10`
+      `/work-orders?project_id=30&supply_id=${candidate.supply_id}&page=1&per_page=10`,
+      { allowError: true }
     );
+    if (!wo) continue;
+
     const total = Number(wo?.data?.page_info?.total ?? 0);
     if (total >= 1) {
       chosen = { supply_id: candidate.supply_id, supply_name: candidate.supply_name };

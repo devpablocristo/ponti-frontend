@@ -7,7 +7,7 @@
 - **tipo:** feature (familia de features por entidad)
 - **repo:** Frontend monorepo `ui/` (React) + `api/` (BFF NodeJS, yarn) — path `/home/pablocristo/Proyectos/pablo/ponti/web`
 - **existe-en-FE:** SÍ (212 archivos: páginas `ui/src/pages/admin/master-data/*`, hooks `ui/src/hooks/*`, rutas BFF `api/src/routes/*` y utils `api/src/utils/*`)
-- **existe-en-BE:** NO. Es Solo-FE. En el repo BE (`core`/`platform`) NO hay carpeta para esta feature. En el `cross-repo-map` del BE debe figurar como **"sin cambios BE"**. (Las APIs que consume el BFF — `/investors`, `/managers`, `/customers?status`, etc. — son contratos BE preexistentes o aportados por otras features; ver dependencies.md.)
+- **existe-en-BE:** NO como feature nueva, pero SI tiene dependencias runtime sobre contratos Core existentes. En particular, las pantallas de labores consumen `GET /api/v1/projects/:project_id/labors`, que requiere la migracion Core `000232_labor_pending_changes` aplicada.
 
 ## Resumen
 Reorganización integral de la zona de administración del FE: se crea la sección **`/admin/master-data`** que reemplaza progresivamente las antiguas pantallas bajo `/admin/database/*` y `/admin/products/*`. Cada entidad de dato maestro (customers, fields, lots, workorders, crops, investors, managers, labors, supplies, supply-movements, stock, campaigns, projects, data-integrity) gana su propia familia de pantallas con tres superficies estándar por entidad: **List**, **FormDrawer** (crear/editar) y **Archived** (archivados/restaurar). Se añade la pantalla transversal **`Administrar Entidades`** (`/admin/master-data/entities`, `GeneralEntities.tsx`) que navega la cadena Cliente→Proyecto→Inversor→Campania→Proveedor→Responsable→Arrendatario→Campo→Lote→Cultivo y monta el "drawer congelado" de proyecto como módulo vivo de catálogo. En paralelo se **refactorizan los hooks** monolíticos (`useLabors`, `useLots`, `useWorkOrders`, `useSupplyMovements`) partiéndolos en `queries.ts` / `mutations.ts` / `metrics.ts` / `helpers.ts` / `*Reducer.ts`, y se renombran reducers (`useXReducer.ts` → `xReducer.ts`). El BFF gana rutas nuevas (`investors`, `managers`), un helper compartido `forwardQuery.ts` y parámetros de query ampliados.
@@ -30,7 +30,7 @@ Las pantallas legacy (`/admin/database/*`, `/admin/products/*`, `/admin/tasks`) 
 - **SPECs SDD** dentro de los módulos (lots, campaigns, fields, entities) que documentan reglas de negocio.
 
 ## Alcance en el otro repo (BE)
-**Ninguno.** No hay carpeta ni cambios BE para feature-014. El BFF consume endpoints BE existentes (`/customers`, `/investors`, `/managers`, `/projects`, `/fields`, `/lots`, `/crops`, `/labors`, `/supplies`, `/stock`, ...). Si algún endpoint (`/investors`, `/managers`, `status`, `campaign_id`) NO existe aún en el BE desplegado, esto es una **dependencia cross-repo de runtime** (ver risks.md), no un cambio a portar en BE.
+No hay carpeta ni feature BE nueva para feature-014. El BFF consume endpoints BE existentes (`/customers`, `/investors`, `/managers`, `/projects`, `/fields`, `/lots`, `/crops`, `/labors`, `/supplies`, `/stock`, ...). Para labores, `GET /projects/:project_id/labors` debe responder el catalogo editable con IDs reales y depende de la migracion Core `000232_labor_pending_changes`; si esa migracion no esta aplicada, las pantallas legacy `/admin/database/tasks` y los selectores de OTs pueden fallar con `failed to list labor`.
 
 ## Fuera de alcance
 - **lot-metrics / total_tons** (FE+BE #117/#121/#124) — DONE. NO re-extraer hunks de `EditableTonsCell.tsx`, `LotsIndicators.tsx`, `useLots/queries.ts` y `useWorkOrders/metrics.ts` que correspondan a métricas/total_tons.
@@ -74,13 +74,13 @@ Las pantallas legacy (`/admin/database/*`, `/admin/products/*`, `/admin/tasks`) 
   - Registro de todas en `api/src/routes/index.ts` (COMPARTIDO con 007/008).
 - **Modelos/DTOs/tipos (FE):** `ui/src/pages/admin/types.ts`, `useCrops/types.ts`, `useLabors/types.ts`, `useLots/types.ts`, `useWorkOrders/types.ts`, `useSupplyMovements/types.ts`, `orderTypes.ts`, `importPreviewTypes.ts`, `pages/admin/master-data/customers/types.ts`.
 - **Componentes/hooks/stores:** ver file-list.md (agrupado por entidad).
-- **DB / migraciones:** **ninguna** (Solo-FE).
+- **DB / migraciones:** ninguna en Web. Runtime depende de Core `migrations_v4/000232_labor_pending_changes.up.sql` para el catalogo de labores.
 - **Tests:** 24 `*.test.ts(x)` (hooks `index.test.ts`, helpers, drawers, listHelpers, importUtils, fileTransfer, generalEntityRows, integrityUtils, customerEditorValidation, etc.).
 
 ## Dependencias
 - **Intra-repo (FE) fuertes:** 006-fe-design-system (`components/crud/*`, `AppFilterBar`, `Modal/copy`), 007-actor-system (`useActors`, `ActorFormDrawer`, `actorCrudarRouting`, `@/copy/entities`, hooks `useInvestors`/`useManagers`/`useCampaigns`), 008-identity-tenant-context (`useWorkspaceFilters`, `lib/workspaceQuery`, `requestContext`/scoped-cache en BFF), 009-crudar-archive-surface (`ArchivedDrawer`, patrón crudar de archivado/restore).
 - **Intra-repo débiles:** 004 contraparte FE de `lib/properName`; 010-projects (`useDatabase/projects`); 018-data-integrity (Integrity.tsx solo se reubica).
-- **Cross-repo:** NINGUNA dependencia de extracción BE (Solo-FE). Dependencia de **runtime**: el BE debe exponer `/investors`, `/managers`, `customers?status`, `campaign_id`/`customer_id` para que las pantallas funcionen end-to-end (ver risks.md). Estos contratos suelen venir de 007/008/010 en BE.
+- **Cross-repo:** NINGUNA dependencia de extracción BE (Solo-FE). Dependencia de **runtime**: el BE debe exponer `/investors`, `/managers`, `customers?status`, `campaign_id`/`customer_id` y `GET /projects/:project_id/labors` con migracion `000232_labor_pending_changes` aplicada para que las pantallas funcionen end-to-end (ver risks.md).
 - **Archivos compartidos (partial-hunks):** `api/src/routes/index.ts` (mezcla 007/008/014), `ui/src/router.tsx` y `ui/src/main.tsx` (NO están en la flist de 014 pero importan casi todos sus archivos — coordinación obligatoria).
 
 ## Riesgos

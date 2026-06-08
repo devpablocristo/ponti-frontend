@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { parsePartialPriceFlag } from "../utils/partialPrice";
+import { buildProjectLaborsResponse } from "../utils/laborsRoute";
 import { configService } from "../configService";
 import { cache } from ".";
 
@@ -781,13 +782,7 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
       headers
     );
 
-    const items = labors.data ?? labors;
-    const data = {
-      success: true,
-      data: items,
-    };
-
-    res.status(200).json(data);
+    res.status(200).json(buildProjectLaborsResponse(labors));
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
