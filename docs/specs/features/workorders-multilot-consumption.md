@@ -2,36 +2,33 @@
 
 ## Purpose
 
-Documentar la cobertura E2E del flujo donde Web lista una OT digital multi-lote
-como una sola orden logica sin duplicar consumo.
+Documentar la cobertura E2E del flujo donde Web lista las subordenes digitales
+creadas por un batch multi-lote sin duplicar consumo.
 
 ## Expected Contract
 
 - Una OT digital batch con numero base `D-n` puede existir internamente como
   subordenes `D-n.1`, `D-n.2`, etc.
-- Para el usuario de `/admin/work-orders`, esas subordenes representan una sola
-  OT logica.
-- El consumo visible y los KPIs deben sumar el consumo real de la OT completa,
-  no una copia del consumo total por lote.
+- El dominio de work orders no tiene una orden multi-lote real. Cada suborden
+  tiene un solo lote y debe mostrarse como fila propia en `/admin/work-orders`.
+- El consumo visible por suborden debe ser la parte distribuida por Core, no una
+  copia completa del consumo total del batch.
 
 Ejemplo:
 
 - Mobile/Core recibe una OT multi-lote con consumo total `200`.
-- Web debe mostrar una sola OT logica `D-n`.
-- Web no debe mostrar `D-n.1` y `D-n.2` como ordenes independientes.
-- El consumo total visible debe ser `200`, no `400`.
-- El BFF conserva los campos existentes y puede recibir los metadatos
-  opcionales de Core: `base_number`, `is_grouped_digital`, `lots_count`.
-- Cuando `is_grouped_digital=true`, la fila representa un grupo digital; las
-  subordenes `D-n.1`, `D-n.2` son detalle interno.
+- Core crea `D-n.1` y `D-n.2`.
+- Web debe mostrar `D-n.1` y `D-n.2` como ordenes independientes.
+- Cada fila de 50 ha debe mostrar `100` de consumo; la suma de ambas es `200`,
+  no `400`.
 
 ## Automated Evidence
 
 - `ui/e2e/workorders-multilot.spec.ts`
 
 El test crea un batch digital contra Core y valida el contrato desde el BFF Web
-y la pantalla `/admin/work-orders`: una fila logica, numero base `D-n` y
-consumo `200`.
+y la pantalla `/admin/work-orders`: dos subordenes visibles y consumo total
+sumado `200`.
 
 Validation 2026-06-08:
 
@@ -40,4 +37,4 @@ Validation 2026-06-08:
 ## Non-Scope
 
 - No cambia el modelo multi-lote real.
-- No reemplaza las filas fisicas por lote; Core agrupa la respuesta de listado.
+- No reemplaza las filas fisicas por lote ni agrupa el listado de work orders.

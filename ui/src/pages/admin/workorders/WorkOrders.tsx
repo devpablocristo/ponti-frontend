@@ -284,7 +284,6 @@ export function WorkOrders() {
   const [selectedOrderRow, setSelectedOrderRow] = useState<{
     id: number;
     isDigital: boolean;
-    isGroupedDigital: boolean;
     status: OrdersData["status"];
   } | null>(null);
 
@@ -644,7 +643,6 @@ export function WorkOrders() {
     setSelectedOrderRow({
       id: order.id,
       isDigital: isDigitalOrder(order),
-      isGroupedDigital: order.is_grouped_digital === true,
       status: order.status,
     });
     setDrawerUpdateOpen(true);
@@ -1238,7 +1236,6 @@ export function WorkOrders() {
           <UpdateOrder
             orderId={selectedOrderRow.id}
             isDigital={selectedOrderRow.isDigital}
-            isGroupedDigital={selectedOrderRow.isGroupedDigital}
             orderStatus={selectedOrderRow.status}
             customerId={selectedCustomer?.id ?? null}
             drawerOpen={drawerUpdateOpen}

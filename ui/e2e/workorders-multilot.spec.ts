@@ -226,7 +226,7 @@ test.beforeEach(async ({ page }) => {
   await installAuthenticatedSession(page);
 });
 
-test("ordenes muestra una OT multi-lote sin duplicar consumo", async ({ page, request }) => {
+test("ordenes muestra subordenes por lote sin duplicar consumo", async ({ page, request }) => {
   const config = getManagerApiConfig();
   test.skip(!config, "BASE_MANAGER_API y X_API_KEY son necesarios para crear el batch digital");
 
@@ -306,8 +306,13 @@ test("ordenes muestra una OT multi-lote sin duplicar consumo", async ({ page, re
       0
     );
 
-    expect.soft(matchingRows).toHaveLength(1);
-    expect.soft(matchingRows[0]?.number).toBe(baseNumber);
+    const supplyRows = matchingRows.filter((row) => Number(row.consumption ?? 0) > 0);
+    expect.soft(matchingRows.some((row) => row.number === baseNumber)).toBeFalsy();
+    expect.soft(supplyRows).toHaveLength(2);
+    expect.soft(supplyRows.map((row) => row.number).sort()).toEqual([
+      `${baseNumber}.1`,
+      `${baseNumber}.2`,
+    ]);
     expect.soft(observedTotalUsed).toBeCloseTo(EXPECTED_TOTAL_USED, 5);
 
     const ordersResponse = page.waitForResponse(
@@ -322,9 +327,8 @@ test("ordenes muestra una OT multi-lote sin duplicar consumo", async ({ page, re
     await ordersResponse;
 
     await expect.soft(page.getByRole("heading", { name: "Órdenes de Trabajo" })).toBeVisible();
-    await expect.soft(page.getByText(baseNumber, { exact: true })).toBeVisible();
-    await expect.soft(page.getByText(`${baseNumber}.1`, { exact: true })).toHaveCount(0);
-    await expect.soft(page.getByText(`${baseNumber}.2`, { exact: true })).toHaveCount(0);
+    await expect.soft(page.getByText(`${baseNumber}.1`, { exact: true }).first()).toBeVisible();
+    await expect.soft(page.getByText(`${baseNumber}.2`, { exact: true }).first()).toBeVisible();
     await expect.soft(page.getByText("400 Lt", { exact: true })).toHaveCount(0);
   } finally {
     await deleteDrafts(request, config!, createdDraftIds, token);
