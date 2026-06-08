@@ -448,6 +448,114 @@ const useOrders = () => {
     }
   }, []);
 
+  const archiveOrder = React.useCallback(async (id: number): Promise<void> => {
+    setProcessing(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.post<SuccessResponse<string>>(
+        `/work-orders/${id}/archive`
+      );
+
+      if (response.success) {
+        return;
+      }
+
+      const message = "Ocurrio un error al intentar archivar una orden.";
+      setError(message);
+      throw new Error(message);
+    } catch (error) {
+      const message = extractErrorMessage(
+        error,
+        "Error desconocido al intentar archivar una orden."
+      );
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const restoreOrder = React.useCallback(async (id: number): Promise<void> => {
+    setProcessing(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.post<SuccessResponse<string>>(
+        `/work-orders/${id}/restore`
+      );
+
+      if (response.success) {
+        return;
+      }
+
+      const message = "Ocurrio un error al intentar restaurar una orden.";
+      setError(message);
+      throw new Error(message);
+    } catch (error) {
+      const message = extractErrorMessage(
+        error,
+        "Error desconocido al intentar restaurar una orden."
+      );
+      setError(message);
+      throw new Error(message);
+    } finally {
+      setProcessing(false);
+    }
+  }, []);
+
+  const getArchivedOrders = React.useCallback(
+    async (queryString: string, options?: { silent?: boolean }): Promise<void> => {
+      if (!options?.silent) {
+        setProcessing(true);
+      }
+      setError(null);
+
+      let queryParams = "";
+      if (queryString !== "") {
+        queryParams = `?${queryString}`;
+      }
+
+      try {
+        const response = await apiClient.get<OrdersListResponse>(
+          `/work-orders/archived${queryParams}`
+        );
+
+        if (response.success) {
+          dispatch({
+            type: actions.SET_ORDERS,
+            payload: response.data.data ?? [],
+          });
+
+          dispatch({
+            type: actions.SET_PAGE_INFO,
+            payload: {
+              page: response.data.page_info.page,
+              per_page: response.data.page_info.per_page,
+              total: response.data.page_info.total,
+              max_page: response.data.page_info.max_page,
+            },
+          });
+          return;
+        }
+
+        setError("Ocurrio un error en la busqueda de ordenes archivadas");
+      } catch (error) {
+        setError(
+          extractErrorMessage(
+            error,
+            "Error desconocido en la busqueda de ordenes archivadas."
+          )
+        );
+      } finally {
+        if (!options?.silent) {
+          setProcessing(false);
+        }
+      }
+    },
+    [dispatch]
+  );
+
   return {
     orders,
     metrics,
@@ -463,6 +571,9 @@ const useOrders = () => {
     publishDraftOrder,
     deleteDraftOrder,
     deleteOrder,
+    archiveOrder,
+    restoreOrder,
+    getArchivedOrders,
     selectedOrder,
     resultCreation,
     processing,

@@ -41,16 +41,23 @@ export const parseWorkOrderScope = (
       : undefined,
 });
 
+// El backend exige cliente + proyecto + campaña (campo opcional = todos los campos).
+// El guard debe espejar ese contrato: si no, una request con solo project/field pasa
+// el chequeo del BFF y el core la rechaza con un 400 crudo en inglés.
 export const hasWorkOrderScope = (scope: WorkOrderQueryScope) =>
-  scope.fieldId > 0 || scope.projectId > 0;
+  scope.customerId > 0 && scope.projectId > 0 && scope.campaignId > 0;
 
 export const buildWorkOrderScopeParams = (scope: WorkOrderQueryScope) => {
   const params = new URLSearchParams();
 
+  // project_id es obligatorio para el backend; field_id lo acota a un campo
+  // (ausente = todos los campos del proyecto). Se envían juntos, no excluyentes.
+  if (scope.projectId > 0) {
+    params.set("project_id", String(scope.projectId));
+  }
+
   if (scope.fieldId > 0) {
     params.set("field_id", String(scope.fieldId));
-  } else if (scope.projectId > 0) {
-    params.set("project_id", String(scope.projectId));
   }
 
   if (scope.customerId > 0) {

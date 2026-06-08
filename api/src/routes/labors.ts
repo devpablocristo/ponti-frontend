@@ -490,14 +490,16 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const requestData = {
+    const requestData: Record<string, any> = {
       id: req.body.id,
       name: req.body.name,
-      category_id: req.body.category_id,
       price: req.body.price,
       contractor_name: req.body.contractor_name,
       is_partial_price: parsePartialPriceFlag(req.body.is_partial_price),
     };
+    if (req.body.category_id && parseInt(req.body.category_id) > 0) {
+      requestData.category_id = req.body.category_id;
+    }
 
     await apiClient.put<any>(
       `projects/${req.params.project_id}/labors/${req.params.id}`,

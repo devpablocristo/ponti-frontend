@@ -8,7 +8,10 @@ import useWorkOrders from "../../../hooks/useWorkOrders";
 import { ChevronDown, LoaderCircle } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
 import { Plot } from "../../../hooks/useDatabase/projects/types";
-import { WorkorderData } from "../../../hooks/useWorkOrders/types";
+import {
+  WorkorderData,
+  WorkOrderStatus,
+} from "../../../hooks/useWorkOrders/types";
 import useSupplies from "../../../hooks/useSupplies";
 import useCategories from "../../../hooks/useCategories";
 import useStock from "../../../hooks/useStock";
@@ -34,17 +37,24 @@ type InvestorSplit = {
 export default function UpdateOrder({
   orderId,
   isDigital,
+  orderStatus,
   drawerOpen,
+  customerId,
   setDrawerOpen,
   onOrderUpdated,
   onOrderDuplicated,
 }: {
   orderId: number;
   isDigital: boolean;
+  orderStatus: WorkOrderStatus;
   drawerOpen: boolean;
+  customerId: number | null;
   setDrawerOpen: (open: boolean) => void;
   onOrderUpdated: () => void;
   onOrderDuplicated: (order: WorkorderData) => void;
+  onPublishOrder?: () => void;
+  onDeleteDraft?: () => void;
+  onArchiveOrder?: () => void;
 }) {
   const {
     updateOrder,
@@ -56,6 +66,7 @@ export default function UpdateOrder({
     errorCreation,
     processingCreation,
   } = useWorkOrders();
+  const isDigitalDraft = isDigital && orderStatus === "draft";
 
   const { getProject, selectedProject, processing } = useProjects();
 
@@ -297,13 +308,13 @@ export default function UpdateOrder({
   useEffect(() => {
     if (!orderId) return;
 
-    if (isDigital) {
+    if (isDigitalDraft) {
       getDraftWorkorder(orderId);
       return;
     }
 
     getWorkorder(orderId);
-  }, [orderId, isDigital, getDraftWorkorder, getWorkorder]);
+  }, [orderId, isDigitalDraft, getDraftWorkorder, getWorkorder]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -590,10 +601,6 @@ export default function UpdateOrder({
   const handleSaveOrder = () => {
     setError(null);
     setSuccessMessage(null);
-        if (isDigital && selectedOrder?.status === "published") {
-      setError("El borrador ya fue publicado y no se puede editar.");
-      return;
-    }
     if (
       !selectedOrder ||
       !lot ||
@@ -606,6 +613,11 @@ export default function UpdateOrder({
       processing
     ) {
       setError("Campos obligatorios incompletos");
+      return;
+    }
+
+    if (isDigitalDraft && !customerId) {
+      setError("No se pudo identificar el cliente de la orden.");
       return;
     }
 
@@ -627,6 +639,7 @@ export default function UpdateOrder({
     const baseOrder = {
       number: orderNumber,
       date,
+      ...(isDigitalDraft ? { customer_id: customerId } : {}),
       project_id: selectedOrder.project_id,
       field_id: selectedOrder.field_id,
       lot_id: lot.id,
@@ -648,7 +661,7 @@ export default function UpdateOrder({
         investor_id: investor!.id,
       };
 
-      if (isDigital) {
+      if (isDigitalDraft) {
         updateDraftOrder(orderId, payload);
       } else {
         updateOrder(orderId, payload);
@@ -668,7 +681,7 @@ export default function UpdateOrder({
         investor_id: splits[0].investorId,
       };
 
-      if (isDigital) {
+      if (isDigitalDraft) {
         updateDraftOrder(orderId, payload);
       } else {
         updateOrder(orderId, payload);
@@ -680,7 +693,7 @@ export default function UpdateOrder({
       try {
         setProcessingSplit(true);
 
-        const endpoint = isDigital
+        const endpoint = isDigitalDraft
           ? `/work-orders/drafts/${Math.abs(orderId)}`
           : `/work-orders/${orderId}`;
 
@@ -694,7 +707,7 @@ export default function UpdateOrder({
         });
 
         setSuccessMessage(
-          isDigital
+          isDigitalDraft
             ? "Borrador actualizado con división por inversor."
             : "Orden actualizada con división por inversor."
         );
@@ -704,7 +717,7 @@ export default function UpdateOrder({
         setError(
           extractErrorMessage(
             err,
-            isDigital
+            isDigitalDraft
               ? "Error al dividir el borrador por inversor."
               : "Error al dividir la orden por inversor."
           )
@@ -718,8 +731,8 @@ export default function UpdateOrder({
   return (
     <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
       <div className="flex flex-col h-full">
-        <h2 className="text-lg font-semibold mb-2">
-          {isDigital ? "Edición de Borrador Digital:" : "Edición de Orden de Trabajo:"}{" "}
+        <h2 className="text-lg font-semibold mb-3 pr-8">
+          {isDigitalDraft ? "Edición de Borrador Digital:" : "Edición de Orden de Trabajo:"}{" "}
           <span className="text-gray-700">{selectedProject?.name}</span>
         </h2>
         {processing || processingCreation || processingSplit ? (
@@ -729,7 +742,7 @@ export default function UpdateOrder({
         ) : (
           <>
             <form className="space-y-4 flex-1">
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <InputField
                   label="Nro. Orden"
                   placeholder="000-001"
@@ -1398,17 +1411,17 @@ export default function UpdateOrder({
                 </div>
               )}
             </form>
-            <div className="flex justify-between gap-2 mt-auto pt-6 pb-2 bg-white">
+            <div className="flex gap-2 mt-auto pt-6 pb-2 bg-white">
               {selectedOrder && !isDigital && (
                 <Button
                   onClick={() => onOrderDuplicated(selectedOrder)}
                   variant="primary"
                   className="text-base font-medium"
                 >
-                  Duplicar orden
+                  Duplicar Orden
                 </Button>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 ml-auto">
                 <Button
                   variant="primary"
                   className="text-base font-medium"

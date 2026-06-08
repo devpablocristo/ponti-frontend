@@ -61,9 +61,16 @@ export default function ListTasks() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
+  const [laborsMode, setLaborsMode] = useState<"all" | "pending">("all");
   const pagination = usePagination({ perPage: 10 });
   const { buildPagination, clampPageForTotal, resetPage } = pagination;
   const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
+    const displayedLabors = useMemo(() => {
+  if (laborsMode === "pending") {
+    return safeLabors.filter((l) => l.is_pending);
+  }
+  return safeLabors.filter((l) => !l.is_pending);
+}, [safeLabors, laborsMode]);
   const {
     filters: columnsFilters,
     filteredRows: filteredLabors,
@@ -71,7 +78,7 @@ export default function ListTasks() {
     handleFilterChange,
     resetFilters,
   } = useClientTableFilters<LaborInfo>({
-    rows: safeLabors,
+    rows: displayedLabors,
     onChange: resetPage,
   });
   const safeCategories = useMemo(
@@ -95,19 +102,19 @@ export default function ListTasks() {
   useEffect(() => {
     resetFilters();
     resetPage();
-  }, [projectId, resetFilters, resetPage]);
+  }, [projectId, laborsMode, resetFilters, resetPage]);
 
   const columns = useMemo<Column<LaborInfo>[]>(
     () => [
       {
-        key: "name",
-        header: "Labor",
-        render: (value) => (
-          <strong className="text-blue-700">{String(value ?? "")}</strong>
-        ),
-        filterType: "select",
-        filterOptions: getFilterOptionsForColumn("name"),
-      },
+  key: "name",
+  header: "Labor",
+  render: (value) => (
+    <strong className="text-blue-700">{String(value ?? "")}</strong>
+  ),
+  filterType: "select",
+  filterOptions: getFilterOptionsForColumn("name"),
+},
       {
         key: "category_name",
         header: "Rubro",
@@ -537,7 +544,7 @@ export default function ListTasks() {
               <SelectField
                 label="Rubro"
                 name={`category-${labor?.id || 0}`}
-                value={labor?.category_id.toString() || ""}
+                value={labor?.category_id ? labor.category_id.toString() : ""}
                 onChange={(e) => {
                   if (!labor) return;
                   setLabor({ ...labor, category_id: parseInt(e.target.value) });
@@ -596,15 +603,32 @@ export default function ListTasks() {
             primaryButtonColor="bg-red-600 hover:bg-red-800 focus:ring-red-300"
             onPrimaryAction={confirmDelete}
           />
+          <div className="flex items-center gap-2 mb-4">
+            <Button
+              variant={laborsMode === "all" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => { setLaborsMode("all"); resetPage(); }}
+            >
+              Activos
+            </Button>
+            <Button
+              variant={laborsMode === "pending" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => { setLaborsMode("pending"); resetPage(); }}
+            >
+              Pendientes
+            </Button>
+          </div>
+
           <DataTable
             data={filteredLabors}
             columns={columns}
             filters={columnsFilters}
             onFilterChange={handleFilterChange}
             enableFilters={true}
-            onDelete={(item) => handleDelete(item)}
+            onDelete={laborsMode === "all" ? (item) => handleDelete(item) : undefined}
             onEdit={(item) => handleEdit(item)}
-            message="No hay labores cargadas en el proyecto"
+            message={laborsMode === "pending" ? "No hay labores pendientes" : "No hay labores cargadas en el proyecto"}
             pagination={buildPagination(filteredLabors.length)}
           />
         </div>

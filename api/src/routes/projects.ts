@@ -771,12 +771,6 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedLabors = cache.get(`labors:${projectId}`);
-    if (cachedLabors) {
-      res.status(200).json(cachedLabors);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
@@ -792,10 +786,6 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
       success: true,
       data: items,
     };
-
-    if (Array.isArray(items) && items.length > 0) {
-      setImmediate(() => cache.set(`labors:${projectId}`, data));
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
