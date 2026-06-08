@@ -306,10 +306,9 @@ test("ordenes muestra subordenes por lote sin duplicar consumo", async ({ page, 
       0
     );
 
-    const supplyRows = matchingRows.filter((row) => Number(row.consumption ?? 0) > 0);
+    expect.soft(matchingRows).toHaveLength(2);
     expect.soft(matchingRows.some((row) => row.number === baseNumber)).toBeFalsy();
-    expect.soft(supplyRows).toHaveLength(2);
-    expect.soft(supplyRows.map((row) => row.number).sort()).toEqual([
+    expect.soft(matchingRows.map((row) => row.number).sort()).toEqual([
       `${baseNumber}.1`,
       `${baseNumber}.2`,
     ]);
@@ -327,8 +326,8 @@ test("ordenes muestra subordenes por lote sin duplicar consumo", async ({ page, 
     await ordersResponse;
 
     await expect.soft(page.getByRole("heading", { name: "Órdenes de Trabajo" })).toBeVisible();
-    await expect.soft(page.getByText(`${baseNumber}.1`, { exact: true }).first()).toBeVisible();
-    await expect.soft(page.getByText(`${baseNumber}.2`, { exact: true }).first()).toBeVisible();
+    await expect.soft(page.getByText(`${baseNumber}.1`, { exact: true })).toHaveCount(1);
+    await expect.soft(page.getByText(`${baseNumber}.2`, { exact: true })).toHaveCount(1);
     await expect.soft(page.getByText("400 Lt", { exact: true })).toHaveCount(0);
   } finally {
     await deleteDrafts(request, config!, createdDraftIds, token);

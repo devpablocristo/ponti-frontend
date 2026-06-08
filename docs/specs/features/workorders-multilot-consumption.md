@@ -19,6 +19,9 @@ Ejemplo:
 - Mobile/Core recibe una OT multi-lote con consumo total `200`.
 - Core crea `D-n.1` y `D-n.2`.
 - Web debe mostrar `D-n.1` y `D-n.2` como ordenes independientes.
+- Cada suborden debe aparecer una sola vez. Si Core tiene filas internas de
+  insumo/labor para la misma suborden, el BFF/UI no debe mostrarlas como filas
+  duplicadas.
 - Cada fila de 50 ha debe mostrar `100` de consumo; la suma de ambas es `200`,
   no `400`.
 
@@ -27,12 +30,15 @@ Ejemplo:
 - `ui/e2e/workorders-multilot.spec.ts`
 
 El test crea un batch digital contra Core y valida el contrato desde el BFF Web
-y la pantalla `/admin/work-orders`: dos subordenes visibles y consumo total
-sumado `200`.
+y la pantalla `/admin/work-orders`: dos subordenes visibles, sin duplicados por
+componentes internos y consumo total sumado `200`.
 
 Validation 2026-06-08:
 
-- `CHOKIDAR_USEPOLLING=true yarn test:e2e workorders-multilot.spec.ts`: passed.
+- `cd api && npm test`: passed.
+- `cd ui && yarn test`: passed.
+- `cd ui && yarn build`: passed.
+- `cd ui && CHOKIDAR_USEPOLLING=true yarn test:e2e workorders-multilot.spec.ts tasks-labors.spec.ts`: passed.
 
 ## Non-Scope
 

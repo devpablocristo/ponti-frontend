@@ -43,5 +43,6 @@ and master-data labor flows.
   to list labor`.
 - After migration `000232`, Core `GET /api/v1/projects/30/labors` returned
   `200` with 19 catalog rows and `page_info`.
-- Web validation: `api yarn test`, `api yarn build`, `ui yarn build`,
-  `ui yarn test`, and `ui yarn test:e2e`.
+- Web validation: `cd api && npm test`, `cd ui && yarn test`,
+  `cd ui && yarn build`, and
+  `cd ui && CHOKIDAR_USEPOLLING=true yarn test:e2e tasks-labors.spec.ts`.
