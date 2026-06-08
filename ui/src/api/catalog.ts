@@ -14,13 +14,29 @@ interface ListShape {
 }
 
 // listCatalog tolera respuestas {data:[]}, {items:[]} o un array crudo.
-export async function listCatalog(base: string): Promise<CatalogItem[]> {
-  const res = await apiClient.get<SuccessResponse<CatalogItem[] | ListShape>>(`/catalog/${base}`);
+// status: "active" (default) | "archived" | "all".
+export async function listCatalog(
+  base: string,
+  status: "active" | "archived" | "all" = "active",
+): Promise<CatalogItem[]> {
+  const qs = status && status !== "active" ? `?status=${status}` : "";
+  const res = await apiClient.get<SuccessResponse<CatalogItem[] | ListShape>>(
+    `/catalog/${base}${qs}`,
+  );
   const d = res.data as CatalogItem[] | ListShape | undefined;
   if (Array.isArray(d)) return d;
   if (d && Array.isArray(d.data)) return d.data;
   if (d && Array.isArray(d.items)) return d.items;
   return [];
+}
+
+// archiveCatalog / restoreCatalog: soft-delete y reactivación (BFF montado con { archive: true }).
+export async function archiveCatalog(base: string, id: number): Promise<void> {
+  await apiClient.post(`/catalog/${base}/${id}/archive`, {});
+}
+
+export async function restoreCatalog(base: string, id: number): Promise<void> {
+  await apiClient.post(`/catalog/${base}/${id}/restore`, {});
 }
 
 export async function createCatalog(base: string, body: Record<string, unknown>): Promise<void> {

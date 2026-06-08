@@ -27,6 +27,7 @@ import ai from "./ai";
 import admin from "./admin";
 import insights from "./insights";
 import actors from "./actors";
+import registry from "./registry";
 import { catalogRouter } from "./catalogFactory";
 
 const router: Router = Router();
@@ -77,13 +78,14 @@ router.use("/ai", ai);
 router.use("/admin", admin);
 router.use("/insights", insights);
 router.use("/actors", actors);
+router.use("/registry", registry);
 
 // CRUDAR genérico de catálogos (no-actors). Namespace /catalog/* aparte de las rutas GET
 // existentes (/crops, /types…) que consume el form de project.
-router.use("/catalog/crops", catalogRouter("/crops"));
-router.use("/catalog/types", catalogRouter("/types"));
-router.use("/catalog/lease-types", catalogRouter("/lease-types"));
-router.use("/catalog/campaigns", catalogRouter("/campaigns"));
+router.use("/catalog/crops", catalogRouter("/crops", { archive: true }));
+router.use("/catalog/types", catalogRouter("/types", { archive: true }));
+router.use("/catalog/lease-types", catalogRouter("/lease-types", { archive: true }));
+router.use("/catalog/campaigns", catalogRouter("/campaigns", { archive: true }));
 
 router.use("/form-options", options);
 
