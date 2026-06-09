@@ -1028,12 +1028,16 @@ export function WorkOrders() {
     const toNum = (v: unknown) => Number(v) || 0;
     let surface_ha = 0, liters = 0, kilograms = 0, direct_cost = 0;
     const orderBaseNumbers = new Set<string>();
+    const surfaceOrderIds = new Set<number>();
 
     filteredOrders.forEach((order) => {
       const baseNumber = getOrderBaseNumber(order.number);
       if (baseNumber) orderBaseNumbers.add(baseNumber);
 
-      surface_ha += toNum(order.surface_ha);
+      if (!surfaceOrderIds.has(order.id)) {
+        surfaceOrderIds.add(order.id);
+        surface_ha += toNum(order.surface_ha);
+      }
 
       const consumption = String(order.consumption || "").trim();
       const match = consumption.match(/[\d.]+/);
