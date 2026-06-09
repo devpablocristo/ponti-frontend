@@ -33,6 +33,11 @@ El test crea un batch digital contra Core y valida el contrato desde el BFF Web
 y la pantalla `/admin/work-orders`: dos subordenes visibles, sin duplicados por
 componentes internos y consumo total sumado `200`.
 
+El mismo spec incluye un smoke read-only contra datos guardados. Si existen las
+ordenes `D-1905555.1`, `D-1905555.2`, y `D-1905555.3` en la DB activa, Web debe
+recibirlas una sola vez cada una, no debe recibir una fila base `D-1905555`, y
+la suma de consumo debe ser `4860`.
+
 Validation 2026-06-08:
 
 - `cd api && npm test`: passed.

@@ -9,6 +9,8 @@ const PROJECT_ID = 30;
 const FALLBACK_CUSTOMER_ID = 17;
 const EXPECTED_TOTAL_USED = 200;
 const LOT_AREA = "50";
+const STORED_BASE_NUMBER = "D-1905555";
+const STORED_EXPECTED_TOTAL_USED = 4860;
 
 test.setTimeout(90_000);
 
@@ -82,8 +84,10 @@ function createE2EToken(): string {
 function parseEnvFile(filePath: string): Record<string, string> {
   if (!fs.existsSync(filePath)) return {};
 
-  return fs.readFileSync(filePath, "utf8").split(/\r?\n/).reduce<Record<string, string>>(
-    (env, line) => {
+  return fs
+    .readFileSync(filePath, "utf8")
+    .split(/\r?\n/)
+    .reduce<Record<string, string>>((env, line) => {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) return env;
 
@@ -94,9 +98,7 @@ function parseEnvFile(filePath: string): Record<string, string> {
       const rawValue = trimmed.slice(separatorIndex + 1).trim();
       env[key] = rawValue.replace(/^['"]|['"]$/g, "");
       return env;
-    },
-    {}
-  );
+    }, {});
 }
 
 function getLocalEnv(name: string): string {
@@ -180,11 +182,7 @@ async function deleteDrafts(
   );
 }
 
-async function resolveFixture(
-  request: APIRequestContext,
-  config: ManagerApiConfig,
-  token: string
-) {
+async function resolveFixture(request: APIRequestContext, config: ManagerApiConfig, token: string) {
   const projectPayload = await coreGet<unknown>(request, config, `/projects/${PROJECT_ID}`, token);
   const project = unwrapPayload<ProjectDetail>(projectPayload);
   const fields = Array.isArray(project.fields) ? project.fields : [];
@@ -233,7 +231,10 @@ test("ordenes muestra subordenes por lote sin duplicar consumo", async ({ page, 
   const token = createE2EToken();
   const fixture = await resolveFixture(request, config!, token);
 
-  test.skip(!fixture.field, `project ${PROJECT_ID} no tiene un campo con al menos 2 lotes con cultivo`);
+  test.skip(
+    !fixture.field,
+    `project ${PROJECT_ID} no tiene un campo con al menos 2 lotes con cultivo`
+  );
   test.skip(fixture.lots.length < 2, `project ${PROJECT_ID} no tiene 2 lotes validos`);
   test.skip(!fixture.labor, `project ${PROJECT_ID} no tiene labores disponibles`);
   test.skip(!fixture.supply, `project ${PROJECT_ID} no tiene insumos disponibles`);
@@ -245,32 +246,35 @@ test("ordenes muestra subordenes por lote sin duplicar consumo", async ({ page, 
   const customerId = fixture.project.customer?.id ?? FALLBACK_CUSTOMER_ID;
 
   try {
-    const createResponse = await request.post(`${config!.baseURL}/work-order-drafts/digital/batch`, {
-      headers: coreHeaders(token, config!.apiKey),
-      data: {
-        number: baseNumber,
-        date: new Date().toISOString().slice(0, 10),
-        customer_id: customerId,
-        project_id: PROJECT_ID,
-        campaign_id: campaignId ?? null,
-        field_id: fixture.field!.id,
-        crop_id: Number(fixture.lots[0].current_crop_id),
-        labor_id: fixture.labor!.id,
-        contractor: fixture.labor!.contractor_name ?? "",
-        observations: "E2E web multi-lote consumo total",
-        investor_id: fixture.investor!.id,
-        lots: fixture.lots.map((lot) => ({
-          lot_id: lot.id,
-          effective_area: LOT_AREA,
-          items: [
-            {
-              supply_id: fixture.supply!.id,
-              total_used: String(EXPECTED_TOTAL_USED),
-            },
-          ],
-        })),
-      },
-    });
+    const createResponse = await request.post(
+      `${config!.baseURL}/work-order-drafts/digital/batch`,
+      {
+        headers: coreHeaders(token, config!.apiKey),
+        data: {
+          number: baseNumber,
+          date: new Date().toISOString().slice(0, 10),
+          customer_id: customerId,
+          project_id: PROJECT_ID,
+          campaign_id: campaignId ?? null,
+          field_id: fixture.field!.id,
+          crop_id: Number(fixture.lots[0].current_crop_id),
+          labor_id: fixture.labor!.id,
+          contractor: fixture.labor!.contractor_name ?? "",
+          observations: "E2E web multi-lote consumo total",
+          investor_id: fixture.investor!.id,
+          lots: fixture.lots.map((lot) => ({
+            lot_id: lot.id,
+            effective_area: LOT_AREA,
+            items: [
+              {
+                supply_id: fixture.supply!.id,
+                total_used: String(EXPECTED_TOTAL_USED),
+              },
+            ],
+          })),
+        },
+      }
+    );
 
     const createBody = await createResponse.text();
     expect(
@@ -291,10 +295,16 @@ test("ordenes muestra subordenes por lote sin duplicar consumo", async ({ page, 
       per_page: "1000",
     });
 
-    const listResponse = await request.get(`${getWebBffBaseURL()}/api/v1/work-orders?${query.toString()}`, {
-      headers: authHeaders(token),
-    });
-    expect(listResponse.ok(), `GET Web BFF work-orders respondio ${listResponse.status()}`).toBeTruthy();
+    const listResponse = await request.get(
+      `${getWebBffBaseURL()}/api/v1/work-orders?${query.toString()}`,
+      {
+        headers: authHeaders(token),
+      }
+    );
+    expect(
+      listResponse.ok(),
+      `GET Web BFF work-orders respondio ${listResponse.status()}`
+    ).toBeTruthy();
 
     const listPayload = await listResponse.json();
     const rows = extractRows<WorkOrderListRow>(listPayload);
@@ -308,10 +318,9 @@ test("ordenes muestra subordenes por lote sin duplicar consumo", async ({ page, 
 
     expect.soft(matchingRows).toHaveLength(2);
     expect.soft(matchingRows.some((row) => row.number === baseNumber)).toBeFalsy();
-    expect.soft(matchingRows.map((row) => row.number).sort()).toEqual([
-      `${baseNumber}.1`,
-      `${baseNumber}.2`,
-    ]);
+    expect
+      .soft(matchingRows.map((row) => row.number).sort())
+      .toEqual([`${baseNumber}.1`, `${baseNumber}.2`]);
     expect.soft(observedTotalUsed).toBeCloseTo(EXPECTED_TOTAL_USED, 5);
 
     const ordersResponse = page.waitForResponse(
@@ -332,4 +341,58 @@ test("ordenes muestra subordenes por lote sin duplicar consumo", async ({ page, 
   } finally {
     await deleteDrafts(request, config!, createdDraftIds, token);
   }
+});
+
+test("ordenes guardadas D-1905555 aparecen una vez por suborden fisica", async ({ request }) => {
+  const config = getManagerApiConfig();
+  test.skip(!config, "BASE_MANAGER_API y X_API_KEY son necesarios para resolver el scope Web");
+
+  const token = createE2EToken();
+  const projectPayload = await coreGet<unknown>(request, config!, `/projects/${PROJECT_ID}`, token);
+  const project = unwrapPayload<ProjectDetail>(projectPayload);
+  const customerId = project.customer?.id ?? FALLBACK_CUSTOMER_ID;
+  const campaignId = project.campaign?.id;
+  const query = new URLSearchParams({
+    project_id: String(PROJECT_ID),
+    customer_id: String(customerId),
+    ...(campaignId ? { campaign_id: String(campaignId) } : {}),
+    page: "1",
+    per_page: "1000",
+  });
+
+  const listResponse = await request.get(
+    `${getWebBffBaseURL()}/api/v1/work-orders?${query.toString()}`,
+    {
+      headers: authHeaders(token),
+    }
+  );
+  expect(
+    listResponse.ok(),
+    `GET Web BFF work-orders respondio ${listResponse.status()}`
+  ).toBeTruthy();
+
+  const listPayload = await listResponse.json();
+  const rows = extractRows<WorkOrderListRow>(listPayload);
+  const matchingRows = rows.filter(
+    (row) => row.number === STORED_BASE_NUMBER || row.number.startsWith(`${STORED_BASE_NUMBER}.`)
+  );
+
+  test.skip(
+    matchingRows.length === 0,
+    `La DB activa no tiene ${STORED_BASE_NUMBER}.x; smoke read-only salteado`
+  );
+
+  const observedTotalUsed = matchingRows.reduce(
+    (total, row) => total + Number(row.consumption ?? 0),
+    0
+  );
+
+  expect(matchingRows).toHaveLength(3);
+  expect(matchingRows.some((row) => row.number === STORED_BASE_NUMBER)).toBeFalsy();
+  expect(matchingRows.map((row) => row.number).sort()).toEqual([
+    `${STORED_BASE_NUMBER}.1`,
+    `${STORED_BASE_NUMBER}.2`,
+    `${STORED_BASE_NUMBER}.3`,
+  ]);
+  expect(observedTotalUsed).toBeCloseTo(STORED_EXPECTED_TOTAL_USED, 5);
 });
