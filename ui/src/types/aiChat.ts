@@ -54,7 +54,6 @@ export type PontiChatResponse = {
   axis_task_id?: string;
   run_id?: string;
   task_id?: string;
-  request_id?: string;
   agent_id?: string;
 };
 
