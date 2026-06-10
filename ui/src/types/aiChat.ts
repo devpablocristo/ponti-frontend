@@ -94,3 +94,254 @@ export type PontiChatStreamSseEvent = {
   event: string;
   data: Record<string, unknown>;
 };
+
+export type PontiDecisionStatus =
+  | "open"
+  | "accepted"
+  | "drafted"
+  | "dismissed"
+  | "snoozed"
+  | "resolved";
+
+export type PontiDecisionBucket = "urgent" | "important" | "opportunity" | "follow_up";
+
+export type PontiDecisionRun = {
+  id: string;
+  tenant_id: string;
+  workspace: PontiWorkspaceContext;
+  requested_by: string;
+  status: "running" | "completed" | "degraded" | "failed" | string;
+  routing_source: string;
+  axis_run_id?: string;
+  axis_task_id?: string;
+  degraded_reason?: string;
+  cards_created: number;
+  cards_updated: number;
+  cards_total: number;
+  started_at: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PontiDecisionAction = {
+  id?: string;
+  label?: string;
+  capability_id?: string;
+  requires_approval?: boolean;
+  nexus_action_type?: string;
+  payload?: Record<string, unknown>;
+  missing_inputs?: string[];
+};
+
+export type PontiDecisionCard = {
+  id: string;
+  decision_run_id?: string;
+  tenant_id: string;
+  workspace: PontiWorkspaceContext;
+  fingerprint: string;
+  domain: string;
+  route_hint: PontiRouteHint | string;
+  severity: "critical" | "warning" | "info" | "opportunity" | string;
+  bucket: PontiDecisionBucket | string;
+  status: PontiDecisionStatus;
+  title: string;
+  summary: string;
+  recommendation: string;
+  impact_label?: string;
+  impact_value?: number | null;
+  source?: string;
+  evidence?: Record<string, unknown>;
+  tools?: PontiChatToolCall[];
+  action?: PontiDecisionAction;
+  axis_run_id?: string;
+  axis_task_id?: string;
+  occurrence_count: number;
+  first_seen_at: string;
+  last_seen_at: string;
+  snooze_until?: string;
+  status_changed_at?: string;
+  last_actor?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PontiDecisionRunResponse = {
+  run: PontiDecisionRun;
+  cards: PontiDecisionCard[];
+};
+
+export type PontiDecisionActionResponse = {
+  status: string;
+  execution_status?: string;
+  action_id?: string;
+  capability_id?: string;
+  approval_required?: boolean;
+  nexus_action_type?: string;
+  side_effect_type?: string;
+  write_performed?: boolean;
+  draft_id?: string | null;
+  nexus_request_id?: string | null;
+  audit_ref?: string;
+  pending_execution?: boolean;
+  execution_allowed?: boolean;
+  execution_blocked_by?: string;
+  proposal?: Record<string, unknown>;
+  missing_inputs?: string[];
+  card: PontiDecisionCard;
+  pending_confirmation?: Record<string, unknown>;
+  evidence?: Record<string, unknown>;
+};
+
+export type AxisCenterContext = {
+  configured: boolean;
+  status: "ready" | "degraded" | "unconfigured" | string;
+  product_surface: string;
+  agent_id: string;
+  org_id?: string;
+  axis_status?: number;
+  business_model?: Record<string, unknown>;
+  error?: unknown;
+  message?: string;
+};
+
+export type AxisTask = {
+  id: string;
+  title: string;
+  goal?: string;
+  status?: string;
+  priority?: string;
+  summary?: string;
+  channel?: string;
+  context_json?: Record<string, unknown> | unknown;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AxisTaskMessage = {
+  id?: string;
+  author_type: string;
+  author_id?: string;
+  body: string;
+  metadata?: Record<string, unknown> | unknown;
+  created_at?: string;
+};
+
+export type AxisTaskPlanStep = {
+  id: string;
+  title: string;
+  status: string;
+  tool_name?: string;
+  capability?: string;
+  observation?: string;
+  error_message?: string;
+};
+
+export type AxisTaskPlan = {
+  objective?: string;
+  status?: string;
+  strategy?: string;
+  next_action?: string;
+  blocker?: string;
+  steps?: AxisTaskPlanStep[];
+};
+
+export type AxisTaskDetail = {
+  task: AxisTask;
+  messages: AxisTaskMessage[];
+  actions?: Record<string, unknown>[];
+  artifacts?: Record<string, unknown>[];
+  linked_nexus_requests?: Record<string, unknown>[];
+  durable_plan?: AxisTaskPlan;
+  execution_plan?: Record<string, unknown>;
+  execution_state?: Record<string, unknown>;
+};
+
+export type AxisChatToolCall = {
+  name?: string;
+  tool_call_id?: string;
+  allowed?: boolean;
+  decision_reason?: string;
+  duration_ms?: number;
+  error?: string;
+  status?: string;
+  result?: unknown;
+};
+
+export type AxisCenterChatResponse = {
+  chat_id?: string;
+  task_id?: string;
+  reply: string;
+  messages?: AxisTaskMessage[];
+  run_id?: string;
+  agent_id?: string;
+  axis_run_id?: string;
+  axis_task_id?: string;
+  routing_source?: string;
+  routed_agent?: string;
+  tool_calls?: AxisChatToolCall[];
+  pending_confirmations?: Record<string, unknown>[];
+};
+
+export type AxisMemoryEntry = {
+  id: string;
+  kind: string;
+  memory_type: string;
+  classification?: string;
+  scope_type: string;
+  scope_id: string;
+  key: string;
+  content_text: string;
+  confidence?: number;
+  trust_score?: number;
+  status?: string;
+  source?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AxisWatcher = {
+  id: string;
+  org_id: string;
+  name: string;
+  watcher_type: string;
+  config?: Record<string, unknown>;
+  enabled: boolean;
+  last_run_at?: string;
+  last_result?: Record<string, unknown> | unknown;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type AxisWatcherProposal = {
+  id: string;
+  watcher_id: string;
+  org_id?: string;
+  action_type?: string;
+  target_resource?: string;
+  params?: Record<string, unknown>;
+  reason?: string;
+  nexus_request_id?: string | null;
+  nexus_decision?: string | null;
+  execution_status?: string;
+  execution_result?: unknown;
+  created_at?: string;
+  resolved_at?: string | null;
+};
+
+export type AxisRunTrace = {
+  run_id?: string;
+  id?: string;
+  org_id?: string;
+  user_id?: string;
+  task_id?: string;
+  product_surface?: string;
+  intent?: string;
+  autonomy_level?: string;
+  status?: string;
+  tool_calls?: AxisChatToolCall[];
+  created_at?: string;
+  started_at?: string;
+  completed_at?: string;
+  [key: string]: unknown;
+};

@@ -33,6 +33,232 @@ const ROUTE_OPTIONS: { value: PontiRouteHint | ""; label: string }[] = [
   { value: "reports", label: "Informes" },
 ];
 
+type QuickPrompt = { label: string; route: PontiRouteHint; prompt: string };
+
+type AIAssistantConfig = {
+  title: string;
+  routeHint?: PontiRouteHint | "";
+  lockRouteHint?: boolean;
+  quickPrompts: QuickPrompt[];
+  emptyText: string;
+  activityOnly?: boolean;
+  consumeNotificationHandoff?: boolean;
+};
+
+const GENERAL_QUICK_PROMPTS: QuickPrompt[] = [
+  {
+    label: "Resumen operativo",
+    route: "dashboard",
+    prompt: "Dame un resumen operativo del proyecto con principales riesgos, avances y próximos focos.",
+  },
+  {
+    label: "Revisar stock",
+    route: "stock",
+    prompt: "Analizá el stock del proyecto y marcá faltantes, diferencias de campo y riesgos de insumos.",
+  },
+  {
+    label: "Labores recientes",
+    route: "labors",
+    prompt: "Listá las labores recientes y señalá estados problemáticos o costos llamativos.",
+  },
+  {
+    label: "Informe económico",
+    route: "reports",
+    prompt: "Resumí los informes económicos de la campaña y explicá el resultado operativo.",
+  },
+  {
+    label: "Insights abiertos",
+    route: "dashboard",
+    prompt: "Mostrame los insights abiertos, explicá los críticos y proponé borradores de acción si corresponde.",
+  },
+];
+
+const AI_MODULE_CONFIGS = {
+  general: {
+    title: "Asistente",
+    routeHint: "",
+    quickPrompts: GENERAL_QUICK_PROMPTS,
+    emptyText: "",
+    consumeNotificationHandoff: true,
+  },
+  dashboard: {
+    title: "IA Dashboard",
+    routeHint: "dashboard",
+    lockRouteHint: true,
+    quickPrompts: [
+      {
+        label: "Resumen operativo",
+        route: "dashboard",
+        prompt: "Dame un resumen operativo del proyecto con principales riesgos, avances y próximos focos.",
+      },
+      {
+        label: "Riesgos principales",
+        route: "dashboard",
+        prompt: "Identificá los riesgos principales del proyecto y priorizalos por impacto operativo.",
+      },
+      {
+        label: "Próximos focos",
+        route: "dashboard",
+        prompt: "Sugerí próximos focos operativos para esta campaña con evidencia de Ponti.",
+      },
+      {
+        label: "Insights abiertos",
+        route: "dashboard",
+        prompt: "Mostrame los insights abiertos y explicá cuáles requieren atención primero.",
+      },
+    ],
+    emptyText: "",
+  },
+  stock: {
+    title: "IA Stock",
+    routeHint: "stock",
+    lockRouteHint: true,
+    quickPrompts: [
+      {
+        label: "Revisar stock",
+        route: "stock",
+        prompt: "Analizá el stock del proyecto y marcá faltantes, diferencias de campo y riesgos de insumos.",
+      },
+      {
+        label: "Stock negativo",
+        route: "stock",
+        prompt: "Detectá stock negativo o diferencias grandes y explicá qué debería revisar.",
+      },
+      {
+        label: "Borrador de conteo",
+        route: "stock",
+        prompt: "Si corresponde, proponé un borrador de conteo de stock sin ejecutar writes finales.",
+      },
+    ],
+    emptyText: "",
+  },
+  workOrders: {
+    title: "IA Órdenes y Labores",
+    routeHint: "labors",
+    lockRouteHint: true,
+    quickPrompts: [
+      {
+        label: "Labores recientes",
+        route: "labors",
+        prompt: "Listá las labores recientes y señalá estados problemáticos o costos llamativos.",
+      },
+      {
+        label: "Estados problemáticos",
+        route: "labors",
+        prompt: "Marcá órdenes o labores con estados problemáticos, atrasos o costos llamativos.",
+      },
+      {
+        label: "Preparar borrador",
+        route: "labors",
+        prompt: "Proponé un borrador de orden de trabajo si detectás una acción clara, sin ejecutarla.",
+      },
+    ],
+    emptyText: "",
+  },
+  lots: {
+    title: "IA Lotes",
+    routeHint: "lots",
+    lockRouteHint: true,
+    quickPrompts: [
+      {
+        label: "Resumen de lotes",
+        route: "lots",
+        prompt: "Resumí los lotes del workspace, superficie relevante y alertas por campo o cultivo.",
+      },
+      {
+        label: "Campos críticos",
+        route: "lots",
+        prompt: "Identificá campos o lotes que requieran atención y explicá por qué.",
+      },
+      {
+        label: "Cruce operativo",
+        route: "lots",
+        prompt: "Relacioná lotes con labores, stock o informes si hay señales relevantes.",
+      },
+    ],
+    emptyText: "",
+  },
+  supplies: {
+    title: "IA Insumos",
+    routeHint: "supplies",
+    lockRouteHint: true,
+    quickPrompts: [
+      {
+        label: "Revisar insumos",
+        route: "supplies",
+        prompt: "Revisá insumos del proyecto, precios tentativos, disponibilidad y riesgos de costo.",
+      },
+      {
+        label: "Precios tentativos",
+        route: "supplies",
+        prompt: "Listá insumos con precio tentativo y sugerí qué validar primero.",
+      },
+      {
+        label: "Riesgo de abastecimiento",
+        route: "supplies",
+        prompt: "Señalá posibles riesgos de abastecimiento o consumo según el workspace.",
+      },
+    ],
+    emptyText: "",
+  },
+  reports: {
+    title: "IA Informes",
+    routeHint: "reports",
+    lockRouteHint: true,
+    quickPrompts: [
+      {
+        label: "Informe económico",
+        route: "reports",
+        prompt: "Resumí los informes económicos de la campaña y explicá el resultado operativo.",
+      },
+      {
+        label: "Resultado operativo",
+        route: "reports",
+        prompt: "Explicá el resultado operativo de la campaña con evidencia de informes Ponti.",
+      },
+      {
+        label: "Contribución",
+        route: "reports",
+        prompt: "Resumí aportes/contribución por inversor y marcá desvíos relevantes.",
+      },
+    ],
+    emptyText: "",
+  },
+  insights: {
+    title: "IA Insights",
+    routeHint: "dashboard",
+    lockRouteHint: true,
+    quickPrompts: [
+      {
+        label: "Insights abiertos",
+        route: "dashboard",
+        prompt: "Mostrame los insights abiertos, explicá los críticos y proponé borradores de acción si corresponde.",
+      },
+      {
+        label: "Críticos",
+        route: "dashboard",
+        prompt: "Mostrame insights críticos abiertos, explicalos y priorizá acciones.",
+      },
+      {
+        label: "Proponer resolución",
+        route: "dashboard",
+        prompt: "Elegí un insight relevante y proponé una resolución reversible sin borrar evidencia.",
+      },
+    ],
+    emptyText: "",
+  },
+  activity: {
+    title: "Actividad IA",
+    routeHint: "",
+    quickPrompts: [],
+    emptyText: "",
+    activityOnly: true,
+  },
+} satisfies Record<string, AIAssistantConfig>;
+
+const routeLabel = (value: PontiRouteHint | ""): string =>
+  ROUTE_OPTIONS.find((option) => option.value === value)?.label ?? "Automático (todos los módulos)";
+
 const MARKDOWN_CLASS =
   "prose prose-sm max-w-none prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-code:rounded prose-code:bg-gray-200 prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-table:text-xs prose-th:border prose-th:border-gray-300 prose-th:bg-gray-50 prose-th:px-2 prose-th:py-1 prose-td:border prose-td:border-gray-300 prose-td:px-2 prose-td:py-1 prose-headings:mb-1 prose-headings:mt-2 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0";
 
@@ -129,8 +355,10 @@ const AssistantEvidence = ({ message }: { message: PontiConversationMessage }) =
   const blocks = nonTextBlocks(message.blocks);
   const pending = message.pending_confirmations ?? [];
   const source = message.routing_source ?? message.routed_agent;
+  const runID = message.axis_run_id ?? message.run_id;
+  const taskID = message.axis_task_id ?? message.task_id;
 
-  if (tools.length === 0 && blocks.length === 0 && pending.length === 0 && !source) {
+  if (tools.length === 0 && blocks.length === 0 && pending.length === 0 && !source && !runID && !taskID) {
     return null;
   }
 
@@ -141,6 +369,16 @@ const AssistantEvidence = ({ message }: { message: PontiConversationMessage }) =
         <span>Evidencia</span>
         {source && (
           <span className="rounded bg-white px-1.5 py-0.5 text-[11px] text-gray-500">{source}</span>
+        )}
+        {runID && (
+          <span className="rounded bg-white px-1.5 py-0.5 text-[11px] text-gray-500">
+            run {runID.slice(0, 8)}
+          </span>
+        )}
+        {taskID && (
+          <span className="rounded bg-white px-1.5 py-0.5 text-[11px] text-gray-500">
+            task {taskID.slice(0, 8)}
+          </span>
         )}
       </div>
 
@@ -205,7 +443,7 @@ const AssistantEvidence = ({ message }: { message: PontiConversationMessage }) =
   );
 };
 
-const AIAssistant = () => {
+const AIAssistantPage = ({ config = AI_MODULE_CONFIGS.general }: { config?: AIAssistantConfig }) => {
   const aiProvider = useMemo(() => getPontiAIProvider(), []);
   const {
     filters,
@@ -235,7 +473,7 @@ const AIAssistant = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<PontiConversationMessage[]>([]);
   const [input, setInput] = useState("");
-  const [routeHint, setRouteHint] = useState<PontiRouteHint | "">("");
+  const [routeHint, setRouteHint] = useState<PontiRouteHint | "">(config.routeHint ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   /** Respuesta en curso (SSE); al llegar `done` se vuelca a `messages`. */
@@ -255,9 +493,15 @@ const AIAssistant = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (config.lockRouteHint) {
+      setRouteHint(config.routeHint ?? "");
+    }
+  }, [config.lockRouteHint, config.routeHint]);
+
   // --- Fase 7: consumir handoff desde notificaciones ---
   useEffect(() => {
-    if (handoffProcessedRef.current || !headers) return;
+    if (!config.consumeNotificationHandoff || handoffProcessedRef.current || !headers) return;
     const raw = sessionStorage.getItem(NOTIFICATION_CHAT_HANDOFF_KEY);
     if (!raw) return;
     handoffProcessedRef.current = true;
@@ -325,7 +569,7 @@ const AIAssistant = () => {
       setStreamDraft(null);
       setLoading(false);
     });
-  }, [headers]);
+  }, [config.consumeNotificationHandoff, headers, workspace]);
 
   const refreshList = useCallback(async () => {
     if (!headers) return;
@@ -367,6 +611,14 @@ const AIAssistant = () => {
     setActiveId(null);
     setMessages([]);
     setError("");
+    if (config.lockRouteHint) {
+      setRouteHint(config.routeHint ?? "");
+    }
+  };
+
+  const handleQuickPrompt = (prompt: string, route: PontiRouteHint) => {
+    setRouteHint(config.lockRouteHint ? config.routeHint ?? route : route);
+    setInput(prompt);
   };
 
   const handleSend = async () => {
@@ -392,7 +644,7 @@ const AIAssistant = () => {
         {
           message: prevInput,
           chat_id: activeId,
-          route_hint: routeHint || undefined,
+          route_hint: (config.lockRouteHint ? config.routeHint : routeHint) || undefined,
           preferred_language: "es",
           workspace,
         },
@@ -479,14 +731,16 @@ const AIAssistant = () => {
         <aside className="w-full shrink-0 rounded-lg border border-gray-200 bg-white lg:w-64">
           <div className="flex h-12 items-center justify-between gap-2 border-b border-gray-100 px-3 text-sm font-medium text-gray-700">
             <span>Conversaciones</span>
-            <Button
-              size="sm"
-              variant="primary"
-              className="px-2 py-1 text-xs !rounded-md !bg-primary-500 hover:!bg-primary-600 !text-white disabled:!opacity-100"
-              onClick={handleNewChat}
-            >
-              Nueva
-            </Button>
+            {!config.activityOnly && (
+              <Button
+                size="sm"
+                variant="primary"
+                className="px-2 py-1 text-xs !rounded-md !bg-primary-500 hover:!bg-primary-600 !text-white disabled:!opacity-100"
+                onClick={handleNewChat}
+              >
+                Nueva
+              </Button>
+            )}
           </div>
           <ul className="max-h-80 overflow-y-auto lg:max-h-[32rem]">
             {conversations.map((c) => (
@@ -511,21 +765,32 @@ const AIAssistant = () => {
 
         <section className="flex h-[32rem] flex-1 flex-col rounded-lg border border-gray-200 bg-white">
           <div className="flex h-12 flex-wrap items-center gap-3 border-b border-gray-100 px-4">
-            <label className="flex items-center gap-2 text-sm text-gray-700">
-              <span>Contexto</span>
-              <select
-                className="rounded-md bg-primary-500 px-2 py-1 text-sm text-white"
-                value={routeHint}
-                disabled={!headers || loading}
-                onChange={(e) => setRouteHint(e.target.value as PontiRouteHint | "")}
-              >
-                {ROUTE_OPTIONS.map((o) => (
-                  <option key={o.value || "auto"} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {config.activityOnly ? (
+              <span className="text-sm font-medium text-gray-700">Actividad reciente</span>
+            ) : config.lockRouteHint ? (
+              <div className="flex items-center gap-2 text-sm text-gray-700">
+                <span>Contexto</span>
+                <span className="rounded-md bg-primary-500 px-2 py-1 text-sm text-white">
+                  {routeLabel(config.routeHint ?? "")}
+                </span>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <span>Contexto</span>
+                <select
+                  className="rounded-md bg-primary-500 px-2 py-1 text-sm text-white"
+                  value={routeHint}
+                  disabled={!headers || loading}
+                  onChange={(e) => setRouteHint(e.target.value as PontiRouteHint | "")}
+                >
+                  {ROUTE_OPTIONS.map((o) => (
+                    <option key={o.value || "auto"} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <span
               className={`ml-auto inline-flex items-center gap-1 rounded px-2 py-1 text-xs ${
                 aiProvider === "axis"
@@ -540,9 +805,24 @@ const AIAssistant = () => {
 
           <div className="flex-1 space-y-3 overflow-y-auto px-4 py-3">
             {messages.length === 0 && (
-              <p className="text-sm text-gray-500">
-                Escribí una pregunta sobre tu proyecto (insights, labores, insumos, lotes, etc.).
-              </p>
+              <div className="space-y-3">
+                {config.emptyText && <p className="text-sm text-gray-500">{config.emptyText}</p>}
+                {config.quickPrompts.length > 0 && (
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {config.quickPrompts.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        className="min-h-11 rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm font-medium text-gray-700 hover:border-primary-300 hover:bg-primary-50 disabled:opacity-60"
+                        disabled={!headers || loading}
+                        onClick={() => handleQuickPrompt(item.prompt, item.route)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
             {messages.map((m, idx) => (
               <div
@@ -583,35 +863,48 @@ const AIAssistant = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          <div className="border-t border-gray-100 p-3">
-            <textarea
-              className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
-              rows={1}
-              placeholder="Mensaje…"
-              value={input}
-              disabled={!headers || loading}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  if (input.trim() && !loading) void handleSend();
-                }
-              }}
-            />
-            <Button
-              size="sm"
-              variant="primary"
-              className="px-6 !bg-primary-700 !text-white disabled:!opacity-100"
-              disabled={!headers || loading || !input.trim()}
-              onClick={() => void handleSend()}
-            >
-              {loading ? "Enviando…" : "Enviar"}
-            </Button>
-          </div>
+          {!config.activityOnly && (
+            <div className="border-t border-gray-100 p-3">
+              <textarea
+                className="mb-2 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                rows={1}
+                placeholder="Mensaje…"
+                value={input}
+                disabled={!headers || loading}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (input.trim() && !loading) void handleSend();
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                variant="primary"
+                className="px-6 !bg-primary-700 !text-white disabled:!opacity-100"
+                disabled={!headers || loading || !input.trim()}
+                onClick={() => void handleSend()}
+              >
+                {loading ? "Enviando…" : "Enviar"}
+              </Button>
+            </div>
+          )}
         </section>
       </div>
     </div>
   );
 };
+
+const AIAssistant = () => <AIAssistantPage config={AI_MODULE_CONFIGS.general} />;
+
+export const AIDashboard = () => <AIAssistantPage config={AI_MODULE_CONFIGS.dashboard} />;
+export const AIStock = () => <AIAssistantPage config={AI_MODULE_CONFIGS.stock} />;
+export const AIWorkOrders = () => <AIAssistantPage config={AI_MODULE_CONFIGS.workOrders} />;
+export const AILots = () => <AIAssistantPage config={AI_MODULE_CONFIGS.lots} />;
+export const AISupplies = () => <AIAssistantPage config={AI_MODULE_CONFIGS.supplies} />;
+export const AIReports = () => <AIAssistantPage config={AI_MODULE_CONFIGS.reports} />;
+export const AIInsights = () => <AIAssistantPage config={AI_MODULE_CONFIGS.insights} />;
+export const AIActivity = () => <AIAssistantPage config={AI_MODULE_CONFIGS.activity} />;
 
 export default AIAssistant;

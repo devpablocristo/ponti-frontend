@@ -25,6 +25,19 @@ function requireEnv(name: string): string {
 class ConfigService {
   public readonly baseManagerApi = requireEnv("BASE_MANAGER_API");
   public readonly apiKey = requireEnv("X_API_KEY");
+  public readonly axisCompanionBaseUrl =
+    process.env.AXIS_COMPANION_BASE_URL || "";
+  public readonly axisCompanionApiKey =
+    process.env.AXIS_COMPANION_API_KEY || "";
+  public readonly axisCompanionOrgId =
+    process.env.AXIS_COMPANION_ORG_ID || process.env.AXIS_ORG_ID || "";
+  public readonly axisProductSurface =
+    process.env.AXIS_PRODUCT_SURFACE || "ponti";
+  public readonly axisDefaultAgentId =
+    process.env.AXIS_DEFAULT_AGENT_ID || "ponti-ops-manager";
+  public readonly axisCompanionTimeoutMs = Number(
+    process.env.AXIS_COMPANION_TIMEOUT_MS || 45000
+  );
   public readonly identityApiKey = process.env.IDENTITY_PLATFORM_API_KEY || "";
   public readonly identityProjectId =
     process.env.IDENTITY_PLATFORM_PROJECT_ID || "";

@@ -10,7 +10,7 @@
     "build:api": "cd api && yarn build",
     "move:frontend": "mkdir -p api/dist/public && cp -r ui/dist/* api/dist/public",
     "start": "cd api && yarn start",
-    "dev": "yarn dev:api && yarn dev:ui",
+    "dev": "bash -c 'yarn dev:api & api=$!; yarn dev:ui & ui=$!; trap \"kill $api $ui 2>/dev/null\" EXIT INT TERM; wait'",
     "dev:ui": "cd ui && yarn dev",
     "dev:api": "cd api && yarn dev"
   },

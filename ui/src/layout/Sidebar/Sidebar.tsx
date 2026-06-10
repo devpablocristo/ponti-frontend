@@ -1,4 +1,15 @@
-import { ChevronDown } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  Bot,
+  ChevronDown,
+  ClipboardList,
+  FileText,
+  Layers,
+  Package,
+  Sparkles,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import React, { ReactNode, useEffect, useState } from "react";
 
 import { Link, useLocation } from "react-router-dom";
@@ -13,6 +24,10 @@ type SubItem = {
   name: string;
   route: string;
 };
+
+const lucideMenuIcon = (Icon: LucideIcon) => (color: string) => (
+  <Icon size={20} strokeWidth={1.7} color={color} />
+);
 
 const menuReports = {
   name: "Informes",
@@ -76,6 +91,16 @@ const menuDatabase = {
 
 const menuAIItems: MenuItem[] = [
   {
+    name: "Centro Axis",
+    icon: lucideMenuIcon(Sparkles),
+    route: "/admin/ai/axis",
+  },
+  {
+    name: "Agente Operativo",
+    icon: lucideMenuIcon(Bot),
+    route: "/admin/ai/operations",
+  },
+  {
     name: "Asistente",
     icon: (color: string) => (
       <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -90,6 +115,46 @@ const menuAIItems: MenuItem[] = [
       </svg>
     ),
     route: "/admin/ai-assistant",
+  },
+  {
+    name: "IA Dashboard",
+    icon: lucideMenuIcon(BarChart3),
+    route: "/admin/ai/dashboard",
+  },
+  {
+    name: "IA Stock",
+    icon: lucideMenuIcon(Package),
+    route: "/admin/ai/stock",
+  },
+  {
+    name: "IA Órdenes y Labores",
+    icon: lucideMenuIcon(ClipboardList),
+    route: "/admin/ai/work-orders",
+  },
+  {
+    name: "IA Lotes",
+    icon: lucideMenuIcon(Layers),
+    route: "/admin/ai/lots",
+  },
+  {
+    name: "IA Insumos",
+    icon: lucideMenuIcon(Sparkles),
+    route: "/admin/ai/supplies",
+  },
+  {
+    name: "IA Informes",
+    icon: lucideMenuIcon(FileText),
+    route: "/admin/ai/reports",
+  },
+  {
+    name: "IA Insights",
+    icon: lucideMenuIcon(Bot),
+    route: "/admin/ai/insights",
+  },
+  {
+    name: "Actividad IA",
+    icon: lucideMenuIcon(Activity),
+    route: "/admin/ai/activity",
   },
   {
     name: "Notificaciones",
