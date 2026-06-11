@@ -43,10 +43,6 @@ export const configService = new ConfigService();
 export const DEFAULT_PER_PAGE = 1000;
 export const DEFAULT_SMALL_PER_PAGE = 100;
 
-// Cache TTLs (in seconds)
-export const CACHE_TTL_SHORT = 300; // 5 minutes
-export const CACHE_TTL_DEFAULT = 1800; // 30 minutes
-
 // Timeouts
 export const API_TIMEOUT = 30000;
 export const LONG_API_TIMEOUT = 60000;

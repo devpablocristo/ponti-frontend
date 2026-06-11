@@ -312,10 +312,15 @@ export default function Items() {
           ?.scrollTo({ top: 0, behavior: "smooth" });
       }, 0);
       setHasUnsavedChanges(false);
+      // Tras crear insumos, recargamos la lista para que la validación de
+      // duplicados use datos frescos y no la versión previa al alta.
+      if (projectId) {
+        getSupplies(projectId);
+      }
     }
     setErrorMessage("");
     setSuccessMessage(result);
-  }, [result]);
+  }, [result, projectId, getSupplies]);
 
   useEffect(() => {
     if (error) {

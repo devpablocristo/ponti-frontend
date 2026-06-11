@@ -2,7 +2,6 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  buildWorkOrderFilterRowsCacheKey,
   buildWorkOrderScopeParams,
   hasWorkOrderScope,
   parseWorkOrderScope,
@@ -97,15 +96,5 @@ test("hasWorkOrderScope exige cliente + proyecto + campaña (campo opcional)", (
   assert.equal(
     hasWorkOrderScope(parseWorkOrderScope({ customer_id: "17", project_id: "30" })),
     false
-  );
-});
-
-test("cache key de filter rows no mezcla proyectos", () => {
-  const jujuy = "?project_id=30&customer_id=17&campaign_id=2";
-  const laguna = "?project_id=31&customer_id=17&campaign_id=2";
-
-  assert.notEqual(
-    buildWorkOrderFilterRowsCacheKey(jujuy),
-    buildWorkOrderFilterRowsCacheKey(laguna)
   );
 });

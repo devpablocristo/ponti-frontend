@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 import {
   buildWorkOrderScopeParams,
   hasWorkOrderScope,
@@ -112,8 +111,6 @@ router.post("", async (req: Request, res: Response) => {
       data: workorder,
     };
 
-    setImmediate(() => cache.flushAll());
-
     res.status(200).json(data);
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -152,10 +149,8 @@ router.get("", async (req: Request, res: Response) => {
 
     const query = `?${params.toString()}`;
 
-    // Sin caché a propósito: el listado se muta desde OTROS servicios (el BFF del mobile crea órdenes
-    // contra el mismo backend). El NodeCache es en memoria por servicio y solo se invalida con escrituras
-    // de ESTE servicio, así que cachear acá dejaba el listado stale hasta 30 min tras una creación hecha
-    // desde el mobile. Es un proxy directo a la BDD: se lee siempre fresco para que aparezca al instante.
+    // Proxy directo a la BDD: el listado se lee siempre fresco para que los cambios aparezcan al instante,
+    // incluso los hechos desde otros servicios (p. ej. el BFF del mobile crea órdenes contra el mismo backend).
     const headers = getAuthHeaders(userId);
 
     const { data: workorders } = await apiClient.get<WorkOrderListResponse>(
@@ -437,8 +432,6 @@ router.put("/drafts/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
-
     res.status(204).send();
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -471,8 +464,6 @@ router.post("/drafts/:id/publish", async (req: Request, res: Response) => {
       {},
       headers
     );
-
-    setImmediate(() => cache.flushAll());
 
     res.status(200).json({
       success: true,
@@ -508,8 +499,6 @@ router.delete("/drafts/:id", async (req: Request, res: Response) => {
       `/work-order-drafts/${draftId}`,
       headers
     );
-
-    setImmediate(() => cache.flushAll());
 
     res.status(200).json({
       success: true,
@@ -592,8 +581,6 @@ router.put("/:id", async (req: Request, res: Response) => {
       message: "Orden actualizada exitosamente",
     };
 
-    setImmediate(() => cache.flushAll());
-
     res.status(200).json(data);
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -625,8 +612,6 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
       {},
       headers
     );
-
-    setImmediate(() => cache.flushAll());
 
     res.status(200).json({
       success: true,
@@ -662,8 +647,6 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
       {},
       headers
     );
-
-    setImmediate(() => cache.flushAll());
 
     res.status(200).json({
       success: true,
@@ -703,8 +686,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
       success: true,
       message: "Orden eliminada exitosamente",
     };
-
-    setImmediate(() => cache.flushAll());
 
     res.status(200).json(data);
   } catch (error: any) {

@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 import { parsePartialPriceFlag } from "../utils/partialPrice";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
@@ -22,13 +21,6 @@ router.get("", async (req: Request, res: Response) => {
     }
 
     const mode = req.query.mode === "pending" ? "pending" : "all";
-    const cacheKey = `supplies:${projectId}:mode:${mode}`;
-
-    const cachedSupplies = cache.get(cacheKey);
-    if (cachedSupplies) {
-      res.status(200).json(cachedSupplies);
-      return;
-    }
 
     const headers = {
       "X-API-KEY": configService.apiKey,
@@ -72,8 +64,6 @@ router.get("", async (req: Request, res: Response) => {
         page_info: pageInfo,
       },
     };
-
-    setImmediate(() => cache.set(cacheKey, data));
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -131,8 +121,6 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
-
     const data = {
       success: true,
       message: "Insumo actualizado exitosamente",
@@ -182,8 +170,6 @@ router.put("/pending/:id/complete", async (req: Request, res: Response) => {
       requestData,
       headers
     );
-
-    setImmediate(() => cache.flushAll());
 
     res.status(200).json({
       success: true,
@@ -240,8 +226,6 @@ router.put("/:id", async (req: Request, res: Response) => {
     }
 
     await apiClient.post<any>(`/supplies/bulk`, supplies, headers);
-
-    setImmediate(() => cache.flushAll());
 
     const data = {
       success: true,
@@ -317,12 +301,6 @@ router.get("/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedSupplies = cache.get(`supplies:${projectId}`);
-    if (cachedSupplies) {
-      res.status(200).json(cachedSupplies);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": String(userId),
@@ -355,10 +333,6 @@ router.get("/:id", async (req: Request, res: Response) => {
         page_info: pageInfo,
       },
     };
-
-    if (items.length > 0) {
-      setImmediate(() => cache.set(`supplies:${projectId}`, data));
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -406,8 +380,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
       message: "Insumo eliminado exitosamente",
     };
 
-    setImmediate(() => cache.flushAll());
-
     res.status(200).json(data);
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -454,8 +426,6 @@ router.put("/:id/archive", async (req: Request, res: Response) => {
       success: true,
       message: "Insumo archivado exitosamente",
     };
-
-    setImmediate(() => cache.flushAll());
 
     res.status(200).json(data);
   } catch (error: any) {
