@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -25,12 +24,6 @@ router.get("", async (req: Request, res: Response) => {
 
     const url = `campaigns?customer_id=${customerId}&project_name=${projectName}`;
 
-    const cachedCampaigns = cache.get(url);
-    if (cachedCampaigns) {
-      res.status(200).json(cachedCampaigns);
-      return;
-    }
-
     const { data: campaigns } = await apiClient.get<any>(url, headers);
     const raw = campaigns;
     const items = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
@@ -42,10 +35,6 @@ router.get("", async (req: Request, res: Response) => {
         total: items.length,
       },
     };
-
-    if (items.length > 0) {
-      cache.set(url, data);
-    }
 
     res.status(200).json(data);
   } catch (error: any) {

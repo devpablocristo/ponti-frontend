@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from "./index";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -25,14 +24,6 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const url = `projects/fields/${project_id}`;
-
-    const cachedFields = cache.get(url);
-    if (cachedFields) {
-      res.status(200).json(cachedFields);
-      return;
-    }
-
     const { data: raw } = await apiClient.get<any>(
       `/projects/${project_id}/fields`,
       headers
@@ -46,10 +37,6 @@ router.get("", async (req: Request, res: Response) => {
         total: Array.isArray(fields) ? fields.length : 0,
       },
     };
-
-    if (Array.isArray(fields) && fields.length > 0) {
-      cache.set(url, data);
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -83,7 +70,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
     };
 
     await apiClient.delete<any>(`/fields/${id}`, headers);
-    setImmediate(() => cache.flushAll());
     res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;

@@ -1,13 +1,10 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
 const router: Router = Router();
-
-const CACHE_PREFIX = "stock_movements";
 
 router.get("/export/:id", async (req, res) => {
   try {
@@ -72,13 +69,6 @@ router.get("/:project_id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const cacheKey = `${CACHE_PREFIX}:${project_id}`;
-    const cachedMovements = cache.get(cacheKey);
-    if (cachedMovements) {
-      res.status(200).json(cachedMovements);
-      return;
-    }
-
     const { data: movements } = await apiClient.get<any>(
       `/projects/${project_id}/stock-movements`,
       headers
@@ -106,10 +96,6 @@ router.get("/:project_id", async (req: Request, res: Response) => {
         },
       },
     };
-
-    if (entries.length > 0) {
-      cache.set(cacheKey, data);
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -164,8 +150,6 @@ router.delete(
         success: true,
       };
 
-      cache.flushAll();
-
       res.status(200).json(data);
     } catch (error: any) {
       const err = error as ApiResponse<null>;
@@ -213,8 +197,6 @@ router.post("/:project_id", async (req: Request, res: Response) => {
       success: true,
       data: result,
     };
-
-    cache.flushAll();
 
     res.status(201).json(data);
   } catch (error: any) {

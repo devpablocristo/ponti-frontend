@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -114,12 +113,6 @@ router.get("/:project_id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const cachedMovements = cache.get(`movements:${project_id}`);
-    if (cachedMovements) {
-      res.status(200).json(cachedMovements);
-      return;
-    }
-
     const { data: movements } = await apiClient.get<any>(
       `/projects/${project_id}/supply-movements`,
       headers
@@ -147,10 +140,6 @@ router.get("/:project_id", async (req: Request, res: Response) => {
         },
       },
     };
-
-    if (entries.length > 0) {
-      cache.set(`movements:${project_id}`, data);
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -205,8 +194,6 @@ router.delete(
         success: true,
       };
 
-      cache.flushAll();
-
       res.status(200).json(data);
     } catch (error: any) {
       const err = error as ApiResponse<null>;
@@ -255,8 +242,6 @@ router.post("/:project_id", async (req: Request, res: Response) => {
       data: result,
     };
 
-    cache.flushAll();
-
     res.status(201).json(data);
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -303,8 +288,6 @@ router.post("/:project_id/import", async (req: Request, res: Response) => {
       success: true,
       data: result,
     };
-
-    cache.flushAll();
 
     res.status(201).json(data);
   } catch (error: any) {
@@ -358,8 +341,6 @@ router.put("/:id/project/:project_id", async (req: Request, res: Response) => {
       success: true,
       data: result,
     };
-
-    cache.flushAll();
 
     res.status(200).json(data);
   } catch (error: any) {

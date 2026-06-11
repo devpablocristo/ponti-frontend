@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
-import { configService, CACHE_TTL_SHORT } from "../configService";
-import { cache } from ".";
+import { configService } from "../configService";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -11,12 +10,6 @@ router.get("", async (req: Request, res: Response) => {
     const userId = req.user?.userID;
     if (!userId) {
       res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-
-    const cachedTypes = cache.get("types");
-    if (cachedTypes) {
-      res.status(200).json(cachedTypes);
       return;
     }
 
@@ -31,10 +24,6 @@ router.get("", async (req: Request, res: Response) => {
       success: true,
       data: raw.data ?? raw,
     };
-
-    setImmediate(() => {
-      cache.set("types", data, CACHE_TTL_SHORT);
-    });
 
     res.status(200).json(data);
   } catch (error: any) {

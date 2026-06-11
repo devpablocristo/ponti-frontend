@@ -1,18 +1,12 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 import {
   parseFieldProjectQueryParams,
   parsePaginationQueryParams,
   parsePositiveIntParam,
 } from "../utils/queryParams";
-import {
-  buildLotsListCacheKey,
-  buildLotsMetricsCacheKey,
-  buildLotsQueryParams,
-  isLotsCacheKey,
-} from "../utils/lotsRoute";
+import { buildLotsQueryParams } from "../utils/lotsRoute";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -91,14 +85,6 @@ const getLotQueryFilters = (req: Request) => {
   return parseFieldProjectQueryParams(req.query);
 };
 
-const invalidateLotsCache = () => {
-  const lotCacheKeys = cache.keys().filter(isLotsCacheKey);
-
-  if (lotCacheKeys.length > 0) {
-    cache.del(lotCacheKeys);
-  }
-};
-
 router.get("", async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userID;
@@ -115,13 +101,6 @@ router.get("", async (req: Request, res: Response) => {
 
     const { page, perPage } = parsePaginationQueryParams(req.query);
     const lotIds = { fieldId, projectId };
-    const key = buildLotsListCacheKey(lotIds, { page, perPage });
-
-    const cachedLots = cache.get<LotListPayload>(key);
-    if (cachedLots) {
-      res.status(200).json(cachedLots);
-      return;
-    }
 
     const headers = {
       "X-API-KEY": configService.apiKey,
@@ -144,8 +123,6 @@ router.get("", async (req: Request, res: Response) => {
         page_info: lots.page_info,
       },
     };
-
-    setImmediate(() => cache.set(key, data));
 
     res.status(200).json(data);
   } catch (error: unknown) {
@@ -179,13 +156,6 @@ router.get("/metrics", async (req: Request, res: Response) => {
     }
 
     const lotIds = { fieldId, projectId };
-    const key = buildLotsMetricsCacheKey(lotIds);
-
-    const cachedLots = cache.get<LotMetricsPayload>(key);
-    if (cachedLots) {
-      res.status(200).json(cachedLots);
-      return;
-    }
 
     const headers = {
       "X-API-KEY": configService.apiKey,
@@ -205,8 +175,6 @@ router.get("/metrics", async (req: Request, res: Response) => {
       success: true,
       data: metrics,
     };
-
-    setImmediate(() => cache.set(key, data));
 
     res.status(200).json(data);
   } catch (error: unknown) {
@@ -298,8 +266,6 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     await apiClient.put<unknown>(`/lots/${req.params.id}`, requestData, headers);
 
-    setImmediate(invalidateLotsCache);
-
     const data = {
       success: true,
       message: "Lote actualizado exitosamente",
@@ -342,8 +308,6 @@ router.put("/:id/tons", async (req: Request, res: Response) => {
       { tons: tons.toString() },
       headers
     );
-
-    setImmediate(invalidateLotsCache);
 
     const data = {
       success: true,

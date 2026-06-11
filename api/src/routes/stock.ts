@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -65,12 +64,6 @@ router.get("/periods/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedStock = cache.get(`stock:periods:${projectId}`);
-    if (cachedStock) {
-      res.status(200).json(cachedStock);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
@@ -85,10 +78,6 @@ router.get("/periods/:id", async (req: Request, res: Response) => {
       success: true,
       data: periods,
     };
-
-    if (Array.isArray(periods) && periods.length > 0) {
-      setImmediate(() => cache.set(`stock:periods:${projectId}`, data));
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -127,12 +116,6 @@ router.get("/:id", async (req: Request, res: Response) => {
       queryString = `?cutoff_date=${cutOffDate}`;
     }
 
-    const cachedStock = cache.get(`stock:${projectId}:${queryString}`);
-    if (cachedStock) {
-      res.status(200).json(cachedStock);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
@@ -147,10 +130,6 @@ router.get("/:id", async (req: Request, res: Response) => {
       success: true,
       data: stock,
     };
-
-    if (Array.isArray(stock?.items) && stock.items.length > 0) {
-      setImmediate(() => cache.set(`stock:${projectId}:${queryString}`, data));
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -195,8 +174,6 @@ router.put("/close/:id", async (req: Request, res: Response) => {
       requestData,
       headers
     );
-
-    cache.flushAll();
 
     const data = {
       success: true,
@@ -243,8 +220,6 @@ router.put("/:id/:idStock", async (req: Request, res: Response) => {
       requestData,
       headers
     );
-
-    cache.flushAll();
 
     const data = {
       success: true,
