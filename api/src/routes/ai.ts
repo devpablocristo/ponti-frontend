@@ -363,6 +363,16 @@ const handleError = (res: Response, error: unknown, opts?: HandleErrorOptions) =
   });
 };
 
+// --- Configuración IA para el FE (flags por entorno, sin secretos) ---
+
+router.get("/config", (_req: Request, res: Response) => {
+  res.status(200).json({
+    features: configService.pontiAiFeatures,
+    badge_poll_ms: configService.aiBadgePollMs,
+    product_surface: configService.axisProductSurface,
+  });
+});
+
 // --- Asistente conversacional (proxy a ponti-backend → ponti-ai) ---
 
 router.post("/chat", async (req: Request, res: Response) => {
@@ -529,6 +539,117 @@ router.post("/decision-cards/:card_id/actions/:action_id", async (req: Request, 
       headers
     );
     res.status(202).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+// --- Inbox de aprobaciones Nexus (proxy a ponti-backend; lectura Ola A, decisión Ola B) ---
+
+router.get("/approvals", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { data } = await apiClient.get<any>(`/ai/approvals${buildQueryString(req.query)}`, headers);
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.get("/approvals/summary", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { data } = await apiClient.get<any>("/ai/approvals/summary", headers);
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.get("/approvals/:request_id", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { request_id } = req.params;
+    const { data } = await apiClient.get<any>(
+      `/ai/approvals/${encodeURIComponent(request_id)}`,
+      headers
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.get("/approvals/:request_id/evidence", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { request_id } = req.params;
+    const { data } = await apiClient.get<any>(
+      `/ai/approvals/${encodeURIComponent(request_id)}/evidence`,
+      headers
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    // handleError propaga el status real del core (409 SoD, 403, 404, 410).
+    handleError(res, error);
+  }
+});
+
+router.post("/approvals/:request_id/approve", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { request_id } = req.params;
+    const { data } = await apiClient.post<any>(
+      `/ai/approvals/${encodeURIComponent(request_id)}/approve`,
+      req.body,
+      headers
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    handleError(res, error);
+  }
+});
+
+router.post("/approvals/:request_id/reject", async (req: Request, res: Response) => {
+  const userId = requireUser(req, res);
+  if (!userId) return;
+  const projectId = requireProject(req, res);
+  if (!projectId) return;
+
+  try {
+    const headers = buildHeaders(userId, projectId);
+    const { request_id } = req.params;
+    const { data } = await apiClient.post<any>(
+      `/ai/approvals/${encodeURIComponent(request_id)}/reject`,
+      req.body,
+      headers
+    );
+    res.status(200).json(data);
   } catch (error) {
     handleError(res, error);
   }

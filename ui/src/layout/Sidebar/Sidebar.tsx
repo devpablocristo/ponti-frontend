@@ -7,12 +7,15 @@ import {
   FileText,
   Layers,
   Package,
+  ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import React, { ReactNode, useEffect, useState } from "react";
 
 import { Link, useLocation } from "react-router-dom";
+
+import { useAiFeature } from "../../hooks/useAiFeatures";
 
 type MenuItem = {
   name: string;
@@ -155,6 +158,12 @@ const menuAIItems: MenuItem[] = [
     name: "Actividad IA",
     icon: lucideMenuIcon(Activity),
     route: "/admin/ai/activity",
+  },
+  {
+    // Solo con el flag approvals_inbox activo (se filtra en el Sidebar).
+    name: "Aprobaciones",
+    icon: lucideMenuIcon(ShieldCheck),
+    route: "/admin/ai/approvals",
   },
   {
     name: "Notificaciones",
@@ -434,6 +443,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   setTitle,
   setIsSidebarOpen,
 }) => {
+  const approvalsEnabled = useAiFeature("approvals_inbox");
+  const aiMenuItems = menuAIItems.filter(
+    (item) => approvalsEnabled || item.route !== "/admin/ai/approvals"
+  );
+
   return (
     <aside
       id="logo-sidebar"
@@ -528,7 +542,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </div>
         <ul className="flex flex-col gap-0.5 font-medium">
-          {menuAIItems.map((item) => (
+          {aiMenuItems.map((item) => (
             <li key={item.name}>
               <SidebarItem
                 setTitle={setTitle}

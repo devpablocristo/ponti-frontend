@@ -11,6 +11,12 @@ function isTruthyEnvString(value: string | undefined): boolean {
   return v === "1" || v === "true" || v === "yes" || v === "on";
 }
 
+/** Entero positivo en ms desde env; ante ausencia, NaN o <= 0 devuelve el fallback. */
+export function positiveMsEnv(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value || value.trim() === "") {
@@ -37,6 +43,20 @@ class ConfigService {
     process.env.AXIS_DEFAULT_AGENT_ID || "ponti-ops-manager";
   public readonly axisCompanionTimeoutMs = Number(
     process.env.AXIS_COMPANION_TIMEOUT_MS || 45000
+  );
+  /**
+   * Flags de features IA del FE (csv), p. ej.
+   * "floating_chat,approvals_inbox,chat_confirmations".
+   * - approvals_inbox: inbox de aprobaciones Nexus (badge + página + aprobar/rechazar).
+   * - chat_confirmations: confirmaciones accionables de pending_confirmations en el chat.
+   */
+  public readonly pontiAiFeatures = (process.env.PONTI_AI_FEATURES || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item !== "");
+  public readonly aiBadgePollMs = positiveMsEnv(
+    process.env.AI_BADGE_POLL_MS,
+    60000
   );
   public readonly identityApiKey = process.env.IDENTITY_PLATFORM_API_KEY || "";
   public readonly identityProjectId =

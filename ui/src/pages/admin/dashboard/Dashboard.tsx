@@ -5,6 +5,7 @@ import { usePDF } from "react-to-pdf";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
 import Button from "../../../components/Button/Button";
+import DecisionSummaryWidget from "../../../components/ai/DecisionSummaryWidget";
 import ManagementBalanceTable from "./ManagementBalanceTable";
 import { CostByCropTable } from "./CostByCropTable";
 import OperationalIndicators from "./OperationalIndicators";
@@ -280,6 +281,8 @@ export function Dashboard() {
           </Button>
         </div>
       )}
+
+      <DecisionSummaryWidget />
 
       <DashboardContent dashboard={dashboard} selectedFilters={selectedFilters} />
 

@@ -1,6 +1,7 @@
 import { request } from "@devpablocristo/core-http/fetch";
 import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 import type {
+  PontiAiConfig,
   PontiChatRequest,
   PontiChatResponse,
   PontiChatStreamSseEvent,
@@ -12,6 +13,10 @@ import type {
   AxisTaskDetail,
   AxisWatcher,
   AxisWatcherProposal,
+  NexusApprovalDecisionResult,
+  NexusApprovalEvidence,
+  NexusApprovalItem,
+  NexusApprovalSummary,
   PontiConversationDetail,
   PontiConversationSummary,
   PontiDecisionActionResponse,
@@ -43,6 +48,20 @@ const buildHeaders = (projectId: string): Record<string, string> => {
   }
   return headers;
 };
+
+/** Config de features IA (no requiere proyecto seleccionado). */
+export async function getPontiAiConfig(): Promise<PontiAiConfig> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return request<PontiAiConfig>("/config", {
+    method: "GET",
+    headers,
+    baseURLs: [getBaseUrl()],
+  });
+}
 
 export async function pontiAssistantChat(
   payload: PontiChatRequest,
@@ -242,6 +261,93 @@ export async function executePontiDecisionCardAction(
     headers: buildHeaders(headers.projectId),
     baseURLs: [getBaseUrl()],
   });
+}
+
+export type AiApprovalsQuery = {
+  status?: "pending" | "history";
+  limit?: number;
+};
+
+export async function listAiApprovals(
+  headers: AskHeaders,
+  query: AiApprovalsQuery = {}
+): Promise<{ items: NexusApprovalItem[] }> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || String(value).trim() === "") continue;
+    params.set(key, String(value));
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return request<{ items: NexusApprovalItem[] }>(`/approvals${suffix}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function getAiApprovalsSummary(headers: AskHeaders): Promise<NexusApprovalSummary> {
+  return request<NexusApprovalSummary>("/approvals/summary", {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function getAiApproval(
+  requestId: string,
+  headers: AskHeaders
+): Promise<NexusApprovalItem> {
+  return request<NexusApprovalItem>(`/approvals/${encodeURIComponent(requestId)}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function getAiApprovalEvidence(
+  requestId: string,
+  headers: AskHeaders
+): Promise<NexusApprovalEvidence> {
+  return request<NexusApprovalEvidence>(
+    `/approvals/${encodeURIComponent(requestId)}/evidence`,
+    {
+      method: "GET",
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+export async function approveAiApproval(
+  requestId: string,
+  payload: { note?: string },
+  headers: AskHeaders
+): Promise<NexusApprovalDecisionResult> {
+  return request<NexusApprovalDecisionResult>(
+    `/approvals/${encodeURIComponent(requestId)}/approve`,
+    {
+      method: "POST",
+      body: payload,
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+export async function rejectAiApproval(
+  requestId: string,
+  payload: { note?: string },
+  headers: AskHeaders
+): Promise<NexusApprovalDecisionResult> {
+  return request<NexusApprovalDecisionResult>(
+    `/approvals/${encodeURIComponent(requestId)}/reject`,
+    {
+      method: "POST",
+      body: payload,
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
 }
 
 const axisPath = (path: string): string => `/axis${path.startsWith("/") ? path : `/${path}`}`;

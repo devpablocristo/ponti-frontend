@@ -329,6 +329,69 @@ export type AxisWatcherProposal = {
   resolved_at?: string | null;
 };
 
+/** Respuesta de GET /api/v1/ai/config (flags de features IA del BFF). */
+export type PontiAiConfig = {
+  features: string[];
+  badge_poll_ms: number;
+  product_surface: string;
+};
+
+/** Contratos /api/v1/ai/approvals* (gobernanza Nexus vía Ponti core, read-only en Ola A). */
+export type NexusApprovalStatus =
+  | "pending_approval"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "allowed"
+  | "denied"
+  | "executed"
+  | "failed"
+  | string;
+
+export type NexusApprovalDecision = {
+  approver_id: string;
+  action: string;
+  note?: string;
+  decided_at: string;
+};
+
+export type NexusApprovalItem = {
+  request_id: string;
+  approval_id?: string;
+  action_type: string;
+  status: NexusApprovalStatus;
+  risk_level: string;
+  requested_by: string;
+  reason: string;
+  created_at: string;
+  expires_at?: string;
+  params?: Record<string, unknown>;
+  decisions: NexusApprovalDecision[];
+  required_approvals?: number;
+  current_approvals?: number;
+};
+
+/** expiring_soon = expira en menos de 15 minutos. */
+export type NexusApprovalSummary = {
+  pending_count: number;
+  expiring_soon_count: number;
+};
+
+/**
+ * Respuesta de POST /approvals/:id/approve|reject. Un 200 NO implica estado
+ * terminal: en multi-approver Nexus responde 200 con la request aún pendiente
+ * y el status final llega por callback async — siempre refetchear el item.
+ */
+export type NexusApprovalDecisionResult = {
+  status: string;
+};
+
+/** GET /approvals/:id/evidence — verified=false hasta la verificación ED25519. */
+export type NexusApprovalEvidence = {
+  pack?: Record<string, unknown> | null;
+  verified?: boolean;
+};
+
 export type AxisRunTrace = {
   run_id?: string;
   id?: string;

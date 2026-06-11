@@ -32,6 +32,7 @@ import InvestorContribution from "./pages/admin/reports/InvestorContributionRepo
 import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionReportV2.tsx";
 import AIAssistant, {
 } from "./pages/admin/ai-assistant/AIAssistant";
+import AIApprovals from "./pages/admin/ai-assistant/AIApprovals";
 import AxisCenter from "./pages/admin/ai-assistant/AxisCenter";
 import {
   AIDecisionActivity,
@@ -128,6 +129,10 @@ export default [
       {
         path: "ai/activity",
         element: <AIDecisionActivity />,
+      },
+      {
+        path: "ai/approvals",
+        element: <AIApprovals />,
       },
       {
         path: "notifications",

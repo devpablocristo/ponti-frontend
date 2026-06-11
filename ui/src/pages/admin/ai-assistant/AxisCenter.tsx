@@ -34,6 +34,7 @@ import {
   syncAxisWatcherProposals,
 } from "@/api/aiClient";
 import { useWorkspaceFilters } from "@/hooks/useWorkspaceFilters";
+import { buildPontiWorkspace } from "@/lib/aiWorkspace";
 import { NOTIFICATION_CHAT_HANDOFF_KEY } from "@/lib/notificationChatHandoff";
 import type {
   AxisCenterChatResponse,
@@ -57,27 +58,6 @@ const tabs: Array<{ key: PanelTab; label: string; icon: typeof Brain }> = [
   { key: "evidencia", label: "Evidencia", icon: ShieldCheck },
   { key: "trazas", label: "Trazas", icon: Activity },
 ];
-
-const buildWorkspace = (
-  selectedCustomer: { id: number; name: string } | undefined,
-  selectedProject: { id: number; name: string } | undefined,
-  projectId: number | null,
-  selectedCampaignId: number | undefined,
-  campaigns: Array<{ id: number; name: string }> | undefined,
-  selectedField: { id: number; name: string } | undefined
-): PontiWorkspaceContext => {
-  const campaign = campaigns?.find((c) => c.id === selectedCampaignId);
-  return {
-    customer_id: selectedCustomer?.id ?? null,
-    customer_name: selectedCustomer?.name ?? null,
-    project_id: projectId ?? null,
-    project_name: selectedProject?.name ?? null,
-    campaign_id: selectedCampaignId ?? null,
-    campaign_name: campaign?.name ?? null,
-    field_id: selectedField?.id ?? null,
-    field_name: selectedField?.name ?? null,
-  };
-};
 
 const workspaceReady = (workspace: PontiWorkspaceContext): boolean =>
   Boolean(workspace.customer_id && workspace.project_id && workspace.campaign_id);
@@ -165,7 +145,7 @@ const AxisCenter = () => {
   const { filters, projectId, selectedCustomer, selectedProject, selectedCampaignId, selectedField, campaigns } =
     useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const workspace = useMemo(
-    () => buildWorkspace(selectedCustomer, selectedProject, projectId, selectedCampaignId, campaigns, selectedField),
+    () => buildPontiWorkspace(selectedCustomer, selectedProject, projectId, selectedCampaignId, campaigns, selectedField),
     [selectedCustomer, selectedProject, projectId, selectedCampaignId, campaigns, selectedField]
   );
   const headers = useMemo(() => (projectId ? { projectId: String(projectId) } : null), [projectId]);

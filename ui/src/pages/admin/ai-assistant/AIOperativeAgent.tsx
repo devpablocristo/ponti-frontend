@@ -4,6 +4,7 @@ import {
   Bot,
   Check,
   Clock3,
+  Eye,
   FileSearch,
   Pause,
   Play,
@@ -12,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import {
   createPontiDecisionRun,
@@ -21,9 +22,14 @@ import {
   listPontiDecisionRuns,
   patchPontiDecisionCard,
 } from "@/api/aiClient";
+import EvidenceDrawer, { EvidenceList } from "@/components/ai/EvidenceDrawer";
+import { useAiFeature } from "@/hooks/useAiFeatures";
+import { usePollingQuery } from "@/hooks/usePollingQuery";
 import { useWorkspaceFilters } from "@/hooks/useWorkspaceFilters";
+import { buildPontiWorkspace } from "@/lib/aiWorkspace";
 import { NOTIFICATION_CHAT_HANDOFF_KEY } from "@/lib/notificationChatHandoff";
 import type {
+  PontiDecisionActionResponse,
   PontiDecisionBucket,
   PontiDecisionCard,
   PontiDecisionRun,
@@ -87,13 +93,6 @@ const statusClass = (status: string): string => {
   }
 };
 
-const toolName = (tool: unknown): string => {
-  if (typeof tool === "string") return tool;
-  if (typeof tool !== "object" || tool === null || Array.isArray(tool)) return "tool";
-  const record = tool as Record<string, unknown>;
-  return String(record.name ?? record.tool ?? record.capability_id ?? "tool");
-};
-
 const compactDate = (value?: string): string => {
   if (!value) return "";
   const date = new Date(value);
@@ -110,27 +109,6 @@ const filterCardsForConfig = (cards: PontiDecisionCard[], config: DecisionViewCo
     if (config.domain && config.routeHint && card.route_hint !== config.routeHint) return false;
     return true;
   });
-
-const buildWorkspace = (
-  selectedCustomer: { id: number; name: string } | undefined,
-  selectedProject: { id: number; name: string } | undefined,
-  projectId: number | null,
-  selectedCampaignId: number | undefined,
-  campaigns: Array<{ id: number; name: string }> | undefined,
-  selectedField: { id: number; name: string } | undefined
-): PontiWorkspaceContext => {
-  const campaign = campaigns?.find((c) => c.id === selectedCampaignId);
-  return {
-    customer_id: selectedCustomer?.id ?? null,
-    customer_name: selectedCustomer?.name ?? null,
-    project_id: projectId ?? null,
-    project_name: selectedProject?.name ?? null,
-    campaign_id: selectedCampaignId ?? null,
-    campaign_name: campaign?.name ?? null,
-    field_id: selectedField?.id ?? null,
-    field_name: selectedField?.name ?? null,
-  };
-};
 
 const workspaceReady = (workspace: PontiWorkspaceContext): boolean =>
   Boolean(workspace.customer_id && workspace.project_id && workspace.campaign_id);
@@ -167,34 +145,13 @@ const DecisionCard = ({
   </button>
 );
 
-const EvidenceList = ({ card }: { card: PontiDecisionCard }) => {
-  const items = Array.isArray(card.evidence?.items) ? card.evidence?.items : [];
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {(card.tools ?? []).map((tool, index) => (
-          <span key={`${index}-${toolName(tool)}`} className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">
-            {toolName(tool)}
-          </span>
-        ))}
-      </div>
-      {items.length > 0 && (
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-2 text-xs text-gray-700">
-          {items.slice(0, 4).map((item, index) => (
-            <pre key={index} className="mb-2 max-h-24 overflow-auto whitespace-pre-wrap font-mono last:mb-0">
-              {JSON.stringify(item, null, 2)}
-            </pre>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-};
-
 const DecisionDetail = ({
   card,
   actionLoading,
   actionMessage,
+  nexusRequestId,
+  approvalsLinkEnabled,
+  executionPending,
   onExplain,
   onAction,
   onStatus,
@@ -202,10 +159,16 @@ const DecisionDetail = ({
   card: PontiDecisionCard | null;
   actionLoading: boolean;
   actionMessage: string;
+  /** nexus_request_id de la última ejecución de acción sobre esta card. */
+  nexusRequestId?: string | null;
+  approvalsLinkEnabled: boolean;
+  executionPending: boolean;
   onExplain: (card: PontiDecisionCard) => void;
   onAction: (card: PontiDecisionCard) => void;
   onStatus: (card: PontiDecisionCard, status: PontiDecisionStatus) => void;
 }) => {
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+
   if (!card) {
     return (
       <aside className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500 lg:w-96">
@@ -241,7 +204,7 @@ const DecisionDetail = ({
             <ShieldCheck className="h-4 w-4" aria-hidden />
             Evidencia
           </p>
-          <EvidenceList card={card} />
+          <EvidenceList tools={card.tools} evidence={card.evidence} />
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
@@ -250,6 +213,32 @@ const DecisionDetail = ({
           <span className="rounded bg-gray-100 px-2 py-1">occ {card.occurrence_count}</span>
           <span className="rounded bg-gray-100 px-2 py-1">{compactDate(card.last_seen_at)}</span>
         </div>
+
+        {(nexusRequestId || executionPending) && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            {nexusRequestId &&
+              (approvalsLinkEnabled ? (
+                <Link
+                  to={`/admin/ai/approvals?request_id=${encodeURIComponent(nexusRequestId)}`}
+                  className="inline-flex items-center gap-1 rounded border border-indigo-200 bg-indigo-50 px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+                  Nexus {nexusRequestId.slice(0, 8)}
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded border border-indigo-200 bg-indigo-50 px-2 py-1 font-medium text-indigo-700">
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+                  Nexus {nexusRequestId.slice(0, 8)}
+                </span>
+              ))}
+            {executionPending && (
+              <span className="inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-amber-700">
+                <Clock3 className="h-3.5 w-3.5" aria-hidden />
+                Ejecución pendiente…
+              </span>
+            )}
+          </div>
+        )}
 
         {missingInputs.length > 0 && (
           <p className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
@@ -267,6 +256,14 @@ const DecisionDetail = ({
           >
             <FileSearch className="h-3.5 w-3.5" aria-hidden />
             Explicar
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            onClick={() => setEvidenceOpen(true)}
+          >
+            <Eye className="h-3.5 w-3.5" aria-hidden />
+            Evidencia
           </button>
           {actionID && (
             <button
@@ -305,6 +302,16 @@ const DecisionDetail = ({
           </button>
         </div>
       </div>
+
+      <EvidenceDrawer
+        open={evidenceOpen}
+        onClose={() => setEvidenceOpen(false)}
+        title={card.title}
+        tools={card.tools}
+        evidence={card.evidence}
+        axisRunId={card.axis_run_id}
+        axisTaskId={card.axis_task_id}
+      />
     </aside>
   );
 };
@@ -314,11 +321,13 @@ const AIDecisionCenter = ({ config }: { config: DecisionViewConfig }) => {
   const { filters, projectId, selectedCustomer, selectedProject, selectedCampaignId, selectedField, campaigns } =
     useWorkspaceFilters(["customer", "project", "campaign", "field"]);
   const workspace = useMemo(
-    () => buildWorkspace(selectedCustomer, selectedProject, projectId, selectedCampaignId, campaigns, selectedField),
+    () => buildPontiWorkspace(selectedCustomer, selectedProject, projectId, selectedCampaignId, campaigns, selectedField),
     [selectedCustomer, selectedProject, projectId, selectedCampaignId, campaigns, selectedField]
   );
   const headers = useMemo(() => (projectId ? { projectId: String(projectId) } : null), [projectId]);
   const ready = workspaceReady(workspace);
+
+  const approvalsLinkEnabled = useAiFeature("approvals_inbox");
 
   const [cards, setCards] = useState<PontiDecisionCard[]>([]);
   const [runs, setRuns] = useState<PontiDecisionRun[]>([]);
@@ -327,6 +336,8 @@ const AIDecisionCenter = ({ config }: { config: DecisionViewConfig }) => {
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [actionMessage, setActionMessage] = useState("");
+  /** Resultado de la última acción ejecutada (chip Nexus + polling de ejecución). */
+  const [actionResult, setActionResult] = useState<PontiDecisionActionResponse | null>(null);
 
   const selectedCard = cards.find((card) => card.id === selectedId) ?? cards[0] ?? null;
 
@@ -406,9 +417,11 @@ const AIDecisionCenter = ({ config }: { config: DecisionViewConfig }) => {
   const handleAction = async (card: PontiDecisionCard) => {
     if (!headers || !card.action?.id) return;
     setActionMessage("");
+    setActionResult(null);
     try {
       const res = await executePontiDecisionCardAction(card.id, card.action.id, headers);
       updateCard(res.card);
+      setActionResult(res);
       setActionMessage(
         res.approval_required
           ? "Acción preparada para aprobación Nexus. Axis debe ejecutar la capability aprobada."
@@ -418,6 +431,44 @@ const AIDecisionCenter = ({ config }: { config: DecisionViewConfig }) => {
       setError(err instanceof Error ? err.message : "No se pudo preparar la acción");
     }
   };
+
+  // Mientras la acción quedó pendiente de ejecución (aprobación Nexus / executor
+  // async) se pollea el estado de las cards hasta que la card salga de pendiente.
+  const actionExecutionPending = Boolean(
+    actionResult && (actionResult.pending_execution || actionResult.execution_status === "pending")
+  );
+
+  const pollCardsWhilePending = useCallback(async (): Promise<PontiDecisionCard[]> => {
+    if (!headers) return [];
+    const res = await listPontiDecisionCards(headers, {
+      route_hint: config.routeHint,
+      domain: config.domain,
+      include_resolved: config.activity,
+      limit: config.activity ? 200 : 100,
+    });
+    return res.items;
+  }, [headers, config.routeHint, config.domain, config.activity]);
+
+  const { data: polledCards } = usePollingQuery(pollCardsWhilePending, {
+    intervalMs: 15000,
+    enabled: actionExecutionPending && Boolean(headers),
+  });
+
+  useEffect(() => {
+    if (!polledCards) return;
+    setCards(polledCards);
+    const targetId = actionResult?.card?.id;
+    if (!targetId) return;
+    const updated = polledCards.find((card) => card.id === targetId);
+    // La card salió del estado pendiente (ejecutada / resuelta / descartada): frenar el polling.
+    if (updated && ["drafted", "resolved", "dismissed"].includes(updated.status)) {
+      setActionResult((prev) =>
+        prev && prev.card?.id === targetId
+          ? { ...prev, pending_execution: false, execution_status: "completed", card: updated }
+          : prev
+      );
+    }
+  }, [polledCards, actionResult?.card?.id]);
 
   const explainInChat = (card: PontiDecisionCard) => {
     sessionStorage.setItem(
@@ -549,6 +600,11 @@ const AIDecisionCenter = ({ config }: { config: DecisionViewConfig }) => {
           card={selectedCard}
           actionLoading={running}
           actionMessage={actionMessage}
+          nexusRequestId={
+            actionResult?.card?.id === selectedCard?.id ? actionResult?.nexus_request_id ?? null : null
+          }
+          approvalsLinkEnabled={approvalsLinkEnabled}
+          executionPending={actionResult?.card?.id === selectedCard?.id && actionExecutionPending}
           onExplain={explainInChat}
           onAction={(card) => void handleAction(card)}
           onStatus={(card, status) => void handleStatus(card, status)}
