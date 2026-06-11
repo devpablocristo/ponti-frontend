@@ -1,6 +1,11 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
+import { cache } from ".";
+import {
+  buildCoreAuthHeaders,
+  flushEntitySelectorCaches,
+} from "../utils/entitySelectors";
 
 // Proxy del BFF a los endpoints del Identity Gate (core /actors/*): búsqueda
 // search-first, lookup por CUIT y resolve-or-create. Reenvía X-API-KEY + X-User-Id
@@ -9,9 +14,7 @@ const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
 
 function authHeaders(req: Request): Record<string, string> | null {
-  const userId = req.user?.userID;
-  if (!userId) return null;
-  return { "X-API-KEY": configService.apiKey, "X-User-Id": userId };
+  return buildCoreAuthHeaders(req, configService.apiKey);
 }
 
 function fail(res: Response, error: unknown) {
@@ -110,6 +113,7 @@ router.post("", async (req: Request, res: Response) => {
   }
   try {
     const { data } = await apiClient.post<unknown>("/actors", req.body, headers);
+    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true, data });
   } catch (error) {
     fail(res, error);
@@ -125,6 +129,7 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.post<unknown>(`/actors/${req.params.id}/archive`, {}, headers);
+    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -139,6 +144,7 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.post<unknown>(`/actors/${req.params.id}/restore`, {}, headers);
+    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -169,6 +175,7 @@ router.put("/:id/roles", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.put<unknown>(`/actors/${req.params.id}/roles`, req.body, headers);
+    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -183,6 +190,7 @@ router.put("/:id/tax-id", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.put<unknown>(`/actors/${req.params.id}/tax-id`, req.body, headers);
+    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -197,6 +205,7 @@ router.put("/:id", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.put<unknown>(`/actors/${req.params.id}`, req.body, headers);
+    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -211,6 +220,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.delete<unknown>(`/actors/${req.params.id}`, headers);
+    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
