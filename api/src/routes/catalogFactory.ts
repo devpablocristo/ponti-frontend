@@ -1,6 +1,11 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
+import { cache } from ".";
+import {
+  buildCoreAuthHeaders,
+  flushEntitySelectorCaches,
+} from "../utils/entitySelectors";
 
 // Factory de routers CRUDAR genéricos para catálogos (no-actors). Cada uno proxea a un
 // path del core bajo /catalog/<entidad>, sin tocar las rutas GET existentes (/crops, etc.)
@@ -8,9 +13,7 @@ import { configService } from "../configService";
 const apiClient = new ApiClient(configService.baseManagerApi);
 
 function authHeaders(req: Request): Record<string, string> | null {
-  const userId = req.user?.userID;
-  if (!userId) return null;
-  return { "X-API-KEY": configService.apiKey, "X-User-Id": userId };
+  return buildCoreAuthHeaders(req, configService.apiKey);
 }
 
 function fail(res: Response, error: unknown) {
@@ -56,6 +59,7 @@ export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}
     }
     try {
       const { data } = await apiClient.post<unknown>(corePath, req.body, headers);
+      setImmediate(() => flushEntitySelectorCaches(cache));
       res.status(201).json({ success: true, data });
     } catch (error) {
       fail(res, error);
@@ -71,6 +75,7 @@ export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}
       }
       try {
         await apiClient.post<unknown>(`${corePath}/${req.params.id}/archive`, {}, headers);
+        setImmediate(() => flushEntitySelectorCaches(cache));
         res.status(200).json({ success: true });
       } catch (error) {
         fail(res, error);
@@ -85,6 +90,7 @@ export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}
       }
       try {
         await apiClient.post<unknown>(`${corePath}/${req.params.id}/restore`, {}, headers);
+        setImmediate(() => flushEntitySelectorCaches(cache));
         res.status(200).json({ success: true });
       } catch (error) {
         fail(res, error);
@@ -100,6 +106,7 @@ export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}
     }
     try {
       await apiClient.put<unknown>(`${corePath}/${req.params.id}`, req.body, headers);
+      setImmediate(() => flushEntitySelectorCaches(cache));
       res.status(200).json({ success: true });
     } catch (error) {
       fail(res, error);
@@ -114,6 +121,7 @@ export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}
     }
     try {
       await apiClient.delete<unknown>(`${corePath}/${req.params.id}`, headers);
+      setImmediate(() => flushEntitySelectorCaches(cache));
       res.status(200).json({ success: true });
     } catch (error) {
       fail(res, error);
