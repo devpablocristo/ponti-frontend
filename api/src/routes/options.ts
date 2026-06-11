@@ -2,6 +2,10 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService, CACHE_TTL_SHORT } from "../configService";
 import { cache } from ".";
+import {
+  buildCoreAuthHeaders,
+  scopedCacheKey,
+} from "../utils/entitySelectors";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -14,21 +18,35 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedOptions = cache.get("options");
+    const headers = buildCoreAuthHeaders(req, configService.apiKey);
+    if (!headers) {
+      res.status(401).json({ message: "Usuario no autenticado" });
+      return;
+    }
+
+    const cacheKey = scopedCacheKey("form-options", req);
+    const cachedOptions = cache.get(cacheKey);
     if (cachedOptions) {
       res.status(200).json(cachedOptions);
       return;
     }
 
-    const headers = {
-      "X-API-KEY": configService.apiKey,
-      "X-User-Id": userId,
-    };
-
-    const { data: customers } = await apiClient.get<any>("/customers", headers);
-    const { data: managers } = await apiClient.get<any>("/managers", headers);
-    const { data: investors } = await apiClient.get<any>("/investors", headers);
-    const { data: campaigns } = await apiClient.get<any>("/campaigns", headers);
+    const { data: customers } = await apiClient.get<any>(
+      "/customers?per_page=1000",
+      headers
+    );
+    const { data: managers } = await apiClient.get<any>(
+      "/managers?per_page=1000",
+      headers
+    );
+    const { data: investors } = await apiClient.get<any>(
+      "/investors?per_page=1000",
+      headers
+    );
+    const { data: campaigns } = await apiClient.get<any>(
+      "/campaigns?per_page=1000",
+      headers
+    );
     const { data: crops } = await apiClient.get<any>("/crops", headers);
     const { data: leaseTypes } = await apiClient.get<any>(
       "/lease-types",
@@ -73,7 +91,7 @@ router.get("", async (req: Request, res: Response) => {
     };
 
     setImmediate(() => {
-      cache.set("options", data, CACHE_TTL_SHORT);
+      cache.set(cacheKey, data, CACHE_TTL_SHORT);
     });
 
     res.status(200).json(data);
