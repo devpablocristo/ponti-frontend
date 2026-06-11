@@ -82,6 +82,3 @@ export const buildWorkOrderScopeParams = (scope: WorkOrderQueryScope) => {
 
   return params;
 };
-
-export const buildWorkOrderFilterRowsCacheKey = (query: string) =>
-  `workorders:filter-rows:${query}`;

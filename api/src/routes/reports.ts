@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -40,12 +39,6 @@ router.get("/field-crop", async (req: Request, res: Response) => {
     const queryParams = new URLSearchParams(params).toString();
 
     const url = `reports/field-crop?${ queryParams }`;
-
-    const cachedReport = cache.get(url);
-    if (cachedReport) {
-      res.status(200).json(cachedReport);
-      return;
-    }
 
     const { data: report } = await apiClient.get<any>(url, headers);
 
@@ -105,12 +98,6 @@ router.get("/investor-contribution", async (req: Request, res: Response) => {
 
     const url = `reports/investor-contribution?${ queryParams }`;
 
-    const cachedReport = cache.get(url);
-    if (cachedReport) {
-      res.status(200).json(cachedReport);
-      return;
-    }
-
     const { data: report } = await apiClient.get<any>(url, headers);
 
     const data = {
@@ -168,12 +155,6 @@ router.get("/summary-results", async (req: Request, res: Response) => {
     const queryParams = new URLSearchParams(params).toString();
 
     const url = `reports/summary-results?${ queryParams }`;
-
-    const cachedReport = cache.get(url);
-    if (cachedReport) {
-      res.status(200).json(cachedReport);
-      return;
-    }
 
     const { data: report } = await apiClient.get<any>(url, headers);
 

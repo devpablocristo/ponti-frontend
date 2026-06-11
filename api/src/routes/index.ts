@@ -10,8 +10,6 @@ import lots from "./lots";
 import crops from "./crops";
 import supplies from "./supplies";
 import { verifyToken } from "./authMiddleware";
-import NodeCache from "node-cache";
-import { CACHE_TTL_DEFAULT } from "../configService";
 import categories from "./categories";
 import types from "./types";
 import workorders from "./workorders";
@@ -28,7 +26,6 @@ import admin from "./admin";
 import insights from "./insights";
 
 const router: Router = Router();
-export const cache = new NodeCache({ stdTTL: CACHE_TTL_DEFAULT, checkperiod: CACHE_TTL_DEFAULT });
 
 router.get("/ping", (req, res) => {
   res.status(200).json({ message: "UI says Pong!" });

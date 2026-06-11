@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import useSupplies from "../../../../hooks/useSupplies";
@@ -34,10 +34,8 @@ export default function ListItems() {
     completePendingSupply,
     deleteSupply,
     getWorkOrdersCount,
-    result,
     processing,
     errorUpdate,
-    resultUpdate,
   } = useSupplies();
   const { categories, types, getCategories, getTypes } = useCategories();
 
@@ -55,9 +53,6 @@ export default function ListItems() {
   const pagination = usePagination({ perPage: 10 });
   const [suppliesMode, setSuppliesMode] = useState<SuppliesMode>("all");
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
-  const lastHandledResultRef = useRef<string>("");
-  const lastHandledResultUpdateRef = useRef<string>("");
-  const closeModalOnNextUpdateRef = useRef(false);
 
   const { filters, projectId } = useWorkspaceFilters(["customer", "project", "campaign"]);
 
@@ -70,31 +65,6 @@ export default function ListItems() {
   }, [projectId, suppliesMode, getSupplies, getCategories, getTypes]);
 
   useEffect(() => {
-    if (!result || !projectId) return;
-    if (lastHandledResultRef.current === result) return;
-
-    lastHandledResultRef.current = result;
-    setSuccessMessage(result);
-    setErrorMessage("");
-    getSupplies(projectId, suppliesMode);
-  }, [result, projectId, suppliesMode, getSupplies]);
-
-  useEffect(() => {
-    if (!resultUpdate || !projectId) return;
-    if (lastHandledResultUpdateRef.current === resultUpdate) return;
-
-    lastHandledResultUpdateRef.current = resultUpdate;
-    if (closeModalOnNextUpdateRef.current) {
-      setModalOpen(false);
-      setItem(null);
-      closeModalOnNextUpdateRef.current = false;
-    }
-    setSuccessMessage(resultUpdate);
-    setErrorMessage("");
-    getSupplies(projectId, suppliesMode);
-  }, [resultUpdate, projectId, suppliesMode, getSupplies]);
-
-  useEffect(() => {
     if (error) {
       setErrorMessage(error);
       setSuccessMessage(null);
@@ -103,7 +73,6 @@ export default function ListItems() {
 
   useEffect(() => {
     if (errorUpdate) {
-      closeModalOnNextUpdateRef.current = false;
       setErrorMessage(errorUpdate);
       setSuccessMessage(null);
     }
@@ -237,18 +206,23 @@ export default function ListItems() {
     setDeleteModalOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (!deleteTarget) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget || !projectId) return;
     setErrorMessage("");
     setSuccessMessage(null);
-    deleteSupply(deleteTarget.id);
     setDeleteModalOpen(false);
     setDeleteTarget(null);
 
-    setTimeout(() => {
-      const totalAfterDelete = supplies.length - 1;
-      pagination.clampPageForTotal(totalAfterDelete);
-    }, 200);
+    const result = await deleteSupply(deleteTarget.id);
+    if (result === "deleted") {
+      setSuccessMessage("Se ha eliminado el insumo con éxito!");
+      getSupplies(projectId, suppliesMode);
+
+      setTimeout(() => {
+        const totalAfterDelete = supplies.length - 1;
+        pagination.clampPageForTotal(totalAfterDelete);
+      }, 200);
+    }
   };
 
   const handleEdit = (item: Supply) => {
@@ -256,16 +230,25 @@ export default function ListItems() {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (processing) return;
     if (!item || !projectId) return;
 
-    closeModalOnNextUpdateRef.current = true;
+    const ok =
+      suppliesMode === "pending"
+        ? await completePendingSupply(projectId, item)
+        : await updateSupply(projectId, item);
 
-    if (suppliesMode === "pending") {
-      completePendingSupply(projectId, item);
-    } else {
-      updateSupply(projectId, item);
+    if (ok) {
+      setModalOpen(false);
+      setItem(null);
+      setSuccessMessage(
+        suppliesMode === "pending"
+          ? "Se completó el insumo pendiente con éxito!"
+          : "Se editado el insumo con éxito!"
+      );
+      setErrorMessage("");
+      getSupplies(projectId, suppliesMode);
     }
   };
 
@@ -449,6 +432,7 @@ export default function ListItems() {
             }
             primaryButtonText={suppliesMode === "pending" ? "Completar" : "Guardar"}
             onPrimaryAction={handleSave}
+            isSaving={processing}
           >
             {" "}
             {suppliesMode === "pending" && (

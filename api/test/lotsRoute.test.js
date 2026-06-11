@@ -1,12 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const {
-  buildLotsListCacheKey,
-  buildLotsMetricsCacheKey,
-  buildLotsQueryParams,
-  isLotsCacheKey,
-} = require("../dist/utils/lotsRoute");
+const { buildLotsQueryParams } = require("../dist/utils/lotsRoute");
 const {
   parseFieldProjectQueryParams,
   parsePaginationQueryParams,
@@ -57,22 +52,4 @@ test("buildLotsQueryParams conserva el contrato HTTP esperado", () => {
   );
 
   assert.equal(buildLotsQueryParams({ fieldId: 0, projectId: 30 }), "project_id=30");
-});
-
-test("cache keys de Lotes no mezclan páginas ni contexto de métricas", () => {
-  const lotIds = { fieldId: 39, projectId: 30 };
-
-  assert.notEqual(
-    buildLotsListCacheKey(lotIds, { page: 1, perPage: 10 }),
-    buildLotsListCacheKey(lotIds, { page: 2, perPage: 10 })
-  );
-
-  assert.notEqual(
-    buildLotsMetricsCacheKey({ fieldId: 39, projectId: 30 }),
-    buildLotsMetricsCacheKey({ fieldId: 39, projectId: 31 })
-  );
-
-  assert.equal(isLotsCacheKey("lots:field:0:project:30:page:1:per_page:10"), true);
-  assert.equal(isLotsCacheKey("kpis:lots:field:0:project:30"), true);
-  assert.equal(isLotsCacheKey("workorders:query:project_id=30"), false);
 });

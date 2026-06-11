@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
-import { configService, CACHE_TTL_SHORT } from "../configService";
-import { cache } from ".";
+import { configService } from "../configService";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -14,17 +13,7 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    let key = "categories";
     const type_id = parseInt(req.query.type_id as string) || 0;
-    if (type_id !== 0) {
-      key = `categories:${type_id}`;
-    }
-
-    const cachedCategories = cache.get(key);
-    if (cachedCategories) {
-      res.status(200).json(cachedCategories);
-      return;
-    }
 
     const headers = {
       "X-API-KEY": configService.apiKey,
@@ -44,10 +33,6 @@ router.get("", async (req: Request, res: Response) => {
       success: true,
       data: categories,
     };
-
-    setImmediate(() => {
-      cache.set(key, data, CACHE_TTL_SHORT);
-    });
 
     res.status(200).json(data);
   } catch (error: any) {
