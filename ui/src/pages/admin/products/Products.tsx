@@ -1,4 +1,5 @@
 import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { IndicatorCard } from "../../../components/Card/IndicatorCard";
@@ -104,6 +105,36 @@ export function Products() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [actionErrorMessage, setActionErrorMessage] = useState<string | null>(null);
   const [exportErrorMessage, setExportErrorMessage] = useState<string | null>(null);
+
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Filtro por insumo recibido por URL (llega desde el link "Ingresados" de Stock).
+  const selectedSupplyFilter = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return { name: params.get("supply_name") || "" };
+  }, [location.search]);
+
+  // Al llegar con ?supply_name=... pre-aplica el filtro de la columna Insumo.
+  useEffect(() => {
+    if (!selectedSupplyFilter.name) return;
+    setColumnsFilters((prev) => ({
+      ...prev,
+      supply_name: [selectedSupplyFilter.name],
+    }));
+    pagination.resetPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSupplyFilter.name]);
+
+  const handleClearSupplyFilter = () => {
+    setColumnsFilters((prev) => {
+      const next = { ...prev };
+      delete next.supply_name;
+      return next;
+    });
+    pagination.resetPage();
+    navigate("/admin/products");
+  };
 
   const isInternalMovementEditionBlocked = (entryType?: string) => {
     const normalized = String(entryType ?? "")
@@ -560,6 +591,20 @@ export function Products() {
               />
             )}
           </>
+        )}
+        {selectedSupplyFilter.name && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
+            <span>
+              Filtrando ingresos de: <strong>{selectedSupplyFilter.name}</strong>
+            </span>
+            <button
+              type="button"
+              className="font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+              onClick={handleClearSupplyFilter}
+            >
+              Quitar filtro
+            </button>
+          </div>
         )}
         <DataTable
           data={filteredMovements}

@@ -85,7 +85,7 @@ const EditableCell = ({
 
     savingRef.current = true;
     try {
-      await updateStock(projectId, item.id, Number(editValue), item.updated_at);
+      await updateStock(projectId, item.id, Number(editValue));
     } finally {
       savingRef.current = false;
     }
@@ -93,7 +93,7 @@ const EditableCell = ({
 
   useEffect(() => {
     if (errorStock) {
-      alert(errorStock);
+      onValidationError(errorStock);
       return;
     }
     if (resultStock) {
@@ -101,7 +101,7 @@ const EditableCell = ({
       onSaved?.();
       return;
     }
-  }, [errorStock, resultStock, onSaved]);
+  }, [errorStock, resultStock, onSaved, onValidationError]);
 
   if (editing) {
     return (
@@ -333,18 +333,34 @@ export function Stock() {
     refreshStock();
   };
 
-  const handleViewConsumingOrders = useCallback(
+  const buildSupplyParams = useCallback(
     (item: GetStockItems) => {
-      if (!projectId || !item.supply_id) return;
-
-      const params = new URLSearchParams({
+      if (!projectId || !item.supply_id) return null;
+      return new URLSearchParams({
         project_id: String(projectId),
         supply_id: String(item.supply_id),
         supply_name: item.supply_name,
-      });
-      navigate(`/admin/work-orders?${params.toString()}`);
+      }).toString();
     },
-    [navigate, projectId]
+    [projectId]
+  );
+
+  const handleViewConsumingOrders = useCallback(
+    (item: GetStockItems) => {
+      const params = buildSupplyParams(item);
+      if (!params) return;
+      navigate(`/admin/work-orders?${params}`);
+    },
+    [navigate, buildSupplyParams]
+  );
+
+  const handleViewIngresos = useCallback(
+    (item: GetStockItems) => {
+      const params = buildSupplyParams(item);
+      if (!params) return;
+      navigate(`/admin/products?${params}`);
+    },
+    [navigate, buildSupplyParams]
   );
 
   const filteredStock = useMemo(() => {
@@ -491,6 +507,8 @@ export function Stock() {
         filterable: true,
         filterType: "select",
         headerPadding: "xs",
+        align: "center",
+        headerAlign: "center",
         filterOptions: getFilterOptionsForColumn(
           "entry_stock",
           stock,
@@ -499,7 +517,20 @@ export function Stock() {
         header: "Ingresados",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          const formatted = formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0);
+          if (!item.supply_id) {
+            return <span className="font-bold text-gray-900">{formatted} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          }
+          return (
+            <button
+              type="button"
+              className="font-bold text-blue-700 hover:text-blue-900 hover:underline"
+              title="Ver ingresos de este insumo"
+              onClick={() => handleViewIngresos(item)}
+            >
+              {formatted} <span className="font-bold text-xs">{unit}</span>
+            </button>
+          );
         },
       },
       {
@@ -508,9 +539,24 @@ export function Stock() {
         header: "Consumidos",
         padding: "xs",
         headerPadding: "xs",
+        align: "center",
+        headerAlign: "center",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          const formatted = formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0);
+          if (!item.supply_id) {
+            return <span className="font-bold text-gray-900">{formatted} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          }
+          return (
+            <button
+              type="button"
+              className="font-bold text-blue-700 hover:text-blue-900 hover:underline"
+              title="Ver órdenes que consumen este insumo"
+              onClick={() => handleViewConsumingOrders(item)}
+            >
+              {formatted} <span className="font-bold text-xs">{unit}</span>
+            </button>
+          );
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -659,7 +705,7 @@ export function Stock() {
         },
       },
     ],
-    [projectId, stock, columnsFilters, refreshStock, handleViewConsumingOrders]
+    [projectId, stock, columnsFilters, refreshStock, handleViewConsumingOrders, handleViewIngresos]
   );
 
   useEffect(() => {

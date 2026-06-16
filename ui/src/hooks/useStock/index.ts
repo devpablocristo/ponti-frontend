@@ -91,21 +91,16 @@ const useStock = () => {
   );
 
   const updateStock = React.useCallback(
-    async (
-      projectId: number,
-      id: number,
-      realStock: number,
-      updatedAt?: string | null
-    ) => {
+    async (projectId: number, id: number, realStock: number) => {
       setProcessingStock(true);
       setErrorStock(null);
       setResultStock(null);
 
       try {
-        const payload = {
-          real_stock_units: realStock,
-          ...(updatedAt ? { updated_at: updatedAt } : {}),
-        };
+        // El stock de campo es un conteo manual (last-write-wins): no enviamos
+        // updated_at para no disparar el lock optimista que hacía fallar el
+        // guardado de forma intermitente.
+        const payload = { real_stock_units: realStock };
 
         const response = await apiClient.put<StockMutationResponse>(
           `/stock/${projectId}/${id}`,
