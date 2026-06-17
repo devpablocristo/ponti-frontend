@@ -1,18 +1,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { Pencil, Archive, ArchiveRestore, Search as SearchIcon, ChevronDown, X } from "lucide-react";
+import { Pencil, Archive, ArchiveRestore, Search as SearchIcon, ChevronDown } from "lucide-react";
 
-import Button from "@/components/Button/Button";
 import { BaseModal } from "@/components/Modal/BaseModal";
 import { toastError } from "@/lib/toast";
-import { RegistryRow, RegistryStatus, searchRegistry } from "@/api/registry";
+import { apiClient } from "@/api/client";
+import { RegistryRow, RegistryStatus, searchRegistry, searchRegistryAll } from "@/api/registry";
 import { archiveActor, restoreActor } from "@/api/actors";
 import { archiveCatalog, restoreCatalog } from "@/api/catalog";
+import { DataTable, useClientTableFilters, usePagination } from "@/lib/dataDisplay";
+import type { DataTableColumn, FilterOptionGroup } from "@/lib/LocalDataTable";
 import RegistryActorDrawer from "./RegistryActorDrawer";
 import RegistryCatalogDrawer, { CatalogItem } from "./RegistryCatalogDrawer";
 import UsagesPopover from "./UsagesPopover";
 
-const PER_PAGE = 200; // cargamos más para poder filtrar client-side
+const statusOf = (e: unknown): number | undefined => {
+  const x = e as { response?: { status?: number }; error?: { status?: number }; status?: number };
+  return x?.response?.status ?? x?.error?.status ?? x?.status;
+};
 
 // ─── Mapeos ───────────────────────────────────────────────────────────────────
 
@@ -30,261 +34,51 @@ const CATALOG_LABEL: Record<string, string> = {
   types: "Tipo",
   "lease-types": "Tipo de arriendo",
   campaigns: "Campaña",
+  project: "Proyecto",
+  field: "Campo",
+  lot: "Lote",
 };
 const CATALOG_SINGULAR: Record<string, string> = {
   crops: "cultivo",
   types: "tipo",
   "lease-types": "tipo de arriendo",
   campaigns: "campaña",
+  project: "proyecto",
+  field: "campo",
+  lot: "lote",
 };
-const CREATE_OPTIONS: { kind: string; label: string }[] = [
-  { kind: "actor", label: "Actor" },
-  { kind: "crops", label: "Cultivo" },
-  { kind: "types", label: "Tipo" },
-  { kind: "lease-types", label: "Tipo de arriendo" },
-  { kind: "campaigns", label: "Campaña" },
-];
-
 const ENTITY_BADGE: Record<string, { label: string; className: string }> = {
   actor:          { label: "Actor",            className: "bg-primary-100 text-primary-700" },
   crops:          { label: "Cultivo",          className: "bg-green-100 text-green-700" },
   types:          { label: "Tipo",             className: "bg-amber-100 text-amber-700" },
   "lease-types":  { label: "Tipo de arriendo", className: "bg-pink-100 text-pink-700" },
   campaigns:      { label: "Campaña",          className: "bg-violet-100 text-violet-700" },
+  project:        { label: "Proyecto",         className: "bg-blue-100 text-blue-700" },
+  field:          { label: "Campo",            className: "bg-orange-100 text-orange-700" },
+  lot:            { label: "Lote",             className: "bg-stone-100 text-stone-700" },
 };
 
-// Tipos de actor-rol (se filtran client-side por roles[])
-const ACTOR_ROLE_TYPES = new Set(["customer","provider","investor","manager","contractor","biller","lessee"]);
-// Tipos de catálogo (se filtran por entity_type)
-const CATALOG_TYPES = new Set(["crops","types","lease-types","campaigns"]);
 
-// Grupos para el popover de filtro
-const FILTER_GROUPS = [
-  {
-    label: "Actores",
-    options: [
-      { value: "customer",   label: "Clientes" },
-      { value: "provider",   label: "Proveedores" },
-      { value: "investor",   label: "Inversores" },
-      { value: "manager",    label: "Responsables" },
-      { value: "contractor", label: "Contratistas" },
-      { value: "biller",     label: "Facturadores" },
-      { value: "lessee",     label: "Arrendatarios" },
-    ],
-  },
-  {
-    label: "Catálogo",
-    options: [
-      { value: "crops",       label: "Cultivos" },
-      { value: "types",       label: "Tipos" },
-      { value: "lease-types", label: "Tipos de arriendo" },
-      { value: "campaigns",   label: "Campañas" },
-    ],
-  },
-];
+// ─── Tipo de fila procesada (campos computados para filtros) ──────────────────
 
-// ─── TypeFilterDropdown ───────────────────────────────────────────────────────
-
-interface TypeFilterDropdownProps {
-  selected: string[];
-  onChange: (next: string[]) => void;
-}
-
-function TypeFilterDropdown({ selected, onChange }: TypeFilterDropdownProps) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-
-  const recalcPos = () => {
-    if (!btnRef.current) return;
-    const r = btnRef.current.getBoundingClientRect();
-    setPos({ top: r.bottom + 4, left: r.left });
-  };
-
-  const toggle = () => {
-    if (open) { setOpen(false); setPos(null); }
-    else { recalcPos(); setOpen(true); setSearch(""); }
-  };
-
-  // cerrar al hacer click afuera
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (!btnRef.current?.contains(t) && !panelRef.current?.contains(t)) {
-        setOpen(false); setPos(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  // reposicionar al resize/scroll
-  useEffect(() => {
-    if (!open) return;
-    const handler = () => recalcPos();
-    window.addEventListener("resize", handler);
-    window.addEventListener("scroll", handler, true);
-    return () => { window.removeEventListener("resize", handler); window.removeEventListener("scroll", handler, true); };
-  }, [open]);
-
-  const allOptions = FILTER_GROUPS.flatMap((g) => g.options);
-  const q = search.toLowerCase();
-  const visibleGroups = FILTER_GROUPS.map((g) => ({
-    ...g,
-    options: g.options.filter((o) => !q || o.label.toLowerCase().includes(q)),
-  })).filter((g) => g.options.length > 0);
-
-  const allValues = allOptions.map((o) => o.value);
-  const allSelected = allValues.every((v) => selected.includes(v));
-  const someSelected = selected.length > 0 && !allSelected;
-
-  const toggleAll = (checked: boolean) => onChange(checked ? allValues : []);
-  const toggleOne = (value: string, checked: boolean) =>
-    onChange(checked ? [...selected, value] : selected.filter((v) => v !== value));
-
-  // etiqueta del botón
-  const buttonLabel = () => {
-    if (selected.length === 0) return "Todos los tipos";
-    if (selected.length === 1) {
-      return allOptions.find((o) => o.value === selected[0])?.label ?? selected[0];
-    }
-    return `${selected.length} tipos`;
-  };
-
-  return (
-    <div className="relative">
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={toggle}
-        className={`flex items-center gap-1.5 border rounded-lg px-3 py-2 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-primary-300 ${
-          selected.length > 0
-            ? "border-primary-400 bg-primary-50 text-primary-700"
-            : "border-gray-200 text-gray-700 hover:border-gray-300"
-        }`}
-      >
-        <span>{buttonLabel()}</span>
-        {selected.length > 0 && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onChange([]); }}
-            className="ml-0.5 text-primary-400 hover:text-primary-700"
-          >
-            <X size={12} />
-          </button>
-        )}
-        <ChevronDown size={14} className={`text-gray-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-
-      {open && pos &&
-        createPortal(
-          <div
-            ref={panelRef}
-            className="fixed z-[9999] w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-lg"
-            style={{ top: pos.top, left: pos.left }}
-          >
-            {/* Buscador interno */}
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar tipo…"
-              className="mb-2 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 focus:outline-none"
-            />
-
-            {/* Seleccionar todo */}
-            {!search && (
-              <label className="mb-1 flex items-center gap-2 border-b border-slate-100 pb-2 text-xs font-semibold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={allSelected}
-                  ref={(el) => { if (el) el.indeterminate = someSelected; }}
-                  onChange={(e) => toggleAll(e.target.checked)}
-                />
-                Seleccionar todo
-              </label>
-            )}
-
-            {/* Grupos */}
-            <div className="max-h-52 overflow-auto pr-1">
-              {visibleGroups.map((group) => (
-                <div key={group.label} className="mb-2">
-                  <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                    {group.label}
-                  </p>
-                  {group.options.map((opt) => (
-                    <label key={opt.value} className="flex cursor-pointer items-center gap-2 rounded px-1 py-1 text-xs text-slate-600 hover:bg-slate-50">
-                      <input
-                        type="checkbox"
-                        checked={selected.includes(opt.value)}
-                        onChange={(e) => toggleOne(opt.value, e.target.checked)}
-                      />
-                      {opt.label}
-                    </label>
-                  ))}
-                </div>
-              ))}
-              {visibleGroups.length === 0 && (
-                <p className="py-2 text-center text-xs text-slate-400">Sin resultados</p>
-              )}
-            </div>
-
-            {/* Acciones */}
-            <div className="mt-2 flex justify-between border-t border-slate-100 pt-2">
-              <button
-                type="button"
-                onClick={() => onChange([])}
-                className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-200"
-              >
-                Limpiar
-              </button>
-              <button
-                type="button"
-                onClick={() => { setOpen(false); setPos(null); }}
-                className="rounded-lg bg-primary-700 px-3 py-1.5 text-xs text-white hover:bg-primary-800"
-              >
-                Aplicar
-              </button>
-            </div>
-          </div>,
-          document.body
-        )
-      }
-    </div>
-  );
-}
-
-// ─── Helpers de filtrado client-side ─────────────────────────────────────────
-
-function rowMatchesTypes(row: RegistryRow, selectedTypes: string[]): boolean {
-  if (selectedTypes.length === 0) return true;
-  if (row.entity_type === "actor") {
-    const actorRoles = selectedTypes.filter((t) => ACTOR_ROLE_TYPES.has(t));
-    if (actorRoles.length === 0) return false; // solo hay tipos de catálogo seleccionados
-    return actorRoles.some((t) => row.roles?.includes(t));
-  }
-  return selectedTypes.includes(row.entity_type);
-}
+type ProcessedRow = RegistryRow & {
+  type_display: string;    // "Actor" | "Cultivo" | "Campaña" | …
+  roles_display: string;   // "Cliente, Inversor" | "—"
+};
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
 export default function RegistryAdmin() {
   const [q, setQ] = useState("");
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [status, setStatus] = useState<RegistryStatus>("active");
   const [entityTab, setEntityTab] = useState<"actors" | "catalog">("catalog");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const newMenuRef = useRef<HTMLDivElement>(null);
-  const [page, setPage] = useState(1);
 
   const [rows, setRows] = useState<RegistryRow[]>([]);
-  const [loadedStatus, setLoadedStatus] = useState<RegistryStatus>("active"); // status de los datos en pantalla
+  const [loadedStatus, setLoadedStatus] = useState<RegistryStatus>("active");
   const [activeTotal, setActiveTotal] = useState(0);
   const [archivedTotal, setArchivedTotal] = useState(0);
-  const [maxPage, setMaxPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
   const [actorDrawer, setActorDrawer] = useState<{ open: boolean; actorId: number | null; prefillName?: string }>({
@@ -293,47 +87,46 @@ export default function RegistryAdmin() {
   const [catalogDrawer, setCatalogDrawer] = useState<{
     open: boolean; base: string; singular: string; item: CatalogItem | null; prefillName?: string;
   }>({ open: false, base: "crops", singular: "cultivo", item: null });
-  const [confirmArchive, setConfirmArchive] = useState<{ row: RegistryRow } | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState<{ row: RegistryRow; usageCount?: number } | null>(null);
 
-  // Filas activas separadas para los conteos de los tabs de entidad (siempre reflejan status=active)
   const [activeActorCount, setActiveActorCount] = useState(0);
   const [activeCatalogCount, setActiveCatalogCount] = useState(0);
 
-  // Carga siempre con type="all" — el filtrado de tipos es client-side
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Carga activos y archivados en paralelo para tener ambos contadores
-      const [activeRes, archivedRes] = await Promise.all([
-        searchRegistry({ q: q.trim(), type: "all", status: "active",   page, perPage: PER_PAGE }),
+  // ─── Carga de datos ──────────────────────────────────────────────────────────
+
+const load = useCallback(async () => {
+  setLoading(true);
+  try {
+    if (status === "active") {
+      const [activeData, archivedRes] = await Promise.all([
+        searchRegistryAll({ q: q.trim(), type: "all", status: "active" }),
         searchRegistry({ q: q.trim(), type: "all", status: "archived", page: 1, perPage: 1 }),
       ]);
-      setActiveTotal(activeRes.page_info?.total ?? 0);
+      setActiveTotal(activeData.length);
       setArchivedTotal(archivedRes.page_info?.total ?? 0);
-
-      // Conteos por tipo para los tabs de entidad (siempre de datos activos)
-      const activeData = activeRes.data ?? [];
       setActiveActorCount(activeData.filter((r) => r.entity_type === "actor").length);
       setActiveCatalogCount(activeData.filter((r) => r.entity_type !== "actor").length);
-
-      if (status === "active") {
-        setRows(activeData);
-        setLoadedStatus("active");
-        setMaxPage(activeRes.page_info?.max_page ?? 1);
-      } else {
-        // recarga archivados con PER_PAGE completo
-        const archived = await searchRegistry({ q: q.trim(), type: "all", status: "archived", page, perPage: PER_PAGE });
-        setRows(archived.data ?? []);
-        setLoadedStatus("archived");
-        setMaxPage(archived.page_info?.max_page ?? 1);
-      }
-    } catch {
-      toastError("No se pudo cargar el listado");
-      setRows([]);
-    } finally {
-      setLoading(false);
+      setRows(activeData);
+      setLoadedStatus("active");
+    } else {
+      const [activeData, archivedData] = await Promise.all([
+        searchRegistryAll({ q: q.trim(), type: "all", status: "active" }),
+        searchRegistryAll({ q: q.trim(), type: "all", status: "archived" }),
+      ]);
+      setActiveTotal(activeData.length);
+      setArchivedTotal(archivedData.length);
+      setActiveActorCount(activeData.filter((r) => r.entity_type === "actor").length);
+      setActiveCatalogCount(activeData.filter((r) => r.entity_type !== "actor").length);
+      setRows(archivedData);
+      setLoadedStatus("archived");
     }
-  }, [q, status, page]);
+  } catch {
+    toastError("No se pudo cargar el listado");
+    setRows([]);
+  } finally {
+    setLoading(false);
+  }
+}, [q, status]);
 
   useEffect(() => {
     if (!newMenuOpen) return;
@@ -349,65 +142,156 @@ export default function RegistryAdmin() {
     return () => clearTimeout(t);
   }, [load]);
 
-  const onQ = (v: string) => { setPage(1); setQ(v); };
-  const onStatus = (v: RegistryStatus) => { setPage(1); setStatus(v); };
-  const onTypes = (v: string[]) => { setPage(1); setSelectedTypes(v); };
+  // ─── Filas activas por tab ────────────────────────────────────────────────────
 
-  // Filtrado client-side por tipos seleccionados
-  const filteredRows = useMemo(
-    () => rows.filter((r) => rowMatchesTypes(r, selectedTypes)),
-    [rows, selectedTypes]
+  const actorRows   = useMemo(() => rows.filter((r) => r.entity_type === "actor"), [rows]);
+  const catalogRows = useMemo(() => rows.filter((r) => r.entity_type !== "actor"), [rows]);
+
+  const isArchived = loadedStatus === "archived";
+  const activeRows = isArchived ? rows : entityTab === "actors" ? actorRows : catalogRows;
+
+  // ─── Filas procesadas para DataTable ─────────────────────────────────────────
+
+  const processedRows = useMemo((): ProcessedRow[] =>
+    activeRows.map((r) => ({
+      ...r,
+      type_display: r.entity_type === "actor"
+        ? "Actor"
+        : (CATALOG_LABEL[r.entity_type] ?? r.entity_type),
+      roles_display: r.entity_type === "actor"
+        ? (r.roles ?? []).map((role) => ROLE_LABEL[role] ?? role).join(", ") || "—"
+        : "—",
+    })),
+    [activeRows]
   );
 
-  // Separar en categorías
-  const actorRows   = useMemo(() => filteredRows.filter((r) => r.entity_type === "actor"), [filteredRows]);
-  const catalogRows = useMemo(() => filteredRows.filter((r) => r.entity_type !== "actor"), [filteredRows]);
+  // roles_display tiene valores combinados ("Cliente, Inversor") que no matchean
+  // exacto con las opciones individuales. Lo filtramos manualmente fuera del hook.
+  const [rolesFilter, setRolesFilter] = useState<string[]>([]);
 
-  // ¿El filtro mezcla actores y catálogo? → tabla unificada (sin tabs de entidad)
-  const hasActorFilter   = selectedTypes.some((t) => ACTOR_ROLE_TYPES.has(t));
-  const hasCatalogFilter = selectedTypes.some((t) => CATALOG_TYPES.has(t));
-  const isMixedFilter    = hasActorFilter && hasCatalogFilter;
+  const {
+    filteredRows: baseFilteredRows,
+    filters: baseColFilters,
+    handleFilterChange: handleBaseFilterChange,
+    resetFilters: resetBaseFilters,
+    getFilterOptionsForColumn,
+  } = useClientTableFilters({ rows: processedRows });
 
-  // Filas que muestra la tabla activa.
-  // Usamos loadedStatus para mostrar todo junto (sin separar por entityTab) cuando los datos son archivados.
-  const activeRows = (loadedStatus === "archived" || isMixedFilter)
-    ? filteredRows
-    : entityTab === "actors"
-      ? actorRows
-      : catalogRows;
+  // Post-filtro de roles: busca si alguno de los roles del actor está en la selección
+  const displayRows = useMemo(() => {
+    if (rolesFilter.length === 0) return baseFilteredRows;
+    return baseFilteredRows.filter((row) =>
+      (row.roles ?? []).some((r) => rolesFilter.includes(ROLE_LABEL[r] ?? r))
+    );
+  }, [baseFilteredRows, rolesFilter]);
 
-  // En modo archivado usamos la tabla "actors" (columnas completas) para acomodar ambos tipos.
-  // Usamos loadedStatus (no status) para que el layout de columnas cambie al mismo tiempo que los datos.
-  const showUnifiedTable = loadedStatus === "archived" || isMixedFilter;
+  // Filtros unificados para DataTable (necesita ver roles_display para pintar el badge activo)
+  const colFilters = useMemo(() => ({
+    ...baseColFilters,
+    ...(rolesFilter.length > 0 ? { roles_display: rolesFilter } : {}),
+  }), [baseColFilters, rolesFilter]);
 
-  const openEdit = (row: RegistryRow) => {
-    if (row.entity_type === "actor") {
-      setActorDrawer({ open: true, actorId: row.id });
-    } else {
-      setCatalogDrawer({
-        open: true,
-        base: row.entity_type,
-        singular: CATALOG_SINGULAR[row.entity_type] ?? row.entity_type,
-        item: { id: row.id, name: row.name, archived: row.archived },
-      });
+  // handleFilterChange unificado: separa roles del resto
+  const handleFilterChange = useCallback((nextFilters: Record<string, unknown>) => {
+    const { roles_display, ...rest } = nextFilters;
+    handleBaseFilterChange(rest);
+    setRolesFilter(Array.isArray(roles_display) ? (roles_display as string[]) : []);
+  }, [handleBaseFilterChange]);
+
+  const resetFilters = useCallback(() => {
+    resetBaseFilters();
+    setRolesFilter([]);
+  }, [resetBaseFilters]);
+
+  // Opciones individuales de rol (sin combinar)
+  const roleFilterOptions = useMemo(() => {
+    const seen = new Set<string>();
+    for (const row of processedRows) {
+      for (const r of (row.roles ?? [])) seen.add(ROLE_LABEL[r] ?? r);
+    }
+    return [...seen].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  }, [processedRows]);
+
+  const pagination = usePagination({ perPage: 30 });
+
+  // ─── Handlers de navegación ────────────────────────────────────────────────
+
+  const onQ = (v: string) => { setQ(v); resetFilters(); pagination.resetPage(); };
+  const onStatus = (v: RegistryStatus) => { setStatus(v); resetFilters(); pagination.resetPage(); };
+  const onEntityTab = (tab: "actors" | "catalog") => {
+    setEntityTab(tab);
+    if (status === "archived") onStatus("active");
+    resetFilters();
+    pagination.resetPage();
+  };
+
+  // ─── Archivar / restaurar ──────────────────────────────────────────────────
+
+  const handleArchiveClick = async (row: RegistryRow) => {
+    if (row.archived) { setConfirmArchive({ row }); return; }
+    setConfirmArchive({ row });
+    try {
+      const qs = new URLSearchParams({ entity_type: row.entity_type, id: String(row.id), name: row.name });
+      if (row.roles?.length) qs.set("roles", row.roles.join(","));
+      const res = await apiClient.get<{ success: boolean; data: { total: number; not_supported?: boolean } }>(
+        `/registry/usages?${qs.toString()}`
+      );
+      const usageCount = res.data?.not_supported ? 0 : (res.data?.total ?? 0);
+      setConfirmArchive((prev) => prev ? { ...prev, usageCount } : null);
+    } catch {
+      setConfirmArchive((prev) => prev ? { ...prev, usageCount: 0 } : null);
     }
   };
 
   const handleArchiveConfirm = async (row: RegistryRow) => {
     setConfirmArchive(null);
+    const isRestore = row.archived;
     try {
       if (row.entity_type === "actor") {
-        if (row.archived) await restoreActor(row.id);
+        if (isRestore) await restoreActor(row.id);
         else await archiveActor(row.id);
+      } else if (row.entity_type === "project") {
+        toastError("Archivar proyectos aún no está disponible");
+        return;
       } else {
-        if (row.archived) await restoreCatalog(row.entity_type, row.id);
+        if (isRestore) await restoreCatalog(row.entity_type, row.id);
         else await archiveCatalog(row.entity_type, row.id);
       }
       void load();
-    } catch {
-      toastError("No se pudo completar la operación");
+    } catch (e) {
+      const s = statusOf(e);
+      if (isRestore) {
+        toastError(
+          s === 409
+            ? row.entity_type === "actor"
+              ? "No se puede restaurar: otra identidad activa tiene el mismo CUIT/DNI"
+              : "No se puede restaurar: ya existe un elemento activo con ese nombre"
+            : s === 404
+            ? "El elemento no existe o ya fue eliminado"
+            : "No se pudo restaurar"
+        );
+      } else {
+        toastError(
+          s === 409 ? "No se puede archivar: el elemento está en uso"
+          : s === 404 ? "El elemento no existe o ya fue eliminado"
+          : "No se pudo archivar"
+        );
+      }
     }
   };
+
+const openEdit = (row: RegistryRow) => {
+  if (row.entity_type === "actor") {
+    setActorDrawer({ open: true, actorId: row.id });
+  } else {
+    setCatalogDrawer({
+      open: true,
+      base: row.entity_type,
+      singular: CATALOG_SINGULAR[row.entity_type] ?? row.entity_type,
+      item: { id: row.id, name: row.name, archived: row.archived },
+    });
+  }
+};
 
   const openCreate = (kind: string) => {
     if (kind === "") return;
@@ -415,132 +299,142 @@ export default function RegistryAdmin() {
     if (kind === "actor") {
       setActorDrawer({ open: true, actorId: null, prefillName });
     } else if (kind === "catalog") {
-      // Nuevo catálogo unificado — la categoría se elige dentro del drawer
       setCatalogDrawer({ open: true, base: "", singular: "", item: null, prefillName });
     } else {
       setCatalogDrawer({ open: true, base: kind, singular: CATALOG_SINGULAR[kind] ?? kind, item: null, prefillName });
     }
   };
 
-  // ─── Render helpers ──────────────────────────────────────────────────────────
+  // ─── Grupos de filtro por tipo ─────────────────────────────────────────────
 
-  const ActionButtons = ({ row }: { row: RegistryRow }) => (
-    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
-      <UsagesPopover entityType={row.entity_type} id={row.id} name={row.name} roles={row.roles ?? []} />
-      <button
-        onClick={() => openEdit(row)}
-        title="Editar"
-        className="p-1.5 rounded-md text-gray-400 hover:text-primary-700 hover:bg-primary-50 transition-colors"
-      >
-        <Pencil size={16} />
-      </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); setConfirmArchive({ row }); }}
-        title={row.archived ? "Restaurar" : "Archivar"}
-        className="p-1.5 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-      >
-        {row.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
-      </button>
-    </div>
-  );
+  // Catálogo: nombres agrupados por Campaña / Cultivo / Tipo / Tipo de arriendo
+  const catalogNameGroups = useMemo((): FilterOptionGroup[] => {
+    const CATALOG_ORDER = ["project", "field", "lot", "campaigns", "crops", "types", "lease-types"];
+    const grouped: Record<string, Set<string>> = {};
+    for (const r of processedRows) {
+      if (r.entity_type === "actor") continue;
+      if (!grouped[r.entity_type]) grouped[r.entity_type] = new Set();
+      grouped[r.entity_type].add(r.name);
+    }
+    return CATALOG_ORDER
+      .filter((et) => grouped[et]?.size)
+      .map((et) => ({
+        label: CATALOG_LABEL[et] ?? et,
+        options: [...grouped[et]].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" })),
+      }));
+  }, [processedRows]);
 
-  const EmptyRow = ({ cols }: { cols: number }) => (
-    <tr>
-      <td colSpan={cols} className="px-4 py-10 text-center text-gray-400 text-sm">
-        {loading ? "Cargando…" : "No hay resultados para los filtros seleccionados."}
-      </td>
-    </tr>
-  );
-
-  // Tabla de actores (con Roles + CUIT)
-  const ActorsTable = () => (
-    <table className="w-full text-sm">
-      <thead className="bg-gray-50 text-gray-500 text-left">
-        <tr>
-          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Nombre</th>
-          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Tipo</th>
-          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Roles</th>
-          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">CUIT / DNI</th>
-          <th className="px-4 py-2.5 w-20" />
-        </tr>
-      </thead>
-      <tbody>
-        {actorRows.length === 0 && !loading
-          ? <EmptyRow cols={5} />
-          : actorRows.map((row) => {
-              const badge = ENTITY_BADGE[row.entity_type] ?? { label: row.entity_type, className: "bg-gray-100 text-gray-600" };
-              const roleChips = (row.roles ?? []).map((r) => ROLE_LABEL[r] ?? r);
-              return (
-                <tr key={`actor-${row.id}`} className="border-t border-gray-100 hover:bg-gray-50 group">
-                  <td className="px-4 py-2.5 font-medium text-gray-900">{row.name}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={`inline-block text-xs px-2.5 py-0.5 rounded-full font-medium ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    {roleChips.length > 0 ? (
-                      <div className="flex flex-wrap gap-1">
-                        {roleChips.map((chip) => (
-                          <span key={chip} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                            {chip}
-                          </span>
-                        ))}
-                      </div>
-                    ) : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-4 py-2.5 text-gray-500 tabular-nums">
-                    {row.tax || <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-4 py-2.5"><ActionButtons row={row} /></td>
-                </tr>
-              );
-            })
+  // Actores: nombres agrupados por rol (Cliente, Inversor, etc.)
+  const actorNameGroups = useMemo((): FilterOptionGroup[] => {
+    const ROLE_ORDER = ["customer", "manager", "investor", "contractor", "provider", "biller", "lessee"];
+    const grouped: Record<string, Set<string>> = {};
+    for (const r of processedRows) {
+      if (r.entity_type !== "actor") continue;
+      const roles = r.roles ?? [];
+      if (roles.length === 0) {
+        if (!grouped["_none"]) grouped["_none"] = new Set();
+        grouped["_none"].add(r.name);
+      } else {
+        for (const role of roles) {
+          if (!grouped[role]) grouped[role] = new Set();
+          grouped[role].add(r.name);
         }
-      </tbody>
-    </table>
-  );
+      }
+    }
+    const ordered = ROLE_ORDER.filter((r) => grouped[r]?.size);
+    if (grouped["_none"]?.size) ordered.push("_none");
+    return ordered.map((role) => ({
+      label: role === "_none" ? "Sin rol" : (ROLE_LABEL[role] ?? role),
+      options: [...grouped[role]].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" })),
+    }));
+  }, [processedRows]);
 
-  // Tabla de catálogo (solo Nombre + Tipo, más compacta)
-  // Nombre ocupa ~60% → Tipo queda centrado; acciones al extremo derecho con filler en medio
-  const CatalogTable = () => (
-    <table className="w-full text-sm table-fixed">
-      <colgroup>
-        <col style={{ width: "60%" }} />
-        <col style={{ width: "20%" }} />
-        <col />
-        <col style={{ width: "72px" }} />
-      </colgroup>
-      <thead className="bg-gray-50 text-gray-500 text-left">
-        <tr>
-          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Nombre</th>
-          <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Tipo</th>
-          <th />
-          <th />
-        </tr>
-      </thead>
-      <tbody>
-        {catalogRows.length === 0 && !loading
-          ? <EmptyRow cols={4} />
-          : catalogRows.map((row) => {
-              const badge = ENTITY_BADGE[row.entity_type] ?? { label: row.entity_type, className: "bg-gray-100 text-gray-600" };
-              return (
-                <tr key={`catalog-${row.entity_type}-${row.id}`} className="border-t border-gray-100 hover:bg-gray-50 group">
-                  <td className="px-4 py-2.5 font-medium text-gray-900 truncate">{row.name}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={`inline-block text-xs px-2.5 py-0.5 rounded-full font-medium ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                  </td>
-                  <td />
-                  <td className="px-4 py-2.5"><ActionButtons row={row} /></td>
-                </tr>
-              );
-            })
-        }
-      </tbody>
-    </table>
-  );
+  // ─── Columnas DataTable ────────────────────────────────────────────────────
+
+  const actorColumns: DataTableColumn<ProcessedRow>[] = useMemo(() => [
+    {
+      key: "name",
+      header: "Nombre",
+      sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptionGroups: actorNameGroups,
+    },
+    {
+      key: "type_display",
+      header: "Tipo",
+      sortable: true,
+      filterable: false,
+      render: (_val, row) => {
+        const badge = ENTITY_BADGE[row.entity_type] ?? { label: row.entity_type, className: "bg-gray-100 text-gray-600" };
+        return (
+          <span className={`inline-block text-xs px-2.5 py-0.5 rounded-full font-medium ${badge.className}`}>
+            {badge.label}
+          </span>
+        );
+      },
+    },
+    {
+      key: "roles_display",
+      header: "Roles",
+      sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptions: roleFilterOptions,
+      render: (_val, row) => {
+        const chips = (row.roles ?? []).map((r) => ROLE_LABEL[r] ?? r);
+        return chips.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {chips.map((chip) => (
+              <span key={chip} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                {chip}
+              </span>
+            ))}
+          </div>
+        ) : <span className="text-gray-300">—</span>;
+      },
+    },
+    {
+      key: "tax",
+      header: "CUIT / DNI",
+      sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptions: getFilterOptionsForColumn("tax"),
+      render: (val) => val ? <span className="tabular-nums text-gray-500">{String(val)}</span> : <span className="text-gray-300">—</span>,
+    },
+  ], [actorNameGroups, getFilterOptionsForColumn, roleFilterOptions]);
+
+  const catalogColumns: DataTableColumn<ProcessedRow>[] = useMemo(() => [
+    {
+  key: "name",
+  header: "Nombre",
+  sortable: true,
+  filterable: true,
+  filterType: "select",
+  filterOptionGroups: catalogNameGroups,
+
+},
+    {
+      key: "type_display",
+      header: "Tipo",
+      sortable: true,
+      filterable: true,
+      filterType: "select",
+      filterOptions: getFilterOptionsForColumn("type_display"),
+      render: (_val, row) => {
+        const badge = ENTITY_BADGE[row.entity_type] ?? { label: row.entity_type, className: "bg-gray-100 text-gray-600" };
+        return (
+          <span className={`inline-block text-xs px-2.5 py-0.5 rounded-full font-medium ${badge.className}`}>
+            {badge.label}
+          </span>
+        );
+      },
+    },
+  ], [catalogNameGroups, getFilterOptionsForColumn]);
+
+  // En modo archivado: tabla unificada con columnas de actor
+  const activeColumns = isArchived ? actorColumns : entityTab === "actors" ? actorColumns : catalogColumns;
 
   // ─── JSX ─────────────────────────────────────────────────────────────────────
 
@@ -563,15 +457,26 @@ export default function RegistryAdmin() {
         onSaved={load}
       />
 
-      {/* Confirm archive/restore dialog — mismo estilo que el resto de la app */}
+      {/* Confirm archive/restore dialog */}
       <BaseModal
         isOpen={!!confirmArchive}
         onClose={() => setConfirmArchive(null)}
-        title={confirmArchive?.row.archived ? "Restaurar entidad" : "Confirmar archivado"}
+        isSaving={!confirmArchive?.row.archived && confirmArchive?.usageCount === undefined}
+        title={
+          confirmArchive?.row.archived
+            ? "Restaurar entidad"
+            : (confirmArchive?.usageCount ?? 0) > 0
+            ? "Elemento en uso"
+            : "Confirmar archivado"
+        }
         message={
           confirmArchive?.row.archived
             ? `¿Restaurar "${confirmArchive.row.name}"?`
-            : `¿Archivar "${confirmArchive?.row.name}"?`
+            : confirmArchive?.usageCount === undefined
+            ? "Verificando usos…"
+            : confirmArchive.usageCount > 0
+            ? `"${confirmArchive.row.name}" está en uso en ${confirmArchive.usageCount} proyecto${confirmArchive.usageCount !== 1 ? "s" : ""}. Si lo archivás, esos proyectos perderán esa referencia. ¿Archivar de todas formas?`
+            : `¿Archivar "${confirmArchive.row.name}"?`
         }
         primaryButtonText={confirmArchive?.row.archived ? "Sí, restaurar" : "Sí, archivar"}
         secondaryButtonText="Cancelar"
@@ -583,12 +488,7 @@ export default function RegistryAdmin() {
         onPrimaryAction={() => confirmArchive && void handleArchiveConfirm(confirmArchive.row)}
         onSecondaryAction={() => setConfirmArchive(null)}
       />
-
-      <p className="text-sm text-gray-500 mb-4">
-        Actores, cultivos, tipos y campañas del sistema
-      </p>
-
-      {/* Filtros */}
+      {/* Toolbar */}
       <div className="flex items-center gap-2 mb-3">
         <div className="relative flex-1">
           <SearchIcon size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -600,8 +500,6 @@ export default function RegistryAdmin() {
             className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
           />
         </div>
-
-        <TypeFilterDropdown selected={selectedTypes} onChange={onTypes} />
 
         <div className="relative" ref={newMenuRef}>
           <button
@@ -633,44 +531,33 @@ export default function RegistryAdmin() {
         </div>
       </div>
 
-      {/* Fila de tabs: Catálogo|Actores (izquierda) + Archivados (derecha) */}
+      {/* Tabs */}
       <div className="flex items-end justify-between border-b border-gray-200">
-        {/* LEFT: tabs de entidad — siempre visibles (salvo filtro mixto) */}
         <div className="flex">
-          {!isMixedFilter ? (
-            (["catalog", "actors"] as const).map((tab) => {
-              const count = tab === "catalog" ? activeCatalogCount : activeActorCount;
-              const isActive = entityTab === tab && status === "active";
-              return (
-                <button
-                  key={tab}
-                  onClick={() => {
-                    setEntityTab(tab);
-                    if (status === "archived") onStatus("active");
-                  }}
-                  className={`text-sm px-4 py-2 border-b-2 transition-colors ${
-                    isActive
-                      ? "border-primary-700 text-primary-700 font-medium"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {tab === "catalog" ? "Catálogo" : "Actores"}
-                  <span className={`ml-2 text-xs rounded-full px-2 py-0.5 ${
-                    isActive ? "bg-primary-100 text-primary-700" : "bg-gray-100 text-gray-500"
-                  }`}>
-                    {loading ? "…" : count}
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <span className="text-sm px-4 py-2 text-gray-500">
-              {filteredRows.length} resultado{filteredRows.length !== 1 ? "s" : ""}
-            </span>
-          )}
+          {(["catalog", "actors"] as const).map((tab) => {
+            const count = tab === "catalog" ? activeCatalogCount : activeActorCount;
+            const isActive = entityTab === tab && status === "active";
+            return (
+              <button
+                key={tab}
+                onClick={() => onEntityTab(tab)}
+                className={`text-sm px-4 py-2 border-b-2 transition-colors ${
+                  isActive
+                    ? "border-primary-700 text-primary-700 font-medium"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                {tab === "catalog" ? "Catálogo" : "Actores"}
+                <span className={`ml-2 text-xs rounded-full px-2 py-0.5 ${
+                  isActive ? "bg-primary-100 text-primary-700" : "bg-gray-100 text-gray-500"
+                }`}>
+                  {loading ? "…" : count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* RIGHT: Archivados toggle */}
         <button
           onClick={() => onStatus(status === "archived" ? "active" : "archived")}
           className={`text-sm px-4 py-2 border-b-2 transition-colors ${
@@ -689,109 +576,36 @@ export default function RegistryAdmin() {
       </div>
 
       {/* Tabla */}
-      <div className={`border border-t-0 rounded-b-lg overflow-hidden bg-white transition-opacity duration-200 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
-        {activeRows.length === 0 && !loading ? (
-          <div className="py-10 text-center text-gray-400 text-sm">
-            No hay resultados para los filtros seleccionados.
-          </div>
-        ) : showUnifiedTable || entityTab === "actors" ? (
-          // Tabla con columnas de actor (Roles + CUIT)
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-gray-500 text-left">
-              <tr>
-                <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Nombre</th>
-                <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Tipo</th>
-                <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Roles</th>
-                <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">CUIT / DNI</th>
-                <th className="px-4 py-2.5 w-20" />
-              </tr>
-            </thead>
-            <tbody>
-              {activeRows.map((row) => {
-                const badge = ENTITY_BADGE[row.entity_type] ?? { label: row.entity_type, className: "bg-gray-100 text-gray-600" };
-                const roleChips = row.entity_type === "actor" ? (row.roles ?? []).map((r) => ROLE_LABEL[r] ?? r) : [];
-                return (
-                  <tr key={`${row.entity_type}-${row.id}`} className="border-t border-gray-100 hover:bg-gray-50 group">
-                    <td className="px-4 py-2.5 font-medium text-gray-900">{row.name}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`inline-block text-xs px-2.5 py-0.5 rounded-full font-medium ${badge.className}`}>
-                        {badge.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {roleChips.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {roleChips.map((chip) => (
-                            <span key={chip} className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                              {chip}
-                            </span>
-                          ))}
-                        </div>
-                      ) : <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-gray-500 tabular-nums">
-                      {row.tax || <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <ActionButtons row={row} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        ) : (
-          // Tabla catálogo (solo Nombre + Tipo)
-          <table className="w-full text-sm table-fixed">
-            <colgroup>
-              <col style={{ width: "60%" }} />
-              <col style={{ width: "20%" }} />
-              <col />
-              <col style={{ width: "72px" }} />
-            </colgroup>
-            <thead className="bg-gray-50 text-gray-500 text-left">
-              <tr>
-                <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Nombre</th>
-                <th className="px-4 py-2.5 text-xs font-semibold uppercase tracking-wide">Tipo</th>
-                <th />
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {activeRows.map((row) => {
-                const badge = ENTITY_BADGE[row.entity_type] ?? { label: row.entity_type, className: "bg-gray-100 text-gray-600" };
-                return (
-                  <tr key={`${row.entity_type}-${row.id}`} className="border-t border-gray-100 hover:bg-gray-50 group">
-                    <td className="px-4 py-2.5 font-medium text-gray-900 truncate">{row.name}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`inline-block text-xs px-2.5 py-0.5 rounded-full font-medium ${badge.className}`}>
-                        {badge.label}
-                      </span>
-                    </td>
-                    <td />
-                    <td className="px-4 py-2.5">
-                      <ActionButtons row={row} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+      <div className={`transition-opacity duration-200 ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}>
+        <DataTable<ProcessedRow>
+          data={displayRows}
+          columns={activeColumns}
+          filters={colFilters}
+          onFilterChange={handleFilterChange}
+          enableFilters={true}
+          renderActions={(row) => (
+            <div className="flex items-center gap-1 justify-end">
+              <UsagesPopover entityType={row.entity_type} id={row.id} name={row.name} roles={row.roles ?? []} />
+              <button
+                onClick={() => openEdit(row)}
+                title="Editar"
+                className="p-1.5 rounded-md text-gray-500 hover:text-primary-700 hover:bg-primary-50 transition-colors"
+              >
+                <Pencil size={16} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); void handleArchiveClick(row); }}
+                title={row.archived ? "Restaurar" : "Archivar"}
+                className="p-1.5 rounded-md text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+              >
+                {row.archived ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+              </button>
+            </div>
+          )}
+          message={loading ? "Cargando…" : "No hay resultados para los filtros seleccionados."}
+          pagination={pagination.buildPagination(displayRows.length)}
+        />
       </div>
-
-      {/* Paginado */}
-      {maxPage > 1 && (
-        <div className="flex items-center justify-end gap-3 mt-3 text-sm text-gray-600">
-          <span className="text-gray-400">Página {page} de {maxPage}</span>
-          <Button variant="secondary" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1}>
-            Anterior
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setPage((p) => Math.min(maxPage, p + 1))} disabled={page >= maxPage}>
-            Siguiente
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

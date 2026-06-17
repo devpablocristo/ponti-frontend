@@ -1,5 +1,9 @@
 # CLAUDE.md — ponti-frontend
 
+## Idioma
+
+- Toda la comunicación e interacción debe ser siempre en español, incluyendo las preguntas que me hagas.
+
 ## Recordatorio al inicio de cada sesión
 
 > **Specs:** antes de implementar algo no trivial, verificá si existe un spec en

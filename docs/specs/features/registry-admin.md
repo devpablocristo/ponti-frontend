@@ -70,9 +70,10 @@ export function invalidateCatalogCache(...prefixes: string[]): void
 
 | `entity_type` | Lógica |
 |---|---|
-| `campaigns` | Busca proyectos con `campaign_id=<id>`. |
+| `campaigns` | Busca proyectos con `campaign_id=<id>` (en el BFF). |
 | `actor` | Para rol `customer`: busca customer por nombre → proyectos por `customer_id`. Para `investor`/`manager`: fetch `/projects?per_page=200` y filtra por nombre en los arrays. Otros roles (`contractor`, `provider`, `biller`, `lessee`): devuelve `unsupported_roles`. |
-| `crops`, `types`, `lease-types` | Devuelve `not_supported: true` (requieren soporte BE). |
+| `crops`, `types`, `lease-types` | Proxy al backend Go (`/registry/usages`), que devuelve los proyectos que usan esa entidad de catálogo. |
+| `lot`, `field`, `project` | Proxy al backend Go. Para estos, "usos" = proyecto(s) en cuya jerarquía vive la entidad (Go resuelve el join `projects → fields → lots`). `lot` y `field` devuelven 1 proyecto; `project`, el proyecto mismo. Si el id no matchea → `items: [], total: 0`. |
 
 **Respuesta:**
 ```json
@@ -142,7 +143,8 @@ export function invalidateCatalogCache(...prefixes: string[]): void
 ## Lo que queda pendiente
 
 - [ ] **Roles contractor/provider/biller/lessee en usages**: `GET /registry/usages?entity_type=actor` devuelve `unsupported_roles` para estos; requiere que el BE exponga filtrado por work-orders.
-- [ ] **Cultivos y tipos de arriendo en usages**: `not_supported: true`; no hay endpoint en el BE que filtre proyectos por cultivo/tipo. A coordinar con el equipo BE.
+- [x] **Cultivos, tipos y tipos de arriendo en usages**: resuelto — el BFF proxea `crops`/`types`/`lease-types` a `/registry/usages` del backend Go.
+- [x] **Lotes, campos y proyectos en usages**: resuelto — el BFF proxea `lot`/`field`/`project` al backend Go (Go agregó esos casos al switch de `GetUsages` con join `projects → fields → lots`). Para estos, "usos" = proyecto(s) en cuya jerarquía vive la entidad.
 - [ ] **Merge de actores desde la UI del registry**: la API de merge ya existe en `actors.ts` BFF, pero no hay flujo UI de deduplicación en el registry. El flujo completo de merge vive en `feature-007` (`/admin/master-data/actors/duplicates`).
 - [ ] **Tests**: no hay tests unitarios ni de integración para `UsagesPopover`, `TypeFilterDropdown`, ni el nuevo endpoint `/registry/usages`.
 - [ ] **Validación manual end-to-end**: verificar que la invalidación de cache funcione correctamente en todos los escenarios de mutación.

@@ -29,7 +29,10 @@ function fail(res: Response, error: unknown) {
   });
 }
 
-export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}): Router {
+export function catalogRouter(
+  corePath: string,
+  opts: { archive?: boolean; nameUpdatePath?: string } = {},
+): Router {
   const r = Router();
 
   r.get("", async (req: Request, res: Response) => {
@@ -105,7 +108,17 @@ export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}
       return;
     }
     try {
-      await apiClient.put<unknown>(`${corePath}/${req.params.id}`, req.body, headers);
+      // Para entidades estructurales (ej. proyecto), el core no acepta PUT completo
+      // con solo {name}; se usa un endpoint dedicado de actualización de nombre.
+      if (opts.nameUpdatePath) {
+        await apiClient.patch<unknown>(
+          `${corePath}/${req.params.id}${opts.nameUpdatePath}`,
+          { name: req.body?.name },
+          headers,
+        );
+      } else {
+        await apiClient.put<unknown>(`${corePath}/${req.params.id}`, req.body, headers);
+      }
       setImmediate(() => flushEntitySelectorCaches(cache));
       res.status(200).json({ success: true });
     } catch (error) {

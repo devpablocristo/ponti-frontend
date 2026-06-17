@@ -48,8 +48,10 @@ router.get("", async (req: Request, res: Response) => {
 
 // GET /registry/usages?entity_type=&id=&name=&roles=
 // Devuelve los proyectos activos donde se usa la entidad dada.
-// Soporta: actor (roles: customer|investor|manager), campaigns.
-// Cultivos y tipos de arriendo requieren soporte del backend Go.
+// Soporta: actor (roles: customer|investor|manager|lessee), campaigns (en este BFF);
+// crops|types|lease-types|lot|field|project se proxean al backend Go.
+// Los roles contractor/provider/biller no tienen soporte (no hay relación con proyectos
+// todavía) y simplemente no aportan resultados.
 router.get("/usages", async (req: Request, res: Response) => {
   const headers = authHeaders(req);
   if (!headers) {
@@ -131,25 +133,53 @@ router.get("/usages", async (req: Request, res: Response) => {
       } catch { /* ignorar */ }
     }
 
-    // Roles contractor/provider/biller/lessee — requieren work-orders, aún no implementado
-    const unsupported = roles.filter((r) => !["customer", "investor", "manager"].includes(r));
+    // Rol arrendatario: campos donde el actor está en field_lessees (resuelto en el backend Go)
+    if (roles.includes("lessee")) {
+      try {
+        const idNum = parseInt(String(req.query.id ?? ""), 10);
+        if (idNum) {
+          const { data } = await apiClient.get<any>(`/registry/usages?entity_type=actor&id=${idNum}`, headers);
+          (data?.items ?? []).forEach(addProject);
+        }
+      } catch { /* ignorar */ }
+    }
+
+    // Roles contractor/provider/biller — requieren work-orders, aún no implementado.
+    // No se reporta como "no soportado": simplemente no hay resultados.
 
     res.status(200).json({
       success: true,
-      data: {
-        items: found,
-        total: found.length,
-        unsupported_roles: unsupported,
-      },
+      data: { items: found, total: found.length },
     });
     return;
   }
 
-  // ── Tipos no soportados (crops, types, lease-types) ───────────────────────
-  res.status(200).json({
-    success: true,
-    data: { items: [], total: 0, not_supported: true },
-  });
+  // ── Cultivos / Tipos / Tipos de arriendo / Lote / Campo / Proyecto → Go ──
+  // Para lot/field/project "usos" = proyecto(s) en cuya jerarquía vive la entidad.
+  if (
+    entityType === "crops" ||
+    entityType === "types" ||
+    entityType === "lease-types" ||
+    entityType === "lot" ||
+    entityType === "field" ||
+    entityType === "project"
+  ) {
+    const id = parseInt(String(req.query.id ?? ""), 10);
+    if (!id) {
+      res.status(400).json({ success: false, message: "id requerido" });
+      return;
+    }
+    try {
+      const { data } = await apiClient.get<unknown>(
+        `/registry/usages?entity_type=${entityType}&id=${id}`,
+        headers
+      );
+      res.status(200).json({ success: true, data });
+    } catch (error) { fail(res, error); }
+    return;
+  }
+
+  res.status(400).json({ success: false, message: "entity_type no soportado" });
 });
 
 // PUT /registry/actors/:id/aliases  { aliases: [] }

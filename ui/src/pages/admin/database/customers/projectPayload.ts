@@ -76,7 +76,7 @@ export const mapProjectFieldsPayload = (
       lease_type_id: Number(field.leaseType),
       lease_type_percent: percent.value,
       lease_type_value: value.value,
-      investors: Array.isArray(field.investors) ? field.investors : [],
+      lessees: Array.isArray(field.lessees) ? field.lessees : [],
       lots: Array.isArray(field.plots)
         ? field.plots.map((plot) => mapPlot(plot, editing))
         : [],
@@ -96,7 +96,7 @@ export const parseProjectFieldErrorMessage = (message: string): string | null =>
   const fieldKey = match[2];
 
   const labels: Record<string, string> = {
-    investors: "inversores",
+    lessees: "arrendatarios",
     lots: "lotes",
     lease_type_percent: "porcentaje de arriendo",
     lease_type_value: "valor de arriendo",

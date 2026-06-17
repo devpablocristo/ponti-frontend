@@ -7,6 +7,36 @@ import {
   flushEntitySelectorCaches,
 } from "../utils/entitySelectors";
 
+// Mapa: rol de actor → path del endpoint de dominio en el core.
+// Cuando se crea/actualiza un actor con estos roles, el BFF provisiona
+// el registro de dominio (customer/investor/manager) en la misma operación.
+// Con IDENTITY_GATE=true el backend resuelve la identidad por nombre y vincula
+// el actor_id automáticamente. Si el registro ya existe devuelve 409 → ignorado (idempotente).
+const DOMAIN_PATH: Record<string, string> = {
+  customer: "/customers",
+  investor: "/investors",
+  manager:  "/managers",
+};
+
+async function provisionDomainRecords(
+  headers: Record<string, string>,
+  name: string,
+  taxId: string | null | undefined,
+  roles: string[],
+): Promise<void> {
+  for (const role of roles) {
+    const path = DOMAIN_PATH[role];
+    if (!path) continue;
+    const body: Record<string, string> = { name };
+    if (taxId) body.tax_id = taxId;
+    try {
+      await apiClient.post(path, body, headers);
+    } catch {
+      // 409 = ya existe (idempotente). Otros errores: best-effort, no bloquear.
+    }
+  }
+}
+
 // Proxy del BFF a los endpoints del Identity Gate (core /actors/*): búsqueda
 // search-first, lookup por CUIT y resolve-or-create. Reenvía X-API-KEY + X-User-Id
 // como el resto de las rutas.
@@ -112,8 +142,20 @@ router.post("", async (req: Request, res: Response) => {
     return;
   }
   try {
-    const { data } = await apiClient.post<unknown>("/actors", req.body, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
+    const { data } = await apiClient.post<any>("/actors", req.body, headers);
+    // Provisionar registros de dominio para roles customer/investor/manager.
+    const roles: string[] = Array.isArray(req.body.roles)
+      ? req.body.roles
+      : req.body.role ? [req.body.role] : [];
+    const actorName: string = (data as any)?.actor?.display_name ?? req.body.name ?? "";
+    const taxId: string | undefined = req.body.tax_id;
+    setImmediate(async () => {
+      flushEntitySelectorCaches(cache);
+      if (actorName && roles.length) {
+        await provisionDomainRecords(headers, actorName, taxId, roles);
+        flushEntitySelectorCaches(cache);
+      }
+    });
     res.status(200).json({ success: true, data });
   } catch (error) {
     fail(res, error);
@@ -175,7 +217,22 @@ router.put("/:id/roles", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.put<unknown>(`/actors/${req.params.id}/roles`, req.body, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
+    const roles: string[] = Array.isArray(req.body.roles) ? req.body.roles : [];
+    setImmediate(async () => {
+      flushEntitySelectorCaches(cache);
+      if (roles.length) {
+        try {
+          const { data: actor } = await apiClient.get<any>(`/actors/${req.params.id}`, headers);
+          const name: string = actor?.display_name ?? "";
+          const taxKey = (actor?.keys ?? []).find((k: any) => k.type === "TAX_ID");
+          const taxId: string | undefined = taxKey?.value;
+          if (name) {
+            await provisionDomainRecords(headers, name, taxId, roles);
+            flushEntitySelectorCaches(cache);
+          }
+        } catch { /* best-effort */ }
+      }
+    });
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
