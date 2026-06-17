@@ -57,7 +57,8 @@ export function catalogRouter(
       return;
     }
     try {
-      const { data } = await apiClient.post<unknown>(corePath, req.body, headers);      res.status(201).json({ success: true, data });
+      const { data } = await apiClient.post<unknown>(corePath, req.body, headers);
+      res.status(201).json({ success: true, data });
     } catch (error) {
       fail(res, error);
     }
@@ -71,7 +72,8 @@ export function catalogRouter(
         return;
       }
       try {
-        await apiClient.post<unknown>(`${corePath}/${req.params.id}/archive`, {}, headers);        res.status(200).json({ success: true });
+        await apiClient.post<unknown>(`${corePath}/${req.params.id}/archive`, {}, headers);
+        res.status(200).json({ success: true });
       } catch (error) {
         fail(res, error);
       }
@@ -84,7 +86,8 @@ export function catalogRouter(
         return;
       }
       try {
-        await apiClient.post<unknown>(`${corePath}/${req.params.id}/restore`, {}, headers);        res.status(200).json({ success: true });
+        await apiClient.post<unknown>(`${corePath}/${req.params.id}/restore`, {}, headers);
+        res.status(200).json({ success: true });
       } catch (error) {
         fail(res, error);
       }
@@ -108,7 +111,8 @@ export function catalogRouter(
         );
       } else {
         await apiClient.put<unknown>(`${corePath}/${req.params.id}`, req.body, headers);
-      }      res.status(200).json({ success: true });
+      }
+      res.status(200).json({ success: true });
     } catch (error) {
       fail(res, error);
     }
@@ -121,7 +125,8 @@ export function catalogRouter(
       return;
     }
     try {
-      await apiClient.delete<unknown>(`${corePath}/${req.params.id}`, headers);      res.status(200).json({ success: true });
+      await apiClient.delete<unknown>(`${corePath}/${req.params.id}`, headers);
+      res.status(200).json({ success: true });
     } catch (error) {
       fail(res, error);
     }
