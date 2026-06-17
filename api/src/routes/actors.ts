@@ -1,11 +1,7 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from "../lib/cache";
-import {
-  buildCoreAuthHeaders,
-  flushEntitySelectorCaches,
-} from "../utils/entitySelectors";
+import { buildCoreAuthHeaders } from "../utils/entitySelectors";
 
 // Mapa: rol de actor → path del endpoint de dominio en el core.
 // Cuando se crea/actualiza un actor con estos roles, el BFF provisiona
@@ -31,8 +27,17 @@ async function provisionDomainRecords(
     if (taxId) body.tax_id = taxId;
     try {
       await apiClient.post(path, body, headers);
-    } catch {
-      // 409 = ya existe (idempotente). Otros errores: best-effort, no bloquear.
+    } catch (error) {
+      // 409 = ya existe (idempotente, esperado). Otros errores son fallos reales
+      // de provisión: best-effort (no bloquean la respuesta) pero se loguean para
+      // no quedar invisibles, ya que el cliente ya recibió 200.
+      const status = (error as ApiResponse<null>)?.error?.status;
+      if (status !== 409) {
+        console.error(
+          `provisionDomainRecords: fallo al provisionar ${role} (${path}) status=${status ?? "?"}`,
+          error,
+        );
+      }
     }
   }
 }
@@ -149,13 +154,11 @@ router.post("", async (req: Request, res: Response) => {
       : req.body.role ? [req.body.role] : [];
     const actorName: string = (data as any)?.actor?.display_name ?? req.body.name ?? "";
     const taxId: string | undefined = req.body.tax_id;
-    setImmediate(async () => {
-      flushEntitySelectorCaches(cache);
-      if (actorName && roles.length) {
-        await provisionDomainRecords(headers, actorName, taxId, roles);
-        flushEntitySelectorCaches(cache);
-      }
-    });
+    if (actorName && roles.length) {
+      setImmediate(() => {
+        void provisionDomainRecords(headers, actorName, taxId, roles);
+      });
+    }
     res.status(200).json({ success: true, data });
   } catch (error) {
     fail(res, error);
@@ -171,7 +174,6 @@ router.post("/:id/archive", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.post<unknown>(`/actors/${req.params.id}/archive`, {}, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -186,7 +188,6 @@ router.post("/:id/restore", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.post<unknown>(`/actors/${req.params.id}/restore`, {}, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -218,9 +219,8 @@ router.put("/:id/roles", async (req: Request, res: Response) => {
   try {
     await apiClient.put<unknown>(`/actors/${req.params.id}/roles`, req.body, headers);
     const roles: string[] = Array.isArray(req.body.roles) ? req.body.roles : [];
-    setImmediate(async () => {
-      flushEntitySelectorCaches(cache);
-      if (roles.length) {
+    if (roles.length) {
+      setImmediate(async () => {
         try {
           const { data: actor } = await apiClient.get<any>(`/actors/${req.params.id}`, headers);
           const name: string = actor?.display_name ?? "";
@@ -228,11 +228,10 @@ router.put("/:id/roles", async (req: Request, res: Response) => {
           const taxId: string | undefined = taxKey?.value;
           if (name) {
             await provisionDomainRecords(headers, name, taxId, roles);
-            flushEntitySelectorCaches(cache);
           }
         } catch { /* best-effort */ }
-      }
-    });
+      });
+    }
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -247,7 +246,6 @@ router.put("/:id/tax-id", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.put<unknown>(`/actors/${req.params.id}/tax-id`, req.body, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -262,7 +260,6 @@ router.put("/:id", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.put<unknown>(`/actors/${req.params.id}`, req.body, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);
@@ -277,7 +274,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.delete<unknown>(`/actors/${req.params.id}`, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);

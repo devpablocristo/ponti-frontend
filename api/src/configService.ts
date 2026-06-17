@@ -46,6 +46,3 @@ export const DEFAULT_SMALL_PER_PAGE = 100;
 // Timeouts
 export const API_TIMEOUT = 30000;
 export const LONG_API_TIMEOUT = 60000;
-
-// TTL de la caché en memoria usada por las features dedup (catálogo/actores).
-export const CACHE_TTL_DEFAULT = 1800; // 30 minutos
