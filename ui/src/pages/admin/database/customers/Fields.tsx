@@ -307,8 +307,9 @@ export default function Fields({
         percentage: investment || 0,
       };
 
+      // Dedup por id (clave estable): reemplaza el lessee existente si ya estaba.
       const updatedLessees = [
-        ...currentLessees.filter((l) => l.id !== newLessee.id && l.name !== newLessee.name),
+        ...currentLessees.filter((l) => l.id !== newLessee.id),
         newLessee,
       ];
 

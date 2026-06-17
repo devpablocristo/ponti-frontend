@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
-import { searchRegistry } from "../../../../api/registry";
+import { searchRegistry, invalidateRegistryOptions } from "../../../../api/registry";
 
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
@@ -119,9 +119,22 @@ export default function Customers() {
   }, [getOptions]);
 
   useEffect(() => {
-    searchRegistry({ type: "lessee", perPage: 1000 }).then((result) => {
-      setLesseeList(result.data.map((row) => ({ id: row.id, name: row.name, percentage: 0 })));
-    });
+    // Al entrar al form refrescamos la caché de opciones del registry (project/field/lot)
+    // para no servir nombres viejos; dentro de la sesión del form los N selects la comparten.
+    invalidateRegistryOptions();
+    let active = true;
+    searchRegistry({ type: "lessee", perPage: 1000 })
+      .then((result) => {
+        if (active) {
+          setLesseeList(result.data.map((row) => ({ id: row.id, name: row.name, percentage: 0 })));
+        }
+      })
+      .catch(() => {
+        if (active) setLesseeList([]);
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {

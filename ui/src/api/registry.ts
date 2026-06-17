@@ -64,6 +64,28 @@ export async function searchRegistryAll(params: {
   return all;
 }
 
+// Caché a nivel módulo de las listas de opciones del registry por `base` (status active).
+// Evita que cada CatalogNameSelect dispare su propio barrido full-paginado: N instancias de
+// la misma base comparten UNA sola request en vuelo. Ante fallo se descarta para permitir
+// reintento. invalidateRegistryOptions() la limpia tras create/archive para ver lo nuevo.
+const registryOptionsCache = new Map<string, Promise<RegistryRow[]>>();
+
+export function loadRegistryOptions(base: string): Promise<RegistryRow[]> {
+  const cached = registryOptionsCache.get(base);
+  if (cached) return cached;
+  const p = searchRegistryAll({ type: base, status: "active" }).catch((err) => {
+    registryOptionsCache.delete(base);
+    throw err;
+  });
+  registryOptionsCache.set(base, p);
+  return p;
+}
+
+export function invalidateRegistryOptions(base?: string): void {
+  if (base) registryOptionsCache.delete(base);
+  else registryOptionsCache.clear();
+}
+
 // getActor: carga un actor completo (keys incl. ALIAS, party_type, roles) para editar.
 export async function getActor(id: number): Promise<Actor> {
   const res = await apiClient.get<SuccessResponse<Actor>>(`/actors/${id}`);

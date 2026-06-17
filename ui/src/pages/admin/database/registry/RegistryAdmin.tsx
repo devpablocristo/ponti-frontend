@@ -74,6 +74,8 @@ export default function RegistryAdmin() {
   const [entityTab, setEntityTab] = useState<"actors" | "catalog">("catalog");
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const newMenuRef = useRef<HTMLDivElement>(null);
+  // Token de secuencia: descarta respuestas viejas que lleguen tarde (q/status cambian rápido).
+  const loadSeq = useRef(0);
 
   const [rows, setRows] = useState<RegistryRow[]>([]);
   const [loadedStatus, setLoadedStatus] = useState<RegistryStatus>("active");
@@ -94,6 +96,7 @@ export default function RegistryAdmin() {
   // ─── Carga de datos ──────────────────────────────────────────────────────────
 
 const load = useCallback(async () => {
+  const myId = ++loadSeq.current;
   setLoading(true);
   try {
     if (status === "active") {
@@ -101,6 +104,7 @@ const load = useCallback(async () => {
         searchRegistryAll({ q: q.trim(), type: "all", status: "active" }),
         searchRegistry({ q: q.trim(), type: "all", status: "archived", page: 1, perPage: 1 }),
       ]);
+      if (loadSeq.current !== myId) return; // respuesta stale: llegó una request más nueva
       setArchivedTotal(archivedRes.page_info?.total ?? 0);
       setActiveActorCount(activeData.filter((r) => r.entity_type === "actor").length);
       setActiveCatalogCount(activeData.filter((r) => r.entity_type !== "actor").length);
@@ -111,6 +115,7 @@ const load = useCallback(async () => {
         searchRegistryAll({ q: q.trim(), type: "all", status: "active" }),
         searchRegistryAll({ q: q.trim(), type: "all", status: "archived" }),
       ]);
+      if (loadSeq.current !== myId) return;
       setArchivedTotal(archivedData.length);
       setActiveActorCount(activeData.filter((r) => r.entity_type === "actor").length);
       setActiveCatalogCount(activeData.filter((r) => r.entity_type !== "actor").length);
@@ -118,10 +123,11 @@ const load = useCallback(async () => {
       setLoadedStatus("archived");
     }
   } catch {
+    if (loadSeq.current !== myId) return;
     toastError("No se pudo cargar el listado");
     setRows([]);
   } finally {
-    setLoading(false);
+    if (loadSeq.current === myId) setLoading(false);
   }
 }, [q, status]);
 

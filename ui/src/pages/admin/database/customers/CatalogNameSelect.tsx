@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { searchRegistryAll } from "@/api/registry";
+import { useRegistryOptions } from "@/hooks/useRegistryOptions";
 
 type Props = {
   base: string; // "project" | "field" | "lot"
@@ -24,23 +24,13 @@ export default function CatalogNameSelect({
   size = "md",
   fullWidth = false,
 }: Props) {
-  const [names, setNames] = useState<string[]>([]);
+  const { options } = useRegistryOptions(base);
+  const names = useMemo(
+    () => options.map((r) => r.name).filter(Boolean),
+    [options]
+  );
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let active = true;
-    searchRegistryAll({ type: base, status: "active" })
-      .then((rows) => {
-        if (active) setNames(rows.map((r) => r.name).filter(Boolean));
-      })
-      .catch(() => {
-        if (active) setNames([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [base]);
 
   useEffect(() => {
     if (!open) return;
