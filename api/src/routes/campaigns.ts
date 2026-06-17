@@ -1,12 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
-import {
-  buildCoreAuthHeaders,
-  buildForwardQuery,
-  scopedCacheKey,
-} from "../utils/entitySelectors";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -20,36 +14,27 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = buildCoreAuthHeaders(req, configService.apiKey);
-    if (!headers) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
 
-    const query = buildForwardQuery(req.query, { limitAsPerPage: true });
-    const cacheKey = scopedCacheKey("campaigns", req, query);
-    const cachedCampaigns = cache.get(cacheKey);
-    if (cachedCampaigns) {
-      res.status(200).json(cachedCampaigns);
-      return;
-    }
+    const customerId = parseInt(req.query.customer_id as string) || 0;
+    const projectName = (req.query.project_name as string) || "";
 
-    const suffix = query ? `?${query}` : "";
-    const { data: campaigns } = await apiClient.get<any>(`/campaigns${suffix}`, headers);
+    const url = `campaigns?customer_id=${customerId}&project_name=${projectName}`;
+
+    const { data: campaigns } = await apiClient.get<any>(url, headers);
     const raw = campaigns;
     const items = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
-    const total =
-      typeof raw?.page_info?.total === "number" ? raw.page_info.total : items.length;
 
     const data = {
       success: true,
       data: {
         data: items,
-        total,
+        total: items.length,
       },
     };
-
-    cache.set(cacheKey, data);
 
     res.status(200).json(data);
   } catch (error: any) {

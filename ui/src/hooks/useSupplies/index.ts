@@ -205,7 +205,7 @@ const useSupplies = () => {
   );
 
   const updateSupply = React.useCallback(
-    async (projectId: number, supply: Supply) => {
+    async (projectId: number, supply: Supply): Promise<boolean> => {
       setProcessing(true);
       setErrorUpdate(null);
       setResultUpdate(null);
@@ -218,14 +218,14 @@ const useSupplies = () => {
 
         if (response.success) {
           setResultUpdate("Se editado el insumo con éxito!");
-          return;
+          return true;
         }
 
         setErrorUpdate("Ocurrio un error en la edicion del insumo");
       } catch (error) {
         if (extractErrorStatus(error) === 404) {
           setErrorUpdate("El insumo no existe.");
-          return;
+          return false;
         }
 
         setErrorUpdate(
@@ -234,12 +234,14 @@ const useSupplies = () => {
       } finally {
         setProcessing(false);
       }
+
+      return false;
     },
     []
   );
 
   const completePendingSupply = React.useCallback(
-    async (projectId: number, supply: Supply) => {
+    async (projectId: number, supply: Supply): Promise<boolean> => {
       setProcessing(true);
       setErrorUpdate(null);
       setResultUpdate(null);
@@ -261,14 +263,14 @@ const useSupplies = () => {
         if (response.success) {
           setResultUpdate("Se completó el insumo pendiente con éxito!");
           notifyWorkspaceDataUpdated();
-          return;
+          return true;
         }
 
         setErrorUpdate("Ocurrio un error al completar el insumo pendiente");
       } catch (error) {
         if (extractErrorStatus(error) === 404) {
           setErrorUpdate("El insumo pendiente no existe.");
-          return;
+          return false;
         }
 
         setErrorUpdate(
@@ -280,6 +282,8 @@ const useSupplies = () => {
       } finally {
         setProcessing(false);
       }
+
+      return false;
     },
     []
   );

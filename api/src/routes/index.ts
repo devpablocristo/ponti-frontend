@@ -29,7 +29,6 @@ import registry from "./registry";
 import { catalogRouter } from "./catalogFactory";
 
 const router: Router = Router();
-export { cache } from "../lib/cache";
 
 router.get("/ping", (req, res) => {
   res.status(200).json({ message: "UI says Pong!" });

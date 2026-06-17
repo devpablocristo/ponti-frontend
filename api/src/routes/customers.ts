@@ -1,13 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
-import {
-  buildCoreAuthHeaders,
-  buildForwardQuery,
-  flushEntitySelectorCaches,
-  scopedCacheKey,
-} from "../utils/entitySelectors";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -21,22 +14,12 @@ router.get("", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = buildCoreAuthHeaders(req, configService.apiKey);
-    if (!headers) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
 
-    const query = buildForwardQuery(req.query, { limitAsPerPage: true });
-    const cacheKey = scopedCacheKey("customers", req, query);
-    const cachedCustomers = cache.get(cacheKey);
-    if (cachedCustomers) {
-      res.status(200).json(cachedCustomers);
-      return;
-    }
-
-    const suffix = query ? `?${query}` : "";
-    const { data: customers } = await apiClient.get<any>(`/customers${suffix}`, headers);
+    const { data: customers } = await apiClient.get<any>("/customers", headers);
 
     if (!Array.isArray(customers?.data)) {
       res.status(502).json({
@@ -58,8 +41,6 @@ router.get("", async (req: Request, res: Response) => {
         total,
       },
     };
-
-    cache.set(cacheKey, data);
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -86,22 +67,13 @@ router.get("/archived", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = buildCoreAuthHeaders(req, configService.apiKey);
-    if (!headers) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-
-    const query = buildForwardQuery(req.query, { limitAsPerPage: true });
-    const cacheKey = scopedCacheKey("customers:archived", req, query);
-    const cachedCustomers = cache.get(cacheKey);
-    if (cachedCustomers) {
-      res.status(200).json(cachedCustomers);
-      return;
-    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
 
     const { data: customers } = await apiClient.get<any>(
-      `/customers/archived${query ? `?${query}` : ""}`,
+      "/customers/archived",
       headers
     );
 
@@ -125,8 +97,6 @@ router.get("/archived", async (req: Request, res: Response) => {
         total,
       },
     };
-
-    cache.set(cacheKey, data);
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -154,15 +124,12 @@ router.put("/:id/archive", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = buildCoreAuthHeaders(req, configService.apiKey);
-    if (!headers) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
 
-    await apiClient.post<any>(`/customers/${id}/archive`, {}, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.post<any>(`/customers/${id}/archive`, {}, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -188,15 +155,12 @@ router.put("/:id/restore", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = buildCoreAuthHeaders(req, configService.apiKey);
-    if (!headers) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
 
-    await apiClient.post<any>(`/customers/${id}/restore`, {}, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.post<any>(`/customers/${id}/restore`, {}, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -222,15 +186,12 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       return;
     }
 
-    const headers = buildCoreAuthHeaders(req, configService.apiKey);
-    if (!headers) {
-      res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
+    const headers = {
+      "X-API-KEY": configService.apiKey,
+      "X-User-Id": userId,
+    };
 
-    await apiClient.delete<any>(`/customers/${id}`, headers);
-    setImmediate(() => flushEntitySelectorCaches(cache));
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.delete<any>(`/customers/${id}`, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 

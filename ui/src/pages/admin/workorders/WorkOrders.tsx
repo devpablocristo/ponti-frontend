@@ -79,6 +79,28 @@ function isPendingSupplyPublishError(message: string) {
   );
 }
 
+function isPendingLaborPublishError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("labor") &&
+    (normalized.includes("pending") || normalized.includes("pendiente"))
+  );
+}
+
+function translatePendingLaborPublishError(message: string) {
+  const englishPrefix = "cannot publish work order draft with pending labor:";
+  const normalized = message.toLowerCase();
+
+  if (normalized.startsWith(englishPrefix)) {
+    const pendingLabor = message.slice(englishPrefix.length).trim();
+    return pendingLabor
+      ? `No se puede publicar la orden porque tiene una labor pendiente de completar: ${pendingLabor}`
+      : "No se puede publicar la orden porque tiene una labor pendiente de completar.";
+  }
+
+  return message;
+}
+
 function translatePendingSupplyPublishError(message: string) {
   const normalized = message.toLowerCase();
   const englishPrefix = "cannot publish work order draft with pending supplies:";
@@ -460,13 +482,14 @@ export function WorkOrders() {
         filterType: "select",
         filterOptions: getFilterOptionsForColumn("labor_category_name"),
         render: (labor) => {
-          const laborName = String(labor);
+          const laborName = String(labor ?? "");
+          const isPending = !laborName || laborName === "null" || laborName === "undefined";
+          const displayName = isPending ? "Pendiente" : laborName;
           return (
             <span
-              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[laborName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"
-                }`}
+              className={`px-2 py-1 text-[14px] rounded-md ${laborColors[displayName] || "bg-[#E5E7EB] text-[#000000] border border-[#000000]"}`}
             >
-              {laborName}
+              {displayName}
             </span>
           );
         },
@@ -685,7 +708,8 @@ export function WorkOrders() {
         error,
         "No se pudo publicar la orden digital."
       );
-      const message = translatePendingSupplyPublishError(rawMessage);
+      const messageAfterSupply = translatePendingSupplyPublishError(rawMessage);
+      const message = translatePendingLaborPublishError(messageAfterSupply);
 
       if (isPendingSupplyPublishError(message)) {
         setErrorMessage(message);
@@ -698,6 +722,23 @@ export function WorkOrders() {
           secondaryButtonText: "Cerrar",
           onConfirm: () => {
             navigate("/admin/database/items/list");
+          },
+        });
+        setIsModalOpen(true);
+        return;
+      }
+
+      if (isPendingLaborPublishError(message)) {
+        setErrorMessage(message);
+        setModalConfig({
+          title: "Labor pendiente",
+          message:
+            `${message}\n\n` +
+            "Dirigirse a Base de Datos > Labores para completar la información faltante.",
+          primaryButtonText: "Ir a Labores",
+          secondaryButtonText: "Cerrar",
+          onConfirm: () => {
+            navigate("/admin/database/tasks/list");
           },
         });
         setIsModalOpen(true);
@@ -740,7 +781,7 @@ export function WorkOrders() {
       title: "Confirmar publicación",
       message:
         `¿Está seguro que desea publicar la orden ${order.number}?\n\n` +
-        "Si la orden contiene insumos pendientes de completar, la publicación será bloqueada.",
+        "Si la orden contiene insumos o labores pendientes de completar, la publicación será bloqueada.",
       primaryButtonText: "Sí, publicar",
       secondaryButtonText: "Cancelar",
       onConfirm: () => {
@@ -987,12 +1028,16 @@ export function WorkOrders() {
     const toNum = (v: unknown) => Number(v) || 0;
     let surface_ha = 0, liters = 0, kilograms = 0, direct_cost = 0;
     const orderBaseNumbers = new Set<string>();
+    const surfaceOrderIds = new Set<number>();
 
     filteredOrders.forEach((order) => {
       const baseNumber = getOrderBaseNumber(order.number);
       if (baseNumber) orderBaseNumbers.add(baseNumber);
 
-      surface_ha += toNum(order.surface_ha);
+      if (!surfaceOrderIds.has(order.id)) {
+        surfaceOrderIds.add(order.id);
+        surface_ha += toNum(order.surface_ha);
+      }
 
       const consumption = String(order.consumption || "").trim();
       const match = consumption.match(/[\d.]+/);

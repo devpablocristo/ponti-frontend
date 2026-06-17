@@ -2,7 +2,6 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { parsePartialPriceFlag } from "../utils/partialPrice";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -29,14 +28,6 @@ router.get("", async (req: Request, res: Response) => {
     const name = (req.query.name as string) || "";
     const page = parseInt(req.query.page as string) || 1;
     const perPage = parseInt(req.query.per_page as string) || 10;
-
-    const cacheKey = `projects:${customer_id}:${campaign_id}:${name}:${page}:${perPage}`;
-
-    const cachedProjects = cache.get(cacheKey);
-    if (cachedProjects) {
-      res.status(200).json(cachedProjects);
-      return;
-    }
 
     const params = new URLSearchParams({
       page: page.toString(),
@@ -100,12 +91,6 @@ router.get("", async (req: Request, res: Response) => {
         page_info: projects.page_info,
       },
     };
-
-    setImmediate(() => {
-      if (adaptedProjects.length > 0) {
-        cache.set(cacheKey, data, 60 * 5);
-      }
-    });
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -238,12 +223,6 @@ const handleProjectsByCustomer = async (req: Request, res: Response) => {
 
     const url = `projects/customers/${id}?page=${page}&per_page=${perPage}`;
 
-    const cachedProjects = cache.get(url);
-    if (cachedProjects) {
-      res.status(200).json(cachedProjects);
-      return;
-    }
-
     const { data: projects } = await apiClient.get<any>(url, headers);
 
     if (!Array.isArray(projects?.items)) {
@@ -262,10 +241,6 @@ const handleProjectsByCustomer = async (req: Request, res: Response) => {
         page_info: projects.page_info,
       },
     };
-
-    if (projects.items.length > 0) {
-      cache.set(url, data);
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -297,20 +272,12 @@ router.get("/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedProject = cache.get(`project:${id}`);
-    if (cachedProject) {
-      res.status(200).json(cachedProject);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
     };
 
     const data = await apiClient.get<any>(`/projects/${id}`, headers);
-
-    setImmediate(() => cache.set(`project:${id}`, data));
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -347,8 +314,6 @@ router.post("", async (req: Request, res: Response) => {
     };
 
     await apiClient.post<any>(`/projects`, requestData, headers);
-
-    setImmediate(() => cache.flushAll());
 
     res.status(200).json({
       success: true,
@@ -390,8 +355,6 @@ router.put("/:id", async (req: Request, res: Response) => {
 
     await apiClient.put<any>(`/projects/${id}`, requestData, headers);
 
-    setImmediate(() => cache.flushAll());
-
     res.status(200).json({
       success: true,
       msg: "ok",
@@ -430,12 +393,7 @@ router.delete(
 
       const data = await apiClient.delete<any>(`/labors/${id}`, headers);
 
-
-      setImmediate(() => cache.flushAll());
       res.status(200).json(data);
-
-
-
     } catch (error: any) {
       const err = error as ApiResponse<null>;
 
@@ -467,9 +425,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.delete<any>(`/projects/${id}`, headers);
-    setImmediate(() => cache.flushAll());
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.delete<any>(`/projects/${id}`, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -500,9 +456,7 @@ router.put("/:id/archive", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.post<any>(`/projects/${id}/archive`, {}, headers);
-    setImmediate(() => cache.flushAll());
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.post<any>(`/projects/${id}/archive`, {}, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -533,9 +487,7 @@ router.put("/:id/restore", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.post<any>(`/projects/${id}/restore`, {}, headers);
-    setImmediate(() => cache.flushAll());
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.post<any>(`/projects/${id}/restore`, {}, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -566,9 +518,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.delete<any>(`/projects/${id}`, headers);
-    setImmediate(() => cache.flushAll());
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.delete<any>(`/projects/${id}`, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -599,12 +549,6 @@ router.get("/:id/dollar-values", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedDollar = cache.get(`dollar:${projectId}`);
-    if (cachedDollar) {
-      res.status(200).json(cachedDollar);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
@@ -619,10 +563,6 @@ router.get("/:id/dollar-values", async (req: Request, res: Response) => {
       success: true,
       data: dollar,
     };
-
-    if (Array.isArray(dollar) && dollar.length > 0) {
-      setImmediate(() => cache.set(`dollar:${projectId}`, data));
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -670,8 +610,6 @@ router.put("/:id/dollar-values", async (req: Request, res: Response) => {
       requestData,
       headers
     );
-
-    setImmediate(() => cache.flushAll());
 
     const data = {
       success: true,
@@ -735,8 +673,6 @@ router.post("/:id/labors", async (req: Request, res: Response) => {
       headers
     );
 
-    setImmediate(() => cache.flushAll());
-
     res.status(207).json({
       success: true,
       data: backendResponse,
@@ -771,12 +707,6 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedLabors = cache.get(`labors:${projectId}`);
-    if (cachedLabors) {
-      res.status(200).json(cachedLabors);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
@@ -792,10 +722,6 @@ router.get("/:id/labors", async (req: Request, res: Response) => {
       success: true,
       data: items,
     };
-
-    if (Array.isArray(items) && items.length > 0) {
-      setImmediate(() => cache.set(`labors:${projectId}`, data));
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -828,12 +754,6 @@ router.get("/:id/commercializations", async (req: Request, res: Response) => {
       return;
     }
 
-    const cachedCommerce = cache.get(`commerce:${projectId}`);
-    if (cachedCommerce) {
-      res.status(200).json(cachedCommerce);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
@@ -848,10 +768,6 @@ router.get("/:id/commercializations", async (req: Request, res: Response) => {
       success: true,
       data: commerce,
     };
-
-    if (Array.isArray(commerce) && commerce.length > 0) {
-      setImmediate(() => cache.set(`commerce:${projectId}`, data));
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -899,8 +815,6 @@ router.post("/:id/commercializations", async (req: Request, res: Response) => {
       success: true,
       data: commerce,
     };
-
-    cache.del(`commerce:${projectId}`);
 
     res.status(200).json(data);
   } catch (error: any) {

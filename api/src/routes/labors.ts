@@ -2,7 +2,6 @@ import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { parsePartialPriceFlag } from "../utils/partialPrice";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
@@ -70,8 +69,6 @@ router.post("/invoice", async (req: Request, res: Response) => {
       requestData,
       headers,
     );
-
-    setImmediate(() => cache.flushAll());
 
     const data = {
       success: true,
@@ -157,8 +154,6 @@ router.put("/invoice/:id", async (req: Request, res: Response) => {
       requestData,
       headers,
     );
-
-    setImmediate(() => cache.flushAll());
 
     const data = {
       success: true,
@@ -393,14 +388,6 @@ router.get("/:id", async (req: Request, res: Response) => {
       query += `&field_id=${field_id}`;
     }
 
-    const cachedLabors = cache.get(
-      `labors:project:${project_id}:query:${query}`,
-    );
-    if (cachedLabors) {
-      res.status(200).json(cachedLabors);
-      return;
-    }
-
     const headers = {
       "X-API-KEY": configService.apiKey,
       "X-User-Id": userId,
@@ -418,10 +405,6 @@ router.get("/:id", async (req: Request, res: Response) => {
         page_info: labors.page_info,
       },
     };
-
-    setImmediate(() =>
-      cache.set(`labors:project:${project_id}:query:${query}`, data),
-    );
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -459,8 +442,6 @@ router.delete("/:id", async (req: Request, res: Response) => {
       message: "Labor eliminada exitosamente",
     };
 
-    setImmediate(() => cache.flushAll());
-
     res.status(200).json(data);
   } catch (error: any) {
     const err = error as ApiResponse<null>;
@@ -490,22 +471,22 @@ router.put("/projects/:project_id/:id", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    const requestData = {
+    const requestData: Record<string, any> = {
       id: req.body.id,
       name: req.body.name,
-      category_id: req.body.category_id,
       price: req.body.price,
       contractor_name: req.body.contractor_name,
       is_partial_price: parsePartialPriceFlag(req.body.is_partial_price),
     };
+    if (req.body.category_id && parseInt(req.body.category_id) > 0) {
+      requestData.category_id = req.body.category_id;
+    }
 
     await apiClient.put<any>(
       `projects/${req.params.project_id}/labors/${req.params.id}`,
       requestData,
       headers,
     );
-
-    setImmediate(() => cache.flushAll());
 
     const data = {
       success: true,

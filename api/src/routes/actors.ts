@@ -1,7 +1,7 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
+import { cache } from "../lib/cache";
 import {
   buildCoreAuthHeaders,
   flushEntitySelectorCaches,
