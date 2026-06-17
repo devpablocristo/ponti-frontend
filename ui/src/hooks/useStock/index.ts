@@ -15,8 +15,6 @@ const useStock = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [processingStock, setProcessingStock] = useState(false);
-  const [errorStock, setErrorStock] = useState<string | null>(null);
-  const [resultStock, setResultStock] = useState<string | null>(null);
 
   const [processingCloseStock, setProcessingCloseStock] = useState(false);
   const [errorCloseStock, setErrorCloseStock] = useState<string | null>(null);
@@ -90,22 +88,20 @@ const useStock = () => {
     []
   );
 
+  // Devuelve el resultado en vez de setear estado-feedback transitorio: el caller actúa
+  // imperativamente en su handler (sin useEffect ni estado colgante que pueda re-dispararse).
   const updateStock = React.useCallback(
     async (
       projectId: number,
       id: number,
-      realStock: number,
-      updatedAt?: string | null
-    ) => {
+      realStock: number
+    ): Promise<{ ok: boolean; error?: string }> => {
       setProcessingStock(true);
-      setErrorStock(null);
-      setResultStock(null);
-
       try {
-        const payload = {
-          real_stock_units: realStock,
-          ...(updatedAt ? { updated_at: updatedAt } : {}),
-        };
+        // El stock de campo es un conteo manual (last-write-wins): no enviamos
+        // updated_at para no disparar el lock optimista que hacía fallar el
+        // guardado de forma intermitente.
+        const payload = { real_stock_units: realStock };
 
         const response = await apiClient.put<StockMutationResponse>(
           `/stock/${projectId}/${id}`,
@@ -113,18 +109,17 @@ const useStock = () => {
         );
 
         if (response.success) {
-          setResultStock("Se han actualizado el stock con éxito");
-          return;
+          return { ok: true };
         }
-
-        setErrorStock("Ocurrio un error en la modificacion del stock");
+        return { ok: false, error: "Ocurrio un error en la modificacion del stock" };
       } catch (error) {
-        setErrorStock(
-          extractErrorMessage(
+        return {
+          ok: false,
+          error: extractErrorMessage(
             error,
             "Error desconocido en la modificacion del stock."
-          )
-        );
+          ),
+        };
       } finally {
         setProcessingStock(false);
       }
@@ -170,8 +165,6 @@ const useStock = () => {
     summary,
     updateStock,
     processingStock,
-    errorStock,
-    resultStock,
     closeStock,
     processingCloseStock,
     errorCloseStock,
