@@ -3,7 +3,7 @@ import { BookOpen } from "lucide-react";
 
 import Drawer from "@/components/Drawer/Drawer";
 import { toastError, toastSuccess } from "@/lib/toast";
-import { archiveCatalog, createCatalog, restoreCatalog, updateCatalog } from "@/api/catalog";
+import { createCatalog, updateCatalog } from "@/api/catalog";
 
 const statusOf = (e: unknown): number | undefined => {
   const x = e as { response?: { status?: number }; error?: { status?: number }; status?: number };
@@ -63,11 +63,6 @@ export default function RegistryCatalogDrawer({ open, onClose, base, singular, i
       toastError(statusOf(e) === 409 ? `Ya existe un ${effectiveSingular} con ese nombre` : "No se pudo guardar");
     } finally { setSaving(false); }
   };
-
-  // kept for internal use
-  const _doArchive = archiveCatalog;
-  const _doRestore = restoreCatalog;
-  void _doArchive; void _doRestore;
 
   const displayName = isEdit
     ? item?.name

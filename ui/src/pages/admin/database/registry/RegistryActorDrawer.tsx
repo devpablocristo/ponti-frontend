@@ -6,9 +6,7 @@ import { toastError, toastSuccess } from "@/lib/toast";
 import {
   Actor,
   ActorRole,
-  archiveActor,
   resolveActor,
-  restoreActor,
   setActorRoles,
   setActorTaxID,
   updateActor,
@@ -134,11 +132,6 @@ export default function RegistryActorDrawer({ open, onClose, actorId, prefillNam
       toastError(statusOf(e) === 409 ? "Ya existe un actor con ese nombre o CUIT" : "No se pudo guardar");
     } finally { setSaving(false); }
   };
-
-  // doArchive / doRestore kept for internal use (no longer shown in drawer UI)
-  const _doArchive = archiveActor;
-  const _doRestore = restoreActor;
-  void _doArchive; void _doRestore;
 
   return (
     <Drawer open={open} onClose={onClose}>
