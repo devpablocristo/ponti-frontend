@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { LoaderCircle } from "lucide-react";
+import { searchRegistry, invalidateRegistryOptions } from "../../../../api/registry";
 
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import AutocompleteSelect from "./AutocompleteSelect";
+import CatalogNameSelect from "./CatalogNameSelect";
 import Fields, { Field } from "./Fields";
 import useOptions from "../../../../hooks/useDatabase/options";
 import { Entity, Investor } from "../../../../hooks/useDatabase/options/types";
@@ -57,6 +59,8 @@ export default function Customers() {
   const [queryInvestor, setQueryInvestor] = useState<string>("");
   const [queryAdminCostInvestor, setQueryAdminCostInvestor] = useState<string>("");
 
+  const [lesseeList, setLesseeList] = useState<{ id: number; name: string; percentage: number }[]>([]);
+
   const [admincost, setAdmincost] = useState<string>("");
   const [planned_cost, setPlannedCost] = useState<string>("");
 
@@ -69,7 +73,7 @@ export default function Customers() {
     leaseType: "",
     leaseTypePercent: "",
     leaseTypeValue: "",
-    investors: [],
+    lessees: [],
     plots: [
       {
         id: 0,
@@ -115,6 +119,25 @@ export default function Customers() {
   }, [getOptions]);
 
   useEffect(() => {
+    // Al entrar al form refrescamos la caché de opciones del registry (project/field/lot)
+    // para no servir nombres viejos; dentro de la sesión del form los N selects la comparten.
+    invalidateRegistryOptions();
+    let active = true;
+    searchRegistry({ type: "lessee", perPage: 1000 })
+      .then((result) => {
+        if (active) {
+          setLesseeList(result.data.map((row) => ({ id: row.id, name: row.name, percentage: 0 })));
+        }
+      })
+      .catch(() => {
+        if (active) setLesseeList([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (options) {
       setSuggestions(options.clients ?? []);
       setCampaignSuggestions(options.campaigns ?? []);
@@ -145,7 +168,7 @@ export default function Customers() {
         String(field.lease_type_value).trim() === ""
           ? ""
           : Number(field.lease_type_value),
-      investors: Array.isArray(field.investors) ? field.investors : [],
+      lessees: Array.isArray(field.lessees) ? field.lessees : [],
       plots: (Array.isArray(field.lots) ? field.lots : []).map((lot) => ({
         id: lot.id,
         name: lot.name,
@@ -254,7 +277,7 @@ export default function Customers() {
         leaseType: "",
         leaseTypePercent: "",
         leaseTypeValue: "",
-        investors: [],
+        lessees: [],
         plots: [
           {
             id: 0,
@@ -535,14 +558,7 @@ export default function Customers() {
     setErrorMessages(errors);
 
     if (!customer) {
-      if (queryCustomer === "") {
-        errors.push("Debe seleccionar un cliente.");
-      } else {
-        setCustomer({
-          id: 0,
-          name: queryCustomer,
-        });
-      }
+      errors.push("Debe seleccionar un cliente de la lista.");
     }
 
     if (!projectName || projectName.trim() === "") {
@@ -550,14 +566,7 @@ export default function Customers() {
     }
 
     if (!campaign) {
-      if (queryCampaign === "") {
-        errors.push("Debe seleccionar o cargar una campaña.");
-      } else {
-        setCampaign({
-          id: 0,
-          name: queryCampaign,
-        });
-      }
+      errors.push("Debe seleccionar una campaña de la lista.");
     }
 
     if (!projectManagers.length) {
@@ -890,13 +899,12 @@ export default function Customers() {
           </div>
 
           <div className="flex justify-between items-center">
-            <InputField
+            <CatalogNameSelect
+              base="project"
               label="Proyecto"
-              placeholder="Ingrese nombre"
-              type="text"
-              name="lote"
+              placeholder="Seleccione proyecto"
               value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
+              onChange={setProjectName}
               fullWidth
             />
           </div>
@@ -950,8 +958,6 @@ export default function Customers() {
             setQuery={setQueryManager}
             handleSuggestionClick={handleManagerSuggestionClick}
             setItems={setProjectManagers}
-            customAddLabel="+ Agregar responsable"
-            customAddItem={{ id: 0, name: queryManager }}
           />
 
           <InputField
@@ -994,8 +1000,6 @@ export default function Customers() {
             setQuery={setQueryAdminCostInvestor}
             handleSuggestionClick={handleAdminCostInvestorSuggestionClick}
             setItems={setAdminCostInvestors}
-            customAddLabel="+ Agregar inversor"
-            customAddItem={{ id: 0, name: queryAdminCostInvestor, percentage: 0 }}
             renderTag={(item) => `${item.name} (${item.percentage}%)`}
           />
 
@@ -1009,15 +1013,13 @@ export default function Customers() {
             setQuery={setQueryInvestor}
             handleSuggestionClick={handleInvestorSuggestionClick}
             setItems={setInvestors}
-            customAddLabel="+ Agregar inversor"
-            customAddItem={{ id: 0, name: queryInvestor, percentage: 0 }}
             renderTag={(item) => `${item.name} (${item.percentage}%)`}
           />
         </div>
         <div>
           <Fields
             fields={fields}
-            investorList={options?.investors}
+            lesseeList={lesseeList}
             setFields={setFields}
             seasons={seasons}
             crops={options?.crops}

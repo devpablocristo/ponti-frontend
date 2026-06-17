@@ -38,7 +38,7 @@ export type Field = {
   lease_type_id: number;
   lease_type_percent: number | string | null;
   lease_type_value: number | string | null;
-  investors: {
+  lessees: {
     id: number;
     name: string;
     percentage: number;
