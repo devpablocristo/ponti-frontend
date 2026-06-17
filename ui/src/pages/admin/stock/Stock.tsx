@@ -49,7 +49,7 @@ const EditableCell = ({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value ?? "");
   const savingRef = useRef(false);
-  const { updateStock, processingStock, errorStock, resultStock } = useStock();
+  const { updateStock, processingStock, errorStock, resultStock, resetStockFeedback } = useStock();
 
   useEffect(() => {
     setEditValue(value ?? "");
@@ -94,14 +94,15 @@ const EditableCell = ({
   useEffect(() => {
     if (errorStock) {
       onValidationError(errorStock);
+      resetStockFeedback();
       return;
     }
     if (resultStock) {
       setEditing(false);
       onSaved?.();
-      return;
+      resetStockFeedback();
     }
-  }, [errorStock, resultStock, onSaved, onValidationError]);
+  }, [errorStock, resultStock, onSaved, onValidationError, resetStockFeedback]);
 
   if (editing) {
     return (

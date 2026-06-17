@@ -156,6 +156,14 @@ const useStock = () => {
     []
   );
 
+  // Limpia el feedback transitorio del update de stock para que un effect que lo
+  // consume no lo vuelva a disparar en renders posteriores (errorStock/resultStock
+  // quedaban "pegados" tras mostrarse).
+  const resetStockFeedback = React.useCallback(() => {
+    setErrorStock(null);
+    setResultStock(null);
+  }, []);
+
   return {
     stock,
     currentPage: currentPage,
@@ -167,6 +175,7 @@ const useStock = () => {
     processingStock,
     errorStock,
     resultStock,
+    resetStockFeedback,
     closeStock,
     processingCloseStock,
     errorCloseStock,

@@ -115,6 +115,13 @@ export function Products() {
     return { name: params.get("supply_name") || "" };
   }, [location.search]);
 
+  // El banner refleja el filtro EFECTIVO de la columna (no la URL): si el usuario quita el
+  // filtro Insumo desde la tabla, el banner desaparece aunque la URL conserve ?supply_name.
+  const activeSupplyFilter = useMemo(() => {
+    const v = columnsFilters.supply_name;
+    return Array.isArray(v) && v.length > 0 ? String(v[0]) : "";
+  }, [columnsFilters]);
+
   // Al llegar con ?supply_name=... pre-aplica el filtro de la columna Insumo.
   useEffect(() => {
     if (!selectedSupplyFilter.name) return;
@@ -592,10 +599,10 @@ export function Products() {
             )}
           </>
         )}
-        {selectedSupplyFilter.name && (
+        {activeSupplyFilter && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-900">
             <span>
-              Filtrando ingresos de: <strong>{selectedSupplyFilter.name}</strong>
+              Filtrando ingresos de: <strong>{activeSupplyFilter}</strong>
             </span>
             <button
               type="button"
