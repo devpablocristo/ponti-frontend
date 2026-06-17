@@ -49,7 +49,7 @@ const EditableCell = ({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value ?? "");
   const savingRef = useRef(false);
-  const { updateStock, processingStock, errorStock, resultStock, resetStockFeedback } = useStock();
+  const { updateStock, processingStock } = useStock();
 
   useEffect(() => {
     setEditValue(value ?? "");
@@ -85,24 +85,18 @@ const EditableCell = ({
 
     savingRef.current = true;
     try {
-      await updateStock(projectId, item.id, Number(editValue));
+      // Manejo imperativo del resultado: sin effect ni estado-feedback colgante.
+      const res = await updateStock(projectId, item.id, Number(editValue));
+      if (res.ok) {
+        setEditing(false);
+        onSaved?.();
+      } else if (res.error) {
+        onValidationError(res.error);
+      }
     } finally {
       savingRef.current = false;
     }
   };
-
-  useEffect(() => {
-    if (errorStock) {
-      onValidationError(errorStock);
-      resetStockFeedback();
-      return;
-    }
-    if (resultStock) {
-      setEditing(false);
-      onSaved?.();
-      resetStockFeedback();
-    }
-  }, [errorStock, resultStock, onSaved, onValidationError, resetStockFeedback]);
 
   if (editing) {
     return (
