@@ -84,7 +84,7 @@ router.use("/catalog/crops", catalogRouter("/crops", { archive: true }));
 router.use("/catalog/types", catalogRouter("/types", { archive: true }));
 router.use("/catalog/lease-types", catalogRouter("/lease-types", { archive: true }));
 router.use("/catalog/campaigns", catalogRouter("/campaigns", { archive: true }));
-router.use("/catalog/project", catalogRouter("/projects", { nameUpdatePath: "/name" }));
+router.use("/catalog/project", catalogRouter("/projects", { archive: true, nameUpdatePath: "/name" }));
 router.use("/catalog/field", catalogRouter("/fields", { archive: true, nameUpdatePath: "/name" }));
 router.use("/catalog/lot", catalogRouter("/lots", { archive: true }));
 

@@ -250,9 +250,6 @@ const load = useCallback(async () => {
       if (row.entity_type === "actor") {
         if (isRestore) await restoreActor(row.id);
         else await archiveActor(row.id);
-      } else if (row.entity_type === "project") {
-        toastError("Archivar proyectos aún no está disponible");
-        return;
       } else {
         if (isRestore) await restoreCatalog(row.entity_type, row.id);
         else await archiveCatalog(row.entity_type, row.id);
