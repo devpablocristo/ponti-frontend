@@ -77,7 +77,6 @@ export default function RegistryAdmin() {
 
   const [rows, setRows] = useState<RegistryRow[]>([]);
   const [loadedStatus, setLoadedStatus] = useState<RegistryStatus>("active");
-  const [activeTotal, setActiveTotal] = useState(0);
   const [archivedTotal, setArchivedTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -102,7 +101,6 @@ const load = useCallback(async () => {
         searchRegistryAll({ q: q.trim(), type: "all", status: "active" }),
         searchRegistry({ q: q.trim(), type: "all", status: "archived", page: 1, perPage: 1 }),
       ]);
-      setActiveTotal(activeData.length);
       setArchivedTotal(archivedRes.page_info?.total ?? 0);
       setActiveActorCount(activeData.filter((r) => r.entity_type === "actor").length);
       setActiveCatalogCount(activeData.filter((r) => r.entity_type !== "actor").length);
@@ -113,7 +111,6 @@ const load = useCallback(async () => {
         searchRegistryAll({ q: q.trim(), type: "all", status: "active" }),
         searchRegistryAll({ q: q.trim(), type: "all", status: "archived" }),
       ]);
-      setActiveTotal(activeData.length);
       setArchivedTotal(archivedData.length);
       setActiveActorCount(activeData.filter((r) => r.entity_type === "actor").length);
       setActiveCatalogCount(activeData.filter((r) => r.entity_type !== "actor").length);

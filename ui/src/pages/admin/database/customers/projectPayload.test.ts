@@ -36,7 +36,7 @@ describe("mapProjectFieldsPayload", () => {
     leaseType: "4",
     leaseTypePercent: 20,
     leaseTypeValue: 120,
-    investors: [{ id: 1, name: "Inv", percentage: 20 }],
+    lessees: [{ id: 1, name: "Inv", percentage: 20 }],
     plots: [
       {
         id: 1,
@@ -49,17 +49,17 @@ describe("mapProjectFieldsPayload", () => {
     ],
   };
 
-  it("garantiza investors y lots presentes aunque falten en origen", () => {
+  it("garantiza lessees y lots presentes aunque falten en origen", () => {
     const malformedField = {
       ...baseField,
-      investors: undefined,
+      lessees: undefined,
       plots: undefined,
     } as unknown as Field;
 
     const result = mapProjectFieldsPayload([malformedField], false);
 
     expect(result.errors).toEqual([]);
-    expect(result.fields[0].investors).toEqual([]);
+    expect(result.fields[0].lessees).toEqual([]);
     expect(result.fields[0].lots).toEqual([]);
   });
 
