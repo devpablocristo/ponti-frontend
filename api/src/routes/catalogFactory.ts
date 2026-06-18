@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
+import { buildCoreAuthHeaders } from "../utils/entitySelectors";
 
 // Factory de routers CRUDAR genéricos para catálogos (no-actors). Cada uno proxea a un
 // path del core bajo /catalog/<entidad>, sin tocar las rutas GET existentes (/crops, etc.)
@@ -8,9 +9,7 @@ import { configService } from "../configService";
 const apiClient = new ApiClient(configService.baseManagerApi);
 
 function authHeaders(req: Request): Record<string, string> | null {
-  const userId = req.user?.userID;
-  if (!userId) return null;
-  return { "X-API-KEY": configService.apiKey, "X-User-Id": userId };
+  return buildCoreAuthHeaders(req, configService.apiKey);
 }
 
 function fail(res: Response, error: unknown) {
@@ -26,7 +25,10 @@ function fail(res: Response, error: unknown) {
   });
 }
 
-export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}): Router {
+export function catalogRouter(
+  corePath: string,
+  opts: { archive?: boolean; nameUpdatePath?: string } = {},
+): Router {
   const r = Router();
 
   r.get("", async (req: Request, res: Response) => {
@@ -99,7 +101,17 @@ export function catalogRouter(corePath: string, opts: { archive?: boolean } = {}
       return;
     }
     try {
-      await apiClient.put<unknown>(`${corePath}/${req.params.id}`, req.body, headers);
+      // Para entidades estructurales (ej. proyecto), el core no acepta PUT completo
+      // con solo {name}; se usa un endpoint dedicado de actualización de nombre.
+      if (opts.nameUpdatePath) {
+        await apiClient.patch<unknown>(
+          `${corePath}/${req.params.id}${opts.nameUpdatePath}`,
+          { name: req.body?.name },
+          headers,
+        );
+      } else {
+        await apiClient.put<unknown>(`${corePath}/${req.params.id}`, req.body, headers);
+      }
       res.status(200).json({ success: true });
     } catch (error) {
       fail(res, error);

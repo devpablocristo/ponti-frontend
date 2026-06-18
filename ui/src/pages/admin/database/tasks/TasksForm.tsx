@@ -9,6 +9,7 @@ import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
+import { listActors, Actor } from "../../../../api/actors";
 import { LoaderCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
@@ -19,6 +20,7 @@ import {
   parseCsv,
   parsePartialPrice,
 } from "./importUtils";
+import ContractorSelect from "./ContractorSelect";
 
 interface Labor {
   id: number;
@@ -50,6 +52,9 @@ export default function TasksForm() {
     "project",
     "campaign",
   ]);
+  const [contractorOptions, setContractorOptions] = useState<
+    { id: number; name: string }[]
+  >([]);
 
   const [rows, setLabors] = useState<Labor[]>(
     Array.from({ length: 5 }, (_, i) => ({
@@ -65,6 +70,26 @@ export default function TasksForm() {
   useEffect(() => {
     getCategories("type_id=4");
   }, [getCategories]);
+
+  useEffect(() => {
+    async function loadContractors() {
+      const perPage = 100;
+      let page = 1;
+      const allActors: Actor[] = [];
+      while (page <= 20) {
+        const result = await listActors("active", page, perPage);
+        allActors.push(...result.data);
+        if (page >= result.page_info.max_page || result.data.length === 0) break;
+        page += 1;
+      }
+      setContractorOptions(
+        allActors
+          .filter((actor) => actor.roles.includes("contractor"))
+          .map((actor) => ({ id: actor.id, name: actor.display_name }))
+      );
+    }
+    loadContractors();
+  }, []);
 
   useEffect(() => {
     if (projectId) {
@@ -668,14 +693,13 @@ export default function TasksForm() {
                     <label className="sm:hidden text-sm text-gray-600">
                       Contratista
                     </label>
-                    <InputField
-                      label=""
+                    <ContractorSelect
                       name={`contratista-${index}`}
                       value={row.contractor}
-                      onChange={(e) =>
-                        handleChange(row.id, "contractor", e.target.value)
+                      options={contractorOptions}
+                      onSelect={(name) =>
+                        handleChange(row.id, "contractor", name)
                       }
-                      placeholder="nombre"
                     />
                   </div>
                 </div>

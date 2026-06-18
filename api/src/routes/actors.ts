@@ -1,6 +1,46 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
+import { buildCoreAuthHeaders } from "../utils/entitySelectors";
+
+// Mapa: rol de actor → path del endpoint de dominio en el core.
+// Cuando se crea/actualiza un actor con estos roles, el BFF provisiona
+// el registro de dominio (customer/investor/manager) en la misma operación.
+// Con IDENTITY_GATE=true el backend resuelve la identidad por nombre y vincula
+// el actor_id automáticamente. Si el registro ya existe devuelve 409 → ignorado (idempotente).
+const DOMAIN_PATH: Record<string, string> = {
+  customer: "/customers",
+  investor: "/investors",
+  manager:  "/managers",
+};
+
+async function provisionDomainRecords(
+  headers: Record<string, string>,
+  name: string,
+  taxId: string | null | undefined,
+  roles: string[],
+): Promise<void> {
+  for (const role of roles) {
+    const path = DOMAIN_PATH[role];
+    if (!path) continue;
+    const body: Record<string, string> = { name };
+    if (taxId) body.tax_id = taxId;
+    try {
+      await apiClient.post(path, body, headers);
+    } catch (error) {
+      // 409 = ya existe (idempotente, esperado). Otros errores son fallos reales
+      // de provisión: best-effort (no bloquean la respuesta) pero se loguean para
+      // no quedar invisibles, ya que el cliente ya recibió 200.
+      const status = (error as ApiResponse<null>)?.error?.status;
+      if (status !== 409) {
+        console.error(
+          `provisionDomainRecords: fallo al provisionar ${role} (${path}) status=${status ?? "?"}`,
+          error,
+        );
+      }
+    }
+  }
+}
 
 // Proxy del BFF a los endpoints del Identity Gate (core /actors/*): búsqueda
 // search-first, lookup por CUIT y resolve-or-create. Reenvía X-API-KEY + X-User-Id
@@ -9,9 +49,7 @@ const apiClient = new ApiClient(configService.baseManagerApi);
 const router: Router = Router();
 
 function authHeaders(req: Request): Record<string, string> | null {
-  const userId = req.user?.userID;
-  if (!userId) return null;
-  return { "X-API-KEY": configService.apiKey, "X-User-Id": userId };
+  return buildCoreAuthHeaders(req, configService.apiKey);
 }
 
 function fail(res: Response, error: unknown) {
@@ -109,7 +147,18 @@ router.post("", async (req: Request, res: Response) => {
     return;
   }
   try {
-    const { data } = await apiClient.post<unknown>("/actors", req.body, headers);
+    const { data } = await apiClient.post<any>("/actors", req.body, headers);
+    // Provisionar registros de dominio para roles customer/investor/manager.
+    const roles: string[] = Array.isArray(req.body.roles)
+      ? req.body.roles
+      : req.body.role ? [req.body.role] : [];
+    const actorName: string = (data as any)?.actor?.display_name ?? req.body.name ?? "";
+    const taxId: string | undefined = req.body.tax_id;
+    if (actorName && roles.length) {
+      setImmediate(() => {
+        void provisionDomainRecords(headers, actorName, taxId, roles);
+      });
+    }
     res.status(200).json({ success: true, data });
   } catch (error) {
     fail(res, error);
@@ -169,6 +218,20 @@ router.put("/:id/roles", async (req: Request, res: Response) => {
   }
   try {
     await apiClient.put<unknown>(`/actors/${req.params.id}/roles`, req.body, headers);
+    const roles: string[] = Array.isArray(req.body.roles) ? req.body.roles : [];
+    if (roles.length) {
+      setImmediate(async () => {
+        try {
+          const { data: actor } = await apiClient.get<any>(`/actors/${req.params.id}`, headers);
+          const name: string = actor?.display_name ?? "";
+          const taxKey = (actor?.keys ?? []).find((k: any) => k.type === "TAX_ID");
+          const taxId: string | undefined = taxKey?.value;
+          if (name) {
+            await provisionDomainRecords(headers, name, taxId, roles);
+          }
+        } catch { /* best-effort */ }
+      });
+    }
     res.status(200).json({ success: true });
   } catch (error) {
     fail(res, error);

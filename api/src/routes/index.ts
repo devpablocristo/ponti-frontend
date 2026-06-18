@@ -10,8 +10,6 @@ import lots from "./lots";
 import crops from "./crops";
 import supplies from "./supplies";
 import { verifyToken } from "./authMiddleware";
-import NodeCache from "node-cache";
-import { CACHE_TTL_DEFAULT } from "../configService";
 import categories from "./categories";
 import types from "./types";
 import workorders from "./workorders";
@@ -31,7 +29,6 @@ import registry from "./registry";
 import { catalogRouter } from "./catalogFactory";
 
 const router: Router = Router();
-export const cache = new NodeCache({ stdTTL: CACHE_TTL_DEFAULT, checkperiod: CACHE_TTL_DEFAULT });
 
 router.get("/ping", (req, res) => {
   res.status(200).json({ message: "UI says Pong!" });
@@ -86,6 +83,9 @@ router.use("/catalog/crops", catalogRouter("/crops", { archive: true }));
 router.use("/catalog/types", catalogRouter("/types", { archive: true }));
 router.use("/catalog/lease-types", catalogRouter("/lease-types", { archive: true }));
 router.use("/catalog/campaigns", catalogRouter("/campaigns", { archive: true }));
+router.use("/catalog/project", catalogRouter("/projects", { archive: true, nameUpdatePath: "/name" }));
+router.use("/catalog/field", catalogRouter("/fields", { archive: true, nameUpdatePath: "/name" }));
+router.use("/catalog/lot", catalogRouter("/lots", { archive: true }));
 
 router.use("/form-options", options);
 

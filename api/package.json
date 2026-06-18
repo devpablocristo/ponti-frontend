@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test test",
     "dev": "NODE_ENV=development nodemon --ext ts --exec ts-node src/index.ts",
     "local": "NODE_ENV=local nodemon --ext ts --exec ts-node src/index.ts",
@@ -29,7 +30,6 @@
   "dependencies": {
     "axios": "^1.8.1",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "node-cache": "^5.1.2"
+    "express": "^4.21.2"
   }
 }

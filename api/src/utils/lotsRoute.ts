@@ -21,15 +21,3 @@ export const buildLotsQueryParams = (
   }
   return queryParams.toString();
 };
-
-export const buildLotsListCacheKey = (
-  { fieldId, projectId }: LotQueryIds,
-  { page, perPage }: LotPagination
-) =>
-  `lots:field:${fieldId}:project:${projectId}:page:${page}:per_page:${perPage}`;
-
-export const buildLotsMetricsCacheKey = ({ fieldId, projectId }: LotQueryIds) =>
-  `kpis:lots:field:${fieldId}:project:${projectId}`;
-
-export const isLotsCacheKey = (key: string) =>
-  key.startsWith("lots:") || key.startsWith("kpis:lots:");

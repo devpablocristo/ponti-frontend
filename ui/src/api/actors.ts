@@ -26,15 +26,6 @@ export interface Actor {
   archived_at?: string;
 }
 
-export interface ScoredActor extends Actor {
-  score: number;
-}
-
-export interface ActorSearchResult {
-  exact: Actor[];
-  similar: ScoredActor[];
-}
-
 export interface ResolveActorResult {
   actor: Actor;
   reused: boolean;
@@ -48,35 +39,6 @@ export interface ResolveActorInput {
   allow_create?: boolean;
   // reject_existing: alta estricta — si ya existe (nombre o CUIT) devuelve 409 en vez de reusar.
   reject_existing?: boolean;
-}
-
-// searchActors: coincidencias exactas + similares (trigram). field "name" (default) o
-// "tax_id" para buscar por CUIT.
-export async function searchActors(
-  q: string,
-  field: "name" | "tax_id" = "name",
-  limit = 20,
-): Promise<ActorSearchResult> {
-  const term = q.trim();
-  if (term === "") return { exact: [], similar: [] };
-  const res = await apiClient.get<SuccessResponse<ActorSearchResult>>(
-    `/actors/search?q=${encodeURIComponent(term)}&field=${field}&limit=${limit}`,
-  );
-  return res.data ?? { exact: [], similar: [] };
-}
-
-// getActorByTaxID: lookup por CUIT/CUIL. Devuelve null si no existe (404).
-export async function getActorByTaxID(taxID: string): Promise<Actor | null> {
-  const t = taxID.trim();
-  if (t === "") return null;
-  try {
-    const res = await apiClient.get<SuccessResponse<Actor>>(
-      `/actors/by-tax-id?tax_id=${encodeURIComponent(t)}`,
-    );
-    return res.data ?? null;
-  } catch {
-    return null; // 404 = no existe (no es error)
-  }
 }
 
 // resolveActor: resuelve-o-crea la identidad por la cascada CUIT→nombre. allow_create
@@ -120,10 +82,6 @@ export async function archiveActor(id: number): Promise<void> {
 
 export async function restoreActor(id: number): Promise<void> {
   await apiClient.post(`/actors/${id}/restore`, {});
-}
-
-export async function deleteActor(id: number): Promise<void> {
-  await apiClient.delete(`/actors/${id}`);
 }
 
 // setActorRoles reemplaza el conjunto de roles del actor.

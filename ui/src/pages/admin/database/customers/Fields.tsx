@@ -2,10 +2,11 @@ import { CirclePlus, CopyIcon, Trash } from "lucide-react";
 import InputField from "../../../../components/Input/InputField";
 import SelectField from "../../../../components/Input/SelectField";
 import Button from "../../../../components/Button/Button";
-import { Entity, Investor } from "../../../../hooks/useDatabase/options/types";
+import { Entity } from "../../../../hooks/useDatabase/options/types";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import AutocompleteSelect from "./AutocompleteSelect";
+import CatalogNameSelect from "./CatalogNameSelect";
 
 export type Plot = {
   id: number;
@@ -16,23 +17,25 @@ export type Plot = {
   season: string;
 };
 
+type Lessee = {
+  id: number;
+  name: string;
+  percentage: number;
+};
+
 export type Field = {
   id: number;
   name: string;
   leaseType: string;
   leaseTypePercent: number | "";
   leaseTypeValue: number | "";
-  investors: {
-    id: number;
-    name: string;
-    percentage: number;
-  }[];
+  lessees: Lessee[];
   plots: Plot[];
 };
 
 type Props = {
   fields: Field[];
-  investorList: Investor[] | undefined;
+  lesseeList: Lessee[] | undefined;
   crops: Entity[] | undefined;
   seasons: { name: string; id: number }[];
   rentTypes: Entity[] | undefined;
@@ -41,7 +44,7 @@ type Props = {
 
 export default function Fields({
   fields,
-  investorList,
+  lesseeList,
   setFields,
   crops,
   seasons,
@@ -80,7 +83,7 @@ export default function Fields({
   }, [rentTypes]);
 
   const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [modalInvestorOpen, setModalInvestorOpen] = useState<boolean>(false);
+  const [modalLesseeOpen, setModalLesseeOpen] = useState<boolean>(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
@@ -89,12 +92,12 @@ export default function Fields({
     }
   }, [modalOpen]);
 
-  const inputInvestorRef = useRef<HTMLInputElement>(null);
+  const inputLesseeRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
-    if (modalInvestorOpen) {
-      setTimeout(() => inputInvestorRef.current?.focus(), 0);
+    if (modalLesseeOpen) {
+      setTimeout(() => inputLesseeRef.current?.focus(), 0);
     }
-  }, [modalInvestorOpen]);
+  }, [modalLesseeOpen]);
 
   const [leaseTypePercent, setLeaseTypePercent] = useState<number | "">("");
   const [leaseTypeDollar, setLeaseTypeDollar] = useState<number | "">("");
@@ -102,15 +105,15 @@ export default function Fields({
   const [investment, setInvestment] = useState<number | "">("");
   const [investmentError, setInvestmentError] = useState<string>("");
 
-  const [queryInvestor, setQueryInvestor] = useState<string>("");
+  const [queryLessee, setQueryLessee] = useState<string>("");
   const [pendingLeaseType, setPendingLeaseType] = useState<{
     key: number;
     value: string;
   } | null>(null);
 
-  const [pendingInvestor, setPendingInvestor] = useState<{
+  const [pendingLessee, setPendingLessee] = useState<{
     key: number;
-    value: Investor;
+    value: Lessee;
   } | null>(null);
 
   const handleLeaseTypeChange = (key: number, value: string) => {
@@ -147,8 +150,8 @@ export default function Fields({
 
   const handleFieldChange = (
     fieldIndex: number,
-    fieldKey: "name" | "leaseType" | "leaseTypePercent" | "leaseTypeValue" | "investors",
-    value: string | number | Investor | Investor[]
+    fieldKey: "name" | "leaseType" | "leaseTypePercent" | "leaseTypeValue" | "lessees",
+    value: string | number | Lessee | Lessee[]
   ) => {
     setFields((prevFields) =>
       prevFields.map((field, idx) =>
@@ -166,7 +169,7 @@ export default function Fields({
         leaseType: "",
         leaseTypePercent: "",
         leaseTypeValue: "",
-        investors: [],
+        lessees: [],
         plots: [
           {
             id: 0,
@@ -280,7 +283,7 @@ export default function Fields({
   };
 
   const handleSaveInvestment = () => {
-    if (!pendingInvestor || investment === null || investment === undefined) {
+    if (!pendingLessee || investment === null || investment === undefined) {
       return;
     }
 
@@ -289,43 +292,42 @@ export default function Fields({
       investment >= 1 &&
       investment <= 100
     ) {
-      // Validate against the current field investors
-      const currentField = fields[pendingInvestor.key] || { investors: [] };
-      const currentInvestors = currentField.investors || [];
-      const used = currentInvestors.reduce((acc, inv) => acc + (inv.percentage || 0), 0);
+      const currentField = fields[pendingLessee.key] || { lessees: [] };
+      const currentLessees = currentField.lessees || [];
+      const used = currentLessees.reduce((acc, l) => acc + (l.percentage || 0), 0);
       if (used + investment > 100) {
         setInvestmentError(
-          "La suma total de los porcentajes de inversores no puede superar 100."
+          "La suma total de los porcentajes de arrendatarios no puede superar 100."
         );
         return;
       }
 
-      // Add or replace investor in the array with provided percentage
-      const newInvestor: Investor = {
-        ...pendingInvestor.value,
+      const newLessee: Lessee = {
+        ...pendingLessee.value,
         percentage: investment || 0,
-      } as Investor;
+      };
 
-      const updatedInvestors = [
-        ...currentInvestors.filter((i) => i.id !== newInvestor.id && i.name !== newInvestor.name),
-        newInvestor,
+      // Dedup por id (clave estable): reemplaza el lessee existente si ya estaba.
+      const updatedLessees = [
+        ...currentLessees.filter((l) => l.id !== newLessee.id),
+        newLessee,
       ];
 
-      handleFieldChange(pendingInvestor.key || 0, "investors", updatedInvestors);
+      handleFieldChange(pendingLessee.key || 0, "lessees", updatedLessees);
     } else {
       setInvestmentError("Porcentaje debe ser entre 1 y 100");
       return;
     }
 
-    setModalInvestorOpen(false);
+    setModalLesseeOpen(false);
     setInvestment("");
-    setPendingInvestor(null);
+    setPendingLessee(null);
   }
 
-  const handleInvestorSuggestionClick = (key: number, value: Investor) => {
-    setPendingInvestor({ key, value });
+  const handleLesseeSuggestionClick = (key: number, value: Lessee) => {
+    setPendingLessee({ key, value });
     setInvestmentError("");
-    setModalInvestorOpen(true);
+    setModalLesseeOpen(true);
   };
 
   return (
@@ -348,13 +350,13 @@ export default function Fields({
             <hr className="mt-4 col-span-full border-b-0 border-gray-800" />
           )}
           <div className="grid grid-cols-1 md:grid-cols-3 md:items-start gap-3 md:gap-4 relative">
-            <InputField
+            <CatalogNameSelect
+              base="field"
               label="Campo"
-              placeholder="Ingrese nombre"
-              name="fieldName"
+              placeholder="Seleccione campo"
               value={field.name}
-              onChange={(e) => handleFieldChange(key, "name", e.target.value)}
-              inputClassName="flex-1"
+              onChange={(v) => handleFieldChange(key, "name", v)}
+              fullWidth
             />
             <div className="relative">
             <SelectField
@@ -411,28 +413,26 @@ export default function Fields({
               </div>
             )}
             </div>
-            <AutocompleteSelect<Investor>
-            name="adminCostInvestor"
+            <AutocompleteSelect<Lessee>
+            name="lessee"
             label="Arrendatario"
             placeholder="Ingrese nombre"
-            options={investorList}
-            selectedItems={field.investors || []}
-            query={queryInvestor}
-            setQuery={setQueryInvestor}
-            handleSuggestionClick={(e) => handleInvestorSuggestionClick(key, e)}
+            options={lesseeList}
+            selectedItems={field.lessees || []}
+            query={queryLessee}
+            setQuery={setQueryLessee}
+            handleSuggestionClick={(e) => handleLesseeSuggestionClick(key, e)}
             setItems={(updater) => {
-              const prev = field.investors || [];
+              const prev = field.lessees || [];
               const next =
                 typeof updater === "function"
-                  ? (updater as (p: Investor[]) => Investor[])(prev)
-                  : (updater as Investor[]);
-              handleFieldChange(key, "investors", next);
+                  ? (updater as (p: Lessee[]) => Lessee[])(prev)
+                  : (updater as Lessee[]);
+              handleFieldChange(key, "lessees", next);
             }}
-            customAddLabel="+ Agregar inversor"
-            customAddItem={{ id: 0, name: queryInvestor, percentage: 0 }}
             renderTag={(item) => `${item.name} (${item.percentage}%)`}
           />
-            
+
           </div>
           <div className="space-y-4">
             {field.plots.map((plot, plotkey) => (
@@ -451,14 +451,12 @@ export default function Fields({
                     <Trash size={12} />
                   </Button>
                 )}
-                <InputField
+                <CatalogNameSelect
+                  base="lot"
                   label="Lote"
-                  placeholder="Ingrese nombre"
-                  name="name"
+                  placeholder="Seleccione lote"
                   value={plot.name}
-                  onChange={(e) =>
-                    handlePlotChange(key, plotkey, "name", e.target.value)
-                  }
+                  onChange={(v) => handlePlotChange(key, plotkey, "name", v)}
                   size="sm"
                   fullWidth
                 />
@@ -727,16 +725,16 @@ export default function Fields({
         />
       </BaseModal>
       <BaseModal
-        isOpen={modalInvestorOpen}
-        onClose={() => setModalInvestorOpen(false)}
-        title={`Aporte para ${pendingInvestor?.value.name || ""}`}
+        isOpen={modalLesseeOpen}
+        onClose={() => setModalLesseeOpen(false)}
+        title={`Aporte para ${pendingLessee?.value.name || ""}`}
         primaryButtonText="Guardar"
         onPrimaryAction={handleSaveInvestment}
       >
         <div className="flex flex-col items-center gap-2">
           <p>Ingresá el porcentaje de aporte al proyecto:</p>
           <input
-            ref={inputInvestorRef}
+            ref={inputLesseeRef}
             type="number"
             min="1"
             max="100"

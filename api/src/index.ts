@@ -47,6 +47,10 @@ app.use((req, _res, next) => {
         typeof req.headers.authorization === "string"
           ? req.headers.authorization
           : undefined,
+      tenantId:
+        typeof req.headers["x-tenant-id"] === "string"
+          ? req.headers["x-tenant-id"]
+          : undefined,
     },
     next
   );
@@ -58,6 +62,14 @@ console.log("Backend real (mocks desactivados).");
 
 app.get("/health", (_req, res) => {
   res.status(200).json({ ok: true });
+});
+
+// Las respuestas del API son datos dinámicos por proyecto: nunca deben cachearse
+// (ni por el navegador, ni por proxies/CDN intermedios). El BFF ya es un proxy
+// directo a la BDD, así que siempre se sirve fresco.
+app.use("/api/v1", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
 });
 
 app.use("/api/v1", routes);

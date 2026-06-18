@@ -308,13 +308,19 @@ export default function UpdateOrder({
   useEffect(() => {
     if (!orderId) return;
 
-    if (isDigitalDraft) {
+    // Las órdenes digitales viven en work_order_drafts y en el listado llegan con
+    // id negativo (-draft_id). Hay que cargarlas SIEMPRE por el endpoint de draft
+    // (getDraftWorkorder normaliza el id con Math.abs). Discriminamos por isDigital
+    // y no por isDigitalDraft: si el status no llegara exactamente como "draft", la
+    // rama normal pediría /work-orders/{id negativo} y fallaría (bug del hipervínculo
+    // de consumo para órdenes digitales).
+    if (isDigital) {
       getDraftWorkorder(orderId);
       return;
     }
 
     getWorkorder(orderId);
-  }, [orderId, isDigitalDraft, getDraftWorkorder, getWorkorder]);
+  }, [orderId, isDigital, getDraftWorkorder, getWorkorder]);
 
   useEffect(() => {
     if (selectedOrder) {

@@ -1,7 +1,6 @@
 import { Request, Response, Router } from "express";
 import { ApiClient, ApiResponse } from "../clients/ApiClient";
 import { configService } from "../configService";
-import { cache } from ".";
 
 const apiClient = new ApiClient(configService.baseManagerApi);
 
@@ -12,12 +11,6 @@ router.get("", async (req: Request, res: Response) => {
     const userId = req.user?.userID;
     if (!userId) {
       res.status(401).json({ message: "Usuario no autenticado" });
-      return;
-    }
-
-    const cachedCustomers = cache.get("customers");
-    if (cachedCustomers) {
-      res.status(200).json(cachedCustomers);
       return;
     }
 
@@ -48,10 +41,6 @@ router.get("", async (req: Request, res: Response) => {
         total,
       },
     };
-
-    if (customers.data.length > 0) {
-      cache.set("customers", data);
-    }
 
     res.status(200).json(data);
   } catch (error: any) {
@@ -140,9 +129,7 @@ router.put("/:id/archive", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.post<any>(`/customers/${id}/archive`, {}, headers);
-    setImmediate(() => cache.flushAll());
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.post<any>(`/customers/${id}/archive`, {}, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -173,9 +160,7 @@ router.put("/:id/restore", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.post<any>(`/customers/${id}/restore`, {}, headers);
-    setImmediate(() => cache.flushAll());
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.post<any>(`/customers/${id}/restore`, {}, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 
@@ -206,9 +191,7 @@ router.delete("/:id/hard", async (req: Request, res: Response) => {
       "X-User-Id": userId,
     };
 
-    await apiClient.delete<any>(`/customers/${id}`, headers);
-    setImmediate(() => cache.flushAll());
-    res.status(200).json({ success: true, message: "Operación exitosa" });
+    await apiClient.delete<any>(`/customers/${id}`, headers);    res.status(200).json({ success: true, message: "Operación exitosa" });
   } catch (error: any) {
     const err = error as ApiResponse<null>;
 

@@ -14,6 +14,8 @@ type FilterPopoverPosition = {
   left: number;
 };
 
+export type FilterOptionGroup = { label: string; options: string[] };
+
 export type DataTableColumn<T> = {
   key: keyof T;
   header: string;
@@ -21,6 +23,8 @@ export type DataTableColumn<T> = {
   filterable?: boolean;
   filterType?: FilterType;
   filterOptions?: string[];
+  /** When set, the filter popover renders options grouped under section headers */
+  filterOptionGroups?: FilterOptionGroup[];
   sortable?: boolean;
   width?: string;
   minWidth?: string;
@@ -411,7 +415,8 @@ export function DataTable<T>({
                                       Filtro
                                     </label>
 
-                                    {column.filterType === "select" && column.filterOptions ? (
+                                    {column.filterType === "select" &&
+                                    (column.filterOptions || column.filterOptionGroups) ? (
                                       <>
                                         <input
                                           type="text"
@@ -428,14 +433,86 @@ export function DataTable<T>({
                                         <div className="max-h-48 overflow-auto pr-1 text-slate-600">
                                           {(() => {
                                             const key = String(column.key);
-                                            const visibleOptions = getVisibleFilterOptions(
-                                              column.filterOptions,
-                                              filterSearch[key] || ""
-                                            );
+                                            const searchQuery = filterSearch[key] || "";
                                             const current = filters?.[key];
-                                            const selectedOptions = Array.isArray(current)
-                                              ? current
-                                              : [];
+                                            const selectedOptions: string[] = Array.isArray(current) ? current : [];
+
+                                            // ── Grouped mode ──────────────────────────────────
+                                            if (column.filterOptionGroups) {
+                                              const visibleGroups = column.filterOptionGroups
+                                                .map((g) => ({
+                                                  label: g.label,
+                                                  options: getVisibleFilterOptions(g.options, searchQuery),
+                                                }))
+                                                .filter((g) => g.options.length > 0);
+
+                                              const allVisibleOptions = visibleGroups.flatMap((g) => g.options);
+                                              const allVisibleSelected =
+                                                allVisibleOptions.length > 0 &&
+                                                allVisibleOptions.every((o) => selectedOptions.includes(o));
+                                              const someVisibleSelected =
+                                                allVisibleOptions.some((o) => selectedOptions.includes(o)) &&
+                                                !allVisibleSelected;
+
+                                              const toggleAllVisible = (checked: boolean) => {
+                                                const next = checked
+                                                  ? [...new Set([...selectedOptions, ...allVisibleOptions])]
+                                                  : selectedOptions.filter((o) => !allVisibleOptions.includes(o));
+                                                handleFilterChange(key, next);
+                                              };
+
+                                              if (allVisibleOptions.length === 0) {
+                                                return <p className="py-1 text-xs text-slate-400">Sin resultados</p>;
+                                              }
+
+                                              return (
+                                                <>
+                                                  <label className="mb-1 flex items-center gap-2 border-b border-slate-100 pb-2 py-1 text-xs font-semibold text-slate-700">
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={allVisibleSelected}
+                                                      ref={(input) => { if (input) input.indeterminate = someVisibleSelected; }}
+                                                      onChange={(e) => toggleAllVisible(e.target.checked)}
+                                                    />
+                                                    Seleccionar todo
+                                                  </label>
+                                                  {visibleGroups.map((group) => (
+                                                    <div key={group.label}>
+                                                      <p className="mt-2 mb-0.5 px-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                                        {group.label}
+                                                      </p>
+                                                      {group.options.map((option) => {
+                                                        const selected = selectedOptions.includes(option);
+                                                        return (
+                                                          <label
+                                                            key={option}
+                                                            className="flex items-center gap-2 py-1 text-xs text-slate-600"
+                                                          >
+                                                            <input
+                                                              type="checkbox"
+                                                              checked={selected}
+                                                              onChange={(e) => {
+                                                                const next = e.target.checked
+                                                                  ? [...selectedOptions, option]
+                                                                  : selectedOptions.filter((v) => v !== option);
+                                                                handleFilterChange(key, next);
+                                                              }}
+                                                            />
+                                                            {option}
+                                                          </label>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  ))}
+                                                </>
+                                              );
+                                            }
+
+                                            // ── Flat mode ─────────────────────────────────────
+                                            const visibleOptions = getVisibleFilterOptions(
+                                              column.filterOptions!,
+                                              searchQuery
+                                            );
 
                                             const allVisibleSelected =
                                               visibleOptions.length > 0 &&
