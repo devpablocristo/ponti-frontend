@@ -1,7 +1,6 @@
 // Cliente del registry (búsqueda unificada de entidades + edición de alias). Habla con el BFF
 // /registry/* y reusa /actors/:id para cargar un actor completo. NO modifica los APIs existentes.
 import { apiClient } from "@/api/client";
-import { SuccessResponse } from "@/api/types";
 import { Actor } from "@/api/actors";
 
 export type RegistryEntityType = "actor" | "crops" | "types" | "lease-types" | "campaigns" | "project" | "field" | "lot";
@@ -29,6 +28,28 @@ export interface RegistryResult {
 
 export type RegistryStatus = "active" | "archived" | "all";
 
+type MaybeWrapped<T> = T | { data: T };
+
+function unwrapResponse<T>(payload: MaybeWrapped<T>): T {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "data" in payload &&
+    !Array.isArray((payload as { data?: unknown }).data)
+  ) {
+    return (payload as { data: T }).data;
+  }
+  return payload as T;
+}
+
+function normalizeRegistryResult(payload: unknown): RegistryResult {
+  const result = unwrapResponse<RegistryResult>(payload as MaybeWrapped<RegistryResult>);
+  return {
+    data: Array.isArray(result?.data) ? result.data : [],
+    page_info: result?.page_info ?? { page: 1, per_page: 100, total: 0, max_page: 1 },
+  };
+}
+
 // searchRegistry: búsqueda unificada paginada. type = "all" | rol de actor | base de catálogo.
 export async function searchRegistry(params: {
   q?: string;
@@ -43,8 +64,8 @@ export async function searchRegistry(params: {
   if (params.status) qs.set("status", params.status);
   qs.set("page", String(params.page ?? 1));
   qs.set("per_page", String(params.perPage ?? 100));
-  const res = await apiClient.get<SuccessResponse<RegistryResult>>(`/registry?${qs.toString()}`);
-  return res.data ?? { data: [], page_info: { page: 1, per_page: 100, total: 0, max_page: 1 } };
+  const res = await apiClient.get<MaybeWrapped<RegistryResult>>(`/registry?${qs.toString()}`);
+  return normalizeRegistryResult(res);
 }
 
 export async function searchRegistryAll(params: {
@@ -88,8 +109,8 @@ export function invalidateRegistryOptions(base?: string): void {
 
 // getActor: carga un actor completo (keys incl. ALIAS, party_type, roles) para editar.
 export async function getActor(id: number): Promise<Actor> {
-  const res = await apiClient.get<SuccessResponse<Actor>>(`/actors/${id}`);
-  return res.data;
+  const res = await apiClient.get<MaybeWrapped<Actor>>(`/actors/${id}`);
+  return unwrapResponse<Actor>(res);
 }
 
 // setActorAliases: reemplaza el set de alias del actor. 409 si un alias ya lo usa otra identidad.
