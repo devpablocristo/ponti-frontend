@@ -14,7 +14,7 @@ import { Column } from "../../types";
 import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import InputField from "../../../../components/Input/InputField";
-import SelectField from "../../../../components/Input/SelectField";
+import SupplyDropdown from "../../../../components/Dropdown/SupplyDropdown";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "../../../../api/client";
 import {
@@ -541,13 +541,13 @@ export default function ListTasks() {
                   );
                 }}
               />
-              <SelectField
+              <SupplyDropdown
                 label="Rubro"
-                name={`category-${labor?.id || 0}`}
-                value={labor?.category_id ? labor.category_id.toString() : ""}
-                onChange={(e) => {
+                searchPlaceholder="Buscar rubro..."
+                value={labor?.category_id || null}
+                onSelect={(option) => {
                   if (!labor) return;
-                  setLabor({ ...labor, category_id: parseInt(e.target.value) });
+                  setLabor({ ...labor, category_id: Number(option.id) });
                 }}
                 options={safeCategories}
               />

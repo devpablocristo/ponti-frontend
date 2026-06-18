@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
 export type SupplyDropdownOption = {
-  id: number;
+  id: number | string;
   name: string;
   badge?: ReactNode;
 };
@@ -14,6 +14,10 @@ type SupplyDropdownProps = {
   onCreateNew?: () => void;
   hasError?: boolean;
   placeholder?: string;
+  searchPlaceholder?: string;
+  createNewLabel?: string;
+  label?: string;
+  disabled?: boolean;
 };
 
 export default function SupplyDropdown({
@@ -23,6 +27,10 @@ export default function SupplyDropdown({
   onCreateNew,
   hasError = false,
   placeholder = "Seleccionar...",
+  searchPlaceholder = "Buscar...",
+  createNewLabel = "+ Crear nuevo",
+  label,
+  disabled = false,
 }: SupplyDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -38,7 +46,7 @@ export default function SupplyDropdown({
   );
 
   const selected = value != null
-    ? options.find((o) => o.id === Number(value))
+    ? options.find((o) => String(o.id) === String(value))
     : null;
 
   const findByPrefix = (prefix: string, startIndex = 0) => {
@@ -182,20 +190,36 @@ export default function SupplyDropdown({
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative text-left">
+      {label && (
+        <label className="block mb-1.5 text-xs font-medium text-slate-600">
+          {label}
+        </label>
+      )}
       <div
         role="combobox"
-        tabIndex={0}
+        tabIndex={disabled ? -1 : 0}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className={`input-base cursor-pointer text-sm py-2 px-3.5 flex items-center justify-between ${
-          hasError ? "border-red-500" : ""
-        }`}
-        onClick={() => (isOpen ? close() : open())}
-        onKeyDown={handleTriggerKeyDown}
+        aria-disabled={disabled}
+        className={`input-base text-sm py-2 px-3.5 flex items-center justify-between ${
+          disabled ? "cursor-not-allowed opacity-60 bg-gray-50" : "cursor-pointer"
+        } ${hasError ? "border-red-500" : ""}`}
+        onClick={() => {
+          if (disabled) return;
+          if (isOpen) {
+            close();
+          } else {
+            open();
+          }
+        }}
+        onKeyDown={(e) => {
+          if (disabled) return;
+          handleTriggerKeyDown(e);
+        }}
       >
         {selected ? (
-          <span className="truncate font-semibold text-gray-900">
+          <span className="truncate text-gray-900">
             {selected.name}
             {selected.badge && <> {selected.badge}</>}
           </span>
@@ -209,7 +233,7 @@ export default function SupplyDropdown({
         <div className="absolute top-full left-0 w-full bg-white border rounded-lg shadow-lg z-20 mt-1">
           <input
             type="text"
-            placeholder="Buscar insumo..."
+            placeholder={searchPlaceholder}
             className="w-full px-3 py-2 text-sm border-b outline-none"
             value={search}
             onChange={(e) => {
@@ -228,14 +252,14 @@ export default function SupplyDropdown({
               <li
                 role="option"
                 aria-selected={false}
-                className="px-3 py-2 cursor-pointer hover:bg-gray-100 text-blue-600 font-semibold border-b"
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 text-blue-600 font-medium border-b"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   onCreateNew();
                   close();
                 }}
               >
-                + Crear nuevo insumo
+                {createNewLabel}
               </li>
             )}
             {filtered.map((option, idx) => (
@@ -244,7 +268,7 @@ export default function SupplyDropdown({
                 role="option"
                 aria-selected={selected?.id === option.id}
                 data-option-index={idx}
-                className={`px-3 py-2 cursor-pointer font-semibold text-gray-900 ${
+                className={`px-3 py-2 text-sm cursor-pointer text-gray-900 ${
                   highlightedIndex === idx ? "bg-gray-100" : "hover:bg-gray-100"
                 }`}
                 onMouseEnter={() => setHighlightedIndex(idx)}

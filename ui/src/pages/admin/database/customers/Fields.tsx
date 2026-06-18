@@ -1,6 +1,6 @@
 import { CirclePlus, CopyIcon, Trash } from "lucide-react";
 import InputField from "../../../../components/Input/InputField";
-import SelectField from "../../../../components/Input/SelectField";
+import SupplyDropdown from "../../../../components/Dropdown/SupplyDropdown";
 import Button from "../../../../components/Button/Button";
 import { Entity } from "../../../../hooks/useDatabase/options/types";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -359,14 +359,13 @@ export default function Fields({
               fullWidth
             />
             <div className="relative">
-            <SelectField
+            <SupplyDropdown
               label="Tipo de Arriendo"
               placeholder="Tipo de Arriendo"
-              name="leaseType"
-              value={field.leaseType}
-              onChange={(e) => handleLeaseTypeChange(key, e.target.value)}
+              searchPlaceholder="Buscar tipo..."
+              value={field.leaseType || null}
+              onSelect={(option) => handleLeaseTypeChange(key, String(option.id))}
               options={rentTypesOptions}
-              className="flex-1"
             />
             {((typeof field.leaseTypePercent === "number" &&
               field.leaseTypePercent > 0) ||
@@ -474,58 +473,48 @@ export default function Fields({
                   }}
                   size="sm"
                 />
-                <SelectField
+                <SupplyDropdown
                   label="Cultivo Anterior"
                   placeholder="Seleccione cultivo"
-                  name="previousCrop"
+                  searchPlaceholder="Buscar cultivo..."
                   options={getCropOptionsForPlot(plot.previousCrop)}
                   value={
-                    plot.previousCrop.name === ""
-                      ? ""
-                      : String(plot.previousCrop.id)
+                    plot.previousCrop.name === "" ? null : plot.previousCrop.id
                   }
-                  onChange={(e) =>
+                  onSelect={(option) =>
                     handlePlotChange(
                       key,
                       plotkey,
                       "previousCrop",
-                      e.target.value
+                      String(option.id)
                     )
                   }
-                  fullWidth
-                  size="sm"
                 />
-                <SelectField
+                <SupplyDropdown
                   label="Cultivo Actual"
                   placeholder="Seleccione cultivo"
-                  name="currentCrop"
+                  searchPlaceholder="Buscar cultivo..."
                   options={getCropOptionsForPlot(plot.currentCrop)}
                   value={
-                    plot.currentCrop.name === ""
-                      ? ""
-                      : String(plot.currentCrop.id)
+                    plot.currentCrop.name === "" ? null : plot.currentCrop.id
                   }
-                  onChange={(e) =>
+                  onSelect={(option) =>
                     handlePlotChange(
                       key,
                       plotkey,
                       "currentCrop",
-                      e.target.value
+                      String(option.id)
                     )
                   }
-                  size="sm"
-                  fullWidth
                 />
-                <SelectField
+                <SupplyDropdown
                   label="Periodo"
-                  name="season"
-                  value={plot.season}
-                  onChange={(e) =>
-                    handlePlotChange(key, plotkey, "season", e.target.value)
+                  searchPlaceholder="Buscar periodo..."
+                  value={plot.season || null}
+                  onSelect={(option) =>
+                    handlePlotChange(key, plotkey, "season", String(option.id))
                   }
                   options={seasons}
-                  size="sm"
-                  fullWidth
                 />
               </div>
             ))}

@@ -878,16 +878,16 @@ export default function Customers() {
             />
             {showCustomerSuggestions && (
               <div className="flex justify-between items-center">
-                <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
+                <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-lg z-10 max-h-[200px] overflow-y-auto">
                   {(suggestions?.length ?? 0) > 0 &&
                     suggestions.map((customer, index) => (
                       <li
                         key={index}
                         onClick={() => handleCustomerSuggestionClick(customer)}
-                        className={`px-4 py-2 cursor-pointer ${
+                        className={`px-3 py-2 text-sm cursor-pointer text-gray-900 ${
                           index === highlightedIndex
-                            ? "bg-gray-300 font-medium"
-                            : "hover:bg-gray-300 hover:font-medium"
+                            ? "bg-gray-100"
+                            : "hover:bg-gray-100"
                         }`}
                       >
                         {customer.name}
@@ -928,16 +928,16 @@ export default function Customers() {
             />
             {showCampaingSuggestions && (
               <div className="flex justify-between items-center">
-                <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-md z-10 max-h-[200px] overflow-y-auto">
+                <ul className="absolute top-full mb-1 w-full bg-white border rounded-lg shadow-lg z-10 max-h-[200px] overflow-y-auto">
                   {(campaignSuggestions?.length ?? 0) > 0 &&
                     campaignSuggestions.map((campaign, index) => (
                       <li
                         key={index}
                         onClick={() => handleCampaignSuggestionClick(campaign)}
-                        className={`px-4 py-2 cursor-pointer ${
+                        className={`px-3 py-2 text-sm cursor-pointer text-gray-900 ${
                           index === highlightedCampaignIndex
-                            ? "bg-gray-300 font-medium"
-                            : "hover:bg-gray-300 hover:font-medium"
+                            ? "bg-gray-100"
+                            : "hover:bg-gray-100"
                         }`}
                       >
                         {campaign.name}

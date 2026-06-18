@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
-import SelectField from "../../../../components/Input/SelectField";
+import SupplyDropdown from "../../../../components/Dropdown/SupplyDropdown";
+import ContractorSelect from "./ContractorSelect";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import useCategories from "../../../../hooks/useCategories";
@@ -20,7 +21,6 @@ import {
   parseCsv,
   parsePartialPrice,
 } from "./importUtils";
-import ContractorSelect from "./ContractorSelect";
 
 interface Labor {
   id: number;
@@ -638,15 +638,14 @@ export default function TasksForm() {
                     <label className="sm:hidden text-sm text-gray-600">
                       Rubro
                     </label>
-                    <SelectField
+                    <SupplyDropdown
                       key={row.id}
-                      label=""
-                      name={`category-${index}`}
-                      value={row.category.toString()}
-                      onChange={(e) =>
-                        handleChange(row.id, "category", e.target.value)
-                      }
                       options={categories}
+                      value={row.category || null}
+                      onSelect={(option) =>
+                        handleChange(row.id, "category", String(option.id))
+                      }
+                      searchPlaceholder="Buscar rubro..."
                     />
                   </div>
                   <div className="sm:col-span-1">

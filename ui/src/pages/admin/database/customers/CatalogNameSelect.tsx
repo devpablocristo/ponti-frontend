@@ -81,11 +81,11 @@ export default function CatalogNameSelect({
           className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
         />
         {open && (suggestions.length > 0 || canCreate) && (
-          <ul className="absolute top-full mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-md z-20 max-h-[200px] overflow-y-auto">
+          <ul className="absolute top-full mt-1 w-full bg-white border rounded-lg shadow-lg z-20 max-h-[200px] overflow-y-auto">
             {canCreate && (
               <li
                 onClick={() => setOpen(false)}
-                className="px-4 py-2 text-sm cursor-pointer hover:bg-primary-50 text-primary-700 font-medium border-b border-gray-100"
+                className="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 text-blue-600 font-medium border-b"
               >
                 Crear «{typed}»
               </li>
@@ -97,7 +97,7 @@ export default function CatalogNameSelect({
                   onChange(name);
                   setOpen(false);
                 }}
-                className="px-4 py-2 text-sm cursor-pointer hover:bg-gray-100"
+                className="px-3 py-2 text-sm cursor-pointer text-gray-900 hover:bg-gray-100"
               >
                 {name}
               </li>
