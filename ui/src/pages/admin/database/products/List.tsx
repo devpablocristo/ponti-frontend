@@ -8,7 +8,7 @@ import Button from "../../../../components/Button/Button";
 import { Column } from "../../types";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import InputField from "../../../../components/Input/InputField";
-import SelectField from "../../../../components/Input/SelectField";
+import SupplyDropdown from "../../../../components/Dropdown/SupplyDropdown";
 import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
@@ -455,13 +455,13 @@ export default function ListItems() {
               />
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <SelectField
+                  <SupplyDropdown
                     label="Unidad"
-                    name={`unit-${item?.name || ""}`}
-                    value={item?.unit_id && item.unit_id > 0 ? item.unit_id.toString() : ""}
-                    onChange={(e) => {
+                    searchPlaceholder="Buscar unidad..."
+                    value={item?.unit_id && item.unit_id > 0 ? item.unit_id : null}
+                    onSelect={(option) => {
                       if (!item) return;
-                      setItem({ ...item, unit_id: parseInt(e.target.value) });
+                      setItem({ ...item, unit_id: Number(option.id) });
                     }}
                     options={units}
                   />
@@ -495,13 +495,13 @@ export default function ListItems() {
                 />
                 Precio parcial (tentativo)
               </label>
-              <SelectField
+              <SupplyDropdown
                 label="Rubro"
-                name={`category-${item?.name || ""}`}
-                value={item?.category_id && item.category_id > 0 ? item.category_id.toString() : ""}
-                onChange={(e) => {
+                searchPlaceholder="Buscar rubro..."
+                value={item?.category_id && item.category_id > 0 ? item.category_id : null}
+                onSelect={(option) => {
                   if (!item) return;
-                  const category = parseInt(e.target.value);
+                  const category = Number(option.id);
                   const cat = categories.find((cat) => cat.id === category);
 
                   setItem({
@@ -512,16 +512,16 @@ export default function ListItems() {
                 }}
                 options={categories}
               />
-              <SelectField
+              <InputField
                 label=""
-                name={`type`}
-                value={item?.type_id && item.type_id > 0 ? item.type_id.toString() : ""}
+                name="type"
+                type="text"
+                value={
+                  types.find((t) => t.id === Number(item?.type_id))?.name || ""
+                }
+                onChange={() => {}}
                 disabled
-                onChange={(e) => {
-                  if (!item) return;
-                  setItem({ ...item, type_id: parseInt(e.target.value) });
-                }}
-                options={types}
+                placeholder="Tipo / Clase"
               />
             </div>
           </BaseModal>

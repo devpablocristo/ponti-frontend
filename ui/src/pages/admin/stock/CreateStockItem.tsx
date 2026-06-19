@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Button from "../../../components/Button/Button";
 import InputField from "../../../components/Input/InputField";
-import SelectField from "../../../components/Input/SelectField";
+import SupplyDropdown from "../../../components/Dropdown/SupplyDropdown";
 import useSupplies from "../../../hooks/useSupplies";
 import { LoaderCircle, Trash } from "lucide-react";
 import useProjects from "../../../hooks/useDatabase/projects";
@@ -278,15 +278,14 @@ clearForm();
                       className="sm:contents border sm:border-0 p-4 sm:p-0 rounded-md sm:rounded-none mb-4 sm:mb-0 shadow-sm sm:shadow-none"
                     >
                       <div className="sm:col-span-1">
-                        <SelectField
-                          label=""
-                          name={`item-${i}`}
+                        <SupplyDropdown
                           options={supplies}
-                          value={item.item}
-                          onChange={(e) =>
-                            handleItemChange(i, "item", e.target.value)
+                          value={item.item || null}
+                          onSelect={(option) =>
+                            handleItemChange(i, "item", String(option.id))
                           }
-                          size="sm"
+                          placeholder="Seleccionar insumo..."
+                          searchPlaceholder="Buscar insumo..."
                         />
                       </div>
                       <div className="sm:col-span-1">
