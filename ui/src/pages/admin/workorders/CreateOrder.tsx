@@ -327,6 +327,23 @@ export default function CreateOrder({
     }));
   }, [supplies, stock]);
 
+  const supplyOptions = useMemo(
+    () =>
+      availableSupplies.map((s) => ({
+        id: s.id,
+        name: s.name,
+        badge: (
+          <span className="ml-1 text-xs text-gray-400 font-normal">
+            <span className={s.availableQty < 0 ? "text-red-600" : undefined}>
+              {formatAvailableQty(s.availableQty)}
+            </span>{" "}
+            {s.availableUnit}
+          </span>
+        ),
+      })),
+    [availableSupplies]
+  );
+
   useEffect(() => {
     if (!pendingCreatedSupplyName) return;
     if (itemIndexToUpdate === null) {
@@ -923,21 +940,8 @@ export default function CreateOrder({
                     >
                       <div className="sm:col-span-1">
                         <SupplyDropdown
-                          options={availableSupplies.map((s) => ({
-                            id: s.id,
-                            name: s.name,
-                            badge: (
-                              <span className="ml-1 text-xs text-gray-400 font-normal">
-                                <span
-                                  className={s.availableQty < 0 ? "text-red-600" : undefined}
-                                >
-                                  {formatAvailableQty(s.availableQty)}
-                                </span>{" "}
-                                {s.availableUnit}
-                              </span>
-                            ),
-                          }))}
-                          value={item.itemId ? Number(item.itemId) : null}
+                          options={supplyOptions}
+                          value={item.itemId != null ? item.itemId : null}
                           onSelect={(option) => {
                             handleItemChange(i, "itemId", Number(option.id));
                             handleItemChange(i, "dose", "");

@@ -105,6 +105,7 @@ export default function SupplyDropdown({
       } else {
         open();
       }
+      return;
     }
     if (e.key === "Escape" && isOpen) {
       e.preventDefault();
@@ -278,9 +279,7 @@ export default function SupplyDropdown({
                 }}
               >
                 <span>{option.name}</span>
-                {option.badge && (
-                  <span className="ml-1 text-xs text-gray-400">{option.badge}</span>
-                )}
+                {option.badge}
               </li>
             ))}
             {filtered.length === 0 && (
