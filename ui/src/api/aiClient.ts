@@ -1,4 +1,5 @@
 import { request } from "@devpablocristo/core-http/fetch";
+import { parseSseStream } from "@devpablocristo/platform-chat-ui";
 import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 import type {
   PontiAiConfig,
@@ -75,36 +76,6 @@ export async function pontiAssistantChat(
   });
 }
 
-function parseSseBlocks(buffer: string): { events: PontiChatStreamSseEvent[]; rest: string } {
-  const events: PontiChatStreamSseEvent[] = [];
-  const lastSep = buffer.lastIndexOf("\n\n");
-  if (lastSep === -1) {
-    return { events, rest: buffer };
-  }
-  const complete = buffer.slice(0, lastSep);
-  const rest = buffer.slice(lastSep + 2);
-  for (const block of complete.split("\n\n")) {
-    if (!block.trim()) continue;
-    let ev = "message";
-    const dataParts: string[] = [];
-    for (const line of block.split("\n")) {
-      if (line.startsWith("event:")) {
-        ev = line.slice(6).trim();
-      } else if (line.startsWith("data:")) {
-        dataParts.push(line.slice(5).trimStart());
-      }
-    }
-    const raw = dataParts.join("\n");
-    try {
-      const data = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
-      events.push({ event: ev, data });
-    } catch {
-      events.push({ event: "error", data: { message: "sse_parse_error", detail: raw } });
-    }
-  }
-  return { events, rest };
-}
-
 /**
  * Chat con streaming SSE vía BFF (`/chat/stream`).
  * `onEvent` recibe cada evento parseado (`start`, `text`, `tool_call`, `tool_result`, `done`, `error`).
@@ -135,28 +106,10 @@ export async function pontiAssistantChatStream(
     const text = await res.text().catch(() => "");
     throw new Error(text || `chat stream failed: ${res.status}`);
   }
-  const reader = res.body?.getReader();
-  if (!reader) {
+  if (!res.body) {
     throw new Error("chat stream: no body");
   }
-  const decoder = new TextDecoder();
-  let buf = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    const { events, rest } = parseSseBlocks(buf);
-    buf = rest;
-    for (const e of events) {
-      onEvent(e);
-    }
-  }
-  if (buf.trim()) {
-    const { events } = parseSseBlocks(buf + "\n\n");
-    for (const e of events) {
-      onEvent(e);
-    }
-  }
+  await parseSseStream(res.body, (event) => onEvent(event as PontiChatStreamSseEvent));
 }
 
 export async function listPontiChatConversations(
