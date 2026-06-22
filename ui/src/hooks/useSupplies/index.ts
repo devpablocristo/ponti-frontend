@@ -14,7 +14,7 @@ import { extractErrorMessage, extractErrorStatus } from "@/api/hooks/useApiCall"
 
 type SupplyMutationResponse = SuccessResponse<unknown>;
 type SupplyWorkOrdersCountResponse = SuccessResponse<{ count: number }>;
-type DeleteSupplyResult = "deleted" | "conflict" | "error";
+type DeleteSupplyResult = "deleted" | "conflict" | "in_use" | "error";
 
 const useSupplies = () => {
   const [{ supplies, result }, dispatch] = useSupplyReducer();
@@ -128,7 +128,15 @@ const useSupplies = () => {
 
         setError("Ocurrio un error en la eliminación del insumo");
       } catch (error) {
-        if (extractErrorStatus(error) === 409) {
+        const status = extractErrorStatus(error);
+        if (status === 422) {
+          // El insumo tiene registros ACTIVOS (órdenes, ingresos o remitos en uso).
+          // No se puede eliminar ni archivar hasta quitar esos registros activos.
+          return "in_use";
+        }
+        if (status === 409) {
+          // El insumo solo tiene historial (registros ya eliminados): no se puede
+          // borrar físicamente. El componente decide archivarlo en su lugar.
           return "conflict";
         }
 
