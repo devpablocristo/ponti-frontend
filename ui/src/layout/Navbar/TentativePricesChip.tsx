@@ -73,9 +73,9 @@ export function TentativePricesChip() {
 
   const chipLabel =
     mode === "review"
-      ? revIngCount === tentativeCount + revIngCount
+      ? tentativeCount === 0
         ? `Revisar ${revIngCount} insumos`
-        : "Revisar"
+        : `Revisar ${count} items`
       : `${count} precios tentativos`;
 
   useEffect(() => {
@@ -123,13 +123,13 @@ export function TentativePricesChip() {
                     key={supply.id}
                     className="flex items-center justify-between gap-3 rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-900"
                   >
-                   <Link
-  to="/admin/database/items/list"
-  onClick={() => setOpen(false)}
-  className="truncate hover:underline"
->
-  {supply.name}
-</Link>
+                    <Link
+                      to="/admin/database/items/list"
+                      onClick={() => setOpen(false)}
+                      className="truncate hover:underline"
+                    >
+                      {supply.name}
+                    </Link>
                     <span className="shrink-0 font-semibold">u$ {supply.price}</span>
                   </div>
                 ))}
@@ -152,12 +152,12 @@ export function TentativePricesChip() {
                     className="flex items-center justify-between gap-3 rounded-lg bg-amber-50 px-2 py-1.5 text-xs text-amber-900"
                   >
                     <Link
-  to="/admin/database/tasks/list"
-  onClick={() => setOpen(false)}
-  className="truncate hover:underline"
->
-  {labor.name}
-</Link>
+                      to="/admin/database/tasks/list"
+                      onClick={() => setOpen(false)}
+                      className="truncate hover:underline"
+                    >
+                      {labor.name}
+                    </Link>
                     <span className="shrink-0 font-semibold">u$ {labor.price}</span>
                   </div>
                 ))}

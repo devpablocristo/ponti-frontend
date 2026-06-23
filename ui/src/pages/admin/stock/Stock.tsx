@@ -472,7 +472,7 @@ export function Stock() {
           stock,
           columnsFilters
         ),
-         render: (value, item) => {
+        render: (value, item) => {
           const investorName = String(value ?? "").trim();
 
           if (!investorName) {
