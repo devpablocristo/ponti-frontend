@@ -233,7 +233,7 @@ function ItemsIndicators({
   disabledCloseStock: boolean;
 }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <IndicatorCard
           title="Total invertido Kg"
@@ -825,7 +825,7 @@ export function Stock() {
         ]}
       />
       {!error && projectId && selectedCustomer && selectedCampaignId && (
-        <div className="my-4">
+        <div className="my-3">
           <ItemsIndicators
             summary={derivedSummary}
             selectedDate={selectedDate}

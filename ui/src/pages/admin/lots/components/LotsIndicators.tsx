@@ -16,7 +16,7 @@ export function LotsIndicators({
   error,
 }: LotsIndicatorsProps) {
   return (
-    <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
+    <div>
       {processing ? (
         <div className="flex items-center justify-center py-4">
           <LoaderCircle className="mr-2 h-5 w-5 animate-spin text-custom-btn" />
