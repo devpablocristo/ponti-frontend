@@ -12,6 +12,7 @@ import SupplyDropdown from "../../../../components/Dropdown/SupplyDropdown";
 import { units } from "../../../../constants/units";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "@/api/client";
+import { useSearchParams } from "react-router-dom";
 import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 
 const renderPriceCell = (value: unknown, row: Supply) => (
@@ -33,6 +34,7 @@ export default function ListItems() {
     updateSupply,
     completePendingSupply,
     deleteSupply,
+    archiveSupply,
     getWorkOrdersCount,
     processing,
     errorUpdate,
@@ -51,8 +53,11 @@ export default function ListItems() {
   } | null>(null);
   const [item, setItem] = useState<Supply | null>(null);
   const pagination = usePagination({ perPage: 10 });
-  const [suppliesMode, setSuppliesMode] = useState<SuppliesMode>("all");
   const [columnsFilters, setColumnsFilters] = useState<Record<string, unknown>>({});
+  const [searchParams] = useSearchParams();
+const [suppliesMode, setSuppliesMode] = useState<SuppliesMode>(
+  searchParams.get("mode") === "pending" ? "pending" : "all"
+);
 
   const { filters, projectId } = useWorkspaceFilters(["customer", "project", "campaign"]);
 
@@ -213,7 +218,9 @@ export default function ListItems() {
     setDeleteModalOpen(false);
     setDeleteTarget(null);
 
-    const result = await deleteSupply(deleteTarget.id);
+    const targetId = deleteTarget.id;
+    const result = await deleteSupply(targetId);
+
     if (result === "deleted") {
       setSuccessMessage("Se ha eliminado el insumo con éxito!");
       getSupplies(projectId, suppliesMode);
@@ -222,6 +229,37 @@ export default function ListItems() {
         const totalAfterDelete = supplies.length - 1;
         pagination.clampPageForTotal(totalAfterDelete);
       }, 200);
+      return;
+    }
+
+    if (result === "in_use") {
+      // El insumo tiene registros activos (órdenes, ingresos o remitos en uso).
+      // No se archiva: el usuario debe quitar primero esos registros activos.
+      setErrorMessage(
+        "El insumo está en uso. Eliminá los registros activos (órdenes, ingresos o remitos) antes de eliminarlo."
+      );
+      return;
+    }
+
+    if (result === "conflict") {
+      // El insumo solo tiene historial (registros ya eliminados) y no puede
+      // eliminarse físicamente. Se archiva en su lugar para conservar el historial.
+      const archived = await archiveSupply(targetId);
+      if (archived) {
+        setSuccessMessage(
+          "El insumo tiene historial, por lo que se archivó en lugar de eliminarse."
+        );
+        getSupplies(projectId, suppliesMode);
+
+        setTimeout(() => {
+          const totalAfterArchive = supplies.length - 1;
+          pagination.clampPageForTotal(totalAfterArchive);
+        }, 200);
+      } else {
+        setErrorMessage(
+          "No se pudo archivar el insumo. Intentá nuevamente."
+        );
+      }
     }
   };
 
@@ -531,13 +569,13 @@ export default function ListItems() {
               setDeleteModalOpen(false);
               setDeleteTarget(null);
             }}
-            title="Archivar insumo"
+            title="Eliminar insumo"
             message={
               deleteTarget && deleteTarget.count > 0
-                ? `El insumo "${deleteTarget.name}" está en ${deleteTarget.count} orden${deleteTarget.count > 1 ? "es" : ""} de trabajo activa${deleteTarget.count > 1 ? "s" : ""}. Se archivará del catálogo pero las órdenes no se verán afectadas. ¿Continuar?`
-                : `¿Está seguro que desea archivar el insumo "${deleteTarget?.name}"?`
+                ? `El insumo "${deleteTarget.name}" está en uso en ${deleteTarget.count} orden${deleteTarget.count > 1 ? "es" : ""} de trabajo activa${deleteTarget.count > 1 ? "s" : ""}. No se puede eliminar hasta quitar esos registros activos.`
+                : `¿Está seguro que desea eliminar el insumo "${deleteTarget?.name}"? Si tiene movimientos o historial, se archivará en lugar de eliminarse para conservar los registros.`
             }
-            primaryButtonText="Archivar"
+            primaryButtonText={deleteTarget && deleteTarget.count > 0 ? null : "Eliminar"}
             primaryButtonColor="bg-red-600 hover:bg-red-800 focus:ring-red-300"
             onPrimaryAction={confirmDelete}
           />

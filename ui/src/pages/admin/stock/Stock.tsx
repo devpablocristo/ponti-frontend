@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
-
+import { getInvestorLabel } from "./investorLabels";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 import { useNavigate } from "react-router-dom";
@@ -18,19 +18,11 @@ import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
 
-const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
-const MISSING_ENTRY_LABEL = "REV ING.";
-
 function getStockFilterValue(item: GetStockItems, key: keyof GetStockItems) {
-  const value = item[key];
-
-  if (key === "investor_name" && String(value ?? "").trim() === "") {
-    return item.has_multiple_investors
-      ? MULTIPLE_INVESTORS_LABEL
-      : MISSING_ENTRY_LABEL;
+  if (key === "investor_name") {
+    return getInvestorLabel(item);
   }
-
-  return String(value ?? "");
+  return String(item[key] ?? "");
 }
 
 const EditableCell = ({
@@ -486,13 +478,10 @@ export function Stock() {
           if (!investorName) {
             return (
               <span className="font-semibold text-red-600">
-                {item.has_multiple_investors
-                  ? MULTIPLE_INVESTORS_LABEL
-                  : MISSING_ENTRY_LABEL}
+                {getInvestorLabel(item)}
               </span>
             );
           }
-
           return <span>{investorName}</span>;
         },
       },
