@@ -212,7 +212,7 @@ function TaskHeader({
 
 function TasksIndicators({ metrics, processing }: { metrics: Metrics; processing: boolean }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <div>
       {processing ? (
         <div className="flex items-center justify-center py-4">
           <LoaderCircle className="animate-spin w-5 h-5 text-custom-btn mr-2" />
@@ -865,7 +865,7 @@ export function Tasks() {
           },
         ]}
       />
-      <div className="my-4">
+      <div className="my-3">
         {errorMetrics ? (
           <div
             className="flex items-center gap-3 p-4 text-sm text-red-800 rounded-xl bg-red-50 border border-red-200"

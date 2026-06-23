@@ -22,7 +22,7 @@ function ItemsIndicators({ summary }: { summary?: Summary }) {
     total_usd: 0,
   };
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <IndicatorCard
           title="Total invertido Kg"
@@ -535,7 +535,7 @@ export function Products() {
         </div>
       )}
       {!error && (
-        <div className="my-4">
+        <div className="my-3">
           <ItemsIndicators summary={derivedSummary} />
         </div>
       )}
