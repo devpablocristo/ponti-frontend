@@ -301,19 +301,20 @@ export default function UpdateOrder({
   useEffect(() => {
     if (!orderId) return;
 
-    // Las órdenes digitales viven en work_order_drafts y en el listado llegan con
-    // id negativo (-draft_id). Hay que cargarlas SIEMPRE por el endpoint de draft
-    // (getDraftWorkorder normaliza el id con Math.abs). Discriminamos por isDigital
-    // y no por isDigitalDraft: si el status no llegara exactamente como "draft", la
-    // rama normal pediría /work-orders/{id negativo} y fallaría (bug del hipervínculo
-    // de consumo para órdenes digitales).
-    if (isDigital) {
+    // Discriminamos por el SIGNO del id, no por isDigital ni por status. La vista
+    // del listado emite id NEGATIVO para los drafts digitales ABIERTOS (viven en
+    // work_order_drafts; getDraftWorkorder normaliza con Math.abs) e id POSITIVO para
+    // los workorders reales: manuales y digitales CERRADAS/publicadas (viven en
+    // public.workorders). Branchear por isDigital pelado mandaba la digital cerrada
+    // (id positivo) al endpoint de draft -> 404 -> drawer vacío. El signo del id es el
+    // contrato de la vista y no depende de que status llegue exacto.
+    if (orderId < 0) {
       getDraftWorkorder(orderId);
       return;
     }
 
     getWorkorder(orderId);
-  }, [orderId, isDigital, getDraftWorkorder, getWorkorder]);
+  }, [orderId, getDraftWorkorder, getWorkorder]);
 
   useEffect(() => {
     if (selectedOrder) {
