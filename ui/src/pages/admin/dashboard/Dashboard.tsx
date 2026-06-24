@@ -126,7 +126,7 @@ function DashboardContent({
         </div>
       )}
 
-      <div className="my-4">
+      <div className="mt-4">
         <DashboardIndicators dashboard={dashboard} />
       </div>
 

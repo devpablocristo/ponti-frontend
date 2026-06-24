@@ -17,8 +17,6 @@ type Props<T extends BaseItem> = {
   options: T[] | undefined;
   setItems: (value: React.SetStateAction<T[]>) => void;
   handleSuggestionClick: (item: T) => void;
-  customAddLabel: string;
-  customAddItem: T;
   renderTag?: (item: T) => React.ReactNode;
 };
 
@@ -32,8 +30,6 @@ function AutocompleteSelect<T extends BaseItem>({
   setQuery,
   handleSuggestionClick,
   setItems,
-  customAddLabel,
-  customAddItem,
   renderTag,
 }: Props<T>) {
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -56,9 +52,7 @@ function AutocompleteSelect<T extends BaseItem>({
       );
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (suggestions.length === 0 && query.trim() !== "") {
-        suggestionClick(customAddItem);
-      } else if (suggestions.length > 0) {
+      if (suggestions.length > 0) {
         const selected = suggestions[highlightedIndex];
         if (
           selected &&
@@ -85,12 +79,14 @@ function AutocompleteSelect<T extends BaseItem>({
         !wrapperRef.current.contains(event.target as Node)
       ) {
         setShowSuggestions(false);
+        setQuery("");
       }
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setShowSuggestions(false);
+        setQuery("");
       }
     };
 
@@ -187,7 +183,7 @@ function AutocompleteSelect<T extends BaseItem>({
         </div>
       </div>
       {showSuggestions && (
-        <ul className="absolute top-16 mt-3 mb-1 w-full bg-white border rounded-lg shadow-md z-50 max-h-[200px] overflow-y-auto">
+        <ul className="absolute top-16 mt-3 mb-1 w-full bg-white border rounded-lg shadow-lg z-50 max-h-[200px] overflow-y-auto">
           {suggestions.map((item, index) => {
             const alreadySelected = selectedItems.some(
               (i) => i.name === item.name
@@ -198,26 +194,21 @@ function AutocompleteSelect<T extends BaseItem>({
                 onClick={
                   !alreadySelected ? () => suggestionClick(item) : undefined
                 }
-                className={`px-4 py-2 cursor-pointer ${
+                className={`px-3 py-2 text-sm cursor-pointer text-gray-900 ${
                   alreadySelected
                     ? "text-gray-400 cursor-not-allowed bg-gray-100"
                     : index === highlightedIndex
-                    ? "bg-gray-300 font-medium"
-                    : "hover:bg-gray-300 hover:font-medium"
+                    ? "bg-gray-100"
+                    : "hover:bg-gray-100"
                 }`}
               >
                 {item.name}
               </li>
             );
           })}
-          {query !== "" && (
-            <li className="px-4 py-2 text-gray-500">
-              <button
-                onClick={() => suggestionClick(customAddItem)}
-                className="text-custom-btn hover:underline"
-              >
-                {customAddLabel}
-              </button>
+          {query !== "" && suggestions.length === 0 && (
+            <li className="px-3 py-2 text-sm text-gray-400">
+              Sin resultados
             </li>
           )}
         </ul>

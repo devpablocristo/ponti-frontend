@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
-import SelectField from "../../../../components/Input/SelectField";
+import SupplyDropdown from "../../../../components/Dropdown/SupplyDropdown";
+import ContractorSelect from "./ContractorSelect";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import useCategories from "../../../../hooks/useCategories";
@@ -9,6 +10,7 @@ import { LaborToSave, LaborInfo } from "../../../../hooks/useLabors/types";
 import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import { apiClient } from "../../../../api/client";
+import { listActors, Actor } from "../../../../api/actors";
 import { LoaderCircle } from "lucide-react";
 import * as XLSX from "xlsx";
 import {
@@ -50,6 +52,9 @@ export default function TasksForm() {
     "project",
     "campaign",
   ]);
+  const [contractorOptions, setContractorOptions] = useState<
+    { id: number; name: string }[]
+  >([]);
 
   const [rows, setLabors] = useState<Labor[]>(
     Array.from({ length: 5 }, (_, i) => ({
@@ -65,6 +70,26 @@ export default function TasksForm() {
   useEffect(() => {
     getCategories("type_id=4");
   }, [getCategories]);
+
+  useEffect(() => {
+    async function loadContractors() {
+      const perPage = 100;
+      let page = 1;
+      const allActors: Actor[] = [];
+      while (page <= 20) {
+        const result = await listActors("active", page, perPage);
+        allActors.push(...result.data);
+        if (page >= result.page_info.max_page || result.data.length === 0) break;
+        page += 1;
+      }
+      setContractorOptions(
+        allActors
+          .filter((actor) => actor.roles.includes("contractor"))
+          .map((actor) => ({ id: actor.id, name: actor.display_name }))
+      );
+    }
+    loadContractors();
+  }, []);
 
   useEffect(() => {
     if (projectId) {
@@ -613,15 +638,14 @@ export default function TasksForm() {
                     <label className="sm:hidden text-sm text-gray-600">
                       Rubro
                     </label>
-                    <SelectField
+                    <SupplyDropdown
                       key={row.id}
-                      label=""
-                      name={`category-${index}`}
-                      value={row.category.toString()}
-                      onChange={(e) =>
-                        handleChange(row.id, "category", e.target.value)
-                      }
                       options={categories}
+                      value={row.category || null}
+                      onSelect={(option) =>
+                        handleChange(row.id, "category", String(option.id))
+                      }
+                      searchPlaceholder="Buscar rubro..."
                     />
                   </div>
                   <div className="sm:col-span-1">
@@ -668,14 +692,13 @@ export default function TasksForm() {
                     <label className="sm:hidden text-sm text-gray-600">
                       Contratista
                     </label>
-                    <InputField
-                      label=""
+                    <ContractorSelect
                       name={`contratista-${index}`}
                       value={row.contractor}
-                      onChange={(e) =>
-                        handleChange(row.id, "contractor", e.target.value)
+                      options={contractorOptions}
+                      onSelect={(name) =>
+                        handleChange(row.id, "contractor", name)
                       }
-                      placeholder="nombre"
                     />
                   </div>
                 </div>

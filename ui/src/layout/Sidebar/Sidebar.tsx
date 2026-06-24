@@ -70,6 +70,7 @@ const menuDatabase = {
     { name: "Crear Insumos", route: "/admin/database/items" },
     { name: "Cargar Dólar Promedio", route: "/admin/database/dollar" },
     { name: "Cargar Comercialización", route: "/admin/database/commerce" },
+    { name: "Administrar Entidades", route: "/admin/database/registry" },
   ],
 };
 

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { parsePartialPrice } from "@/lib/importHelpers";
 import InputField from "../../../../components/Input/InputField";
 import Button from "../../../../components/Button/Button";
-import SelectField from "../../../../components/Input/SelectField";
+import SupplyDropdown from "../../../../components/Dropdown/SupplyDropdown";
 import { FilterBar } from "@devpablocristo/modules-ui-filters";
 import { useWorkspaceFilters } from "../../../../hooks/useWorkspaceFilters";
 import { SupplyCreatePayload, Supply } from "../../../../hooks/useSupplies/types";
@@ -930,15 +930,14 @@ export default function Items() {
                     <label className="sm:hidden text-sm text-gray-600">
                       Unidad
                     </label>
-                    <SelectField
+                    <SupplyDropdown
                       key={row.id}
-                      label=""
-                      name={`unit-${index}`}
-                      value={row.unit}
-                      onChange={(e) =>
-                        handleChange(row.id, "unit", e.target.value)
-                      }
                       options={units}
+                      value={row.unit || null}
+                      onSelect={(option) =>
+                        handleChange(row.id, "unit", String(option.id))
+                      }
+                      searchPlaceholder="Buscar unidad..."
                     />
                   </div>
                   <div className="sm:col-span-1">
@@ -986,37 +985,39 @@ export default function Items() {
                     <label className="sm:hidden text-sm text-gray-600">
                       Rubro
                     </label>
-                    <SelectField
+                    <SupplyDropdown
                       key={`category-${row.id}`}
-                      label=""
-                      name={`category-${index}`}
-                      value={row.category.toString()}
-                      onChange={(e) => {
+                      options={categories}
+                      value={row.category || null}
+                      onSelect={(option) => {
                         const cat = categories.find(
-                          (cat) => cat.id === Number(e.target.value)
+                          (cat) => cat.id === Number(option.id)
                         );
-                        handleChange(row.id, "category", e.target.value);
+                        handleChange(row.id, "category", String(option.id));
                         handleChange(
                           row.id,
                           "type",
                           cat?.type_id?.toString() || ""
                         );
                       }}
-                      options={categories}
+                      searchPlaceholder="Buscar rubro..."
                     />
                   </div>
                   <div className="sm:col-span-1">
                     <label className="sm:hidden text-sm text-gray-600">
                       Tipo / Clase
                     </label>
-                    <SelectField
+                    <InputField
                       key={`type-${row.id}`}
                       label=""
                       name={`type-${index}`}
-                      value={row.type.toString()}
+                      type="text"
+                      value={
+                        types.find((t) => t.id === Number(row.type))?.name || ""
+                      }
+                      onChange={() => {}}
                       disabled
-                      onChange={() => { }}
-                      options={types}
+                      placeholder="Tipo / Clase"
                     />
                   </div>
                 </div>

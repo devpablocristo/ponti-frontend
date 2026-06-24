@@ -327,7 +327,7 @@ export function Lots() {
       ) : null}
 
       {!message && !error ? (
-        <div className="my-4">
+        <div className="my-3">
           <LotsIndicators
             kpis={indicators}
             processing={!hasColumnFilters && processingKpis}

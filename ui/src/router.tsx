@@ -13,6 +13,7 @@ import { Stock } from "./pages/admin/stock/Stock";
 import Customers from "./pages/admin/customers/Customers";
 import Access from "./pages/admin/access/Access";
 import DatabaseCustomers from "./pages/admin/database/customers/Customers";
+import RegistryAdmin from "./pages/admin/database/registry/RegistryAdmin";
 import ArchivedCustomers from "./pages/admin/database/customers/ArchivedCustomers";
 import ArchivedProjects from "./pages/admin/database/projects/ArchivedProjects";
 import DataIntegrity from "./pages/admin/database/data-integrity/Integrity";
@@ -114,6 +115,10 @@ export default [
       {
         path: "database/customers",
         element: <DatabaseCustomers />,
+      },
+      {
+        path: "database/registry",
+        element: <RegistryAdmin />,
       },
       {
         path: "database/customers/archived",

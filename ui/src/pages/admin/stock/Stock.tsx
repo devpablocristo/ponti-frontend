@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LoaderCircle, Pencil, Check, AlertCircle } from "lucide-react";
-
+import { getInvestorLabel } from "./investorLabels";
 import { DataTable, usePagination } from "@/lib/dataDisplay";
 import { matchesSelectFilter, matchesTextFilter } from "@/lib/tableFilters";
 import { useNavigate } from "react-router-dom";
@@ -18,19 +18,11 @@ import { formatNumberAr, normalizeNumber } from "../utils";
 import CreateStockItem from "./CreateStockItem";
 import { getUnitName } from "../../../constants/units";
 
-const MULTIPLE_INVESTORS_LABEL = "+1 INV.";
-const MISSING_ENTRY_LABEL = "REV ING.";
-
 function getStockFilterValue(item: GetStockItems, key: keyof GetStockItems) {
-  const value = item[key];
-
-  if (key === "investor_name" && String(value ?? "").trim() === "") {
-    return item.has_multiple_investors
-      ? MULTIPLE_INVESTORS_LABEL
-      : MISSING_ENTRY_LABEL;
+  if (key === "investor_name") {
+    return getInvestorLabel(item);
   }
-
-  return String(value ?? "");
+  return String(item[key] ?? "");
 }
 
 const EditableCell = ({
@@ -49,7 +41,7 @@ const EditableCell = ({
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value ?? "");
   const savingRef = useRef(false);
-  const { updateStock, processingStock, errorStock, resultStock } = useStock();
+  const { updateStock, processingStock } = useStock();
 
   useEffect(() => {
     setEditValue(value ?? "");
@@ -85,23 +77,18 @@ const EditableCell = ({
 
     savingRef.current = true;
     try {
-      await updateStock(projectId, item.id, Number(editValue), item.updated_at);
+      // Manejo imperativo del resultado: sin effect ni estado-feedback colgante.
+      const res = await updateStock(projectId, item.id, Number(editValue));
+      if (res.ok) {
+        setEditing(false);
+        onSaved?.();
+      } else if (res.error) {
+        onValidationError(res.error);
+      }
     } finally {
       savingRef.current = false;
     }
   };
-
-  useEffect(() => {
-    if (errorStock) {
-      alert(errorStock);
-      return;
-    }
-    if (resultStock) {
-      setEditing(false);
-      onSaved?.();
-      return;
-    }
-  }, [errorStock, resultStock, onSaved]);
 
   if (editing) {
     return (
@@ -246,7 +233,7 @@ function ItemsIndicators({
   disabledCloseStock: boolean;
 }) {
   return (
-    <div className="bg-gray-50/60 rounded-xl p-4 border border-gray-100">
+    <div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <IndicatorCard
           title="Total invertido Kg"
@@ -333,18 +320,34 @@ export function Stock() {
     refreshStock();
   };
 
-  const handleViewConsumingOrders = useCallback(
+  const buildSupplyParams = useCallback(
     (item: GetStockItems) => {
-      if (!projectId || !item.supply_id) return;
-
-      const params = new URLSearchParams({
+      if (!projectId || !item.supply_id) return null;
+      return new URLSearchParams({
         project_id: String(projectId),
         supply_id: String(item.supply_id),
         supply_name: item.supply_name,
-      });
-      navigate(`/admin/work-orders?${params.toString()}`);
+      }).toString();
     },
-    [navigate, projectId]
+    [projectId]
+  );
+
+  const handleViewConsumingOrders = useCallback(
+    (item: GetStockItems) => {
+      const params = buildSupplyParams(item);
+      if (!params) return;
+      navigate(`/admin/work-orders?${params}`);
+    },
+    [navigate, buildSupplyParams]
+  );
+
+  const handleViewIngresos = useCallback(
+    (item: GetStockItems) => {
+      const params = buildSupplyParams(item);
+      if (!params) return;
+      navigate(`/admin/products?${params}`);
+    },
+    [navigate, buildSupplyParams]
   );
 
   const filteredStock = useMemo(() => {
@@ -475,13 +478,10 @@ export function Stock() {
           if (!investorName) {
             return (
               <span className="font-semibold text-red-600">
-                {item.has_multiple_investors
-                  ? MULTIPLE_INVESTORS_LABEL
-                  : MISSING_ENTRY_LABEL}
+                {getInvestorLabel(item)}
               </span>
             );
           }
-
           return <span>{investorName}</span>;
         },
       },
@@ -491,6 +491,8 @@ export function Stock() {
         filterable: true,
         filterType: "select",
         headerPadding: "xs",
+        align: "center",
+        headerAlign: "center",
         filterOptions: getFilterOptionsForColumn(
           "entry_stock",
           stock,
@@ -499,7 +501,20 @@ export function Stock() {
         header: "Ingresados",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          const formatted = formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0);
+          if (!item.supply_id) {
+            return <span className="font-bold text-gray-900">{formatted} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          }
+          return (
+            <button
+              type="button"
+              className="font-bold text-blue-700 hover:text-blue-900 hover:underline"
+              title="Ver ingresos de este insumo"
+              onClick={() => handleViewIngresos(item)}
+            >
+              {formatted} <span className="font-bold text-xs">{unit}</span>
+            </button>
+          );
         },
       },
       {
@@ -508,9 +523,24 @@ export function Stock() {
         header: "Consumidos",
         padding: "xs",
         headerPadding: "xs",
+        align: "center",
+        headerAlign: "center",
         render: (value, item) => {
           const unit = getUnitName(item.supply_unit_id);
-          return <span className="font-bold text-gray-900">{formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0)} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          const formatted = formatNumberAr(typeof value === "string" || typeof value === "number" ? value : 0);
+          if (!item.supply_id) {
+            return <span className="font-bold text-gray-900">{formatted} <span className="text-gray-900 font-bold text-xs">{unit}</span></span>;
+          }
+          return (
+            <button
+              type="button"
+              className="font-bold text-blue-700 hover:text-blue-900 hover:underline"
+              title="Ver órdenes que consumen este insumo"
+              onClick={() => handleViewConsumingOrders(item)}
+            >
+              {formatted} <span className="font-bold text-xs">{unit}</span>
+            </button>
+          );
         },
         filterType: "select",
         filterOptions: getFilterOptionsForColumn(
@@ -659,7 +689,7 @@ export function Stock() {
         },
       },
     ],
-    [projectId, stock, columnsFilters, refreshStock, handleViewConsumingOrders]
+    [projectId, stock, columnsFilters, refreshStock, handleViewConsumingOrders, handleViewIngresos]
   );
 
   useEffect(() => {
@@ -795,7 +825,7 @@ export function Stock() {
         ]}
       />
       {!error && projectId && selectedCustomer && selectedCampaignId && (
-        <div className="my-4">
+        <div className="my-3">
           <ItemsIndicators
             summary={derivedSummary}
             selectedDate={selectedDate}

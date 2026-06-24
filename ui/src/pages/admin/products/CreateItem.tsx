@@ -777,21 +777,20 @@ useEffect(() => {
           <>
             <form className="space-y-4 flex-1">
               <div className="grid grid-cols-3 gap-4">
-                <SelectField
+                <SupplyDropdown
                   label="Tipo de ingreso"
-                  name="type"
                   options={typeOptions}
-                  value={type?.id?.toString() || ""}
-                  onChange={(e) => {
+                  value={type?.id ?? null}
+                  onSelect={(option) => {
                     const selectedType = typeOptions.find(
-                      (type) => type.id === Number(e.target.value)
+                      (type) => type.id === Number(option.id)
                     );
                     if (selectedType) {
                       setType(selectedType);
                     }
                   }}
                   disabled={processing}
-                  size="sm"
+                  placeholder="Seleccionar..."
                 />
                 <InputField
                   label="Fecha"
@@ -837,94 +836,76 @@ useEffect(() => {
                   size="sm"
                 />
 
-                <div className="space-y-2">
-                  <SelectField
-                    label="Proveedor existente"
-                    placeholder="Seleccionar proveedor"
-                    name="provider"
-                    options={providers || []}
-                    value={provider?.id?.toString() || ""}
-                    onChange={(e) => {
-                      const selectedProvider = providers?.find(
-                        (p) => p.id === Number(e.target.value)
-                      );
-                      setProvider(selectedProvider);
-                      setQueryProvider(selectedProvider?.name || "");
-                    }}
-                    size="sm"
-                  />
-                  <InputField
-                    label="O escribir proveedor nuevo"
-                    placeholder="Nombre del proveedor"
-                    name="providerName"
-                    type="text"
-                    value={queryProvider}
-                    onChange={(e) => {
-                      setQueryProvider(e.target.value);
-                      setProvider(undefined);
-                    }}
-                    size="sm"
-                  />
-                </div>
-                <SelectField
+                <SupplyDropdown
+                  label="Proveedor"
+                  placeholder="Seleccionar proveedor"
+                  searchPlaceholder="Buscar proveedor..."
+                  options={providers || []}
+                  value={provider?.id ?? null}
+                  onSelect={(option) => {
+                    const selectedProvider = providers?.find(
+                      (p) => p.id === Number(option.id)
+                    );
+                    setProvider(selectedProvider);
+                    setQueryProvider(selectedProvider?.name || "");
+                  }}
+                />
+                <SupplyDropdown
                   label="Inversor"
                   placeholder="Selecciona el inversor"
-                  name="investor"
+                  searchPlaceholder="Buscar inversor..."
                   options={investors}
-                  value={investor?.id?.toString() || ""}
-                  onChange={(e) => {
+                  value={investor?.id ?? null}
+                  onSelect={(option) => {
                     const selectedInvestor = investors.find(
-                      (i) => i.id === Number(e.target.value)
+                      (i) => i.id === Number(option.id)
                     );
                     if (selectedInvestor) {
                       setInvestor(selectedInvestor);
                     }
                   }}
-                  size="sm"
                 />
               </div>
 
               {type?.id === 2 && (
                 <div className="grid grid-cols-3 gap-4">
-                  <SelectField
+                  <SupplyDropdown
                     label="Cliente destino"
-                    name="customer"
+                    searchPlaceholder="Buscar cliente..."
                     options={customers}
-                    value={customer?.id?.toString() || ""}
-                    onChange={(e) => {
+                    value={customer?.id ?? null}
+                    onSelect={(option) => {
                       const selectedCustomer = customers.find(
-                        (customer) => customer.id === Number(e.target.value)
+                        (customer) => customer.id === Number(option.id)
                       );
                       if (selectedCustomer) {
                         setCustomer(selectedCustomer);
                       }
                     }}
-                    size="sm"
                   />
-                  <SelectField
+                  <SupplyDropdown
                     label="Proyecto destino"
-                    name="projectDestination"
+                    searchPlaceholder="Buscar proyecto..."
                     options={projectsDropdown}
-                    value={project?.id?.toString() || ""}
-                    onChange={(e) => {
+                    value={project?.id ?? null}
+                    onSelect={(option) => {
                       const selectedProject = projectsDropdown.find(
-                        (project) => project.id === Number(e.target.value)
+                        (project) => project.id === Number(option.id)
                       );
                       if (selectedProject) {
                         setProject(selectedProject);
                       }
                     }}
                     disabled={processing || !customers}
-                    size="sm"
                   />
-                  <SelectField
+                  <SupplyDropdown
                     label="Campaña"
-                    name="campaign"
+                    searchPlaceholder="Buscar campaña..."
                     options={campaigns}
-                    value={campaign?.id?.toString() || ""}
-                    onChange={(e) => {
+                    value={campaign?.id ?? null}
+                    onSelect={(option) => {
                       const selectedCampaign = campaigns.find(
-                        (campaign) => campaign.id === Number(e.target.value)
+                        (campaign) => campaign.id === Number(option.id)
                       );
                       if (selectedCampaign) {
                         setCampaign(selectedCampaign);
@@ -933,7 +914,6 @@ useEffect(() => {
                         );
                       }
                     }}
-                    size="sm"
                   />
                 </div>
               )}
@@ -985,6 +965,9 @@ useEffect(() => {
                             setOpenCreateSupply(true);
                           }}
                           hasError={!!itemErrors[i]}
+                          placeholder="Seleccionar insumo..."
+                          searchPlaceholder="Buscar insumo..."
+                          createNewLabel="+ Crear nuevo insumo"
                         />
                       </div>
                       <div className="sm:col-span-1">

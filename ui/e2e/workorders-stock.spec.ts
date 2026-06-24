@@ -53,8 +53,10 @@ test("ordenes respeta filtro por insumo y conserva paginacion server-side", asyn
 
   let chosen: { supply_id: number; supply_name: string } | null = null;
   for (const candidate of candidates.slice(0, 15)) {
+    // El endpoint exige el workspace completo (customer_id+campaign_id+project_id), igual
+    // que lo manda la UI desde el workspace seleccionado. project 30 → customer 17, campaign 2.
     const wo = await apiGet(
-      `/work-orders?project_id=30&supply_id=${candidate.supply_id}&page=1&per_page=10`
+      `/work-orders?customer_id=17&campaign_id=2&project_id=30&supply_id=${candidate.supply_id}&page=1&per_page=10`
     );
     const total = Number(wo?.data?.page_info?.total ?? 0);
     if (total >= 1) {

@@ -14,9 +14,10 @@ import { Column } from "../../types";
 import useLabors from "../../../../hooks/useLabors";
 import { BaseModal } from "../../../../components/Modal/BaseModal";
 import InputField from "../../../../components/Input/InputField";
-import SelectField from "../../../../components/Input/SelectField";
+import SupplyDropdown from "../../../../components/Dropdown/SupplyDropdown";
 import useCategories from "../../../../hooks/useCategories";
 import { apiClient } from "../../../../api/client";
+import { useSearchParams } from "react-router-dom";
 import {
   getValueByAliases,
   LABOR_HEADER_ALIASES,
@@ -61,8 +62,11 @@ export default function ListTasks() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string; count: number } | null>(null);
   const [labor, setLabor] = useState<LaborInfo | null>(null);
-  const [laborsMode, setLaborsMode] = useState<"all" | "pending">("all");
   const pagination = usePagination({ perPage: 10 });
+  const [searchParams] = useSearchParams();
+const [laborsMode, setLaborsMode] = useState<"all" | "pending">(
+  searchParams.get("mode") === "pending" ? "pending" : "all"
+);
   const { buildPagination, clampPageForTotal, resetPage } = pagination;
   const safeLabors = useMemo(() => (Array.isArray(labors) ? labors : []), [labors]);
     const displayedLabors = useMemo(() => {
@@ -192,16 +196,39 @@ export default function ListTasks() {
   };
 
   const handleEdit = (item: LaborInfo) => {
+    setErrorMessage("");
     setLabor(item);
     setModalOpen(true);
   };
 
   const handleSave = () => {
     if (processing) return;
-    if (labor && projectId) {
-      updateLabor(projectId, labor);
-      setModalOpen(false);
+    if (!labor || !projectId) return;
+
+    const name = labor.name?.trim();
+    const contractor = labor.contractor_name?.trim();
+    const priceValue = Number(String(labor.price ?? "").replace(",", "."));
+    const missing: string[] = [];
+    if (!name) missing.push("Nombre");
+    if (!labor.category_id) missing.push("Rubro");
+    if (!labor.price || Number.isNaN(priceValue) || priceValue <= 0) missing.push("Precio");
+    if (!contractor) missing.push("Contratista");
+
+    if (missing.length > 0) {
+      setSuccessMessage(null);
+      setErrorMessage(
+        `Complete todos los campos requeridos antes de guardar: ${missing.join(", ")}.`
+      );
+      return;
     }
+
+    setErrorMessage("");
+    updateLabor(projectId, {
+      ...labor,
+      name,
+      contractor_name: contractor,
+    });
+    setModalOpen(false);
   };
 
   const handleExport = async () => {
@@ -518,12 +545,18 @@ export default function ListTasks() {
             onClose={() => {
               setModalOpen(false);
               setLabor(null);
+              setErrorMessage("");
             }}
             title={`Edicion de labor ${labor?.name || ""}`}
             primaryButtonText="Guardar"
             onPrimaryAction={handleSave}
           >
             <div className="flex flex-col gap-1">
+              {errorMessage && (
+                <div className="mb-2 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-800">
+                  {errorMessage}
+                </div>
+              )}
               <InputField
                 label="Nombre de la labor"
                 placeholder="Nombre de la labor"
@@ -541,13 +574,13 @@ export default function ListTasks() {
                   );
                 }}
               />
-              <SelectField
+              <SupplyDropdown
                 label="Rubro"
-                name={`category-${labor?.id || 0}`}
-                value={labor?.category_id ? labor.category_id.toString() : ""}
-                onChange={(e) => {
+                searchPlaceholder="Buscar rubro..."
+                value={labor?.category_id || null}
+                onSelect={(option) => {
                   if (!labor) return;
-                  setLabor({ ...labor, category_id: parseInt(e.target.value) });
+                  setLabor({ ...labor, category_id: Number(option.id) });
                 }}
                 options={safeCategories}
               />
