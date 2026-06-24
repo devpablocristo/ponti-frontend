@@ -8,6 +8,8 @@ import { useAuth } from "../pages/login/context/useAuth";
 import { Outlet, useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 import { SelectionProvider } from "../pages/login/context/SelectionContext";
+import { ChatDrawerProvider } from "../components/ai/ChatDrawer";
+import { AiFeaturesProvider } from "../hooks/useAiFeatures";
 
 const MainLayout: React.FC = () => {
   const navigate = useNavigate();
@@ -92,7 +94,11 @@ export const ProtectedLayout = () => {
   return (
     <AuthProvider>
       <SelectionProvider>
-        <MainLayout />
+        <AiFeaturesProvider>
+          <ChatDrawerProvider>
+            <MainLayout />
+          </ChatDrawerProvider>
+        </AiFeaturesProvider>
       </SelectionProvider>
     </AuthProvider>
   );

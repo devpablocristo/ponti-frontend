@@ -1,7 +1,9 @@
 import React from "react";
 
 import Menu from "./Menu";
+import { ApprovalsBadge } from "./ApprovalsBadge";
 import { TentativePricesChip } from "./TentativePricesChip";
+import { ChatDrawerLauncher } from "../../components/ai/ChatDrawer";
 
 interface NavbarProps {
   username: string;
@@ -62,6 +64,8 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
         <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
           <TentativePricesChip />
+          <ApprovalsBadge />
+          <ChatDrawerLauncher />
           <Menu
             setIsLogoutModalOpen={setIsLogoutModalOpen}
             username={username}

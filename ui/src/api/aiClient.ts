@@ -1,11 +1,32 @@
 import { request } from "@devpablocristo/core-http/fetch";
+import { parseSseStream } from "@devpablocristo/platform-chat-ui";
 import { getAccessToken } from "@/pages/login/context/useLocalStorage";
 import type {
+  PontiAiConfig,
   PontiChatRequest,
   PontiChatResponse,
   PontiChatStreamSseEvent,
+  AxisCenterChatResponse,
+  AxisCenterContext,
+  AxisMemoryEntry,
+  AxisRunTrace,
+  AxisTask,
+  AxisTaskDetail,
+  AxisWatcher,
+  AxisWatcherProposal,
+  NexusApprovalDecisionResult,
+  NexusApprovalEvidence,
+  NexusApprovalItem,
+  NexusApprovalSummary,
   PontiConversationDetail,
   PontiConversationSummary,
+  PontiDecisionActionResponse,
+  PontiDecisionCard,
+  PontiDecisionRun,
+  PontiDecisionRunResponse,
+  PontiDecisionStatus,
+  PontiRouteHint,
+  PontiWorkspaceContext,
 } from "@/types/aiChat";
 
 type AskHeaders = {
@@ -29,6 +50,20 @@ const buildHeaders = (projectId: string): Record<string, string> => {
   return headers;
 };
 
+/** Config de features IA (no requiere proyecto seleccionado). */
+export async function getPontiAiConfig(): Promise<PontiAiConfig> {
+  const token = getAccessToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return request<PontiAiConfig>("/config", {
+    method: "GET",
+    headers,
+    baseURLs: [getBaseUrl()],
+  });
+}
+
 export async function pontiAssistantChat(
   payload: PontiChatRequest,
   headers: AskHeaders
@@ -39,36 +74,6 @@ export async function pontiAssistantChat(
     headers: buildHeaders(headers.projectId),
     baseURLs: [getBaseUrl()],
   });
-}
-
-function parseSseBlocks(buffer: string): { events: PontiChatStreamSseEvent[]; rest: string } {
-  const events: PontiChatStreamSseEvent[] = [];
-  const lastSep = buffer.lastIndexOf("\n\n");
-  if (lastSep === -1) {
-    return { events, rest: buffer };
-  }
-  const complete = buffer.slice(0, lastSep);
-  const rest = buffer.slice(lastSep + 2);
-  for (const block of complete.split("\n\n")) {
-    if (!block.trim()) continue;
-    let ev = "message";
-    const dataParts: string[] = [];
-    for (const line of block.split("\n")) {
-      if (line.startsWith("event:")) {
-        ev = line.slice(6).trim();
-      } else if (line.startsWith("data:")) {
-        dataParts.push(line.slice(5).trimStart());
-      }
-    }
-    const raw = dataParts.join("\n");
-    try {
-      const data = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
-      events.push({ event: ev, data });
-    } catch {
-      events.push({ event: "error", data: { message: "sse_parse_error", detail: raw } });
-    }
-  }
-  return { events, rest };
 }
 
 /**
@@ -101,28 +106,10 @@ export async function pontiAssistantChatStream(
     const text = await res.text().catch(() => "");
     throw new Error(text || `chat stream failed: ${res.status}`);
   }
-  const reader = res.body?.getReader();
-  if (!reader) {
+  if (!res.body) {
     throw new Error("chat stream: no body");
   }
-  const decoder = new TextDecoder();
-  let buf = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += decoder.decode(value, { stream: true });
-    const { events, rest } = parseSseBlocks(buf);
-    buf = rest;
-    for (const e of events) {
-      onEvent(e);
-    }
-  }
-  if (buf.trim()) {
-    const { events } = parseSseBlocks(buf + "\n\n");
-    for (const e of events) {
-      onEvent(e);
-    }
-  }
+  await parseSseStream(res.body, (event) => onEvent(event as PontiChatStreamSseEvent));
 }
 
 export async function listPontiChatConversations(
@@ -144,6 +131,347 @@ export async function getPontiChatConversation(
   headers: AskHeaders
 ): Promise<PontiConversationDetail> {
   return request<PontiConversationDetail>(`/chat/conversations/${conversationId}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export type PontiDecisionCardQuery = {
+  route_hint?: PontiRouteHint | string;
+  domain?: string;
+  bucket?: string;
+  status?: PontiDecisionStatus;
+  include_resolved?: boolean;
+  limit?: number;
+};
+
+const decisionQueryString = (query: PontiDecisionCardQuery): string => {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "") continue;
+    params.set(key, String(value));
+  }
+  const out = params.toString();
+  return out ? `?${out}` : "";
+};
+
+export async function createPontiDecisionRun(
+  payload: { workspace: PontiWorkspaceContext; route_hint?: PontiRouteHint | string },
+  headers: AskHeaders
+): Promise<PontiDecisionRunResponse> {
+  return request<PontiDecisionRunResponse>("/decision-runs", {
+    method: "POST",
+    body: payload,
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function listPontiDecisionRuns(
+  headers: AskHeaders,
+  limit = 25
+): Promise<{ items: PontiDecisionRun[] }> {
+  return request<{ items: PontiDecisionRun[] }>(`/decision-runs?limit=${limit}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function listPontiDecisionCards(
+  headers: AskHeaders,
+  query: PontiDecisionCardQuery = {}
+): Promise<{ items: PontiDecisionCard[] }> {
+  return request<{ items: PontiDecisionCard[] }>(`/decision-cards${decisionQueryString(query)}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function patchPontiDecisionCard(
+  cardId: string,
+  payload: { status: PontiDecisionStatus; snooze_until?: string },
+  headers: AskHeaders
+): Promise<PontiDecisionCard> {
+  return request<PontiDecisionCard>(`/decision-cards/${cardId}`, {
+    method: "PATCH",
+    body: payload,
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function executePontiDecisionCardAction(
+  cardId: string,
+  actionId: string,
+  headers: AskHeaders
+): Promise<PontiDecisionActionResponse> {
+  return request<PontiDecisionActionResponse>(`/decision-cards/${cardId}/actions/${actionId}`, {
+    method: "POST",
+    body: {},
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export type AiApprovalsQuery = {
+  status?: "pending" | "history";
+  limit?: number;
+};
+
+export async function listAiApprovals(
+  headers: AskHeaders,
+  query: AiApprovalsQuery = {}
+): Promise<{ items: NexusApprovalItem[] }> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || String(value).trim() === "") continue;
+    params.set(key, String(value));
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return request<{ items: NexusApprovalItem[] }>(`/approvals${suffix}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function getAiApprovalsSummary(headers: AskHeaders): Promise<NexusApprovalSummary> {
+  return request<NexusApprovalSummary>("/approvals/summary", {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function getAiApproval(
+  requestId: string,
+  headers: AskHeaders
+): Promise<NexusApprovalItem> {
+  return request<NexusApprovalItem>(`/approvals/${encodeURIComponent(requestId)}`, {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function getAiApprovalEvidence(
+  requestId: string,
+  headers: AskHeaders
+): Promise<NexusApprovalEvidence> {
+  return request<NexusApprovalEvidence>(
+    `/approvals/${encodeURIComponent(requestId)}/evidence`,
+    {
+      method: "GET",
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+export async function approveAiApproval(
+  requestId: string,
+  payload: { note?: string },
+  headers: AskHeaders
+): Promise<NexusApprovalDecisionResult> {
+  return request<NexusApprovalDecisionResult>(
+    `/approvals/${encodeURIComponent(requestId)}/approve`,
+    {
+      method: "POST",
+      body: payload,
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+export async function rejectAiApproval(
+  requestId: string,
+  payload: { note?: string },
+  headers: AskHeaders
+): Promise<NexusApprovalDecisionResult> {
+  return request<NexusApprovalDecisionResult>(
+    `/approvals/${encodeURIComponent(requestId)}/reject`,
+    {
+      method: "POST",
+      body: payload,
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+const axisPath = (path: string): string => `/axis${path.startsWith("/") ? path : `/${path}`}`;
+
+export async function getAxisCenterContext(headers: AskHeaders): Promise<AxisCenterContext> {
+  return request<AxisCenterContext>(axisPath("/context"), {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function axisCenterChat(
+  payload: PontiChatRequest & { task_id?: string | null; agent_id?: string | null },
+  headers: AskHeaders
+): Promise<AxisCenterChatResponse> {
+  return request<AxisCenterChatResponse>(axisPath("/chat"), {
+    method: "POST",
+    body: payload,
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function listAxisTasks(headers: AskHeaders, limit = 50): Promise<{ data?: AxisTask[]; items?: AxisTask[] }> {
+  return request<{ data?: AxisTask[]; items?: AxisTask[] }>(axisPath(`/tasks?limit=${limit}`), {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function getAxisTask(taskId: string, headers: AskHeaders): Promise<AxisTaskDetail> {
+  return request<AxisTaskDetail>(axisPath(`/tasks/${taskId}`), {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function getAxisTaskGraph(
+  taskId: string,
+  headers: AskHeaders
+): Promise<{ events?: Record<string, unknown>[]; data?: Record<string, unknown>[] }> {
+  return request<{ events?: Record<string, unknown>[]; data?: Record<string, unknown>[] }>(
+    axisPath(`/tasks/${taskId}/graph`),
+    {
+      method: "GET",
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+export async function listAxisMemory(
+  headers: AskHeaders,
+  query: { scope_type?: string; kind?: string; q?: string; limit?: number } = {}
+): Promise<{ entries?: AxisMemoryEntry[]; results?: Array<{ entry: AxisMemoryEntry; score?: number }>; scope?: Record<string, string> }> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      params.set(key, String(value));
+    }
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return request<{ entries?: AxisMemoryEntry[]; results?: Array<{ entry: AxisMemoryEntry; score?: number }>; scope?: Record<string, string> }>(
+    axisPath(`/memory${suffix}`),
+    {
+      method: "GET",
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+export async function createAxisMemory(
+  payload: {
+    content_text: string;
+    kind?: string;
+    memory_type?: string;
+    scope_type?: string;
+    workspace?: PontiWorkspaceContext;
+    confirmed: true;
+  },
+  headers: AskHeaders
+): Promise<AxisMemoryEntry & { scope?: Record<string, string> }> {
+  return request<AxisMemoryEntry & { scope?: Record<string, string> }>(axisPath("/memory"), {
+    method: "POST",
+    body: payload,
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function listAxisWatchers(
+  headers: AskHeaders
+): Promise<{ watchers?: AxisWatcher[]; org_id?: string }> {
+  return request<{ watchers?: AxisWatcher[]; org_id?: string }>(axisPath("/watchers"), {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function ensurePontiAxisWatchers(
+  payload: { workspace: PontiWorkspaceContext },
+  headers: AskHeaders
+): Promise<{ created?: AxisWatcher[]; existing?: AxisWatcher[]; org_id?: string }> {
+  return request<{ created?: AxisWatcher[]; existing?: AxisWatcher[]; org_id?: string }>(
+    axisPath("/watchers/ensure-ponti"),
+    {
+      method: "POST",
+      body: payload,
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+export async function runAxisWatcher(
+  watcherId: string,
+  payload: { workspace: PontiWorkspaceContext },
+  headers: AskHeaders
+): Promise<Record<string, unknown>> {
+  return request<Record<string, unknown>>(axisPath(`/watchers/${watcherId}/run`), {
+    method: "POST",
+    body: payload,
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function listAxisWatcherProposals(
+  watcherId: string,
+  headers: AskHeaders
+): Promise<{ proposals?: AxisWatcherProposal[] }> {
+  return request<{ proposals?: AxisWatcherProposal[] }>(axisPath(`/watchers/${watcherId}/proposals`), {
+    method: "GET",
+    headers: buildHeaders(headers.projectId),
+    baseURLs: [getBaseUrl()],
+  });
+}
+
+export async function syncAxisWatcherProposals(
+  watcherId: string,
+  payload: { workspace: PontiWorkspaceContext },
+  headers: AskHeaders
+): Promise<{ proposals?: AxisWatcherProposal[]; cards?: PontiDecisionCard[] }> {
+  return request<{ proposals?: AxisWatcherProposal[]; cards?: PontiDecisionCard[] }>(
+    axisPath(`/watchers/${watcherId}/sync-proposals`),
+    {
+      method: "POST",
+      body: payload,
+      headers: buildHeaders(headers.projectId),
+      baseURLs: [getBaseUrl()],
+    }
+  );
+}
+
+export async function listAxisRunTraces(
+  headers: AskHeaders,
+  query: { task_id?: string; limit?: number } = {}
+): Promise<{ traces?: AxisRunTrace[] }> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && String(value).trim() !== "") {
+      params.set(key, String(value));
+    }
+  }
+  const suffix = params.toString() ? `?${params.toString()}` : "";
+  return request<{ traces?: AxisRunTrace[] }>(axisPath(`/traces${suffix}`), {
     method: "GET",
     headers: buildHeaders(headers.projectId),
     baseURLs: [getBaseUrl()],

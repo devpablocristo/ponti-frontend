@@ -26,6 +26,8 @@
     "@devpablocristo/modules-ui-data-display": "^0.3.3",
     "@devpablocristo/modules-ui-filters": "^0.1.0",
     "@devpablocristo/modules-ui-forms": "^0.1.0",
+    "@devpablocristo/platform-chat-ui": "^0.1.2",
+    "@devpablocristo/platform-crud-ui": "^0.4.0",
     "@heroicons/react": "^2.2.0",
     "@material-tailwind/react": "^3.0.0-beta.24",
     "axios": "^1.8.1",

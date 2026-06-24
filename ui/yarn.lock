@@ -270,6 +270,23 @@
   resolved "https://registry.npmjs.org/@devpablocristo/modules-ui-forms/-/modules-ui-forms-0.1.0.tgz"
   integrity sha512-BLFvvJcsdl3x7Uc5U8L12YOkJntv7/px5b04/kJJLeUXv9dd8ltffUROOabhiYm2ZbczO1ec2rnrANlVNSQJXw==
 
+"@devpablocristo/platform-browser@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/platform-browser/-/platform-browser-0.2.0.tgz#b90cb73fc2a8c20f4e88cc1f937bdbd9a078c0e5"
+  integrity sha512-d4OTZ4ZXMXadaj30t4qEqxCJ6dDX2DuHqEmW+S5psjjcErNQBrpN94NglohG5yFvOiPgbwUdpOkYRI2ZmTKUZQ==
+
+"@devpablocristo/platform-chat-ui@^0.1.2":
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/platform-chat-ui/-/platform-chat-ui-0.1.2.tgz#ad6663c25199b0a00cf6030af67c1b573e326be4"
+  integrity sha512-bDyKru7/JfbWP7aKUe9fC2r+jqqBdOksTcpVei9e+tLrIsBn8r7u8RM7p85qK49VoWR9RFiN8yYVNPSSD8uQtQ==
+
+"@devpablocristo/platform-crud-ui@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@devpablocristo/platform-crud-ui/-/platform-crud-ui-0.4.0.tgz#78b79c5a8ce12c95689e07da580deb7782e82c9b"
+  integrity sha512-RIGWRBikCFzLOEOuzYIgv9t9LMXQmguqAGgBvgs55diqagRgxWS2/3UF4X+bIuvvM4TSZGziGOjPiUCEZv/jVQ==
+  dependencies:
+    "@devpablocristo/platform-browser" "^0.2.0"
+
 "@esbuild/aix-ppc64@0.25.0":
   version "0.25.0"
   resolved "https://registry.yarnpkg.com/@esbuild/aix-ppc64/-/aix-ppc64-0.25.0.tgz#499600c5e1757a524990d5d92601f0ac3ce87f64"

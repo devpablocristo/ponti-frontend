@@ -30,7 +30,21 @@ import ByFieldOrCropReportV2 from "./pages/admin/reports/ByFieldOrCropReportV2.t
 import SummaryResultsReport from "./pages/admin/reports/SummaryResultsReport.tsx";
 import InvestorContribution from "./pages/admin/reports/InvestorContributionReport.tsx";
 import InvestorContributionV2 from "./pages/admin/reports/InvestorContributionReportV2.tsx";
-import AIAssistant from "./pages/admin/ai-assistant/AIAssistant";
+import AIAssistant, {
+} from "./pages/admin/ai-assistant/AIAssistant";
+import AIApprovals from "./pages/admin/ai-assistant/AIApprovals";
+import AxisCenter from "./pages/admin/ai-assistant/AxisCenter";
+import {
+  AIDecisionActivity,
+  AIDecisionDashboard,
+  AIDecisionInsights,
+  AIDecisionLots,
+  AIDecisionReports,
+  AIDecisionStock,
+  AIDecisionSupplies,
+  AIDecisionWorkOrders,
+  AIOperativeAgent,
+} from "./pages/admin/ai-assistant/AIOperativeAgent";
 import Notifications from "./pages/admin/notifications/Notifications";
 
 export default [
@@ -71,6 +85,54 @@ export default [
       {
         path: "ai-assistant",
         element: <AIAssistant />,
+      },
+      {
+        path: "ai",
+        element: <Navigate to="/admin/ai/axis" replace />,
+      },
+      {
+        path: "ai/axis",
+        element: <AxisCenter />,
+      },
+      {
+        path: "ai/operations",
+        element: <AIOperativeAgent />,
+      },
+      {
+        path: "ai/dashboard",
+        element: <AIDecisionDashboard />,
+      },
+      {
+        path: "ai/stock",
+        element: <AIDecisionStock />,
+      },
+      {
+        path: "ai/work-orders",
+        element: <AIDecisionWorkOrders />,
+      },
+      {
+        path: "ai/lots",
+        element: <AIDecisionLots />,
+      },
+      {
+        path: "ai/supplies",
+        element: <AIDecisionSupplies />,
+      },
+      {
+        path: "ai/reports",
+        element: <AIDecisionReports />,
+      },
+      {
+        path: "ai/insights",
+        element: <AIDecisionInsights />,
+      },
+      {
+        path: "ai/activity",
+        element: <AIDecisionActivity />,
+      },
+      {
+        path: "ai/approvals",
+        element: <AIApprovals />,
       },
       {
         path: "notifications",

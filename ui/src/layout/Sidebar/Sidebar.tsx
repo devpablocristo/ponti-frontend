@@ -1,7 +1,21 @@
-import { ChevronDown } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  Bot,
+  ChevronDown,
+  ClipboardList,
+  FileText,
+  Layers,
+  Package,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import React, { ReactNode, useEffect, useState } from "react";
 
 import { Link, useLocation } from "react-router-dom";
+
+import { useAiFeature } from "../../hooks/useAiFeatures";
 
 type MenuItem = {
   name: string;
@@ -13,6 +27,10 @@ type SubItem = {
   name: string;
   route: string;
 };
+
+const lucideMenuIcon = (Icon: LucideIcon) => (color: string) => (
+  <Icon size={20} strokeWidth={1.7} color={color} />
+);
 
 const menuReports = {
   name: "Informes",
@@ -76,6 +94,16 @@ const menuDatabase = {
 
 const menuAIItems: MenuItem[] = [
   {
+    name: "Centro Axis",
+    icon: lucideMenuIcon(Sparkles),
+    route: "/admin/ai/axis",
+  },
+  {
+    name: "Agente Operativo",
+    icon: lucideMenuIcon(Bot),
+    route: "/admin/ai/operations",
+  },
+  {
     name: "Asistente",
     icon: (color: string) => (
       <svg width="20" height="20" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -90,6 +118,52 @@ const menuAIItems: MenuItem[] = [
       </svg>
     ),
     route: "/admin/ai-assistant",
+  },
+  {
+    name: "IA Dashboard",
+    icon: lucideMenuIcon(BarChart3),
+    route: "/admin/ai/dashboard",
+  },
+  {
+    name: "IA Stock",
+    icon: lucideMenuIcon(Package),
+    route: "/admin/ai/stock",
+  },
+  {
+    name: "IA Órdenes y Labores",
+    icon: lucideMenuIcon(ClipboardList),
+    route: "/admin/ai/work-orders",
+  },
+  {
+    name: "IA Lotes",
+    icon: lucideMenuIcon(Layers),
+    route: "/admin/ai/lots",
+  },
+  {
+    name: "IA Insumos",
+    icon: lucideMenuIcon(Sparkles),
+    route: "/admin/ai/supplies",
+  },
+  {
+    name: "IA Informes",
+    icon: lucideMenuIcon(FileText),
+    route: "/admin/ai/reports",
+  },
+  {
+    name: "IA Insights",
+    icon: lucideMenuIcon(Bot),
+    route: "/admin/ai/insights",
+  },
+  {
+    name: "Actividad IA",
+    icon: lucideMenuIcon(Activity),
+    route: "/admin/ai/activity",
+  },
+  {
+    // Solo con el flag approvals_inbox activo (se filtra en el Sidebar).
+    name: "Aprobaciones",
+    icon: lucideMenuIcon(ShieldCheck),
+    route: "/admin/ai/approvals",
   },
   {
     name: "Notificaciones",
@@ -369,6 +443,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   setTitle,
   setIsSidebarOpen,
 }) => {
+  const approvalsEnabled = useAiFeature("approvals_inbox");
+  const aiMenuItems = menuAIItems.filter(
+    (item) => approvalsEnabled || item.route !== "/admin/ai/approvals"
+  );
+
   return (
     <aside
       id="logo-sidebar"
@@ -463,7 +542,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </div>
         <ul className="flex flex-col gap-0.5 font-medium">
-          {menuAIItems.map((item) => (
+          {aiMenuItems.map((item) => (
             <li key={item.name}>
               <SidebarItem
                 setTitle={setTitle}

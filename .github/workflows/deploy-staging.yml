@@ -81,6 +81,8 @@ jobs:
           gcloud auth configure-docker "${{ env.REGISTRY }}" --quiet
 
       - name: Build frontend
+        env:
+          VITE_AI_PROVIDER: ${{ vars.VITE_AI_PROVIDER_STG || 'axis' }}
         run: |
           corepack enable
           yarn --cwd ui install --frozen-lockfile
