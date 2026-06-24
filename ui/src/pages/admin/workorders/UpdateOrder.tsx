@@ -427,11 +427,24 @@ export default function UpdateOrder({
     setContractor(selectedOrder.contractor);
     setObservations(selectedOrder.observations);
 
-    const loadedItems = selectedOrder.items.map((item) => ({
-      item: item.supply_id.toString(),
-      totalUsed: item.total_used.toString(),
-      dose: item.final_dose.toString(),
-    }));
+    const surfaceValue = Number(selectedOrder.effective_area);
+
+    const loadedItems = selectedOrder.items.map((item) => {
+      const dose = Number(item.final_dose);
+      // En órdenes digitales (id negativo) la edición es por lote, pero el
+      // total_used guardado es el de toda la orden. Derivamos el total del lote
+      // a partir de la dosis y la superficie realizada del lote.
+      const lotTotalUsed =
+        orderId < 0 && Number.isFinite(dose) && Number.isFinite(surfaceValue)
+          ? dose * surfaceValue
+          : Number(item.total_used);
+
+      return {
+        item: item.supply_id.toString(),
+        totalUsed: lotTotalUsed.toString(),
+        dose: item.final_dose.toString(),
+      };
+    });
 
     while (loadedItems.length < 7) {
       loadedItems.push({ item: "", totalUsed: "", dose: "" });
